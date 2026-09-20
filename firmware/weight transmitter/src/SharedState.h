@@ -40,6 +40,8 @@ public:
   void requestCommand(ScaleCmd cmd, float argF = 0.0f, float argF2 = 0.0f);
   bool takeCommand(ScaleCmd& cmd, float& argF, float& argF2); // returns true if consumed
   bool commandPending();
+  bool commandProcessing();        // true while scale task is executing a command handler
+  void setCommandProcessing(bool v);
 
   // ---- session totals ----
   void setSessionTotals(uint32_t count, double totalG, double minG, double maxG);
@@ -54,6 +56,7 @@ private:
   ScaleSnapshot _snap;
 
   ScaleCmd _cmd;      float _cmdArg;   float _cmdArg2;   bool _cmdPending;
+  bool     _commandProcessing = false;
 
   uint32_t _sessCount; double _totalG; double _minG; double _maxG;
 };

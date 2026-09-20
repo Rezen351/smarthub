@@ -40,6 +40,7 @@ void ScaleSensor::loop() {
   _lastSample = now;
 
   // ---- consume commands issued by web / modbus ----
+  _s->setCommandProcessing(true);
   ScaleCmd cmd; float arg; float arg2;
   while (_s->takeCommand(cmd, arg, arg2)) {
     switch (cmd) {
@@ -75,7 +76,7 @@ void ScaleSensor::loop() {
         float slope = arg;
         float intercept = arg2;
         if (slope > 0.0f) {
-          Serial.printf("[scale] CMD_CALIBRATE_MLR slope=%.4f intercept=%.4f\n", slope, intercept);
+          Serial.printf("[scale] CMD_CALIBRATE_MLR countsPerKg=%.4f intercept=%.4f\n", slope, intercept);
           applyCalibration(slope, intercept);
         } else {
           Serial.println("[scale] CMD_CALIBRATE_MLR ignored: slope <= 0");
@@ -108,6 +109,7 @@ void ScaleSensor::loop() {
         break;
     }
   }
+  _s->setCommandProcessing(false);
 
   // ---- acquire a fresh reading ----
   if (!hxPoll(_hx, 40)) return;              // HX711 not responding yet
@@ -160,10 +162,9 @@ void ScaleSensor::applyCalibration(float slope, float intercept) {
   snap.calibrated = true;
   _s->setSnapshot(snap);
 
-  AppSettings a;
-  _st->load(a);
-  a.countsPerKg = slope;
-  a.calIntercept = intercept;
-  a.calibrated = true;
-  _st->saveCalibration(a);
+  // Persist only the calibration math: the tare offset stays untouched so a
+  // concurrent portal write can never be overwritten with a stale copy.
+  _st->saveCalibrationValues(slope, intercept, true);
+  Serial.printf("[scale] calibration applied countsPerKg=%.4f intercept=%.4f calibrated=%d\n",
+                slope, intercept, snap.calibrated);
 }

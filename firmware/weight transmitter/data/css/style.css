@@ -615,6 +615,65 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Reboot Overlay */
+.reboot-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 23, 23, 0.72);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 2000;
+}
+
+.reboot-overlay.reboot-overlay-visible {
+  display: flex;
+}
+
+.reboot-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  box-shadow: var(--shadow-lg);
+  padding: 24px 26px;
+  max-width: 360px;
+  text-align: center;
+}
+
+.reboot-spinner {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 14px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: rebootSpin 0.9s linear infinite;
+}
+
+@keyframes rebootSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.reboot-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.reboot-text {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.reboot-hint {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
 /* Footer */
 .footer {
   text-align: center;

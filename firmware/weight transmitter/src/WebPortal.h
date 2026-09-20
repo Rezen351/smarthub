@@ -35,6 +35,10 @@ public:
 
   void sendJson(uint16_t code, const String& json);
 
+  // True while a restart is scheduled (the portal stays reachable until the
+  // last queued command has been consumed).
+  bool rebootScheduled() const { return _rebootPending; }
+
   // SPIFFS state queries
   bool fsMounted() const { return _fsOk; }
   String fsInfo() const;
@@ -52,9 +56,17 @@ private:
   bool           _cfgLoaded = false;
   bool           _fsOk = false;
 
+  bool           _rebootPending = false;
+  uint32_t       _rebootAtMs    = 0;
+
   void ensureCfg();
   bool serveFromSPIFFS(String path);
   String getContentType(const String& path);
+
+  // Deferred restart so the HTTP response and any pending scale command are
+  // completed before the CPU is reset.
+  void scheduleReboot(uint32_t delayMs);
+  void processPendingReboot();
 };
 
 #endif // WEB_PORTAL_H

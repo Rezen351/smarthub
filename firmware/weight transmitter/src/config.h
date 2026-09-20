@@ -37,6 +37,22 @@
 // ------------------------- Web portal --------------------------------
 #define WEB_PORT            80
 
+// Grace period inserted between answering a mutating HTTP request and
+// touching the radio. The browser must receive its response first, otherwise
+// "Apply Configuration" looks like it never answers.
+#define WIFI_APPLY_DELAY_MS      750
+
+// When a calibration is applied from the web portal the coefficients are
+// persisted to NVS and the transmitter restarts, so the brand new
+// calibration is loaded exactly like after a power cycle.
+// Value = delay before the restart; 0 restarts as soon as the HTTP response
+// has been flushed and no scale command is pending anymore.
+#define CALIBRATION_REBOOT_DELAY_MS  1200
+
+// Extra time granted to the sensor task to consume a queued command before
+// a scheduled restart is executed.
+#define REBOOT_GRACE_MS          500
+
 // ------------------------- Dual core task layout ----------------------
 // ESP32 WROOM-32 has 2 cores. We pin:
 //   core 0 : HX711 read + filter + calibration math
@@ -62,5 +78,5 @@
 #define PREF_NAMESPACE      "scale"
 
 // ------------------------- Firmware ----------------------------------
-#define FW_VERSION          0x0101   // major<<8 | minor  (1.1)
+#define FW_VERSION          0x0102   // major<<8 | minor  (1.2)
 #endif // SCALE_CONFIG_H

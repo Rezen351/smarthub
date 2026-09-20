@@ -63,6 +63,20 @@ bool SharedState::commandPending() {
   return p;
 }
 
+bool SharedState::commandProcessing() {
+  bool p = false;
+  if (_mutex) xSemaphoreTake(_mutex, portMAX_DELAY);
+  p = _commandProcessing;
+  if (_mutex) xSemaphoreGive(_mutex);
+  return p;
+}
+
+void SharedState::setCommandProcessing(bool v) {
+  if (_mutex) xSemaphoreTake(_mutex, portMAX_DELAY);
+  _commandProcessing = v;
+  if (_mutex) xSemaphoreGive(_mutex);
+}
+
 void SharedState::setSessionTotals(uint32_t count, double totalG, double minG, double maxG) {
   if (_mutex) xSemaphoreTake(_mutex, portMAX_DELAY);
   _sessCount = count; _totalG = totalG; _minG = minG; _maxG = maxG;

@@ -32,10 +32,17 @@ struct AppSettings {
 
 class SettingsStore {
 public:
+  // Creates the cross-core NVS mutex. Call once from setup() before any
+  // task is created, so the namespace is never touched by two cores at once.
+  void    begin();
+
   void    load(AppSettings& s);
   void    saveAll(const AppSettings& s);
   void    saveWifi(const AppSettings& s);
   void    saveCalibration(const AppSettings& s);
+  // Persist calibration math only (never touches the tare offset), so a
+  // stale cached copy of the offset can never overwrite a fresher tare.
+  void    saveCalibrationValues(float countsPerKg, float intercept, bool calibrated);
   void    saveTotals(double totalG, uint32_t count);
   void    factoryReset();
 };

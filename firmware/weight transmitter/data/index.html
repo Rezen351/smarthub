@@ -62,7 +62,7 @@
       <section class="card">
         <div class="card-header">
           <h2 class="card-title">Calibration & Tare</h2>
-          <span class="card-hint">Tare first, then capture known reference masses for regression</span>
+          <span class="card-hint">Tare first, then capture known reference masses for average calibration</span>
         </div>
         <div class="card-body">
           <div class="action-row">
@@ -109,28 +109,29 @@
               </thead>
               <tbody id="calibPointsBody">
                 <tr id="calibEmptyRow">
-                  <td colspan="4" style="color: var(--text-light); text-align: center; padding: 12px;">No calibration points captured yet</td>
+                  <td colspan="4" style="color: var(--text-light); text-align: center; padding: 12px;">No calibration
+                    points captured yet</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <!-- Regression Results -->
+          <!-- Calibration Results -->
           <div class="metrics-grid" id="regressionResults" style="margin-top: 14px; display: none;">
             <div class="metric-box">
-              <span class="metric-title">Slope (counts/kg)</span>
+              <span class="metric-title">Avg Counts/kg</span>
               <span class="metric-val font-mono" id="valSlope">--</span>
             </div>
             <div class="metric-box">
-              <span class="metric-title">Intercept (counts)</span>
+              <span class="metric-title">Points</span>
               <span class="metric-val font-mono" id="valIntercept">--</span>
             </div>
             <div class="metric-box">
-              <span class="metric-title">R²</span>
+              <span class="metric-title">Min Raw</span>
               <span class="metric-val font-mono" id="valR2">--</span>
             </div>
             <div class="metric-box">
-              <span class="metric-title">Std Error (kg)</span>
+              <span class="metric-title">Max Raw</span>
               <span class="metric-val font-mono" id="valStdErr">--</span>
             </div>
           </div>
@@ -231,7 +232,7 @@
 
             <div class="action-row" style="margin-top: 14px;">
               <button type="submit" class="btn btn-primary" id="btnSaveWifi">
-                Save &amp; Connect
+                Apply Configuration
               </button>
               <button type="button" class="btn btn-outline" id="btnForgetWifi">
                 Forget Network (Open AP)
@@ -361,8 +362,18 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <p>ENYX-Smart Hub &bull; Weight Transmitter &bull; by Almuzky</p>
+      <p>ENYX-Smart Hub &bull; Weight Transmitter &bull; by Almuzky v1 multi-core</p>
     </footer>
+  </div>
+
+  <!-- Reboot Overlay (shown while a restart is in progress) -->
+  <div id="rebootOverlay" class="reboot-overlay" role="status" aria-live="polite">
+    <div class="reboot-box">
+      <div class="reboot-spinner"></div>
+      <h3 class="reboot-title">Transmitter restarting</h3>
+      <p class="reboot-text" id="rebootMessage">Please wait...</p>
+      <p class="reboot-hint">Do not close this page. It reloads automatically once the device answers again.</p>
+    </div>
   </div>
 
   <!-- Toast Notification -->

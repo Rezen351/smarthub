@@ -21,7 +21,15 @@ public:
   int          savedMode() { return _savedMode; }
   String       savedSsid() { return _savedSsid; }
   int8_t       rssi();
-  void         applySettings(const AppSettings& s);  // re-apply uplink
+  // Blocking variant: applies the uplink immediately (boot-time / non-HTTP
+  // callers). HTTP handlers must use requestSettings() instead.
+  void         applySettings(const AppSettings& s);
+
+  // Non-blocking variant used by the HTTP portal: stores the new credentials
+  // and applies them from loop() after WIFI_APPLY_DELAY_MS, so the HTTP
+  // response reaches the browser before the radio is reconfigured.
+  void         requestSettings(const AppSettings& s);
+  bool         applyPending() { return _applyPending; }
 
 private:
   uint8_t      _savedMode = WIFI_MODE_NONE;
@@ -29,7 +37,12 @@ private:
   uint32_t     _lastCheck = 0;
   String       _apSsid;
 
+  bool         _applyPending = false;
+  uint32_t     _applyAtMs    = 0;
+  AppSettings  _pendingCfg;
+
   void  startSta(const AppSettings& s);
+  void  applyPendingSettings();
 };
 
 #endif // WIFI_MANAGER_H

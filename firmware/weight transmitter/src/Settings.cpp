@@ -1,7 +1,37 @@
 #include "Settings.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 // Preferences object used by all SettingsStore methods.
 static Preferences _prefs;
+
+// ---------------------------------------------------------------------
+//  Cross-core NVS guard
+//
+//  Preferences/NVS is not reentrant: the sensor task (calibration + totals)
+//  and the network task (WiFi configuration, factory reset) share this one
+//  `Preferences` handle. Two concurrent begin()/end() pairs corrupt the
+//  handle, which is what made the web portal look unresponsive ("Apply
+//  configuration" never answered). Every access is therefore serialised
+//  through a recursive mutex so nesting (e.g. saveAll()) stays safe.
+// ---------------------------------------------------------------------
+static SemaphoreHandle_t _nvsMutex = nullptr;
+
+static SemaphoreHandle_t nvsMutex() {
+  if (!_nvsMutex) {
+    _nvsMutex = xSemaphoreCreateRecursiveMutex();
+  }
+  return _nvsMutex;
+}
+
+static void lockNvs() {
+  SemaphoreHandle_t m = nvsMutex();
+  if (m) xSemaphoreTakeRecursive(m, portMAX_DELAY);
+}
+
+static void unlockNvs() {
+  if (_nvsMutex) xSemaphoreGiveRecursive(_nvsMutex);
+}
 
 static void openWrite() {
   _prefs.begin(PREF_NAMESPACE, false);   // RW
@@ -13,7 +43,13 @@ static void close() {
   _prefs.end();
 }
 
+void SettingsStore::begin() {
+  nvsMutex();
+  Serial.printf("[nvs] SettingsStore ready (namespace '%s')\n", PREF_NAMESPACE);
+}
+
 void SettingsStore::load(AppSettings& s) {
+  lockNvs();
   openRead();
 
   s.wifiMode     = _prefs.isKey("wifiMode") ? _prefs.getUChar("wifiMode") : WIFI_MODE_NONE;
@@ -33,9 +69,13 @@ void SettingsStore::load(AppSettings& s) {
 
   close();
 
-  // Sanity: leftover enterprise fields while mode is PSK -> normalize.
+  if (s.calibrated && s.countsPerKg <= 0.0f) {
+    s.calibrated = false;
+  }
+
   if (s.wifiMode == WIFI_MODE_PSK) { s.entIdentity = ""; s.entUsername = ""; s.entPassword = ""; }
   if (s.wifiMode == WIFI_MODE_ENT) { s.wpaPassword = ""; }
+  unlockNvs();
 }
 
 void SettingsStore::saveAll(const AppSettings& s) {
@@ -45,6 +85,7 @@ void SettingsStore::saveAll(const AppSettings& s) {
 }
 
 void SettingsStore::saveWifi(const AppSettings& s) {
+  lockNvs();
   openWrite();
   _prefs.putUChar("wifiMode", s.wifiMode);
   _prefs.putString("ssid", s.ssid);
@@ -53,26 +94,43 @@ void SettingsStore::saveWifi(const AppSettings& s) {
   _prefs.putString("eusr", s.entUsername);
   _prefs.putString("epwd", s.entPassword);
   close();
+  unlockNvs();
 }
 
 void SettingsStore::saveCalibration(const AppSettings& s) {
+  lockNvs();
   openWrite();
   _prefs.putFloat("calOff", s.calOffset);
   _prefs.putFloat("cntPerKg", s.countsPerKg);
   _prefs.putFloat("calInt", s.calIntercept);
   _prefs.putBool("calib", s.calibrated);
   close();
+  unlockNvs();
+}
+
+void SettingsStore::saveCalibrationValues(float countsPerKg, float intercept, bool calibrated) {
+  lockNvs();
+  openWrite();
+  _prefs.putFloat("cntPerKg", countsPerKg);
+  _prefs.putFloat("calInt", intercept);
+  _prefs.putBool("calib", calibrated);
+  close();
+  unlockNvs();
 }
 
 void SettingsStore::saveTotals(double totalG, uint32_t count) {
+  lockNvs();
   openWrite();
   _prefs.putFloat("totalG", (float)totalG);
   _prefs.putUInt("count", count);
   close();
+  unlockNvs();
 }
 
 void SettingsStore::factoryReset() {
+  lockNvs();
   openWrite();
   _prefs.clear();
   close();
+  unlockNvs();
 }

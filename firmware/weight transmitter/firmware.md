@@ -66,7 +66,7 @@ GPIO -1     | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset butt
 | **Minimal coupling** | Modules share data only through `SharedState` (mutex-guarded). No direct function calls cross the core boundary. |
 | **Deterministic sensor loop** | Scale task runs on core 0 with a fixed 30 ms tick, isolated from all networking latency. |
 | **Always-reachable portal** | Soft-AP + DNS never stop regardless of STA status. Configuration is possible even without an upstream router. |
-| **Robust persistence** | NVS writes are batched by category; calibration survives power cycles; WiFi creds are separate from calibration data so a factory WiFi reset cannot erase calibration. |
+| **Robust persistence** | NVS writes are batched by category and serialised by a recursive mutex (`SettingsStore`); calibration survives power cycles; WiFi creds are separate from calibration data so a factory WiFi reset cannot erase calibration. |
 | **Zero-placeholder rule** | All code is complete and functional; no TODO stubs shipped in production. |
 
 ### 3.2 Module Dependency Graph
@@ -118,6 +118,27 @@ Arduino loop() -------------------------------------------------------
 - Mutex-protected SharedState prevents data races
 
 **Why two cores?** The HX711 requires precise clock timing (<= 1 us between pulses). Placing the HX711 driver on a core isolated from WiFi interrupt jitter prevents data corruption and missed samples.
+
+### 3.4 NVS access is serialised across cores
+
+`Preferences`/NVS is **not** reentrant, yet both cores need it:
+
+| Core | Writer | Data |
+|------|--------|------|
+| 0 (`scale`) | `ScaleSensor` | tare offset, calibration, session totals (every 30 s) |
+| 1 (`net`) | `WebPortal` | WiFi configuration, calibration applied from the portal, factory reset |
+
+Two concurrent `Preferences::begin()/end()` pairs on the same namespace corrupted the internal handle — the portal then appeared to hang when applying a configuration or a calibration. `SettingsStore` now guards every operation with a **recursive mutex** created in `SettingsStore::begin()` (called from `setup()` before any task starts):
+
+```
+lockNvs()                      // xSemaphoreTakeRecursive(portMAX_DELAY)
+  openWrite() / openRead()     // Preferences::begin(PREF_NAMESPACE, false)
+  ... read / write keys ...
+  close()                      // Preferences::end()
+unlockNvs()                    // xSemaphoreGiveRecursive()
+```
+
+The mutex is recursive so composite helpers (`saveAll()` → `saveWifi()` + `saveCalibration()` + `saveTotals()`) stay safe, and `saveCalibrationValues()` only touches the three calibration keys so it can never overwrite a fresher tare offset.
 
 ---
 
@@ -208,6 +229,7 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 | `CMD_NONE` | 0 | — |
 | `CMD_TARE` | 1 | — |
 | `CMD_CALIBRATE` | 2 | Known weight in kg (float) |
+| `CMD_CALIBRATE_MLR` | 5 | `countsPerKg` (float) + intercept (float) |
 | `CMD_RESET_SESSION` | 3 | — |
 | `CMD_FLUSH` | 4 | — |
 | `CMD_WIPE_WIFI` | 99 | — (triggers reboot) |
@@ -252,9 +274,10 @@ The exponential moving average (EMA) with alpha = 0.35 rejects noise from vibrat
 
 #### Two-point / Multi-Point calibration procedure
 
-1. **Tare** — Empty platform. Send `CMD_TARE`. HX711 library sets internal offset to current raw average. Offset persisted to NVS.
-2. **Single-point calibrate** — Place known reference mass (kg). Send `CMD_CALIBRATE` with the mass value. Firmware computes `countsPerKg = rawCounts / knownKg` and persists to NVS.
-3. **Multi-point calibrate** — Capture 2–10 raw readings at different known masses via the web UI. Frontend computes linear regression: `slope` (counts/kg) and `intercept` (counts at 0 kg). Send both values to `/api/calibrate/multi`. Firmware stores them and uses `weight = (raw - intercept) / slope` for conversion.
+1. **Tare** — Empty platform. Send `CMD_TARE`. HX711 library sets internal offset to current raw average. Offset persisted to NVS (calibration is invalidated until it is applied again).
+2. **Single-point calibrate** — Place known reference mass (kg) and call `POST /api/calibrate?kg=<mass>`. The portal computes `countsPerKg = rawCounts / knownKg` from the live snapshot, persists it with `SettingsStore::saveCalibrationValues()` and schedules a restart (~1.2 s).
+3. **Multi-point calibrate** — Capture 1–10 raw readings at different known masses via the web UI. The browser computes the average ratio `countsPerKg = mean(rawCounts / weightKg)` and calls `POST /api/calibrate/multi?slope=<countsPerKg>`. The portal persists the value (`calIntercept` is forced to `0`) and schedules a restart.
+4. **Restart** — Applying a calibration always restarts the ESP32. The coefficients are written to NVS *before* the reset, so the transmitter boots with the new calibration loaded, exactly like after a power cycle. The web UI shows a "Transmitter restarting" overlay, polls `/api/status` until the device answers again and then reloads the page.
 
 ---
 
@@ -286,11 +309,24 @@ begin(AppSettings)
 
 Called every network task iteration. Checks STA state every 5 s; if disconnected and a saved SSID exists, re-initiates connection without restarting the AP or portal.
 
+#### Deferred configuration apply (why `POST /api/wifi` answers immediately)
+
+| Step | Where | What happens |
+|------|-------|--------------|
+| 1 | `WebPortal::handleApiWifi()` (network task) | Validates the form, writes NVS, sends the JSON response |
+| 2 | `WebPortal::handleApiWifi()` | Calls `WifiManager::requestSettings()` — **no radio calls**, just stores the pending config |
+| 3 | `WifiManager::loop()` after `WIFI_APPLY_DELAY_MS` (750 ms) | `startSta()` disconnects/joins the uplink and supervises it from then on |
+
+The delay is what makes "Apply Configuration" feel instant: the browser receives its response while the AP/uplink is still untouched, and the radio is only reconfigured afterwards. The soft-AP is never stopped, so the portal stays reachable even if the new credentials are wrong.
+
+`wifiMode = 0` now actively drops a previously configured uplink (`WiFi.setAutoReconnect(false)` + `WiFi.disconnect(false)`), so switching back to "soft-AP only" really disconnects the station.
+
 #### Key design decisions
 
 - **AP never stops:** Even if STA credentials are wrong, the portal remains accessible on `192.168.4.1`.
 - **Non-blocking connect:** `WiFi.begin()` is non-blocking; `loop()` polls `WiFi.status()` and retries on `WL_DISCONNECTED` / `WL_CONNECTION_LOST`.
-- **WPA2-Enterprise:** Uses `esp_wifi_sta_wpa2_ent_*` API for PEAP/MSCHAPv2.
+- **No radio work inside HTTP handlers:** WiFi reconfiguration is queued and executed by the network task loop, so the web server never stalls mid-response.
+- **WPA2-Enterprise:** Uses `esp_wifi_sta_wpa2_ent_*` API for PEAP/MSCHAPv2. When the outer identity is left empty the inner username is used instead, and a missing inner username is rejected by the portal with a validation error.
 
 ---
 
@@ -391,22 +427,44 @@ When a device connects to the Soft-AP and opens any URL, DNS returns `192.168.4.
 | `GET` | `/js/app.js` | — | Client application script served from SPIFFS |
 | `GET` | `/api/status` | — | JSON snapshot: weight, calibration, WiFi, uptime, session |
 | `GET` | `/api/config` | — | Return stored WiFi + calibration config as JSON |
-| `POST` | `/api/wifi` | Form: `mode`, `ssid`, `psk`, `eid`, `eusr`, `epwd` | Save WiFi credentials + reconnect STA |
+| `POST` | `/api/wifi` | Form: `mode`, `ssid`, `psk`, `eid`, `eusr`, `epwd` | Validate + save WiFi credentials, answer, then apply the uplink asynchronously |
 | `POST` | `/api/tare` | — | Issue `CMD_TARE` |
-| `POST` | `/api/calibrate` | Query: `kg=<float>` | Issue `CMD_CALIBRATE` with known weight in kg |
-| `POST` | `/api/calibrate/multi` | Query: `slope=<float>&intercept=<float>` | Apply multi-point regression (store slope + intercept) |
+| `POST` | `/api/calibrate` | Query: `kg=<float>` | Persist single-point `countsPerKg` to NVS + schedule restart |
+| `POST` | `/api/calibrate/multi` | Query: `slope=<float>` | Persist averaged `countsPerKg` to NVS + schedule restart |
 | `POST` | `/api/totals/reset` | — | Issue `CMD_RESET_SESSION` |
-| `POST` | `/api/portal/force` | — | Issue `CMD_WIPE_WIFI` (forget STA, reboot into AP) |
-| `POST` | `/api/factory` | — | Wipe all NVS + reboot |
+| `POST` | `/api/portal/force` | — | Forget uplink credentials + restart into soft-AP setup mode |
+| `POST` | `/api/factory` | — | Wipe all NVS + restart |
 | `GET` | `/*` | — | Captive redirect -> `/` (Android/iOS/Windows probes + unknown hosts) |
 
 #### Response formats
 
-Most mutation endpoints return plain JSON:
+Mutation endpoints return the project-wide wrapper **plus** the legacy `ok` flag used by the bundled web UI:
 
 ```json
-{ "ok": true, "message": "English status text" }
+{ "ok": true, "success": true, "message": "English status text" }
 ```
+
+Errors carry a machine-readable code and an English message:
+
+```json
+{
+  "ok": false,
+  "success": false,
+  "error": { "code": "SSID_REQUIRED", "message": "A network SSID is required when an uplink mode is selected" },
+  "message": "Network SSID is required"
+}
+```
+
+| Error code | HTTP | Raised when |
+|------------|------|-------------|
+| `INVALID_WIFI_MODE` | 400 | `mode` is not 0/1/2 |
+| `SSID_REQUIRED` | 400 | Uplink selected without an SSID |
+| `PSK_TOO_SHORT` | 400 | WPA2-PSK password shorter than 8 characters |
+| `ENTERPRISE_USERNAME_REQUIRED` | 400 | Enterprise mode without an inner username |
+| `INVALID_REFERENCE_WEIGHT` | 400 | `/api/calibrate` without a positive kg value |
+| `SENSOR_NOT_READY` | 409 | `/api/calibrate` before the HX711 produced a reading |
+| `INVALID_CALIBRATION` | 400 | `/api/calibrate` computed a non-positive counts/kg |
+| `INVALID_CALIBRATION_SLOPE` | 400 | `/api/calibrate/multi` without a positive slope |
 
 `/api/status` returns a flat JSON object with live telemetry:
 
@@ -420,13 +478,14 @@ Most mutation endpoints return plain JSON:
   "intercept": 0.0,
   "calibrated": true,
   "sensorReady": true,
+  "rebooting": false,
   "totalG": 5432.0,
   "sampleCount": 42,
   "minG": 100.0,
   "maxG": 2345.0,
   "modbusClients": 1,
   "uptime": 3600,
-  "fw": "1.1",
+  "fw": "1.2",
   "wifi": {
     "modeName": "WPA2-PSK",
     "mode": 1,
@@ -443,7 +502,12 @@ Most mutation endpoints return plain JSON:
 Unknown `/api/*` paths return:
 
 ```json
-{ "ok": false, "message": "API endpoint not found" }
+{
+  "ok": false,
+  "success": false,
+  "error": { "code": "API_NOT_FOUND", "message": "API endpoint not found" },
+  "message": "API endpoint not found"
+}
 ```
 
 #### WiFi configuration flow
@@ -452,12 +516,31 @@ Unknown `/api/*` paths return:
 User opens portal
   -> GET /api/status  (UI shows current mode and STA status)
   -> GET /api/config  (UI pre-fills SSID / PSK / enterprise fields)
-  -> User selects mode + fills fields
+  -> User selects mode + fills fields, presses "Apply Configuration"
   -> POST /api/wifi  (form-encoded: mode, ssid, psk, eid, eusr, epwd)
-       -> Settings saved to NVS via saveWifi()
-       -> WifiManager::applySettings() -> STA reconnect (non-blocking)
-       -> AP stays up
-  -> User polls GET /api/status to see STA connection result
+       -> validation (400 + error.code on failure)
+       -> Settings saved to NVS via saveWifi()          [mutex-protected]
+       -> HTTP 200 answered to the browser
+       -> WifiManager::requestSettings() marks the config as pending
+  -> 750 ms later (network task loop): WifiManager::startSta()
+       -> uplink disconnect/join, AP stays up
+  -> UI polls GET /api/status to see the STA connection result
+```
+
+#### Calibration apply & restart flow
+
+```
+User captures reference points, presses "Apply Calibration"
+  -> POST /api/calibrate/multi?slope=<countsPerKg>
+       -> validation (400 + error.code on failure)
+       -> SettingsStore::saveCalibrationValues() writes NVS   [mutex-protected]
+       -> CMD_CALIBRATE_MLR queued so the live snapshot updates too
+       -> HTTP 200 answered ("... Device is rebooting...")
+       -> scheduleReboot(1200 ms)
+  -> WebPortal::processPendingReboot() waits until no command is pending
+  -> ESP.restart()
+  -> browser shows the reboot overlay, polls /api/status until the device
+     answers again, then reloads the page (calibration is now live)
 ```
 
 ---
@@ -468,6 +551,7 @@ User opens portal
 setup()
   |
   +- Serial.begin(115200)
+  +- gSettings.begin()                   <- create the cross-core NVS mutex
   +- gSettings.load(gAppSettings)        <- restore NVS settings
   +- checkForceApButton()                <- hold FORCE_AP_PIN to wipe WiFi creds
   +- gShared.begin()                     <- create mutex, zero state
@@ -573,7 +657,11 @@ All keys live in the `"scale"` namespace.
 | `totalG` | Float | Session | Total accumulated grams |
 | `count` | UInt | Session | Sample count |
 
-**Factory reset** clears all keys in the namespace then calls `ESP.restart()`.
+**Access rule:** every read/write goes through `SettingsStore`, which serialises the namespace with a recursive mutex (see §3.4). The `Preferences` handle is opened and closed inside each call, so no stale handle can survive across cores.
+
+**Calibration restart:** applying a calibration from the web portal writes `cntPerKg`, `calInt` and `calib` (`saveCalibrationValues()`) and then restarts the device, so the new values are always loaded by `ScaleSensor::begin()`.
+
+**Factory reset** clears all keys in the namespace and then restarts the device.
 
 ---
 
@@ -673,18 +761,18 @@ firmware/weight transmitter/
 +-- data/                       <- SPIFFS filesystem assets (HTML/CSS/JS separated)
 |   +-- index.html              <- modern responsive captive portal & dashboard UI
 |   +-- css/
-|   |   +-- style.css           <- dark emerald theme stylesheet
+|   |   +-- style.css           <- portal stylesheet (incl. reboot overlay)
 |   +-- js/
-|       +-- app.js              <- client-side telemetry polling & REST interaction
+|       +-- app.js              <- telemetry polling, REST interaction, reboot-aware flows
 +-- src/
     +-- main.ino                <- boot, task creation, singleton wiring
     +-- config.h                <- ALL compile-time constants
     +-- SharedState.h/.cpp      <- mutex-guarded inter-core data bus + command slot
-    +-- Settings.h/.cpp         <- NVS persistence (AppSettings struct)
+    +-- Settings.h/.cpp         <- NVS persistence (AppSettings struct) + cross-core mutex
     +-- Scale.h/.cpp            <- HX711 acquisition, EMA filter, calibration
-    +-- WifiManager.h/.cpp      <- AP+STA dual-mode WiFi management
+    +-- WifiManager.h/.cpp      <- AP+STA dual-mode WiFi management, deferred config apply
     +-- ModbusServer.h/.cpp     <- Modbus TCP server, holding register publish
-    +-- WebPortal.h/.cpp        <- HTTP captive portal, SPIFFS static server & REST API
+    +-- WebPortal.h/.cpp        <- HTTP captive portal, SPIFFS static server, REST API, deferred reboot
 ```
 
 ---

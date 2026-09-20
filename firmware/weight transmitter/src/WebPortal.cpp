@@ -78,6 +78,41 @@ void WebPortal::startDns() {
 void WebPortal::handleClient() {
   _http.handleClient();
   _dns.processNextRequest();
+  processPendingReboot();   // runs last: the response is already on the wire
+}
+
+// =====================================================================
+//  Deferred restart
+//
+//  A calibration / factory reset must survive a power cycle, so the values
+//  are written to NVS before the CPU is reset. The restart itself is
+//  scheduled instead of being executed inline, which guarantees that
+//  (a) the HTTP response reaches the browser and (b) the sensor task has
+//  consumed any queued command before the reset happens.
+// =====================================================================
+void WebPortal::scheduleReboot(uint32_t delayMs) {
+  _rebootPending = true;
+  _rebootAtMs = millis() + delayMs;
+  Serial.printf("[portal] restart scheduled in %u ms\n", (unsigned)delayMs);
+}
+
+void WebPortal::processPendingReboot() {
+  if (!_rebootPending) return;
+
+  // Give the sensor task time to consume the queued calibration command so
+  // its own NVS work finishes before the reset.
+  if (_shared && _shared->commandProcessing()) {
+    _rebootAtMs = millis() + REBOOT_GRACE_MS;
+    return;
+  }
+
+  if ((int32_t)(millis() - _rebootAtMs) < 0) return;
+
+  _rebootPending = false;
+  Serial.println("[portal] restarting transmitter now");
+  Serial.flush();
+  delay(50);
+  ESP.restart();
 }
 
 void WebPortal::ensureCfg() {
@@ -181,7 +216,9 @@ void WebPortal::handleNotFound() {
 
   // Guard against missing API endpoints
   if (uri.startsWith("/api/")) {
-    sendJson(404, "{\"ok\":false,\"message\":\"API endpoint not found\"}");
+    sendJson(404, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"API_NOT_FOUND\",\"message\":\"API endpoint not found\"},"
+                  "\"message\":\"API endpoint not found\"}");
     return;
   }
 
@@ -234,6 +271,9 @@ void WebPortal::handleApiStatus() {
   json += ",\"calibrated\":";
   json += (s.calibrated ? "true" : "false");
 
+  json += ",\"rebooting\":";
+  json += (_rebootPending ? "true" : "false");
+
   json += ",\"sensorReady\":";
   json += (s.rawSample != 0.0f ? "true" : "false");
 
@@ -278,74 +318,201 @@ void WebPortal::handleApiConfig() {
 }
 
 // ---- /api/wifi (POST form) ----
+// Saves the new uplink configuration and answers *before* touching the radio.
+// The actual reconfiguration is handed to WifiManager::requestSettings(),
+// which applies it from the network task loop after WIFI_APPLY_DELAY_MS.
+// This is what used to make "Apply Configuration" look unresponsive: the old
+// code called WiFi.disconnect()/WiFi.begin() inside the HTTP handler, so the
+// browser kept waiting for a response while the radio was torn down.
 void WebPortal::handleApiWifi() {
   ensureCfg();
+
   int mode = _http.hasArg("mode") ? _http.arg("mode").toInt() : (int)WIFI_MODE_NONE;
+  if (mode < (int)WIFI_MODE_NONE || mode > (int)WIFI_MODE_ENT) {
+    Serial.printf("[portal] /api/wifi rejected: invalid mode %d\n", mode);
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"INVALID_WIFI_MODE\","
+                  "\"message\":\"WiFi mode must be 0 (soft-AP only), 1 (WPA2-PSK) or 2 (WPA2-Enterprise)\"},"
+                  "\"message\":\"Invalid WiFi mode\"}");
+    return;
+  }
+
   _cfg.wifiMode = (uint8_t)mode;
-  _cfg.ssid = _http.hasArg("ssid") ? _http.arg("ssid") : "";
-  _cfg.wpaPassword = _http.hasArg("psk") ? _http.arg("psk") : "";
-  _cfg.entIdentity = _http.hasArg("eid") ? _http.arg("eid") : "";
-  _cfg.entUsername = _http.hasArg("eusr") ? _http.arg("eusr") : "";
-  _cfg.entPassword = _http.hasArg("epwd") ? _http.arg("epwd") : "";
+  _cfg.ssid         = _http.hasArg("ssid") ? _http.arg("ssid") : "";
+  _cfg.wpaPassword  = _http.hasArg("psk")  ? _http.arg("psk")  : "";
+  _cfg.entIdentity  = _http.hasArg("eid")  ? _http.arg("eid")  : "";
+  _cfg.entUsername  = _http.hasArg("eusr") ? _http.arg("eusr") : "";
+  _cfg.entPassword  = _http.hasArg("epwd") ? _http.arg("epwd") : "";
+  _cfg.ssid.trim();
+  _cfg.entIdentity.trim();
+  _cfg.entUsername.trim();
+  _cfgLoaded = true;
+
+  if (_cfg.wifiMode != WIFI_MODE_NONE && _cfg.ssid.length() == 0) {
+    Serial.println("[portal] /api/wifi rejected: SSID missing");
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"SSID_REQUIRED\","
+                  "\"message\":\"A network SSID is required when an uplink mode is selected\"},"
+                  "\"message\":\"Network SSID is required\"}");
+    return;
+  }
+
+  if (_cfg.wifiMode == WIFI_MODE_PSK &&
+      _cfg.wpaPassword.length() > 0 && _cfg.wpaPassword.length() < 8) {
+    Serial.println("[portal] /api/wifi rejected: PSK shorter than 8 characters");
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"PSK_TOO_SHORT\","
+                  "\"message\":\"WPA2-PSK passwords must be at least 8 characters\"},"
+                  "\"message\":\"WPA2 password is too short\"}");
+    return;
+  }
+
+  if (_cfg.wifiMode == WIFI_MODE_ENT && _cfg.entUsername.length() == 0) {
+    Serial.println("[portal] /api/wifi rejected: enterprise username missing");
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"ENTERPRISE_USERNAME_REQUIRED\","
+                  "\"message\":\"Username (inner identity) is required for WPA2-Enterprise\"},"
+                  "\"message\":\"Enterprise username is required\"}");
+    return;
+  }
 
   if (_settings) _settings->saveWifi(_cfg);
-  if (_wifi)     _wifi->applySettings(_cfg);
 
-  sendJson(200, "{\"ok\":true,\"message\":\"WiFi settings saved. Reconnecting...\"}");
+  // Answer first: everything below runs after this response is on the wire.
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"message\":\"Configuration saved. Uplink is being applied...\"}");
+
+  if (_wifi) _wifi->requestSettings(_cfg);
+  Serial.printf("[portal] /api/wifi saved (mode=%u, ssid='%s')\n",
+                (unsigned)_cfg.wifiMode, _cfg.ssid.c_str());
 }
 
 // ---- /api/tare (POST) ----
 void WebPortal::handleApiTare() {
   if (_shared) _shared->requestCommand(CMD_TARE);
-  sendJson(200, "{\"ok\":true,\"message\":\"Tare requested - keep scale empty\"}");
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"message\":\"Tare requested - keep scale empty\"}");
 }
 
 // ---- /api/calibrate?kg=... (POST) ----
+// Single-point calibration: derives counts/kg from the live HX711 reading,
+// persists it to NVS and restarts the transmitter so the new calibration is
+// loaded exactly like after a power cycle.
 void WebPortal::handleApiCalibrate() {
   float kg = _http.hasArg("kg") ? _http.arg("kg").toFloat() : 0.0f;
-  if (kg <= 0.0f) {
-    sendJson(400, "{\"ok\":false,\"message\":\"Enter a valid known weight in kg\"}");
+  if (!(kg > 0.0f)) {
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"INVALID_REFERENCE_WEIGHT\","
+                  "\"message\":\"Enter a valid known weight in kg\"},"
+                  "\"message\":\"Invalid reference weight\"}");
     return;
   }
+
+  ScaleSnapshot snap = _shared ? _shared->getSnapshot() : ScaleSnapshot{};
+  if (snap.rawSample == 0.0f) {
+    Serial.println("[portal] /api/calibrate rejected: no HX711 reading available");
+    sendJson(409, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"SENSOR_NOT_READY\","
+                  "\"message\":\"No HX711 reading available yet. Check the load cell wiring and tare the scale first\"},"
+                  "\"message\":\"Sensor is not ready\"}");
+    return;
+  }
+
+  float countsPerKg = snap.rawSample / kg;
+  if (!(countsPerKg > 0.0f)) {
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"INVALID_CALIBRATION\","
+                  "\"message\":\"Measured raw counts are not positive. Tare the scale, place the reference weight and retry\"},"
+                  "\"message\":\"Calibration could not be computed\"}");
+    return;
+  }
+
   ensureCfg();
-  _cfg.countsPerKg = 0.0f;
-  if (_shared) _shared->requestCommand(CMD_CALIBRATE, kg);
-  sendJson(200, "{\"ok\":true,\"message\":\"Calibrating with " + String(kg, 3) + " kg\"}");
+  _cfg.countsPerKg  = countsPerKg;
+  _cfg.calIntercept = 0.0f;
+  _cfg.calibrated   = true;
+  _cfgLoaded        = true;
+
+  // Persist first (the SettingsStore mutex keeps NVS single-writer safe),
+  // then let the sensor task refresh the live snapshot, then restart.
+  if (_settings) _settings->saveCalibrationValues(countsPerKg, 0.0f, true);
+  if (_shared)   _shared->requestCommand(CMD_CALIBRATE_MLR, countsPerKg, 0.0f);
+
+  Serial.printf("[portal] /api/calibrate persisted countsPerKg=%.4f (reference %.3f kg)\n",
+                countsPerKg, kg);
+
+  scheduleReboot(CALIBRATION_REBOOT_DELAY_MS);
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"data\":{\"countsPerKg\":" + String(countsPerKg, 4) +
+                ",\"referenceKg\":" + String(kg, 4) + "},"
+                "\"message\":\"Calibration saved (" + String(countsPerKg, 1) +
+                " counts/kg). Device is rebooting...\"}");
 }
 
 // ---- /api/calibrate/multi (POST) ----
+// Multi-point calibration: the browser sends the averaged counts/kg derived
+// from every captured reference point. The value is persisted to NVS and the
+// transmitter restarts so it takes effect on a clean boot.
 void WebPortal::handleApiCalibrateMulti() {
   float slope = _http.hasArg("slope") ? _http.arg("slope").toFloat() : 0.0f;
-  float intercept = _http.hasArg("intercept") ? _http.arg("intercept").toFloat() : 0.0f;
-  if (slope <= 0.0f) {
+  if (!(slope > 0.0f)) {
     Serial.println("[portal] /api/calibrate/multi rejected: invalid slope");
-    sendJson(400, "{\"ok\":false,\"message\":\"Invalid calibration slope\"}");
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"INVALID_CALIBRATION_SLOPE\","
+                  "\"message\":\"Invalid calibration slope: capture at least one reference point first\"},"
+                  "\"message\":\"Invalid calibration slope\"}");
     return;
   }
+
   ensureCfg();
-  _cfg.countsPerKg = slope;
-  _cfg.calIntercept = intercept;
-  _cfg.calibrated = true;
-  Serial.printf("[portal] /api/calibrate/multi slope=%.4f intercept=%.4f\n", slope, intercept);
-  if (_shared) _shared->requestCommand(CMD_CALIBRATE_MLR, slope, intercept);
-  if (_settings) _settings->saveCalibration(_cfg);
-  sendJson(200, "{\"ok\":true,\"message\":\"Multi-point calibration applied\"}");
+  _cfg.countsPerKg  = slope;
+  _cfg.calIntercept = 0.0f;
+  _cfg.calibrated   = true;
+  _cfgLoaded        = true;
+
+  if (_settings) _settings->saveCalibrationValues(slope, 0.0f, true);
+  if (_shared)   _shared->requestCommand(CMD_CALIBRATE_MLR, slope, 0.0f);
+
+  Serial.printf("[portal] /api/calibrate/multi persisted countsPerKg=%.4f\n", slope);
+
+  scheduleReboot(CALIBRATION_REBOOT_DELAY_MS);
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"data\":{\"countsPerKg\":" + String(slope, 4) + "},"
+                "\"message\":\"Calibration saved (" + String(slope, 1) +
+                " counts/kg). Device is rebooting...\"}");
 }
 
 // ---- /api/totals/reset (POST) ----
 void WebPortal::handleApiResetSession() {
   if (_shared) _shared->requestCommand(CMD_RESET_SESSION);
-  sendJson(200, "{\"ok\":true,\"message\":\"Session totals reset successfully\"}");
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"message\":\"Session totals reset successfully\"}");
 }
 
 // ---- /api/portal/force (POST) ----
+// Forgets the uplink credentials, drops the STA link and reboots so the unit
+// comes back up as a pure soft-AP setup hotspot (calibration is untouched).
 void WebPortal::handleApiForceAp() {
-  if (_shared) _shared->requestCommand(CMD_WIPE_WIFI);
-  sendJson(200, "{\"ok\":true,\"message\":\"WiFi forgotten; opening setup AP\"}");
+  ensureCfg();
+  _cfg.wifiMode = WIFI_MODE_NONE;
+  _cfg.ssid = "";         _cfg.wpaPassword = "";
+  _cfg.entIdentity = "";  _cfg.entUsername = "";  _cfg.entPassword = "";
+  _cfgLoaded = true;
+
+  if (_settings) _settings->saveWifi(_cfg);
+
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"message\":\"WiFi credentials cleared. Device is rebooting into the setup AP...\"}");
+
+  if (_wifi) _wifi->requestSettings(_cfg);
+  scheduleReboot(CALIBRATION_REBOOT_DELAY_MS);
 }
 
 // ---- /api/factory (POST) ----
 void WebPortal::handleApiFactoryReset() {
   if (_settings) _settings->factoryReset();
-  sendJson(200, "{\"ok\":true,\"message\":\"Factory reset complete. Rebooting recommended.\" }");
+  _cfgLoaded = false;
+  scheduleReboot(CALIBRATION_REBOOT_DELAY_MS);
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"message\":\"Factory reset complete. Device is rebooting...\"}");
 }

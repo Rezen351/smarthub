@@ -75,6 +75,7 @@ void setup() {
   Serial.printf("[scale] FW %d.%d  chipCores=%u\n",
                 FW_VERSION >> 8, FW_VERSION & 0xFF, (unsigned)ESP.getChipCores());
 
+  gSettings.begin();              // create the cross-core NVS mutex first
   gSettings.load(gAppSettings);
   checkForceApButton();           // may erase WiFi creds, never calibration
 

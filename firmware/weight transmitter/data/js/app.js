@@ -38,6 +38,10 @@
     btnResetTotals: el('btnResetTotals'),
     btnFactoryReset: el('btnFactoryReset'),
     btnForgetWifi: el('btnForgetWifi'),
+    btnSaveWifi: el('btnSaveWifi'),
+
+    rebootOverlay: el('rebootOverlay'),
+    rebootMessage: el('rebootMessage'),
 
     calibPointsBody: el('calibPointsBody'),
     calibEmptyRow: el('calibEmptyRow'),
@@ -62,7 +66,12 @@
 
   let toastTimer = null;
   let calibPoints = [];
-  let regression = null;
+  let avgCalibration = null;
+  let pollingPaused = false;    // true while a restart is expected
+  let statusInFlight = false;   // prevents overlapping /api/status polls
+
+  // Every request is bounded so a stalled radio can never freeze the UI.
+  const API_TIMEOUT_MS = 4000;
 
   function showToast(message, isError = false) {
     if (!ui.toast) return;
@@ -76,54 +85,101 @@
     }, 3200);
   }
 
+  function setBusy(button, busy, busyLabel, idleLabel) {
+    if (!button) return;
+    button.disabled = busy;
+    button.textContent = busy ? busyLabel : idleLabel;
+  }
+
+  function showRebootOverlay(message) {
+    if (!ui.rebootOverlay) return;
+    if (ui.rebootMessage && message) ui.rebootMessage.textContent = message;
+    ui.rebootOverlay.classList.add('reboot-overlay-visible');
+  }
+
+  function hideRebootOverlay() {
+    if (!ui.rebootOverlay) return;
+    ui.rebootOverlay.classList.remove('reboot-overlay-visible');
+  }
+
   async function apiCall(endpoint, options = {}) {
+    const controller = (typeof AbortController === 'function') ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), API_TIMEOUT_MS) : null;
+
     try {
-      const response = await fetch(endpoint, Object.assign({
-        headers: { 'Accept': 'application/json' }
-      }, options));
+      const requestOptions = Object.assign({
+        headers: { 'Accept': 'application/json' },
+        cache: 'no-store'
+      }, options);
+      if (controller && !requestOptions.signal) requestOptions.signal = controller.signal;
+
+      const response = await fetch(endpoint, requestOptions);
       const data = await response.json();
       return data;
     } catch (err) {
       console.warn(`[API] Error contacting ${endpoint}:`, err);
       return null;
+    } finally {
+      if (timer) clearTimeout(timer);
     }
+  }
+
+  // Polls the transmitter until it answers again after a restart.
+  async function waitForDeviceOnline(timeoutMs = 30000) {
+    const startedAt = Date.now();
+    while ((Date.now() - startedAt) < timeoutMs) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const data = await apiCall('/api/status');
+      if (data && typeof data.uptime === 'number' && data.rebooting !== true) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Shared post-restart flow: overlay -> wait -> reload the SPA.
+  async function handleRebootFlow() {
+    pollingPaused = true;
+    showRebootOverlay('Applying changes and restarting the transmitter...');
+
+    const online = await waitForDeviceOnline();
+    if (online) {
+      showRebootOverlay('Transmitter is back online. Reloading...');
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      window.location.reload();
+      return true;
+    }
+
+    pollingPaused = false;
+    hideRebootOverlay();
+    showToast('Transmitter did not come back within 30 s. Reconnect to its WiFi and reload.', true);
+    return false;
   }
 
   function formatGramsToKg(g) {
     return ((g || 0) / 1000.0).toFixed(3);
   }
 
-  function computeRegression(points) {
+  function computeAverage(points) {
     const n = points.length;
-    if (n < 2) return null;
+    if (n < 1) return null;
 
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+    let sumRatio = 0;
+    let minRaw = Infinity;
+    let maxRaw = -Infinity;
     for (const p of points) {
-      const x = p.weightKg;
-      const y = p.rawCounts;
-      sumX += x; sumY += y; sumXY += x * y; sumX2 += x * x; sumY2 += y * y;
+      const ratio = p.weightKg > 0 ? p.rawCounts / p.weightKg : 0;
+      sumRatio += ratio;
+      if (p.rawCounts < minRaw) minRaw = p.rawCounts;
+      if (p.rawCounts > maxRaw) maxRaw = p.rawCounts;
     }
 
-    const denom = n * sumX2 - sumX * sumX;
-    if (Math.abs(denom) < 1e-9) return null;
-
-    const slope = (n * sumXY - sumX * sumY) / denom;
-    const intercept = (sumY - slope * sumX) / n;
-
-    let ssRes = 0, ssTot = 0;
-    const meanY = sumY / n;
-    for (const p of points) {
-      const y = p.rawCounts;
-      const predicted = slope * p.weightKg + intercept;
-      ssRes += (y - predicted) ** 2;
-      ssTot += (y - meanY) ** 2;
-    }
-
-    const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
-    const stdErrCounts = n > 2 ? Math.sqrt(ssRes / (n - 2)) : 0;
-    const stdErrKg = slope !== 0 ? stdErrCounts / Math.abs(slope) : 0;
-
-    return { slope, intercept, r2, stdErrCounts, stdErrKg, n };
+    return {
+      countsPerKg: sumRatio / n,
+      n,
+      minRaw: minRaw === Infinity ? 0 : minRaw,
+      maxRaw: maxRaw === -Infinity ? 0 : maxRaw
+    };
   }
 
   function renderCalibPoints() {
@@ -151,7 +207,7 @@
         btn.addEventListener('click', () => {
           const idx = parseInt(btn.getAttribute('data-idx'), 10);
           calibPoints.splice(idx, 1);
-          updateRegression();
+          updateAverage();
           renderCalibPoints();
         });
       });
@@ -162,32 +218,41 @@
     }
   }
 
-  function updateRegression() {
-    regression = computeRegression(calibPoints);
+  function updateAverage() {
+    avgCalibration = computeAverage(calibPoints);
 
-    if (regression && ui.regressionResults) {
+    if (avgCalibration && ui.regressionResults) {
       ui.regressionResults.style.display = 'grid';
-      if (ui.valSlope) ui.valSlope.textContent = regression.slope.toFixed(1);
-      if (ui.valIntercept) ui.valIntercept.textContent = regression.intercept.toFixed(1);
-      if (ui.valR2) ui.valR2.textContent = regression.r2.toFixed(5);
-      if (ui.valStdErr) ui.valStdErr.textContent = regression.stdErrKg.toFixed(3);
+      if (ui.valSlope) ui.valSlope.textContent = avgCalibration.countsPerKg.toFixed(1);
+      if (ui.valIntercept) ui.valIntercept.textContent = String(avgCalibration.n);
+      if (ui.valR2) ui.valR2.textContent = Math.round(avgCalibration.minRaw).toLocaleString();
+      if (ui.valStdErr) ui.valStdErr.textContent = Math.round(avgCalibration.maxRaw).toLocaleString();
     } else if (ui.regressionResults) {
       ui.regressionResults.style.display = 'none';
     }
 
     if (ui.btnApplyMulti) {
-      ui.btnApplyMulti.disabled = !regression || calibPoints.length < 2;
+      ui.btnApplyMulti.disabled = !avgCalibration || calibPoints.length < 1;
     }
   }
 
   // Update Live Telemetry
   async function refreshStatus() {
-    const data = await apiCall('/api/status');
-    if (!data) {
-      if (ui.barIp) ui.barIp.textContent = 'Disconnected';
-      return;
+    if (pollingPaused || statusInFlight) return;
+    statusInFlight = true;
+    try {
+      const data = await apiCall('/api/status');
+      if (!data) {
+        if (ui.barIp) ui.barIp.textContent = 'Disconnected';
+        return;
+      }
+      applyStatus(data);
+    } finally {
+      statusInFlight = false;
     }
+  }
 
+  function applyStatus(data) {
     if (ui.valWeightKg) ui.valWeightKg.textContent = (data.weightKg !== undefined) ? data.weightKg.toFixed(3) : '0.000';
     if (ui.valStableKg) ui.valStableKg.textContent = formatGramsToKg(data.stableG) + ' kg';
     if (ui.valRawCounts) ui.valRawCounts.textContent = Math.round(data.raw || 0).toLocaleString();
@@ -326,7 +391,7 @@
           showToast('Failed to read sensor data', true);
         } else {
           calibPoints.push({ weightKg: kg, rawCounts: data.raw, timestamp: Date.now() });
-          updateRegression();
+          updateAverage();
           renderCalibPoints();
           showToast(`Captured point ${calibPoints.length}: ${kg.toFixed(3)} kg @ ${Math.round(data.raw).toLocaleString()} counts`);
         }
@@ -338,40 +403,32 @@
 
     if (ui.btnApplyMulti) {
       ui.btnApplyMulti.addEventListener('click', async () => {
-        if (!regression) return;
+        const avg = computeAverage(calibPoints);
+        if (!avg) return;
 
-        ui.btnApplyMulti.disabled = true;
-        ui.btnApplyMulti.textContent = 'Applying...';
-        
+        setBusy(ui.btnApplyMulti, true, 'Applying...', 'Apply Calibration');
+
         try {
-          const url = `/api/calibrate/multi?slope=${encodeURIComponent(regression.slope)}&intercept=${encodeURIComponent(regression.intercept)}`;
+          const url = `/api/calibrate/multi?slope=${encodeURIComponent(avg.countsPerKg.toFixed(4))}`;
           const res = await apiCall(url, { method: 'POST' });
-          
+
           if (!res) {
-            showToast('Failed to apply calibration: network error', true);
+            showToast('Failed to apply calibration: no response from the transmitter', true);
             return;
           }
-          
           if (!res.ok) {
             showToast(res.message || 'Calibration failed', true);
             return;
           }
-          
-          showToast('Calibration applied, verifying...', false);
-          
-          await new Promise(r => setTimeout(r, 400));
-          const status = await apiCall('/api/status');
-          if (status && status.calibrated) {
-            showToast('Calibration successfully applied and verified', false);
-          } else {
-            showToast('Warning: calibration may not have taken effect', true);
-          }
+
+          // Calibration is stored in NVS and the transmitter restarts, so wait
+          // for it to come back and then reload the page with fresh values.
+          showToast(res.message || 'Calibration saved. Device is rebooting...', false);
+          await handleRebootFlow();
         } catch (e) {
           showToast('Error applying calibration', true);
         } finally {
-          ui.btnApplyMulti.disabled = false;
-          ui.btnApplyMulti.textContent = 'Apply Calibration';
-          refreshStatus();
+          setBusy(ui.btnApplyMulti, false, 'Applying...', 'Apply Calibration');
         }
       });
     }
@@ -379,8 +436,8 @@
     if (ui.btnClearPoints) {
       ui.btnClearPoints.addEventListener('click', () => {
         calibPoints = [];
-        regression = null;
-        updateRegression();
+        avgCalibration = null;
+        updateAverage();
         renderCalibPoints();
         showToast('All calibration points cleared');
       });
@@ -413,27 +470,41 @@
     if (ui.wifiForm) {
       ui.wifiForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+
         const mode = ui.wmode.value;
         const ssid = encodeURIComponent(ui.ssid.value.trim());
-        const psk = encodeURIComponent(ui.psk.value);
-        const eid = encodeURIComponent(ui.eid.value.trim());
+        const psk  = encodeURIComponent(ui.psk.value);
+        const eid  = encodeURIComponent(ui.eid.value.trim());
         const eusr = encodeURIComponent(ui.eusr.value.trim());
         const epwd = encodeURIComponent(ui.epwd.value);
-
         const body = `mode=${mode}&ssid=${ssid}&psk=${psk}&eid=${eid}&eusr=${eusr}&epwd=${epwd}`;
 
-        const res = await apiCall('/api/wifi', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: body
-        });
+        setBusy(ui.btnSaveWifi, true, 'Applying...', 'Apply Configuration');
 
-        if (res && res.message) {
-          showToast(res.message);
-        } else {
-          showToast('WiFi settings saved. Reconnecting...');
+        try {
+          const res = await apiCall('/api/wifi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body
+          });
+
+          if (!res) {
+            showToast('No response from the transmitter. Retry in a few seconds.', true);
+            return;
+          }
+          if (!res.ok) {
+            showToast(res.message || 'Configuration rejected', true);
+            return;
+          }
+
+          showToast(res.message || 'Configuration saved. Uplink is being applied...', false);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          await refreshStatus();
+        } catch (err) {
+          showToast('Error applying configuration', true);
+        } finally {
+          setBusy(ui.btnSaveWifi, false, 'Applying...', 'Apply Configuration');
         }
-        setTimeout(refreshStatus, 1500);
       });
     }
 
@@ -452,11 +523,11 @@
             return;
           }
           showToast(res.message || 'Uplink credentials cleared.', false);
+          await handleRebootFlow();
         } catch (e) {
           showToast('Error forgetting WiFi', true);
         } finally {
           ui.btnForgetWifi.disabled = false;
-          setTimeout(refreshStatus, 1000);
         }
       });
     }
@@ -478,11 +549,11 @@
             return;
           }
           showToast(res.message || 'Transmitter factory reset complete.', false);
+          await handleRebootFlow();
         } catch (e) {
           showToast('Error during factory reset', true);
         } finally {
           ui.btnFactoryReset.disabled = false;
-          setTimeout(() => window.location.reload(), 2000);
         }
       });
     }
