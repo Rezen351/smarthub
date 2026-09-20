@@ -1,0 +1,43 @@
+#ifndef SETTINGS_H
+#define SETTINGS_H
+
+#include <Arduino.h>
+#include <Preferences.h>
+#include "config.h"
+
+// WiFi authentication modes
+enum WifiMode : uint8_t {
+  WIFI_MODE_NONE = 0,   // no uplink (AP/setup only)
+  WIFI_MODE_PSK  = 1,   // WPA2-PSK
+  WIFI_MODE_ENT  = 2    // WPA2-Enterprise (PEAP/MSCHAPv2)
+};
+
+// All persistent application settings (NVS-backed via Preferences).
+struct AppSettings {
+  uint8_t  wifiMode = WIFI_MODE_NONE;
+  String   ssid;
+  String   wpaPassword;
+  String   entIdentity;
+  String   entUsername;
+  String   entPassword;
+
+  float    calOffset   = 0.0f;   // tare offset (raw counts)
+  float    countsPerKg = 0.0f;   // calibration slope
+  float    calIntercept= 0.0f;   // calibration intercept (raw counts at 0 kg)
+  bool     calibrated  = false;
+
+  double   totalG      = 0.0;    // accumulated weight (grams) - stored
+  uint32_t sampleCount = 0;      // weighing count - stored
+};
+
+class SettingsStore {
+public:
+  void    load(AppSettings& s);
+  void    saveAll(const AppSettings& s);
+  void    saveWifi(const AppSettings& s);
+  void    saveCalibration(const AppSettings& s);
+  void    saveTotals(double totalG, uint32_t count);
+  void    factoryReset();
+};
+
+#endif // SETTINGS_H
