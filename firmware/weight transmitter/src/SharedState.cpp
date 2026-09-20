@@ -14,10 +14,12 @@ void SharedState::begin() {
   _cmdArg = 0.0f;
   _cmdArg2 = 0.0f;
   _cmdPending = false;
+  _commandProcessing = false;
   _sessCount = 0;
   _totalG = 0.0;
   _minG = 0.0;
   _maxG = 0.0;
+  _calPointCount = 0;
 }
 
 void SharedState::setSnapshot(const ScaleSnapshot& s) {
@@ -91,4 +93,73 @@ void SharedState::getSessionTotals(uint32_t& count, double& totalG, double& minG
 
 uint32_t SharedState::uptimeSeconds() {
   return (uint32_t)(millis() / 1000);
+}
+
+void SharedState::resetCalibrationPoints() {
+  if (_mutex) xSemaphoreTake(_mutex, portMAX_DELAY);
+  _calPointCount = 0;
+  if (_mutex) xSemaphoreGive(_mutex);
+}
+
+void SharedState::addCalibrationPoint(float weightKg, float rawCounts) {
+  if (_mutex) xSemaphoreTake(_mutex, portMAX_DELAY);
+  if (_calPointCount < MAX_CALIBRATION_POINTS) {
+    _calPoints[_calPointCount].weightKg = weightKg;
+    _calPoints[_calPointCount].rawCounts = rawCounts;
+    _calPointCount++;
+  }
+  if (_mutex) xSemaphoreGive(_mutex);
+}
+
+uint8_t SharedState::calibrationPointCount() const {
+  uint8_t c = 0;
+  if (_mutex) xSemaphoreTake(_mutex, portMAX_DELAY);
+  c = _calPointCount;
+  if (_mutex) xSemaphoreGive(_mutex);
+  return c;
+}
+
+SharedState::CalibrationPoint SharedState::getCalibrationPoint(uint8_t index) const {
+  CalibrationPoint p = {0.0f, 0.0f};
+  if (_mutex) xSemaphoreTake(_mutex, portMAX_DELAY);
+  if (index < _calPointCount) {
+    p = _calPoints[index];
+  }
+  if (_mutex) xSemaphoreGive(_mutex);
+  return p;
+}
+
+bool SharedState::computeLinearRegression(float& slope, float& intercept) const {
+  if (_mutex) xSemaphoreTake(_mutex, portMAX_DELAY);
+  if (_calPointCount < 2) {
+    if (_mutex) xSemaphoreGive(_mutex);
+    return false;
+  }
+
+  double sumX = 0.0;
+  double sumY = 0.0;
+  double sumXY = 0.0;
+  double sumX2 = 0.0;
+
+  for (uint8_t i = 0; i < _calPointCount; i++) {
+    double x = (double)_calPoints[i].weightKg;
+    double y = (double)_calPoints[i].rawCounts;
+    sumX += x;
+    sumY += y;
+    sumXY += x * y;
+    sumX2 += x * x;
+  }
+
+  double n = (double)_calPointCount;
+  double denom = n * sumX2 - sumX * sumX;
+
+  bool ok = false;
+  if (fabs(denom) >= 1e-6) {
+    slope = (float)((n * sumXY - sumX * sumY) / denom);
+    intercept = (float)((sumY - slope * sumX) / n);
+    ok = slope > 0.0f;
+  }
+
+  if (_mutex) xSemaphoreGive(_mutex);
+  return ok;
 }

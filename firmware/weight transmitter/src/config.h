@@ -78,5 +78,5 @@
 #define PREF_NAMESPACE      "scale"
 
 // ------------------------- Firmware ----------------------------------
-#define FW_VERSION          0x0102   // major<<8 | minor  (1.2)
+#define FW_VERSION          0x0103   // major<<8 | minor  (1.3)
 #endif // SCALE_CONFIG_H

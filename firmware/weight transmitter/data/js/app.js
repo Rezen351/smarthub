@@ -559,10 +559,20 @@
     }
   }
 
+  async function loadCalibrationPoints() {
+    const data = await apiCall('/api/calibration/points');
+    if (data && data.ok && Array.isArray(data.data.points)) {
+      calibPoints = data.data.points.map(p => ({ weightKg: p.kg, rawCounts: p.counts, timestamp: Date.now() }));
+      updateAverage();
+      renderCalibPoints();
+    }
+  }
+
   // Initialization
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', async () => {
     initEvents();
     loadConfig();
+    await loadCalibrationPoints();
     refreshStatus();
     setInterval(refreshStatus, 500);
   });

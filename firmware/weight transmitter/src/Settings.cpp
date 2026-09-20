@@ -67,6 +67,18 @@ void SettingsStore::load(AppSettings& s) {
   s.totalG       = _prefs.isKey("totalG")   ? (double)_prefs.getFloat("totalG") : 0.0;
   s.sampleCount  = _prefs.isKey("count")    ? _prefs.getUInt("count")      : 0;
 
+  s.calPointCount = _prefs.isKey("calPtCnt") ? _prefs.getUChar("calPtCnt") : 0;
+  if (s.calPointCount > MAX_CALIBRATION_POINTS) {
+    s.calPointCount = 0;
+  }
+  for (uint8_t i = 0; i < s.calPointCount; i++) {
+    char wKey[16], rKey[16];
+    snprintf(wKey, sizeof(wKey), "calPtW%u", (unsigned)i);
+    snprintf(rKey, sizeof(rKey), "calPtR%u", (unsigned)i);
+    s.calPointWeightKg[i] = _prefs.getFloat(wKey);
+    s.calPointRawCounts[i] = _prefs.getFloat(rKey);
+  }
+
   close();
 
   if (s.calibrated && s.countsPerKg <= 0.0f) {
@@ -123,6 +135,54 @@ void SettingsStore::saveTotals(double totalG, uint32_t count) {
   openWrite();
   _prefs.putFloat("totalG", (float)totalG);
   _prefs.putUInt("count", count);
+  close();
+  unlockNvs();
+}
+
+void SettingsStore::saveCalibrationPoints(const AppSettings& s) {
+  lockNvs();
+  openWrite();
+  _prefs.putUChar("calPtCnt", s.calPointCount);
+  for (uint8_t i = 0; i < s.calPointCount; i++) {
+    char wKey[16], rKey[16];
+    snprintf(wKey, sizeof(wKey), "calPtW%u", (unsigned)i);
+    snprintf(rKey, sizeof(rKey), "calPtR%u", (unsigned)i);
+    _prefs.putFloat(wKey, s.calPointWeightKg[i]);
+    _prefs.putFloat(rKey, s.calPointRawCounts[i]);
+  }
+  close();
+  unlockNvs();
+}
+
+void SettingsStore::loadCalibrationPoints(AppSettings& s) {
+  lockNvs();
+  openRead();
+  s.calPointCount = _prefs.isKey("calPtCnt") ? _prefs.getUChar("calPtCnt") : 0;
+  if (s.calPointCount > MAX_CALIBRATION_POINTS) {
+    s.calPointCount = 0;
+  }
+  for (uint8_t i = 0; i < s.calPointCount; i++) {
+    char wKey[16], rKey[16];
+    snprintf(wKey, sizeof(wKey), "calPtW%u", (unsigned)i);
+    snprintf(rKey, sizeof(rKey), "calPtR%u", (unsigned)i);
+    s.calPointWeightKg[i] = _prefs.getFloat(wKey);
+    s.calPointRawCounts[i] = _prefs.getFloat(rKey);
+  }
+  close();
+  unlockNvs();
+}
+
+void SettingsStore::clearCalibrationPoints() {
+  lockNvs();
+  openWrite();
+  _prefs.remove("calPtCnt");
+  for (uint8_t i = 0; i < MAX_CALIBRATION_POINTS; i++) {
+    char wKey[16], rKey[16];
+    snprintf(wKey, sizeof(wKey), "calPtW%u", (unsigned)i);
+    snprintf(rKey, sizeof(rKey), "calPtR%u", (unsigned)i);
+    _prefs.remove(wKey);
+    _prefs.remove(rKey);
+  }
   close();
   unlockNvs();
 }

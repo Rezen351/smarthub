@@ -13,7 +13,9 @@ enum ScaleCmd : uint8_t {
   CMD_CALIBRATE_MLR = 5,   // apply pre-computed multi-point regression (argF = slope, argF2 = intercept)
   CMD_RESET_SESSION = 3,   // zero total / count / min / max
   CMD_FLUSH         = 4,   // force persist of session totals
-  CMD_WIPE_WIFI     = 99   // forget WiFi config + reboot into AP/setup
+  CMD_WIPE_WIFI     = 99,  // forget WiFi config + reboot into AP/setup
+  CMD_CAPTURE_CAL_POINT = 6, // capture one calibration reference point (argF = kg, argF2 = expectedRaw)
+  CMD_FINISH_CALIBRATION = 7 // compute regression from captured points and apply
 };
 
 // Immutable-ish snapshot written by the scale task and read by the
@@ -27,6 +29,13 @@ struct ScaleSnapshot {
   float interceptCounts;// calibration intercept (raw counts at 0 kg)
   bool  calibrated;     // countsPerKg has been set
 };
+
+struct CalibrationPoint {
+  float weightKg;       // known reference weight (kg)
+  float rawCounts;      // averaged HX711 raw counts at that weight
+};
+
+static const uint8_t MAX_CALIBRATION_POINTS = 8;
 
 class SharedState {
 public:
@@ -47,6 +56,13 @@ public:
   void setSessionTotals(uint32_t count, double totalG, double minG, double maxG);
   void getSessionTotals(uint32_t& count, double& totalG, double& minG, double& maxG);
 
+  // ---- calibration points (multi-point regression) ----
+  void resetCalibrationPoints();
+  void addCalibrationPoint(float weightKg, float rawCounts);
+  uint8_t calibrationPointCount() const;
+  CalibrationPoint getCalibrationPoint(uint8_t index) const;
+  bool computeLinearRegression(float& slope, float& intercept) const;
+
   // ---- boot time (ms) ----
   uint32_t uptimeSeconds();
 
@@ -59,6 +75,9 @@ private:
   bool     _commandProcessing = false;
 
   uint32_t _sessCount; double _totalG; double _minG; double _maxG;
+
+  CalibrationPoint _calPoints[MAX_CALIBRATION_POINTS];
+  uint8_t _calPointCount;
 };
 
 #endif // SHARED_STATE_H

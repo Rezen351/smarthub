@@ -15,6 +15,7 @@ static void hCalibrateMulti()  { if (gPortal) gPortal->handleApiCalibrateMulti()
 static void hCalibrationStart()  { if (gPortal) gPortal->handleApiCalibrationStart(); }
 static void hCalibrationCapture() { if (gPortal) gPortal->handleApiCalibrationCapture(); }
 static void hCalibrationFinish()  { if (gPortal) gPortal->handleApiCalibrationFinish(); }
+static void hCalibrationPoints()  { if (gPortal) gPortal->handleApiCalibrationPoints(); }
 static void hResetSession()    { if (gPortal) gPortal->handleApiResetSession(); }
 static void hForceAp()         { if (gPortal) gPortal->handleApiForceAp(); }
 static void hFactory()         { if (gPortal) gPortal->handleApiFactoryReset(); }
@@ -53,6 +54,7 @@ void WebPortal::begin(SharedState* shared, SettingsStore* settings,
   _http.on("/api/calibration/start",  HTTP_POST, hCalibrationStart);
   _http.on("/api/calibration/capture", HTTP_POST, hCalibrationCapture);
   _http.on("/api/calibration/finish",  HTTP_POST, hCalibrationFinish);
+  _http.on("/api/calibration/points",  HTTP_GET,  hCalibrationPoints);
   _http.on("/api/totals/reset",     HTTP_POST, hResetSession);
   _http.on("/api/portal/force",     HTTP_POST, hForceAp);
   _http.on("/api/factory",          HTTP_POST, hFactory);
@@ -516,7 +518,7 @@ void WebPortal::handleApiCalibrationFinish() {
     _settings->load(a);
     a.calPointCount = pointCount;
     for (uint8_t i = 0; i < pointCount; i++) {
-      SharedState::CalibrationPoint p = _shared->getCalibrationPoint(i);
+      CalibrationPoint p = _shared->getCalibrationPoint(i);
       a.calPointWeightKg[i] = p.weightKg;
       a.calPointRawCounts[i] = p.rawCounts;
     }
@@ -534,7 +536,7 @@ void WebPortal::handleApiCalibrationFinish() {
 
   String pointsJson = "[";
   for (uint8_t i = 0; i < pointCount; i++) {
-    SharedState::CalibrationPoint p = _shared->getCalibrationPoint(i);
+    CalibrationPoint p = _shared->getCalibrationPoint(i);
     if (i > 0) pointsJson += ",";
     pointsJson += "{\"kg\":" + String(p.weightKg, 4) + ",\"counts\":" + String(p.rawCounts, 1) + "}";
   }
@@ -545,6 +547,27 @@ void WebPortal::handleApiCalibrationFinish() {
                 ",\"intercept\":" + String(intercept, 4) +
                 ",\"points\":" + pointsJson + "},"
                 "\"message\":\"Multi-point calibration saved. Rebooting...\"}");
+}
+
+void WebPortal::handleApiCalibrationPoints() {
+  if (!_shared) {
+    sendJson(500, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"INTERNAL_ERROR\",\"message\":\"Shared state unavailable\"},"
+                  "\"message\":\"Internal error\"}");
+    return;
+  }
+
+  uint8_t pointCount = _shared->calibrationPointCount();
+  String pointsJson = "[";
+  for (uint8_t i = 0; i < pointCount; i++) {
+    SharedState::CalibrationPoint p = _shared->getCalibrationPoint(i);
+    if (i > 0) pointsJson += ",";
+    pointsJson += "{\"kg\":" + String(p.weightKg, 4) + ",\"counts\":" + String(p.rawCounts, 1) + "}";
+  }
+  pointsJson += "]";
+
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"data\":{\"points\":" + pointsJson + "}}");
 }
 
 void WebPortal::handleApiResetSession() {

@@ -77,7 +77,7 @@ uint8_t SharedState::calibrationPointCount() const {
   return _calPointCount;
 }
 
-SharedState::CalibrationPoint SharedState::getCalibrationPoint(uint8_t index) const {
+CalibrationPoint SharedState::getCalibrationPoint(uint8_t index) const {
   CalibrationPoint p = {0.0f, 0.0f};
   if (index < _calPointCount) {
     p = _calPoints[index];

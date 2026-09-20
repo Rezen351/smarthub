@@ -8,7 +8,6 @@ void ScaleSensor::begin(SharedState* shared, SettingsStore* settings) {
   _hx.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN, HX711_FAST_PROCESSOR);
   _hx.power_up();
 
-  // Restore calibration from NVS.
   AppSettings persisted;
   _st->load(persisted);
 
@@ -18,10 +17,16 @@ void ScaleSensor::begin(SharedState* shared, SettingsStore* settings) {
 
   ScaleSnapshot snap = _s->getSnapshot();
   snap.offsetCounts = persisted.calOffset;
-  snap.countsPerKg  = persisted.countsPerKg;
+  snap.countsPerKg = persisted.countsPerKg;
   snap.interceptCounts = persisted.calIntercept;
-  snap.calibrated   = persisted.calibrated;
+  snap.calibrated = persisted.calibrated;
   _s->setSnapshot(snap);
+
+  for (uint8_t i = 0; i < persisted.calPointCount; i++) {
+    _s->addCalibrationPoint(persisted.calPointWeightKg[i], persisted.calPointRawCounts[i]);
+  }
+
+  Serial.println("[scale] HX711 initialised, calibration loaded from NVS");
 }
 
 // Returns true once the HX711 has produced a datum.
@@ -80,6 +85,32 @@ void ScaleSensor::loop() {
           applyCalibration(slope, intercept);
         } else {
           Serial.println("[scale] CMD_CALIBRATE_MLR ignored: slope <= 0");
+        }
+        break;
+      }
+      case CMD_CAPTURE_CAL_POINT: {
+        float weightKg = arg;
+        float expectedRaw = arg2;
+        if (weightKg > 0.0f && hxPoll(_hx, 500)) {
+          float raw = (float)_hx.get_value();
+          if (expectedRaw > 0.0f) {
+            raw = expectedRaw;
+          }
+          _s->addCalibrationPoint(weightKg, raw);
+          Serial.printf("[scale] CMD_CAPTURE_CAL_POINT captured %.3f kg -> %.1f counts (total points: %d)\n",
+                        weightKg, raw, (int)_s->calibrationPointCount());
+        }
+        break;
+      }
+      case CMD_FINISH_CALIBRATION: {
+        float slope = 0.0f;
+        float intercept = 0.0f;
+        if (_s->computeLinearRegression(slope, intercept)) {
+          Serial.printf("[scale] CMD_FINISH_CALIBRATION computed slope=%.4f intercept=%.4f\n",
+                        slope, intercept);
+          applyCalibration(slope, intercept);
+        } else {
+          Serial.println("[scale] CMD_FINISH_CALIBRATION ignored: need at least 2 points with non-zero slope");
         }
         break;
       }

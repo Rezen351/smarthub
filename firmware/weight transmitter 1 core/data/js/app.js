@@ -160,6 +160,21 @@
     return ((g || 0) / 1000.0).toFixed(3);
   }
 
+  async function refreshStatus() {
+    if (pollingPaused || statusInFlight) return;
+    statusInFlight = true;
+    try {
+      const data = await apiCall('/api/status');
+      if (!data) {
+        if (ui.barIp) ui.barIp.textContent = 'Disconnected';
+        return;
+      }
+      applyStatus(data);
+    } finally {
+      statusInFlight = false;
+    }
+  }
+
   function computeAverage(points) {
     const n = points.length;
     if (n < 1) return null;
@@ -559,10 +574,20 @@
     }
   }
 
+  async function loadCalibrationPoints() {
+    const data = await apiCall('/api/calibration/points');
+    if (data && data.ok && Array.isArray(data.data.points)) {
+      calibPoints = data.data.points.map(p => ({ weightKg: p.kg, rawCounts: p.counts, timestamp: Date.now() }));
+      updateAverage();
+      renderCalibPoints();
+    }
+  }
+
   // Initialization
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', async () => {
     initEvents();
     loadConfig();
+    await loadCalibrationPoints();
     refreshStatus();
     setInterval(refreshStatus, 500);
   });

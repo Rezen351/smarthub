@@ -29,6 +29,7 @@ public:
   void handleApiCalibrationStart();
   void handleApiCalibrationCapture();
   void handleApiCalibrationFinish();
+  void handleApiCalibrationPoints();
   void handleApiResetSession();
   void handleApiForceAp();
   void handleApiFactoryReset();
