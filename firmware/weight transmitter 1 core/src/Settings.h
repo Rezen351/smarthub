@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <Preferences.h>
 #include "config.h"
+#include "SharedState.h"
 
 // WiFi authentication modes
 enum WifiMode : uint8_t {
@@ -28,6 +29,10 @@ struct AppSettings {
 
   double   totalG      = 0.0;    // accumulated weight (grams) - stored
   uint32_t sampleCount = 0;      // weighing count - stored
+
+  uint8_t  calPointCount = 0;    // number of valid calibration points
+  float    calPointWeightKg[MAX_CALIBRATION_POINTS]; // reference weights (kg)
+  float    calPointRawCounts[MAX_CALIBRATION_POINTS]; // raw counts at those weights
 };
 
 class SettingsStore {
@@ -41,6 +46,10 @@ public:
   void    saveCalibrationValues(float countsPerKg, float intercept, bool calibrated);
   void    saveTotals(double totalG, uint32_t count);
   void    factoryReset();
+
+  void    saveCalibrationPoints(const AppSettings& s);
+  void    loadCalibrationPoints(AppSettings& s);
+  void    clearCalibrationPoints();
 };
 
 #endif // SETTINGS_H

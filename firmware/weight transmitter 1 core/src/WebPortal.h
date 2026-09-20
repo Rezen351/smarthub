@@ -26,6 +26,9 @@ public:
   void handleApiTare();
   void handleApiCalibrate();
   void handleApiCalibrateMulti();
+  void handleApiCalibrationStart();
+  void handleApiCalibrationCapture();
+  void handleApiCalibrationFinish();
   void handleApiResetSession();
   void handleApiForceAp();
   void handleApiFactoryReset();

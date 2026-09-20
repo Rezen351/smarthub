@@ -12,6 +12,9 @@ static void hWifi()            { if (gPortal) gPortal->handleApiWifi(); }
 static void hTare()            { if (gPortal) gPortal->handleApiTare(); }
 static void hCalibrate()       { if (gPortal) gPortal->handleApiCalibrate(); }
 static void hCalibrateMulti()  { if (gPortal) gPortal->handleApiCalibrateMulti(); }
+static void hCalibrationStart()  { if (gPortal) gPortal->handleApiCalibrationStart(); }
+static void hCalibrationCapture() { if (gPortal) gPortal->handleApiCalibrationCapture(); }
+static void hCalibrationFinish()  { if (gPortal) gPortal->handleApiCalibrationFinish(); }
 static void hResetSession()    { if (gPortal) gPortal->handleApiResetSession(); }
 static void hForceAp()         { if (gPortal) gPortal->handleApiForceAp(); }
 static void hFactory()         { if (gPortal) gPortal->handleApiFactoryReset(); }
@@ -47,6 +50,9 @@ void WebPortal::begin(SharedState* shared, SettingsStore* settings,
   _http.on("/api/tare",             HTTP_POST, hTare);
   _http.on("/api/calibrate",        HTTP_POST, hCalibrate);
   _http.on("/api/calibrate/multi",  HTTP_POST, hCalibrateMulti);
+  _http.on("/api/calibration/start",  HTTP_POST, hCalibrationStart);
+  _http.on("/api/calibration/capture", HTTP_POST, hCalibrationCapture);
+  _http.on("/api/calibration/finish",  HTTP_POST, hCalibrationFinish);
   _http.on("/api/totals/reset",     HTTP_POST, hResetSession);
   _http.on("/api/portal/force",     HTTP_POST, hForceAp);
   _http.on("/api/factory",          HTTP_POST, hFactory);
@@ -234,6 +240,9 @@ void WebPortal::handleApiStatus() {
 
   json += ",\"calibrated\":";
   json += (s.calibrated ? "true" : "false");
+
+  json += ",\"calibrationPoints\":";
+  json += String(_shared ? _shared->calibrationPointCount() : 0);
 
   json += ",\"rebooting\":";
   json += (_rebootPending ? "true" : "false");
@@ -424,6 +433,118 @@ void WebPortal::handleApiCalibrateMulti() {
                 "\"data\":{\"countsPerKg\":" + String(slope, 4) + "},"
                 "\"message\":\"Calibration saved (" + String(slope, 1) +
                 " counts/kg). Device is rebooting...\"}");
+}
+
+void WebPortal::handleApiCalibrationStart() {
+  if (_shared) {
+    _shared->resetCalibrationPoints();
+  }
+  Serial.println("[portal] /api/calibration/start cleared previous calibration points");
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"message\":\"Calibration session started. Place a known weight and capture points.\"}");
+}
+
+void WebPortal::handleApiCalibrationCapture() {
+  float kg = _http.hasArg("kg") ? _http.arg("kg").toFloat() : 0.0f;
+  if (!(kg > 0.0f)) {
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"INVALID_REFERENCE_WEIGHT\","
+                  "\"message\":\"Enter a valid known weight in kg\"},"
+                  "\"message\":\"Invalid reference weight\"}");
+    return;
+  }
+
+  ScaleSnapshot snap = _shared ? _shared->getSnapshot() : ScaleSnapshot{};
+  if (snap.rawSample == 0.0f) {
+    sendJson(409, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"SENSOR_NOT_READY\","
+                  "\"message\":\"No HX711 reading available yet\"},"
+                  "\"message\":\"Sensor is not ready\"}");
+    return;
+  }
+
+  if (_shared) {
+    _shared->requestCommand(CMD_CAPTURE_CAL_POINT, kg, snap.rawSample);
+  }
+
+  uint8_t count = _shared ? _shared->calibrationPointCount() : 0;
+  Serial.printf("[portal] /api/calibration/capture queued %.3f kg (points: %d)\n", kg, (int)count);
+
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"data\":{\"weightKg\":" + String(kg, 4) +
+                ",\"rawCounts\":" + String(snap.rawSample, 1) +
+                ",\"pointCount\":" + String((unsigned)count) + "},"
+                "\"message\":\"Calibration point captured (" + String(count) + " points)\"}");
+}
+
+void WebPortal::handleApiCalibrationFinish() {
+  if (!_shared) {
+    sendJson(500, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"INTERNAL_ERROR\",\"message\":\"Shared state unavailable\"},"
+                  "\"message\":\"Internal error\"}");
+    return;
+  }
+
+  uint8_t pointCount = _shared->calibrationPointCount();
+  if (pointCount < 2) {
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"INSUFFICIENT_POINTS\","
+                  "\"message\":\"At least 2 calibration points are required for regression\"},"
+                  "\"message\":\"Insufficient calibration points\"}");
+    return;
+  }
+
+  float slope = 0.0f;
+  float intercept = 0.0f;
+  if (!_shared->computeLinearRegression(slope, intercept)) {
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"REGRESSION_FAILED\","
+                  "\"message\":\"Could not compute linear regression from calibration points\"},"
+                  "\"message\":\"Regression failed\"}");
+    return;
+  }
+
+  ensureCfg();
+  _cfg.countsPerKg = slope;
+  _cfg.calIntercept = intercept;
+  _cfg.calibrated = true;
+  _cfgLoaded = true;
+
+  if (_settings) {
+    _settings->saveCalibrationValues(slope, intercept, true);
+    AppSettings a;
+    _settings->load(a);
+    a.calPointCount = pointCount;
+    for (uint8_t i = 0; i < pointCount; i++) {
+      SharedState::CalibrationPoint p = _shared->getCalibrationPoint(i);
+      a.calPointWeightKg[i] = p.weightKg;
+      a.calPointRawCounts[i] = p.rawCounts;
+    }
+    _settings->saveCalibrationPoints(a);
+  }
+
+  if (_shared) {
+    _shared->requestCommand(CMD_CALIBRATE_MLR, slope, intercept);
+  }
+
+  Serial.printf("[portal] /api/calibration/finish persisted slope=%.4f intercept=%.4f points=%d\n",
+                slope, intercept, (int)pointCount);
+
+  scheduleReboot(CALIBRATION_REBOOT_DELAY_MS);
+
+  String pointsJson = "[";
+  for (uint8_t i = 0; i < pointCount; i++) {
+    SharedState::CalibrationPoint p = _shared->getCalibrationPoint(i);
+    if (i > 0) pointsJson += ",";
+    pointsJson += "{\"kg\":" + String(p.weightKg, 4) + ",\"counts\":" + String(p.rawCounts, 1) + "}";
+  }
+  pointsJson += "]";
+
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"data\":{\"countsPerKg\":" + String(slope, 4) +
+                ",\"intercept\":" + String(intercept, 4) +
+                ",\"points\":" + pointsJson + "},"
+                "\"message\":\"Multi-point calibration saved. Rebooting...\"}");
 }
 
 void WebPortal::handleApiResetSession() {

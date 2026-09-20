@@ -17,6 +17,7 @@ void SharedState::begin() {
   _totalG = 0.0;
   _minG = 0.0;
   _maxG = 0.0;
+  _calPointCount = 0;
 }
 
 void SharedState::setSnapshot(const ScaleSnapshot& s) {
@@ -58,4 +59,60 @@ void SharedState::getSessionTotals(uint32_t& count, double& totalG, double& minG
 
 uint32_t SharedState::uptimeSeconds() {
   return (uint32_t)(millis() / 1000);
+}
+
+void SharedState::resetCalibrationPoints() {
+  _calPointCount = 0;
+}
+
+void SharedState::addCalibrationPoint(float weightKg, float rawCounts) {
+  if (_calPointCount < MAX_CALIBRATION_POINTS) {
+    _calPoints[_calPointCount].weightKg = weightKg;
+    _calPoints[_calPointCount].rawCounts = rawCounts;
+    _calPointCount++;
+  }
+}
+
+uint8_t SharedState::calibrationPointCount() const {
+  return _calPointCount;
+}
+
+SharedState::CalibrationPoint SharedState::getCalibrationPoint(uint8_t index) const {
+  CalibrationPoint p = {0.0f, 0.0f};
+  if (index < _calPointCount) {
+    p = _calPoints[index];
+  }
+  return p;
+}
+
+bool SharedState::computeLinearRegression(float& slope, float& intercept) const {
+  if (_calPointCount < 2) {
+    return false;
+  }
+
+  double sumX = 0.0;
+  double sumY = 0.0;
+  double sumXY = 0.0;
+  double sumX2 = 0.0;
+
+  for (uint8_t i = 0; i < _calPointCount; i++) {
+    double x = (double)_calPoints[i].weightKg;
+    double y = (double)_calPoints[i].rawCounts;
+    sumX += x;
+    sumY += y;
+    sumXY += x * y;
+    sumX2 += x * x;
+  }
+
+  double n = (double)_calPointCount;
+  double denom = n * sumX2 - sumX * sumX;
+
+  if (fabs(denom) < 1e-6) {
+    return false;
+  }
+
+  slope = (float)((n * sumXY - sumX * sumY) / denom);
+  intercept = (float)((sumY - slope * sumX) / n);
+
+  return slope > 0.0f;
 }
