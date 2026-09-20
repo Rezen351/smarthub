@@ -204,7 +204,7 @@
  /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/WebServer/src/detail/RequestHandler.h \
  /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/DNSServer/src/DNSServer.h \
  /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/WiFi/src/WiFiUdp.h \
- /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/LittleFS/src/LittleFS.h \
+ /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/SPIFFS/src/SPIFFS.h \
  /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/FS/src/FS.h \
  src/SharedState.h src/Settings.h \
  /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/Preferences/src/Preferences.h \

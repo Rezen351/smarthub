@@ -4,13 +4,13 @@
 #include <Arduino.h>
 #include <WebServer.h>
 #include <DNSServer.h>
-#include <LittleFS.h>
+#include <SPIFFS.h>
 #include "SharedState.h"
 #include "Settings.h"
 #include "WifiManager.h"
 #include "ModbusServer.h"
 
-// Captive-portal + calibration web UI backed by LittleFS static assets.
+// Captive-portal + calibration web UI backed by SPIFFS static assets.
 // Always accessible on the Soft-AP IP (and additionally LAN IP when STA is connected).
 class WebPortal {
 public:
@@ -35,6 +35,12 @@ public:
 
   void sendJson(uint16_t code, const String& json);
 
+  // SPIFFS state queries
+  bool fsMounted() const { return _fsOk; }
+  String fsInfo() const;
+  size_t fsTotalBytes() const;
+  size_t fsUsedBytes() const;
+
 private:
   WebServer      _http{80};
   DNSServer      _dns;
@@ -47,7 +53,7 @@ private:
   bool           _fsOk = false;
 
   void ensureCfg();
-  bool serveFromLittleFS(String path);
+  bool serveFromSPIFFS(String path);
   String getContentType(const String& path);
 };
 

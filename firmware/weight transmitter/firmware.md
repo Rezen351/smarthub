@@ -386,9 +386,9 @@ When a device connects to the Soft-AP and opens any URL, DNS returns `192.168.4.
 
 | Method | Path | Query / Body params | Description |
 |--------|------|---------------------|-------------|
-| `GET` | `/` | — | Single-page UI (`/index.html` served from LittleFS) |
-| `GET` | `/css/style.css` | — | Stylesheet served from LittleFS |
-| `GET` | `/js/app.js` | — | Client application script served from LittleFS |
+| `GET` | `/` | — | Single-page UI (`/index.html` served from SPIFFS) |
+| `GET` | `/css/style.css` | — | Stylesheet served from SPIFFS |
+| `GET` | `/js/app.js` | — | Client application script served from SPIFFS |
 | `GET` | `/api/status` | — | JSON snapshot: weight, calibration, WiFi, uptime, session |
 | `GET` | `/api/config` | — | Return stored WiFi + calibration config as JSON |
 | `POST` | `/api/wifi` | Form: `mode`, `ssid`, `psk`, `eid`, `eusr`, `epwd` | Save WiFi credentials + reconnect STA |
@@ -645,7 +645,7 @@ pio run -e esp32-c3-mini
 pio run -t upload && pio device monitor --baud 115200
 ```
 
-### Flash LittleFS Filesystem
+### Flash SPIFFS Filesystem
 
 ```bash
 pio run -t uploadfs
@@ -668,9 +668,9 @@ pio run -t uploadfs
 
 ```
 firmware/weight transmitter/
-+-- platformio.ini              <- build config, LittleFS filesystem, lib dependencies
++-- platformio.ini              <- build config, SPIFFS filesystem, lib dependencies
 +-- firmware.md                 <- this document
-+-- data/                       <- LittleFS filesystem assets (HTML/CSS/JS separated)
++-- data/                       <- SPIFFS filesystem assets (HTML/CSS/JS separated)
 |   +-- index.html              <- modern responsive captive portal & dashboard UI
 |   +-- css/
 |   |   +-- style.css           <- dark emerald theme stylesheet
@@ -684,7 +684,7 @@ firmware/weight transmitter/
     +-- Scale.h/.cpp            <- HX711 acquisition, EMA filter, calibration
     +-- WifiManager.h/.cpp      <- AP+STA dual-mode WiFi management
     +-- ModbusServer.h/.cpp     <- Modbus TCP server, holding register publish
-    +-- WebPortal.h/.cpp        <- HTTP captive portal, LittleFS static server & REST API
+    +-- WebPortal.h/.cpp        <- HTTP captive portal, SPIFFS static server & REST API
 ```
 
 ---

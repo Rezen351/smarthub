@@ -1,5 +1,5 @@
-.pio/build/esp32-c3-mini/liba97/LittleFS/LittleFS.cpp.o: \
- /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/LittleFS/src/LittleFS.cpp \
+.pio/build/esp32-c3-mini/lib738/SPIFFS/SPIFFS.cpp.o: \
+ /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/SPIFFS/src/SPIFFS.cpp \
  /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/FS/src/vfs_api.h \
  /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/FS/src/FS.h \
  /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/cores/esp32/Arduino.h \
@@ -163,6 +163,6 @@
  /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/cores/esp32/io_pin_remap.h \
  /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/cores/esp32/Arduino.h \
  /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/FS/src/FSImpl.h \
- /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/LittleFS/src/LittleFS.h \
- /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/FS/src/FS.h \
- /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/tools/sdk/esp32c3/include/esp_littlefs/include/esp_littlefs.h
+ /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/tools/sdk/esp32c3/include/spiffs/include/esp_spiffs.h \
+ /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/SPIFFS/src/SPIFFS.h \
+ /root/.platformio/packages/framework-arduinoespressif32@3.20014.231204/libraries/FS/src/FS.h

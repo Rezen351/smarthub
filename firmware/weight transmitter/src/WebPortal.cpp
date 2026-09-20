@@ -31,12 +31,15 @@ void WebPortal::begin(SharedState* shared, SettingsStore* settings,
   _modbus = modbus;
   gPortal = this;
 
-  // Mount LittleFS filesystem (formatOnFail = true)
-  _fsOk = LittleFS.begin(true, "/");
+  // Mount SPIFFS filesystem (formatOnFail = false to avoid silent corruption)
+  _fsOk = SPIFFS.begin(false, "/spiffs", 10, "spiffs");
   if (_fsOk) {
-    Serial.println("[portal] LittleFS mounted successfully");
+    Serial.printf("[portal] SPIFFS mounted: %u bytes total, %u bytes used\n",
+                  (unsigned)SPIFFS.totalBytes(),
+                  (unsigned)SPIFFS.usedBytes());
   } else {
-    Serial.println("[portal] ERROR: LittleFS mount failed!");
+    Serial.println("[portal] ERROR: SPIFFS mount failed! "
+                   "Run 'pio run -t uploadfs' to flash the filesystem image.");
   }
 
   // Register captive portal probe routes (Android, iOS, Windows, ChromeOS)
@@ -89,7 +92,7 @@ void WebPortal::sendJson(uint16_t code, const String& json) {
 }
 
 // =====================================================================
-//  LittleFS Static File Serving
+//  SPIFFS Static File Serving
 // =====================================================================
 String WebPortal::getContentType(const String& path) {
   if (path.endsWith(".html") || path.endsWith(".htm")) return "text/html";
@@ -102,12 +105,28 @@ String WebPortal::getContentType(const String& path) {
   return "text/plain";
 }
 
-bool WebPortal::serveFromLittleFS(String path) {
+String WebPortal::fsInfo() const {
+  if (!_fsOk) return "not mounted";
+  return String("mounted, ") + String(SPIFFS.totalBytes()) + " total, " +
+         String(SPIFFS.usedBytes()) + " used, " +
+         String(SPIFFS.totalBytes() - SPIFFS.usedBytes()) + " free";
+}
+
+size_t WebPortal::fsTotalBytes() const {
+  return _fsOk ? SPIFFS.totalBytes() : 0;
+}
+
+size_t WebPortal::fsUsedBytes() const {
+  return _fsOk ? SPIFFS.usedBytes() : 0;
+}
+
+bool WebPortal::serveFromSPIFFS(String path) {
   if (path.endsWith("/")) {
     path += "index.html";
   }
 
   if (!_fsOk) {
+    Serial.println("[portal] serveFromSPIFFS skipped: filesystem not mounted");
     return false;
   }
 
@@ -115,31 +134,34 @@ bool WebPortal::serveFromLittleFS(String path) {
     path = "/" + path;
   }
 
-  if (LittleFS.exists(path)) {
-    File file = LittleFS.open(path, "r");
-    if (file) {
-      String contentType = getContentType(path);
-      _http.streamFile(file, contentType);
-      file.close();
-      return true;
-    }
+  if (!SPIFFS.exists(path)) {
+    return false;
   }
 
-  return false;
+  File file = SPIFFS.open(path, "r");
+  if (!file) {
+    Serial.printf("[portal] serveFromSPIFFS: failed to open '%s'\n", path.c_str());
+    return false;
+  }
+
+  String contentType = getContentType(path);
+  _http.streamFile(file, contentType);
+  file.close();
+  return true;
 }
 
 // =====================================================================
 //  Web Page & Captive Portal Routing
 // =====================================================================
 void WebPortal::handleRoot() {
-  if (!serveFromLittleFS("/index.html")) {
-    // Graceful fallback if LittleFS image has not yet been uploaded
+  if (!serveFromSPIFFS("/index.html")) {
+    Serial.println("[portal] fallback: serving inline HTML (SPIFFS image missing or corrupt)");
     String fallback = "<!DOCTYPE html><html><head><meta charset='utf-8'><title>E-Tani Weight Transmitter</title>"
                       "<style>body{background:#0a150f;color:#e2e8f0;font-family:sans-serif;padding:24px;line-height:1.6;}"
                       "h1{color:#10b981;}.box{background:#162e20;border:1px solid #1e3f2c;padding:16px;border-radius:8px;}</style></head>"
                       "<body><h1>E-Tani Weight Transmitter</h1><div class='box'>"
-                      "<p><strong>LittleFS partition mounted:</strong> " + String(_fsOk ? "YES" : "NO") + "</p>"
-                      "<p>Filesystem image (<code>index.html</code>) not found in LittleFS.</p>"
+                      "<p><strong>SPIFFS partition:</strong> " + fsInfo() + "</p>"
+                      "<p>Filesystem image (<code>index.html</code>) not found in SPIFFS.</p>"
                       "<p>Please build and upload the filesystem using: <code>pio run -t uploadfs</code></p>"
                       "<p><a href='/api/status' style='color:#34d399;'>Inspect /api/status JSON &rarr;</a></p>"
                       "</div></body></html>";
@@ -163,10 +185,12 @@ void WebPortal::handleNotFound() {
     return;
   }
 
-  // Attempt to serve static asset directly from LittleFS (e.g. /css/style.css, /js/app.js)
-  if (serveFromLittleFS(uri)) {
+  // Attempt to serve static asset directly from SPIFFS (e.g. /css/style.css, /js/app.js)
+  if (serveFromSPIFFS(uri)) {
     return;
   }
+
+  Serial.printf("[portal] 404: '%s' (fs mounted: %s)\n", uri.c_str(), _fsOk ? "yes" : "no");
 
   // If request comes from an unexpected domain on captive portal, redirect to root
   String host = _http.hostHeader();
