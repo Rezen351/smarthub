@@ -119,7 +119,7 @@ uint8_t SharedState::calibrationPointCount() const {
   return c;
 }
 
-SharedState::CalibrationPoint SharedState::getCalibrationPoint(uint8_t index) const {
+CalibrationPoint SharedState::getCalibrationPoint(uint8_t index) const {
   CalibrationPoint p = {0.0f, 0.0f};
   if (_mutex) xSemaphoreTake(_mutex, portMAX_DELAY);
   if (index < _calPointCount) {

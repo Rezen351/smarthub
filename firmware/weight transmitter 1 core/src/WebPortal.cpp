@@ -560,7 +560,7 @@ void WebPortal::handleApiCalibrationPoints() {
   uint8_t pointCount = _shared->calibrationPointCount();
   String pointsJson = "[";
   for (uint8_t i = 0; i < pointCount; i++) {
-    SharedState::CalibrationPoint p = _shared->getCalibrationPoint(i);
+    CalibrationPoint p = _shared->getCalibrationPoint(i);
     if (i > 0) pointsJson += ",";
     pointsJson += "{\"kg\":" + String(p.weightKg, 4) + ",\"counts\":" + String(p.rawCounts, 1) + "}";
   }

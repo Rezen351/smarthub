@@ -266,6 +266,7 @@
         <div class="card-body">
           <p class="table-description">
             Holding Registers base address <strong>40001</strong> (Function Code 03 Read, 06/16 Write).
+            Float values are encoded as two consecutive 16-bit registers (IEEE 754 single-precision).
           </p>
           <div class="table-responsive">
             <table class="data-table">
@@ -279,64 +280,124 @@
               </thead>
               <tbody>
                 <tr>
-                  <td class="font-mono">40001</td>
-                  <td>System Status Bitfield</td>
-                  <td>UInt16</td>
-                  <td><span class="tag tag-ro">RO</span></td>
-                </tr>
-                <tr>
-                  <td class="font-mono">40002 &ndash; 40003</td>
-                  <td>Raw ADC Counts (HX711)</td>
-                  <td>Int32</td>
-                  <td><span class="tag tag-ro">RO</span></td>
-                </tr>
-                <tr>
-                  <td class="font-mono">40004 &ndash; 40005</td>
+                  <td class="font-mono">40001 &ndash; 40002</td>
                   <td>Live Weight (grams)</td>
-                  <td>Int32</td>
-                  <td><span class="tag tag-ro">RO</span></td>
-                </tr>
-                <tr>
-                  <td class="font-mono">40006 &ndash; 40007</td>
-                  <td>Stable Weight Filtered (grams)</td>
-                  <td>Int32</td>
-                  <td><span class="tag tag-ro">RO</span></td>
-                </tr>
-                <tr>
-                  <td class="font-mono">40008 &ndash; 40009</td>
-                  <td>Weight (kilograms)</td>
                   <td>Float32</td>
                   <td><span class="tag tag-ro">RO</span></td>
                 </tr>
                 <tr>
-                  <td class="font-mono">40010 &ndash; 40011</td>
-                  <td>Tare Offset Value</td>
-                  <td>UInt32</td>
+                  <td class="font-mono">40003 &ndash; 40004</td>
+                  <td>Stable Weight Filtered (grams)</td>
+                  <td>Float32</td>
                   <td><span class="tag tag-ro">RO</span></td>
                 </tr>
                 <tr>
-                  <td class="font-mono">40012 &ndash; 40013</td>
+                  <td class="font-mono">40005 &ndash; 40006</td>
+                  <td>Raw ADC Counts (HX711)</td>
+                  <td>Float32</td>
+                  <td><span class="tag tag-ro">RO</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40007 &ndash; 40008</td>
+                  <td>Tare Offset (raw counts)</td>
+                  <td>Float32</td>
+                  <td><span class="tag tag-ro">RO</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40009 &ndash; 40010</td>
                   <td>Calibration Counts Per Kg</td>
                   <td>Float32</td>
                   <td><span class="tag tag-ro">RO</span></td>
                 </tr>
                 <tr>
-                  <td class="font-mono">40030 &ndash; 40031</td>
-                  <td>Calibration Intercept (counts)</td>
+                  <td class="font-mono">40011</td>
+                  <td>System Status Bitfield</td>
+                  <td>UInt16</td>
+                  <td><span class="tag tag-ro">RO</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40012</td>
+                  <td>WiFi RSSI (dBm)</td>
+                  <td>Int16</td>
+                  <td><span class="tag tag-ro">RO</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40013</td>
+                  <td>WiFi Mode (0=AP, 1=PSK, 2=ENT)</td>
+                  <td>UInt16</td>
+                  <td><span class="tag tag-ro">RO</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40014</td>
+                  <td>Firmware Version (major.minor)</td>
+                  <td>UInt16</td>
+                  <td><span class="tag tag-ro">RO</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40015</td>
+                  <td>Uptime (seconds, capped at 65535)</td>
+                  <td>UInt16</td>
+                  <td><span class="tag tag-ro">RO</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40016</td>
+                  <td>Command Trigger (write to execute, read=0 when idle)</td>
+                  <td>UInt16</td>
+                  <td><span class="tag tag-rw">R/W</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40017 &ndash; 40018</td>
+                  <td>Command Argument (float)</td>
+                  <td>Float32</td>
+                  <td><span class="tag tag-rw">R/W</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40019</td>
+                  <td>Session Count (high word)</td>
+                  <td>UInt16</td>
+                  <td><span class="tag tag-ro">RO</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40020</td>
+                  <td>Session Count (low word)</td>
+                  <td>UInt16</td>
+                  <td><span class="tag tag-ro">RO</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40021 &ndash; 40022</td>
+                  <td>Session Total Weight (grams)</td>
                   <td>Float32</td>
                   <td><span class="tag tag-ro">RO</span></td>
                 </tr>
                 <tr>
                   <td class="font-mono">40023 &ndash; 40024</td>
-                  <td>Known Mass for Calibration (kg)</td>
+                  <td>Session Minimum Weight (grams)</td>
                   <td>Float32</td>
-                  <td><span class="tag tag-rw">R/W</span></td>
+                  <td><span class="tag tag-ro">RO</span></td>
                 </tr>
                 <tr>
-                  <td class="font-mono">40025</td>
-                  <td>Command Trigger (1=Tare, 2=Calib, 3=Reset Totals)</td>
+                  <td class="font-mono">40025 &ndash; 40026</td>
+                  <td>Session Maximum Weight (grams)</td>
+                  <td>Float32</td>
+                  <td><span class="tag tag-ro">RO</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40027</td>
+                  <td>Modbus Client Connected</td>
                   <td>UInt16</td>
-                  <td><span class="tag tag-rw">R/W</span></td>
+                  <td><span class="tag tag-ro">RO</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40028 &ndash; 40029</td>
+                  <td>Reserved</td>
+                  <td>&mdash;</td>
+                  <td><span class="tag tag-ro">RO</span></td>
+                </tr>
+                <tr>
+                  <td class="font-mono">40030 &ndash; 40031</td>
+                  <td>Calibration Intercept (raw counts)</td>
+                  <td>Float32</td>
+                  <td><span class="tag tag-ro">RO</span></td>
                 </tr>
               </tbody>
             </table>
