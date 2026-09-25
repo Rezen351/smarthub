@@ -1,0 +1,277 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  WEIGHING_OPERATOR
+  SORTING_OPERATOR
+  WAREHOUSE_OPERATOR
+  DELIVERY_OPERATOR
+  FARMER
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(WEIGHING_OPERATOR)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  farmerProfile Farmer?
+  weighings     WeighingRecord[]
+
+  @@map("users")
+}
+
+model Farmer {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  address   String?
+  location  String?
+  code      String   @unique
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User             @relation(fields: [userId], references: [id])
+  pallets   Pallet[]
+  weighings WeighingRecord[]
+
+  @@map("farmers")
+}
+
+model Commodity {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String   @unique // 3 digit code, e.g., 001
+  description String?
+  unit        String   @default("kg")
+  createdAt   DateTime @default(now())
+
+  // Relations
+  pallets         Pallet[]
+  grades          Grade[]
+  warehouseStocks WarehouseStock[]
+  packagingUnits  PackagingUnit[]
+  packagingItems  PackagingItem[]
+  pouches         Pouch[]
+
+  @@map("commodities")
+}
+
+model Pallet {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  farmerId    String
+  commodityId String
+  location    String?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  farmer    Farmer           @relation(fields: [farmerId], references: [id])
+  commodity Commodity        @relation(fields: [commodityId], references: [id])
+  weighings WeighingRecord[]
+  pouches   Pouch[]
+
+  @@map("pallets")
+}
+
+model Grade {
+  id          String   @id @default(uuid())
+  name        String
+  commodityId String
+  description String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  commodity Commodity        @relation(fields: [commodityId], references: [id])
+  weighings WeighingRecord[]
+  pouches   Pouch[]
+  stocks    WarehouseStock[]
+  packagingItems PackagingItem[]
+
+  @@unique([name, commodityId])
+  @@map("grades")
+}
+
+model WeighingRecord {
+  id          String   @id @default(uuid())
+  farmerId    String
+  palletId    String
+  gradeId     String
+  weightKg    Float
+  userId      String
+  deviceId    String?
+  note        String?
+  timestamp   DateTime @default(now())
+
+  // Relations
+  farmer Farmer  @relation(fields: [farmerId], references: [id])
+  pallet Pallet  @relation(fields: [palletId], references: [id])
+  grade  Grade   @relation(fields: [gradeId], references: [id])
+  user   User    @relation(fields: [userId], references: [id])
+
+  @@map("weighing_records")
+}
+
+model Pouch {
+  id          String   @id @default(uuid())
+  palletId    String
+  gradeId     String
+  qrCode      String   @unique
+  ean13       String   @unique
+  weightKg    Float    @default(1.0)
+  commodityId String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  pallet    Pallet    @relation(fields: [palletId], references: [id])
+  grade     Grade     @relation(fields: [gradeId], references: [id])
+  commodity Commodity @relation(fields: [commodityId], references: [id])
+
+  @@map("pouches")
+}
+
+model Warehouse {
+  id          String   @id @default(uuid())
+  name        String
+  location    String?
+  capacity    Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  stocks WarehouseStock[]
+
+  @@map("warehouses")
+}
+
+model WarehouseStock {
+  id          String   @id @default(uuid())
+  warehouseId String
+  gradeId     String
+  commodityId String
+  quantity    Int      @default(0)
+  totalWeight Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  grade     Grade     @relation(fields: [gradeId], references: [id])
+  commodity Commodity @relation(fields: [commodityId], references: [id])
+
+  @@unique([warehouseId, gradeId, commodityId])
+  @@map("warehouse_stock")
+}
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  sizes PackagingSize[]
+
+  @@map("packaging_types")
+}
+
+model PackagingSize {
+  id          String   @id @default(uuid())
+  typeId      String
+  code        String   @unique
+  name        String
+  capacity    Int
+  unit        String   @default("pouch")
+  createdAt   DateTime @default(now())
+
+  // Relations
+  type    PackagingType    @relation(fields: [typeId], references: [id])
+  units   PackagingUnit[]
+
+  @@map("packaging_sizes")
+}
+
+model PackagingUnit {
+  id          String   @id @default(uuid())
+  sizeId      String
+  commodityId String
+  barcode     String   @unique
+  batchNo     String?
+  totalWeight Float?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  size      PackagingSize    @relation(fields: [sizeId], references: [id])
+  commodity Commodity        @relation(fields: [commodityId], references: [id])
+  items     PackagingItem[]
+  deliveries PackagingDelivery[]
+
+  @@map("packaging_units")
+}
+
+model PackagingItem {
+  id             String   @id @default(uuid())
+  packagingUnitId String
+  gradeId        String
+  commodityId    String
+  weightKg       Float
+  pouchId        String?
+  createdAt      DateTime @default(now())
+
+  // Relations
+  packagingUnit PackagingUnit @relation(fields: [packagingUnitId], references: [id])
+  grade         Grade         @relation(fields: [gradeId], references: [id])
+  commodity     Commodity     @relation(fields: [commodityId], references: [id])
+
+  @@map("packaging_items")
+}
+
+model PackagingDelivery {
+  id              String   @id @default(uuid())
+  packagingUnitId String
+  deliveryId      String?
+  shippedAt       DateTime?
+  createdAt       DateTime @default(now())
+
+  @@map("packaging_deliveries")
+}
+
+model Delivery {
+  id          String   @id @default(uuid())
+  truckPlate  String
+  destination String
+  driverName  String?
+  commodityId String?
+  departedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@map("deliveries")
+}
+
+model ScaleReading {
+  time        DateTime   @db.Timestamptz(6)
+  deviceId    String
+  weightKg    Float?
+  palletId    String?
+  commodityId String?
+  raw         String?
+  createdAt   DateTime   @default(now())
+
+  @@id([time, deviceId])
+  @@map("scale_readings")
+}

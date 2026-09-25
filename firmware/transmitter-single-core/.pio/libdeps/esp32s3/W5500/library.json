@@ -1,0 +1,27 @@
+{
+    "authors": {
+        "name": "Raphael Kwon",
+        "url": "https://os.mbed.com/users/xeon011/"
+    },
+    "build": {
+        "builder": "MbedLibBuilder"
+    },
+    "description": "W5500 Driver",
+    "examples": [
+        "https://os.mbed.com/users/xeon011/code/Ethernet/",
+        "https://os.mbed.com/teams/WIZnet/code/Ethernet/"
+    ],
+    "frameworks": "mbed",
+    "keywords": [
+        "ethernet",
+        "socket",
+        "w5500"
+    ],
+    "name": "W5500",
+    "platforms": "*",
+    "repository": {
+        "type": "hg",
+        "url": "https://os.mbed.com/users/xeon011/code/W5500/"
+    },
+    "version": "0.0.0+sha.4f25c0dc00f7"
+}
