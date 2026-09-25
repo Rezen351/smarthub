@@ -35,6 +35,9 @@ public:
   // True when at least one Modbus TCP client is tracked as connected.
   bool clientConnected();
 
+  // True when the Modbus TCP server is listening on MODBUS_PORT.
+  bool serverRunning() const { return _started; }
+
   void setTransportMode(uint8_t mode);
   uint8_t transportMode() const { return _transportMode; }
 

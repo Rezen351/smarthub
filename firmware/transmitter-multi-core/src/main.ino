@@ -104,7 +104,7 @@ static void networkTask(void* pvParameters) {
       ScaleSnapshot s = gShared.getSnapshot();
       String ip = gWifi.transportMode() == TRANSPORT_ETHERNET ? gWifi.ethernetIp().toString() : WiFi.localIP().toString();
       if (gAppSettings.oledEnabled) {
-        gDisplay.showSummary(s.weightG, ip.c_str());
+        gDisplay.showSimple(ip.c_str(), s.stableWeightG / 1000.0f);
       }
     }
 

@@ -31,42 +31,20 @@ void DisplayManager::loop() {
   _lastUpdate = now;
 }
 
-void DisplayManager::showWeight(float weightG, float stableG) {
+void DisplayManager::showSimple(const char* ip, float weightKg) {
   if (!_enabled) return;
 
   _display.clearDisplay();
-  _display.setTextSize(1);
   _display.setTextColor(SSD1306_WHITE);
-  _display.setCursor(0, 0);
-  _display.printf("Weight: %.1f g", weightG);
-  _display.setCursor(0, 16);
-  _display.printf("Stable: %.1f g", stableG);
-  _display.display();
-}
 
-void DisplayManager::showStatus(const char* transport, const char* ip) {
-  if (!_enabled) return;
-
-  _display.clearDisplay();
   _display.setTextSize(1);
-  _display.setTextColor(SSD1306_WHITE);
-  _display.setCursor(0, 0);
-  _display.printf("Transport: %s", transport);
-  _display.setCursor(0, 16);
-  _display.printf("IP: %s", ip);
-  _display.display();
-}
-
-void DisplayManager::showSummary(float weightG, const char* ip) {
-  if (!_enabled) return;
-
-  _display.clearDisplay();
-  _display.setTextSize(1);
-  _display.setTextColor(SSD1306_WHITE);
-  _display.setCursor(0, 0);
+  _display.setCursor(12, 0);
   _display.printf("%s", ip);
-  _display.setCursor(0, 40);
-  _display.printf("Weight: %.1f g", weightG);
+
+  _display.setTextSize(2);
+  _display.setCursor(8, 10);
+  _display.printf("%.3f kg", weightKg);
+
   _display.display();
 }
 

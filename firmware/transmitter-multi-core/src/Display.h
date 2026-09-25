@@ -11,9 +11,7 @@ class DisplayManager {
   void begin();
   void loop();
 
-  void showWeight(float weightG, float stableG);
-  void showStatus(const char* transport, const char* ip);
-  void showSummary(float weightG, const char* ip);
+  void showSimple(const char* ip, float weightKg);
   void clear();
 
   bool enabled() { return _enabled; }
@@ -21,8 +19,8 @@ class DisplayManager {
 
  private:
   Adafruit_SSD1306 _display;
-  bool _enabled = true;
-  uint32_t _lastUpdate = 0;
+  bool           _enabled = true;
+  uint32_t       _lastUpdate = 0;
 };
 
 #endif
