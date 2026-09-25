@@ -2,7 +2,7 @@
 node_modules/
 .pnp
 .pnp.js
-
+.kilo
 # Environment
 .env
 .env.local
@@ -31,6 +31,10 @@ docker-data/
 # Firmware build artifacts
 firmware/weight\ transmitter/.pio/
 firmware/weight\ transmitter/.pio
+firmware/transmitter-multi-core/.pio/
+firmware/transmitter-multi-core/.pio
+firmware/transmitter-single-core/.pio/
+firmware/transmitter-single-core/.pio
 
 # Uploads
 backend/uploads/*

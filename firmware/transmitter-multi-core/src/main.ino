@@ -16,6 +16,7 @@
 #include "ModbusServer.h"
 #include "WebPortal.h"
 #include "Display.h"
+#include <ArduinoOTA.h>
 
 // ---- application singletons ----
 SharedState  gShared;
@@ -46,6 +47,41 @@ static void checkForceApButton() {
   }
 }
 
+static String otaHostname() {
+  if (OTA_HOSTNAME && OTA_HOSTNAME[0] != '\0') return String(OTA_HOSTNAME);
+  uint64_t mac = ESP.getEfuseMac();
+  char suffix[13];
+  snprintf(suffix, sizeof(suffix), "%02X%02X%02X%02X%02X%02X",
+           (uint8_t)(mac >> 40), (uint8_t)(mac >> 32), (uint8_t)(mac >> 24),
+           (uint8_t)(mac >> 16), (uint8_t)(mac >> 8), (uint8_t)mac);
+  return String(AP_SSID_PREFIX) + String(suffix);
+}
+
+static void otaSetup() {
+  ArduinoOTA.setHostname(otaHostname().c_str());
+  if (OTA_PASSWORD && OTA_PASSWORD[0] != '\0') {
+    ArduinoOTA.setPassword(OTA_PASSWORD);
+  }
+
+  ArduinoOTA.onStart([]() {
+    Serial.println("[ota] update start");
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\n[ota] update end, restarting");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    unsigned int pct = (progress * 100) / total;
+    Serial.printf("[ota] progress=%u%% (%u/%u bytes)\n", pct, progress, total);
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("[ota] error=%d\n", (int)error);
+  });
+
+  ArduinoOTA.begin();
+  Serial.printf("[ota] hostname=%s port=%u\n",
+                ArduinoOTA.getHostname(), (unsigned)OTA_PORT);
+}
+
 // ---- core 1 : networking ----
 static void networkTask(void* pvParameters) {
   uint32_t lastModbus = 0;
@@ -54,6 +90,7 @@ static void networkTask(void* pvParameters) {
   for (;;) {
     gPortal.handleClient();
     gWifi.loop();
+    ArduinoOTA.handle();
 
     if ((millis() - lastModbus) >= MODBUS_POLL_MS) {
       lastModbus = millis();
@@ -122,6 +159,8 @@ void setup() {
   gPortal.startDns();
 
   gDisplay.begin();
+
+  otaSetup();
 
   // Pin workload to the two ESP32 cores.
   BaseType_t okNet = xTaskCreatePinnedToCore(networkTask, "net",
