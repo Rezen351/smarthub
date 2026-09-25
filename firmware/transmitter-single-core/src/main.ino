@@ -70,11 +70,15 @@ void setup() {
   gDisplay.begin();
 
   Serial.println("[scale] AP: " + gWifi.apSsid() + " @ " + gWifi.apIP().toString());
+  Serial.printf("[setup] transport=%s oled=%s\n",
+                gAppSettings.transportMode == TRANSPORT_ETHERNET ? "Ethernet" : "WiFi",
+                gAppSettings.oledEnabled ? "on" : "off");
 }
 
 void loop() {
   static uint32_t lastModbus = 0;
   static uint32_t lastDisplay = 0;
+  static uint32_t lastStateLog = 0;
   uint32_t now = millis();
 
   gScale.loop();
@@ -101,5 +105,21 @@ void loop() {
     }
   }
 
-  delay(1);
+  // Periodic state summary log every 5 s for diagnostics.
+  if ((now - lastStateLog) >= 5000) {
+    lastStateLog = now;
+    ScaleSnapshot s = gShared.getSnapshot();
+    Serial.printf("[state] weight_raw=%.1f stable=%.1f cal=%d cmdPending=%d "
+                  "ap=%s sta=%s rssi=%d transport=%s uptime=%lus fw=%d.%d\n",
+                  s.rawSample, s.stableWeightG, s.calibrated ? 1 : 0,
+                  gShared.commandPending() ? 1 : 0,
+                  gWifi.apActive() ? "up" : "down",
+                  gWifi.staConnected() ? "connected" : "disconnected",
+                  (int)gWifi.rssi(),
+                  gWifi.transportMode() == TRANSPORT_ETHERNET ? "eth" : "wifi",
+                  (unsigned long)(millis() / 1000),
+                  FW_VERSION >> 8, FW_VERSION & 0xFF);
+  }
+
+  yield();
 }

@@ -183,10 +183,89 @@
         </div>
       </section>
 
+      <!-- Network & Transport Card -->
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">Network &amp; Transport Configuration</h2>
+          <span class="card-hint">Select Modbus TCP transport and configure network</span>
+        </div>
+        <div class="card-body">
+          <form id="transportForm" class="space-y-4">
+            <div class="form-group">
+              <label class="form-label">Transport Mode</label>
+              <div class="radio-group">
+                <label class="radio-label">
+                  <input type="radio" name="transportMode" value="0" checked>
+                  <span>WiFi</span>
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="transportMode" value="1">
+                  <span>Ethernet (W5500)</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="ethernetFields" style="display: none;">
+              <div class="form-group">
+                <label class="form-label">W5500 IP Configuration</label>
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="w5500Dhcp" class="form-label">DHCP</label>
+                    <select id="w5500Dhcp" class="form-select">
+                      <option value="true">DHCP Enabled</option>
+                      <option value="false">Static IP</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row" style="margin-top: 8px;">
+                  <div class="form-group flex-1">
+                    <label for="w5500StaticIp" class="form-label">Static IP</label>
+                    <input type="text" id="w5500StaticIp" class="form-input" placeholder="192.168.1.100">
+                  </div>
+                  <div class="form-group flex-1">
+                    <label for="w5500StaticGateway" class="form-label">Gateway</label>
+                    <input type="text" id="w5500StaticGateway" class="form-input" placeholder="192.168.1.1">
+                  </div>
+                </div>
+                <div class="form-row" style="margin-top: 8px;">
+                  <div class="form-group flex-1">
+                    <label for="w5500StaticSubnet" class="form-label">Subnet Mask</label>
+                    <input type="text" id="w5500StaticSubnet" class="form-input" placeholder="255.255.255.0">
+                  </div>
+                  <div class="form-group flex-1">
+                    <label for="w5500StaticDns" class="form-label">DNS Server</label>
+                    <input type="text" id="w5500StaticDns" class="form-input" placeholder="8.8.8.8">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="action-row" style="margin-top: 14px;">
+              <button type="submit" class="btn btn-primary" id="btnSaveTransport">Save Transport Configuration</button>
+            </div>
+          </form>
+
+          <div class="network-diagnostics" style="margin-top: 18px;">
+            <div class="diag-item">
+              <span class="diag-label">Transport Mode:</span>
+              <span class="diag-val" id="valTransportMode">WiFi</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Ethernet Status:</span>
+              <span class="diag-val" id="valEthernetStatus">Inactive</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Ethernet IP:</span>
+              <span class="diag-val font-mono" id="valEthernetIp">--</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- WiFi & Network Settings Card -->
       <section class="card">
         <div class="card-header">
-          <h2 class="card-title">Network &amp; WiFi Configuration</h2>
+          <h2 class="card-title">WiFi Configuration</h2>
           <span class="card-hint">Soft-AP is always active alongside Station uplink</span>
         </div>
         <div class="card-body">
@@ -423,7 +502,7 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <p>ENYX-Smart Hub &bull; Weight Transmitter &bull; by Almuzky v1 multi-core</p>
+      <p>ENYX-Smart Hub &bull; Weight Transmitter &bull; by Almuzky v1 multi-core S3</p>
     </footer>
   </div>
 

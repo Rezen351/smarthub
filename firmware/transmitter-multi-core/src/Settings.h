@@ -33,6 +33,15 @@ struct AppSettings {
   uint8_t  calPointCount = 0;    // number of valid calibration points
   float    calPointWeightKg[MAX_CALIBRATION_POINTS]; // reference weights (kg)
   float    calPointRawCounts[MAX_CALIBRATION_POINTS]; // raw counts at those weights
+
+  uint8_t  transportMode = DEFAULT_TRANSPORT;  // WiFi or Ethernet
+  bool     oledEnabled = true;
+
+  bool     w5500UseDhcp = W5500_USE_DHCP;
+  String   w5500StaticIp;
+  String   w5500StaticGateway;
+  String   w5500StaticSubnet;
+  String   w5500StaticDns;
 };
 
 class SettingsStore {
@@ -45,8 +54,6 @@ public:
   void    saveAll(const AppSettings& s);
   void    saveWifi(const AppSettings& s);
   void    saveCalibration(const AppSettings& s);
-  // Persist calibration math only (never touches the tare offset), so a
-  // stale cached copy of the offset can never overwrite a fresher tare.
   void    saveCalibrationValues(float countsPerKg, float intercept, bool calibrated);
   void    saveTotals(double totalG, uint32_t count);
   void    factoryReset();
@@ -54,6 +61,7 @@ public:
   void    saveCalibrationPoints(const AppSettings& s);
   void    loadCalibrationPoints(AppSettings& s);
   void    clearCalibrationPoints();
+  void    saveTransportSettings(const AppSettings& s);
 };
 
 #endif // SETTINGS_H

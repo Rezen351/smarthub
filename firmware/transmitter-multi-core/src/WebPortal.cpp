@@ -23,16 +23,20 @@ static void hCalibrationPoints()  { if (gPortal) gPortal->handleApiCalibrationPo
 static void hResetSession()    { if (gPortal) gPortal->handleApiResetSession(); }
 static void hForceAp()         { if (gPortal) gPortal->handleApiForceAp(); }
 static void hFactory()         { if (gPortal) gPortal->handleApiFactoryReset(); }
+static void hTransport()       { if (gPortal) gPortal->handleApiTransport(); }
+static void hEthernetConfig()  { if (gPortal) gPortal->handleApiEthernetConfig(); }
+static void hDisplayConfig()   { if (gPortal) gPortal->handleApiDisplayConfig(); }
 
 // =====================================================================
 //  Initialization & Lifecycle
 // =====================================================================
 void WebPortal::begin(SharedState* shared, SettingsStore* settings,
-                      WifiManager* wifi, ModbusServer* modbus) {
+                      WifiManager* wifi, ModbusServer* modbus, DisplayManager* display) {
   _shared = shared;
   _settings = settings;
   _wifi = wifi;
   _modbus = modbus;
+  _display = display;
   gPortal = this;
 
   // Mount SPIFFS filesystem (formatOnFail = false to avoid silent corruption)
@@ -68,6 +72,12 @@ void WebPortal::begin(SharedState* shared, SettingsStore* settings,
   _http.on("/api/totals/reset",     HTTP_POST, hResetSession);
   _http.on("/api/portal/force",     HTTP_POST, hForceAp);
   _http.on("/api/factory",          HTTP_POST, hFactory);
+  _http.on("/api/transport",        HTTP_GET,  hTransport);
+  _http.on("/api/transport",        HTTP_POST, hTransport);
+  _http.on("/api/ethernet/config",  HTTP_GET,  hEthernetConfig);
+  _http.on("/api/ethernet/config",  HTTP_POST, hEthernetConfig);
+  _http.on("/api/display/config",   HTTP_GET,  hDisplayConfig);
+  _http.on("/api/display/config",   HTTP_POST, hDisplayConfig);
 
   // Fallback handler for static files (css, js) and captive portal redirection
   _http.onNotFound(hNotFound);
@@ -309,6 +319,22 @@ void WebPortal::handleApiStatus() {
   json += ",\"apSsid\":\"" + (_wifi ? _wifi->apSsid() : "") + "\"";
   json += ",\"apIp\":\"" + (_wifi ? _wifi->apIP().toString() : "") + "\"";
   json += "}";
+
+  json += ",\"transport\":{";
+  json += "\"mode\":" + String(_cfg.transportMode);
+  json += ",\"modeName\":\"" + String(_cfg.transportMode == TRANSPORT_WIFI ? "WiFi" : "Ethernet") + "\"";
+  json += ",\"ethernetActive\":" + String(_wifi && _wifi->ethernetActive() ? "true" : "false");
+  json += ",\"ethernetIp\":\"" + (_wifi ? _wifi->ethernetIp().toString() : "") + "\"";
+  json += ",\"w5500UseDhcp\":" + String(_cfg.w5500UseDhcp ? "true" : "false");
+  json += ",\"w5500StaticIp\":\"" + _cfg.w5500StaticIp + "\"";
+  json += ",\"w5500StaticGateway\":\"" + _cfg.w5500StaticGateway + "\"";
+  json += ",\"w5500StaticSubnet\":\"" + _cfg.w5500StaticSubnet + "\"";
+  json += ",\"w5500StaticDns\":\"" + _cfg.w5500StaticDns + "\"";
+  json += "}";
+
+  json += ",\"display\":{";
+  json += "\"oledEnabled\":" + String(_cfg.oledEnabled ? "true" : "false");
+  json += "}";
   json += "}";
 
   sendJson(200, json);
@@ -324,6 +350,13 @@ void WebPortal::handleApiConfig() {
   json += ",\"entIdentity\":\"" + _cfg.entIdentity + "\"";
   json += ",\"entUsername\":\"" + _cfg.entUsername + "\"";
   json += ",\"entPassword\":\"" + _cfg.entPassword + "\"";
+  json += ",\"transportMode\":" + String(_cfg.transportMode);
+  json += ",\"oledEnabled\":" + String(_cfg.oledEnabled ? "true" : "false");
+  json += ",\"w5500UseDhcp\":" + String(_cfg.w5500UseDhcp ? "true" : "false");
+  json += ",\"w5500StaticIp\":\"" + _cfg.w5500StaticIp + "\"";
+  json += ",\"w5500StaticGateway\":\"" + _cfg.w5500StaticGateway + "\"";
+  json += ",\"w5500StaticSubnet\":\"" + _cfg.w5500StaticSubnet + "\"";
+  json += ",\"w5500StaticDns\":\"" + _cfg.w5500StaticDns + "\"";
   json += "}";
   sendJson(200, json);
 }
@@ -659,4 +692,98 @@ void WebPortal::handleApiFactoryReset() {
   scheduleReboot(CALIBRATION_REBOOT_DELAY_MS);
   sendJson(200, "{\"ok\":true,\"success\":true,"
                 "\"message\":\"Factory reset complete. Device is rebooting...\"}");
+}
+
+void WebPortal::handleApiTransport() {
+  ensureCfg();
+
+  if (_http.method() == HTTP_GET) {
+    String json = "{";
+    json += "\"transportMode\":" + String(_cfg.transportMode);
+    json += ",\"wifiMode\":" + String(_cfg.wifiMode);
+    json += ",\"ssid\":\"" + _cfg.ssid + "\"";
+    json += ",\"staConnected\":" + String(_wifi && _wifi->staConnected() ? "true" : "false");
+    json += ",\"ethernetActive\":" + String(_wifi && _wifi->ethernetActive() ? "true" : "false");
+    json += ",\"ethernetIp\":\"" + (_wifi ? _wifi->ethernetIp().toString() : "") + "\"";
+    json += ",\"apSsid\":\"" + (_wifi ? _wifi->apSsid() : "") + "\"";
+    json += ",\"apIp\":\"" + (_wifi ? _wifi->apIP().toString() : "") + "\"";
+    json += "}";
+    sendJson(200, json);
+    return;
+  }
+
+  int mode = _http.hasArg("mode") ? _http.arg("mode").toInt() : (int)DEFAULT_TRANSPORT;
+  if (mode != TRANSPORT_WIFI && mode != TRANSPORT_ETHERNET) {
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"INVALID_TRANSPORT_MODE\",\"message\":\"Transport mode must be 0 (WiFi) or 1 (Ethernet)\"},"
+                  "\"message\":\"Invalid transport mode\"}");
+    return;
+  }
+
+  _cfg.transportMode = (uint8_t)mode;
+  _cfgLoaded = true;
+
+  if (_settings) _settings->saveAll(_cfg);
+  if (_wifi) _wifi->setTransportMode((uint8_t)mode);
+  if (_modbus) _modbus->setTransportMode((uint8_t)mode);
+
+  Serial.printf("[portal] /api/transport saved (mode=%u)\n", (unsigned)mode);
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"message\":\"Transport mode saved. Applying...\"}");
+}
+
+void WebPortal::handleApiEthernetConfig() {
+  ensureCfg();
+
+  if (_http.method() == HTTP_GET) {
+    String json = "{";
+    json += "\"useDhcp\":" + String(_cfg.w5500UseDhcp ? "true" : "false");
+    json += ",\"staticIp\":\"" + _cfg.w5500StaticIp + "\"";
+    json += ",\"staticGateway\":\"" + _cfg.w5500StaticGateway + "\"";
+    json += ",\"staticSubnet\":\"" + _cfg.w5500StaticSubnet + "\"";
+    json += ",\"staticDns\":\"" + _cfg.w5500StaticDns + "\"";
+    json += ",\"currentIp\":\"" + (_wifi ? _wifi->ethernetIp().toString() : "") + "\"";
+    json += ",\"active\":" + String(_wifi && _wifi->ethernetActive() ? "true" : "false");
+    json += "}";
+    sendJson(200, json);
+    return;
+  }
+
+  bool useDhcp = _http.hasArg("useDhcp") ? _http.arg("useDhcp") == "true" : _cfg.w5500UseDhcp;
+  _cfg.w5500UseDhcp = useDhcp;
+  _cfg.w5500StaticIp = _http.hasArg("staticIp") ? _http.arg("staticIp") : _cfg.w5500StaticIp;
+  _cfg.w5500StaticGateway = _http.hasArg("staticGateway") ? _http.arg("staticGateway") : _cfg.w5500StaticGateway;
+  _cfg.w5500StaticSubnet = _http.hasArg("staticSubnet") ? _http.arg("staticSubnet") : _cfg.w5500StaticSubnet;
+  _cfg.w5500StaticDns = _http.hasArg("staticDns") ? _http.arg("staticDns") : _cfg.w5500StaticDns;
+  _cfgLoaded = true;
+
+  if (_settings) _settings->saveAll(_cfg);
+  if (_wifi) _wifi->setTransportMode(_cfg.transportMode);
+
+  Serial.printf("[portal] /api/ethernet/config saved (dhcp=%u)\n", (unsigned)useDhcp);
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"message\":\"Ethernet configuration saved. Applying...\"}");
+}
+
+void WebPortal::handleApiDisplayConfig() {
+  ensureCfg();
+
+  if (_http.method() == HTTP_GET) {
+    String json = "{";
+    json += "\"oledEnabled\":" + String(_cfg.oledEnabled ? "true" : "false");
+    json += "}";
+    sendJson(200, json);
+    return;
+  }
+
+  bool enabled = _http.hasArg("enabled") ? _http.arg("enabled") == "true" : _cfg.oledEnabled;
+  _cfg.oledEnabled = enabled;
+  _cfgLoaded = true;
+
+  if (_display) _display->setEnabled(enabled);
+  if (_settings) _settings->saveAll(_cfg);
+
+  Serial.printf("[portal] /api/display/config saved (oled=%u)\n", (unsigned)enabled);
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"message\":\"Display configuration saved\"}");
 }

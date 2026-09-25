@@ -13,6 +13,7 @@ class WifiManager {
 
   String       apSsid() { return _apSsid; }
   IPAddress    apIP()   { return WiFi.softAPIP(); }
+  bool         apActive() const { return WiFi.getMode() & WIFI_AP; }
   bool         staConnected();
   int          savedMode() { return _savedMode; }
   String       savedSsid() { return _savedSsid; }

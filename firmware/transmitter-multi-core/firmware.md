@@ -1,9 +1,7 @@
 # Weight Transmitter — Firmware Design Document
 
-> **E-Tani Smart Hub · Firmware v1.1**
-> Target: ESP32-WROOM-32 (dual-core Xtensa LX6, 240 MHz, 520 KB SRAM, 4 MB Flash)
-> Also compatible with: ESP32-S3 (Xtensa LX7, 240 MHz, native USB, same GPIO map)
-> Also compatible with: ESP32-C3-MINI (single-core RISC-V, WiFi only, compact form factor)
+> **E-Tani Smart Hub · Firmware v1.4**
+> Target: ESP32-S3 (dual-core Xtensa LX7, 240 MHz, native USB)
 > Build system: PlatformIO · framework-arduinoespressif32 6.6.0 · RTOS: FreeRTOS 10.4
 
 ---
@@ -35,25 +33,65 @@ The design is intentionally **protocol-agnostic at the top level**: the `SharedS
 | Load cell | Any strain-gauge (1-200 kg range) | 4-wire Wheatstone bridge |
 | Power supply | 5 V / 1 A USB or regulated | HX711 may use 3.3 V or 5 V VCC |
 
+### 2.1 Minimum Bill of Materials
+
+| Component | Part | Notes |
+|-----------|------|-------|
+| MCU | ESP32-S3 DevKitC-1 | Dual-core Xtensa LX7, 240 MHz, native USB, WiFi/BT |
+| Load cell ADC | HX711 module | 24-bit sigma-delta, 10/80 Hz |
+| Load cell | Any strain-gauge (1-200 kg range) | 4-wire Wheatstone bridge |
+| Ethernet | W5500 module (hardware SPI) | Modbus TCP over Ethernet |
+| Display | SSD1306 128x64 OLED (I2C) | Weight + status display |
+| Power supply | 5 V / 1 A USB or regulated | HX711 may use 3.3 V or 5 V VCC |
+
 ### 2.2 Pin Assignment
 
 ```
-ESP32 GPIO  | Signal        | Connected to
------------+---------------+-------------------------------
-GPIO 2      | LOADCELL_DOUT | HX711 DT  (data out)
-GPIO 4      | LOADCELL_SCK  | HX711 PD_SCK (clock)
-3.3 V       | HX711 VCC     | HX711 power (or 5 V)
-GND         | HX711 GND     | Common ground
-GPIO -1     | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset button)
+ESP32-S3 GPIO  | Signal        | Connected to
+--------------+---------------+-------------------------------
+GPIO 14       | LOADCELL_DOUT | HX711 DT  (data out)
+GPIO 15       | LOADCELL_SCK  | HX711 PD_SCK (clock)
+GPIO 16       | OLED_SDA      | SSD1306 SDA (I2C)
+GPIO 17       | OLED_SCL      | SSD1306 SCL (I2C)
+GPIO 10       | W5500_SCK     | W5500 SPI clock
+GPIO 11       | W5500_MISO    | W5500 SPI MISO
+GPIO 12       | W5500_MOSI    | W5500 SPI MOSI
+GPIO 13       | W5500_CS      | W5500 SPI chip select
+3.3 V         | HX711 VCC     | HX711 power (or 5 V)
+GND           | HX711 GND     | Common ground
+GPIO -1       | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset button)
 ```
+
+#### Bus topology
+
+| Bus | Peripheral | GPIO | Mode | Notes |
+|-----|-----------|------|------|-------|
+| Software GPIO | HX711 | 14, 15 | Bit-banged | Uses `HX711` library; does **not** use SPI peripheral |
+| I2C (Wire) | SSD1306 | 16, 17 | I2C | `Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN)` |
+| Hardware SPI | W5500 | 10, 11, 12, 13 | SPI | `SPI.begin(SCK, MISO, MOSI, CS)` |
+
+#### Pin conflict prevention
+
+- HX711 is bit-banged on GPIO 14/15 and does not touch the SPI peripheral, so hardware SPI on GPIO 10/11/12/13 is safe.
+- All peripherals use contiguous GPIO blocks:
+  - W5500 SPI: GPIO 10-13
+  - HX711: GPIO 14-15
+  - OLED I2C: GPIO 16-17
+- GPIO 10-17 are general-purpose pins on ESP32-S3 DevKitC-1 with no boot-time restrictions, so they are safe for all three peripherals.
+- Do **not** move HX711 to GPIO 10-13 without also updating W5500 SPI pins.
+
+#### Electrical notes
+
+- HX711 VCC can be 3.3 V or 5 V depending on module variant; check module silkscreen.
+- W5500 CS must be pulled low during SPI transactions; `EthernetENC` handles this automatically via `Ethernet.init(W5500_CS_PIN)`.
+- OLED reset pin is `-1` (unused) because the SSD1306 is held in reset by default and initialized via I2C address `0x3C`.
 
 > **Note:** `HX711_FAST_PROCESSOR = true` is mandatory for ESP32 because the core can
 > toggle GPIO in < 0.4 us; without this flag the library inserts a software delay that
 > breaks timing on fast MCUs.
-> 
-> **ESP32-S3 note:** GPIO 2 and GPIO 4 are valid on ESP32-S3 DevKitC-1; no pin changes needed.
-> 
-> **ESP32-C3 note:** GPIO 2 and GPIO 4 are valid on ESP32-C3-DevKitM-1; no pin changes needed.
+>
+> HX711 is bit-banged via the HX711 library and does not use the SPI peripheral, so
+> hardware SPI on GPIO 10/11/12/13 is safe for W5500.
 
 ---
 
@@ -112,12 +150,14 @@ Arduino loop() -------------------------------------------------------
   All work is inside the two pinned tasks above.
 ```
 
-**Single-core chips (ESP32-C3, ESP32-S3):** Both tasks are pinned to core 0. The scheduler time-slices them. This is acceptable because:
+**Single-core chips:** Both tasks are pinned to core 0. The scheduler time-slices them. This is acceptable because:
 - Scale task runs every 30 ms with minimal work
 - Network task is mostly idle (HTTP/DNS/Modbus are event-driven)
 - Mutex-protected SharedState prevents data races
 
 **Why two cores?** The HX711 requires precise clock timing (<= 1 us between pulses). Placing the HX711 driver on a core isolated from WiFi interrupt jitter prevents data corruption and missed samples.
+
+On ESP32-S3, true dual-core pinning is used: scale on core 0, network on core 1.
 
 ### 3.4 NVS access is serialised across cores
 
@@ -170,7 +210,7 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 | `FORCE_AP_PIN` | -1 | GPIO for force-AP button (-1 = disabled) |
 | `FORCE_AP_HOLD_MS` | 3000 | Hold duration to trigger force-AP (ms) |
 | `PREF_NAMESPACE` | `"scale"` | NVS namespace |
-| `FW_VERSION` | `0x0101` | Major.Minor encoded (1.1) |
+| `FW_VERSION` | `0x0104` | Major.Minor encoded (1.4) |
 
 ---
 
@@ -246,7 +286,7 @@ The command slot is a single-producer / single-consumer queue of depth 1. The se
 #### Acquisition pipeline
 
 ```
-HX711 (24-bit ADC, GPIO 2/4)
+HX711 (24-bit ADC, GPIO 14/15)
        |
        v  get_value()            <- blocks <= 40 ms (hxPoll)
   raw counts (offset subtracted by HX711 library)
@@ -281,33 +321,42 @@ The exponential moving average (EMA) with alpha = 0.35 rejects noise from vibrat
 
 ---
 
-### 4.5 `WifiManager` — Dual WiFi Mode (AP + STA Always-On)
+### 4.5 `WifiManager` — WiFi + Ethernet Transport
 
 **Files:** [`WifiManager.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/WifiManager.h) / [`WifiManager.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/WifiManager.cpp)
 **Runs on:** Core 1, polled via `loop()`
 
 The ESP32 WiFi stack supports simultaneous **AP + STA** mode (`WIFI_AP_STA`). Both interfaces are always active; the AP for configuration, the STA for upstream connectivity.
 
+#### Transport modes
+
+| Mode | Value | Behavior |
+|------|-------|----------|
+| `TRANSPORT_WIFI` | 0 | Soft-AP + STA uplink, Modbus TCP over WiFi |
+| `TRANSPORT_ETHERNET` | 1 | Soft-AP only, W5500 Ethernet for Modbus TCP |
+
+When Ethernet is selected, STA is disconnected and W5500 is initialized via hardware SPI. When WiFi is selected, Ethernet is stopped and STA reconnect supervision resumes.
+
 #### Boot sequence
 
 ```
 begin(AppSettings)
   |
+  +-> WiFi.disconnect(false) + WiFi.setSleep(false)
+  +-> WiFi.mode(WIFI_AP) + softAP() with retry + AP IP wait loop
   +-> WiFi.mode(WIFI_AP_STA)
   |
-  +-> WiFi.softAP("ENYX-SMARTHUB-AABBCCDDEEFF", "", channel=6, hidden=0, maxConn=4)
-  |       AP is always started regardless of STA config.
-  |       SSID suffix = last 3 bytes of MAC address.
-  |
-  +-> startSta(AppSettings)
-        +- wifiMode == WIFI_MODE_PSK  -> WiFi.begin(ssid, password)
-        +- wifiMode == WIFI_MODE_ENT  -> esp_wifi_sta_wpa2_ent_set_*() + WiFi.begin(ssid)
-        +- wifiMode == WIFI_MODE_NONE -> STA not started (AP only)
+  +-> if transportMode == Ethernet:
+  |     beginEthernet() -> SPI.begin() + Ethernet.init() + Ethernet.begin()
+  |     WiFi.disconnect(false)
+  +-> else:
+  |     stopEthernet()
+  |     startSta(AppSettings)
 ```
 
 #### Reconnection loop (`loop()`)
 
-Called every network task iteration. Checks STA state every 5 s; if disconnected and a saved SSID exists, re-initiates connection without restarting the AP or portal.
+Called every network task iteration. Checks STA state every 5 s; if disconnected and a saved SSID exists, re-initiates connection without restarting the AP or portal. When Ethernet transport is active and the link is down, attempts to reinitialize W5500.
 
 #### Deferred configuration apply (why `POST /api/wifi` answers immediately)
 
@@ -338,6 +387,12 @@ The delay is what makes "Apply Configuration" feel instant: the browser receives
 **Port:** 502 (TCP)
 
 The device acts as a **Modbus TCP server** (formerly "slave"). Holding registers (FC 03/06/16) are used. All multi-word values are **big-endian, high word first** (IEEE 754 float split into two 16-bit registers).
+
+Supports two transports:
+- **WiFi**: `ModbusTCP` server from modbus-esp8266
+- **Ethernet**: `EthernetServer` + `EthernetClient` from EthernetENC
+
+Transport is switched at runtime via `setTransportMode()`. The register map is identical for both transports.
 
 #### Holding Register Map
 
@@ -425,8 +480,8 @@ When a device connects to the Soft-AP and opens any URL, DNS returns `192.168.4.
 | `GET` | `/` | — | Single-page UI (`/index.html` served from SPIFFS) |
 | `GET` | `/css/style.css` | — | Stylesheet served from SPIFFS |
 | `GET` | `/js/app.js` | — | Client application script served from SPIFFS |
-| `GET` | `/api/status` | — | JSON snapshot: weight, calibration, WiFi, uptime, session |
-| `GET` | `/api/config` | — | Return stored WiFi + calibration config as JSON |
+| `GET` | `/api/status` | — | JSON snapshot: weight, calibration, WiFi, transport, display, uptime, session |
+| `GET` | `/api/config` | — | Return stored WiFi + transport + display config as JSON |
 | `POST` | `/api/wifi` | Form: `mode`, `ssid`, `psk`, `eid`, `eusr`, `epwd` | Validate + save WiFi credentials, answer, then apply the uplink asynchronously |
 | `POST` | `/api/tare` | — | Issue `CMD_TARE` |
 | `POST` | `/api/calibrate` | Query: `kg=<float>` | Persist single-point `countsPerKg` to NVS + schedule restart |
@@ -434,6 +489,12 @@ When a device connects to the Soft-AP and opens any URL, DNS returns `192.168.4.
 | `POST` | `/api/totals/reset` | — | Issue `CMD_RESET_SESSION` |
 | `POST` | `/api/portal/force` | — | Forget uplink credentials + restart into soft-AP setup mode |
 | `POST` | `/api/factory` | — | Wipe all NVS + restart |
+| `GET` | `/api/transport` | — | Return current transport mode + status |
+| `POST` | `/api/transport` | Form: `mode` (0=WiFi, 1=Ethernet) | Switch transport mode |
+| `GET` | `/api/ethernet/config` | — | Return W5500 config (DHCP/static IP) |
+| `POST` | `/api/ethernet/config` | Form: `useDhcp`, `staticIp`, `staticGateway`, `staticSubnet`, `staticDns` | Save W5500 config + apply transport |
+| `GET` | `/api/display/config` | — | Return OLED enabled state |
+| `POST` | `/api/display/config` | Form: `enabled` (true/false) | Enable/disable OLED |
 | `GET` | `/*` | — | Captive redirect -> `/` (Android/iOS/Windows probes + unknown hosts) |
 
 #### Response formats
@@ -485,7 +546,7 @@ Errors carry a machine-readable code and an English message:
   "maxG": 2345.0,
   "modbusClients": 1,
   "uptime": 3600,
-  "fw": "1.2",
+  "fw": "1.4",
   "wifi": {
     "modeName": "WPA2-PSK",
     "mode": 1,
@@ -495,6 +556,20 @@ Errors carry a machine-readable code and an English message:
     "staIp": "192.168.1.100",
     "apSsid": "ENYX-SMARTHUB-AABBCCDDEEFF",
     "apIp": "192.168.4.1"
+  },
+  "transport": {
+    "mode": 0,
+    "modeName": "WiFi",
+    "ethernetActive": false,
+    "ethernetIp": "",
+    "w5500UseDhcp": true,
+    "w5500StaticIp": "192.168.1.100",
+    "w5500StaticGateway": "192.168.1.1",
+    "w5500StaticSubnet": "255.255.255.0",
+    "w5500StaticDns": "8.8.8.8"
+  },
+  "display": {
+    "oledEnabled": true
   }
 }
 ```
@@ -573,7 +648,7 @@ setup()
 ```
           +-------------- Core 0 ---------------+
           |                                      |
-          |  HX711 (GPIO 2, 4)                   |
+           |  HX711 (GPIO 14, 15)                |
           |    | 24-bit reading every 30 ms       |
           |    v                                  |
           |  ScaleSensor::loop()                  |
@@ -656,6 +731,13 @@ All keys live in the `"scale"` namespace.
 | `calib` | Bool | Calibration | Calibrated flag |
 | `totalG` | Float | Session | Total accumulated grams |
 | `count` | UInt | Session | Sample count |
+| `transportMode` | UChar | Transport | 0=WiFi, 1=Ethernet |
+| `oledEnabled` | Bool | Display | OLED on/off |
+| `w5500Dhcp` | Bool | Ethernet | DHCP enabled |
+| `w5500Ip` | String | Ethernet | Static IP |
+| `w5500Gw` | String | Ethernet | Static gateway |
+| `w5500Sn` | String | Ethernet | Static subnet mask |
+| `w5500Dns` | String | Ethernet | Static DNS server |
 
 **Access rule:** every read/write goes through `SettingsStore`, which serialises the namespace with a recursive mutex (see §3.4). The `Preferences` handle is opened and closed inside each call, so no stale handle can survive across cores.
 
@@ -749,6 +831,9 @@ pio run -t uploadfs
 | `WebServer` | ESP32 Arduino SDK | HTTP server (built-in) |
 | `DNSServer` | ESP32 Arduino SDK | Captive portal DNS (built-in) |
 | `WiFi` | ESP32 Arduino SDK | AP+STA WiFi (built-in) |
+| `Adafruit SSD1306` | Adafruit | OLED display driver |
+| `Adafruit GFX` | Adafruit | Graphics primitives for OLED |
+| `EthernetENC` | jandrassy | W5500 Ethernet driver |
 
 ---
 
@@ -770,9 +855,10 @@ firmware/transmitter-multi-core/
     +-- SharedState.h/.cpp      <- mutex-guarded inter-core data bus + command slot
     +-- Settings.h/.cpp         <- NVS persistence (AppSettings struct) + cross-core mutex
     +-- Scale.h/.cpp            <- HX711 acquisition, EMA filter, calibration
-    +-- WifiManager.h/.cpp      <- AP+STA dual-mode WiFi management, deferred config apply
-    +-- ModbusServer.h/.cpp     <- Modbus TCP server, holding register publish
+    +-- WifiManager.h/.cpp      <- AP+STA dual-mode WiFi management, deferred config apply, W5500 Ethernet
+    +-- ModbusServer.h/.cpp     <- Modbus TCP server (WiFi/Ethernet), holding register publish
     +-- WebPortal.h/.cpp        <- HTTP captive portal, SPIFFS static server, REST API, deferred reboot
+    +-- Display.h/.cpp          <- SSD1306 OLED driver (I2C)
 ```
 
 ---

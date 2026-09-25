@@ -56,13 +56,17 @@ void ModbusServer::loop() {
     uint16_t cmd = _mb.Hreg(REG_CMD);
     if (cmd != 0) {
       float arg = getFloat(REG_CMD_ARG);
+      Serial.printf("[modbus] state=cmd-wifi cmd=%u arg=%.4f\n",
+                    (unsigned)cmd, arg);
       switch (cmd) {
         case 1:  _shared->requestCommand(CMD_TARE);          break;
         case 2:  _shared->requestCommand(CMD_CALIBRATE, arg); break;
         case 3:  _shared->requestCommand(CMD_RESET_SESSION); break;
         case 4:  _shared->requestCommand(CMD_FLUSH);         break;
         case 99: _shared->requestCommand(CMD_WIPE_WIFI);     break;
-        default: break;
+        default:
+          Serial.printf("[modbus] state=cmd-unknown cmd=%u\n", (unsigned)cmd);
+          break;
       }
       _mb.Hreg(REG_CMD, 0);
     }
@@ -81,13 +85,17 @@ void ModbusServer::loop() {
       uint16_t cmd = _mb.Hreg(REG_CMD);
       if (cmd != 0) {
         float arg = getFloat(REG_CMD_ARG);
+        Serial.printf("[modbus] state=cmd-ethernet cmd=%u arg=%.4f\n",
+                      (unsigned)cmd, arg);
         switch (cmd) {
           case 1:  _shared->requestCommand(CMD_TARE);          break;
           case 2:  _shared->requestCommand(CMD_CALIBRATE, arg); break;
           case 3:  _shared->requestCommand(CMD_RESET_SESSION); break;
           case 4:  _shared->requestCommand(CMD_FLUSH);         break;
           case 99: _shared->requestCommand(CMD_WIPE_WIFI);     break;
-          default: break;
+          default:
+            Serial.printf("[modbus] state=cmd-unknown cmd=%u\n", (unsigned)cmd);
+            break;
         }
         _mb.Hreg(REG_CMD, 0);
       }

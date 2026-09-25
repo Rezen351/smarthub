@@ -32,7 +32,7 @@ void ScaleSensor::begin(SharedState* shared, SettingsStore* settings) {
 static bool hxPoll(HX711& hx, int waitMs) {
   int waited = 0;
   while (!hx.is_ready()) {
-    delay(1);
+    yield();
     if (++waited > waitMs) return false;
   }
   return true;
@@ -47,6 +47,7 @@ void ScaleSensor::loop() {
   while (_s->takeCommand(cmd, arg, arg2)) {
     switch (cmd) {
       case CMD_TARE: {
+        Serial.println("[scale] state=tare-start");
         if (hxPoll(_hx, 500)) {
           _hx.tare();
           ScaleSnapshot snap = _s->getSnapshot();
@@ -60,77 +61,105 @@ void ScaleSensor::loop() {
           a.countsPerKg = 0.0f;
           a.calibrated = false;
           _st->saveCalibration(a);
+          Serial.println("[scale] state=tare-done");
+        } else {
+          Serial.println("[scale] state=tare-timeout");
         }
         break;
       }
       case CMD_CALIBRATE: {
         float kg = arg;
+        Serial.printf("[scale] state=calibrate-start ref=%.3f kg\n", kg);
         if (kg > 0.0f && hxPoll(_hx, 500)) {
           float raw = (float)_hx.get_value();
           float cPerKg = raw / kg;
           if (cPerKg > 0.0f) {
             applyCalibration(cPerKg, 0.0f);
+            Serial.println("[scale] state=calibrate-done");
+          } else {
+            Serial.println("[scale] state=calibrate-invalid");
           }
+        } else {
+          Serial.println("[scale] state=calibrate-timeout");
         }
         break;
       }
       case CMD_CALIBRATE_MLR: {
         float slope = arg;
         float intercept = arg2;
+        Serial.printf("[scale] state=calibrate-mlr-start slope=%.4f intercept=%.4f\n",
+                      slope, intercept);
         if (slope > 0.0f) {
           applyCalibration(slope, intercept);
+          Serial.println("[scale] state=calibrate-mlr-done");
+        } else {
+          Serial.println("[scale] state=calibrate-mlr-invalid");
         }
         break;
       }
       case CMD_CAPTURE_CAL_POINT: {
         float weightKg = arg;
         float expectedRaw = arg2;
+        Serial.printf("[scale] state=capture-point-start kg=%.3f expected=%.1f\n",
+                      weightKg, expectedRaw);
         if (weightKg > 0.0f && hxPoll(_hx, 500)) {
           float raw = (float)_hx.get_value();
           if (expectedRaw > 0.0f) {
             raw = expectedRaw;
           }
           _s->addCalibrationPoint(weightKg, raw);
-          Serial.printf("[scale] CMD_CAPTURE_CAL_POINT captured %.3f kg -> %.1f counts (total points: %d)\n",
+          Serial.printf("[scale] state=capture-point kg=%.3f counts=%.1f totalPoints=%d\n",
                         weightKg, raw, (int)_s->calibrationPointCount());
+        } else {
+          Serial.println("[scale] state=capture-point-timeout");
         }
         break;
       }
       case CMD_FINISH_CALIBRATION: {
+        Serial.println("[scale] state=finish-calibration-start");
         float slope = 0.0f;
         float intercept = 0.0f;
         if (_s->computeLinearRegression(slope, intercept)) {
-          Serial.printf("[scale] CMD_FINISH_CALIBRATION computed slope=%.4f intercept=%.4f\n",
+          Serial.printf("[scale] state=finish-calibration slope=%.4f intercept=%.4f\n",
                         slope, intercept);
           applyCalibration(slope, intercept);
+          Serial.println("[scale] state=finish-calibration-done");
         } else {
-          Serial.println("[scale] CMD_FINISH_CALIBRATION ignored: need at least 2 points with non-zero slope");
+          Serial.println("[scale] state=finish-calibration-failed (need >=2 points)");
         }
         break;
       }
       case CMD_RESET_SESSION: {
+        Serial.println("[scale] state=reset-session");
         _s->setSessionTotals(0, 0.0, 0.0, 0.0);
         AppSettings a; _st->load(a);
         a.totalG = 0.0; a.sampleCount = 0;
         _st->saveTotals(a.totalG, a.sampleCount);
+        Serial.println("[scale] state=reset-session-done");
         break;
       }
       case CMD_FLUSH: {
+        Serial.println("[scale] state=flush-session");
         uint32_t cnt; double tg, mn, mx;
         _s->getSessionTotals(cnt, tg, mn, mx);
         _st->saveTotals(tg, cnt);
+        Serial.printf("[scale] state=flush-done cnt=%u total=%.1f\n",
+                      (unsigned)cnt, tg);
         break;
       }
       case CMD_WIPE_WIFI: {
+        Serial.println("[scale] state=wipe-wifi");
         AppSettings a; _st->load(a);
         a.wifiMode = WIFI_MODE_NONE;
         a.ssid = ""; a.wpaPassword = ""; a.entIdentity = ""; a.entUsername = ""; a.entPassword = "";
         _st->saveWifi(a);
+        Serial.println("[scale] state=wipe-wifi-done rebooting");
         delay(200);
         ESP.restart();
         break;
       }
       default:
+        Serial.printf("[scale] state=unknown-cmd cmd=%u\n", (unsigned)cmd);
         break;
     }
   }

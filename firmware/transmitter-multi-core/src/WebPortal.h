@@ -9,13 +9,14 @@
 #include "Settings.h"
 #include "WifiManager.h"
 #include "ModbusServer.h"
+#include "Display.h"
 
 // Captive-portal + calibration web UI backed by SPIFFS static assets.
 // Always accessible on the Soft-AP IP (and additionally LAN IP when STA is connected).
 class WebPortal {
 public:
   void begin(SharedState* shared, SettingsStore* settings,
-             WifiManager* wifi, ModbusServer* modbus);
+              WifiManager* wifi, ModbusServer* modbus, DisplayManager* display);
   void startDns();          // start DNS responder on the AP IP
   void handleClient();      // service HTTP + DNS (call from network task)
 
@@ -36,6 +37,9 @@ public:
   void handleApiResetSession();
   void handleApiForceAp();
   void handleApiFactoryReset();
+  void handleApiTransport();
+  void handleApiEthernetConfig();
+  void handleApiDisplayConfig();
 
   void sendJson(uint16_t code, const String& json);
 
@@ -56,6 +60,7 @@ private:
   SettingsStore* _settings = nullptr;
   WifiManager*   _wifi = nullptr;
   ModbusServer*  _modbus = nullptr;
+  DisplayManager* _display = nullptr;
   AppSettings    _cfg;
   bool           _cfgLoaded = false;
   bool           _fsOk = false;

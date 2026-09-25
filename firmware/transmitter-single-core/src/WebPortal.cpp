@@ -75,9 +75,12 @@ void WebPortal::begin(SharedState* shared, SettingsStore* settings,
 }
 
 void WebPortal::startDns() {
-  if (!_wifi || !WiFi.softAPIP()) return;
+  if (!_wifi || !WiFi.softAPIP()) {
+    Serial.println("[portal] state=dns-skipped (no AP IP)");
+    return;
+  }
   _dns.start(53, "*", WiFi.softAPIP());
-  Serial.printf("[portal] DNS captive responder started on %s\n",
+  Serial.printf("[portal] state=dns-active ip=%s\n",
                 WiFi.softAPIP().toString().c_str());
 }
 
@@ -90,13 +93,16 @@ void WebPortal::handleClient() {
 void WebPortal::scheduleReboot(uint32_t delayMs) {
   _rebootPending = true;
   _rebootAtMs = millis() + delayMs;
-  Serial.printf("[portal] restart scheduled in %u ms\n", (unsigned)delayMs);
+  Serial.printf("[portal] state=reboot-scheduled delay=%ums\n", (unsigned)delayMs);
 }
 
 void WebPortal::processPendingReboot() {
   if (!_rebootPending) return;
 
   if (_shared && _shared->commandPending()) {
+    if (_rebootAtMs != (uint32_t)-1) {
+      Serial.println("[portal] state=reboot-delayed command pending");
+    }
     _rebootAtMs = millis() + REBOOT_GRACE_MS;
     return;
   }
@@ -104,7 +110,7 @@ void WebPortal::processPendingReboot() {
   if ((int32_t)(millis() - _rebootAtMs) < 0) return;
 
   _rebootPending = false;
-  Serial.println("[portal] restarting transmitter now");
+  Serial.println("[portal] state=rebooting");
   Serial.flush();
   delay(50);
   ESP.restart();

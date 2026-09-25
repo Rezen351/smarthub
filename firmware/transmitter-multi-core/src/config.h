@@ -12,9 +12,10 @@
 //   HX711 PD_SCK (clock)         -> GPIO pin below
 //   HX711 VCC / GND              -> 3.3V / GND (or 5V, see module)
 //
-// ESP32-S3 note: GPIO 2 and GPIO 4 are valid on ESP32-S3 DevKitC-1.
-#define LOADCELL_DOUT_PIN    2      // GPIO 2  (DOUT)
-#define LOADCELL_SCK_PIN     4      // GPIO 4  (PD_SCK)
+// ESP32-S3: HX711 is bit-banged via HX711 library, safe to share bus
+// with hardware SPI on other pins.
+#define LOADCELL_DOUT_PIN    14     // GPIO 14 (DOUT)
+#define LOADCELL_SCK_PIN     15     // GPIO 15 (PD_SCK)
 #define HX711_FAST_PROCESSOR true   // ESP32 can toggle IO < 0.4us -> must be true
 #define HX711_READS          10     // samples averaged per reading
 #define SCALE_SAMPLE_MS      30     // sensor task period
@@ -53,24 +54,50 @@
 // a scheduled restart is executed.
 #define REBOOT_GRACE_MS          500
 
+// ------------------------- W5500 Ethernet ---------------------------
+// Hardware SPI on ESP32-S3 DevKitC-1.
+//   W5500 SCK  -> GPIO 10
+//   W5500 MISO -> GPIO 11
+//   W5500 MOSI -> GPIO 12
+//   W5500 CS   -> GPIO 13
+// HX711 stays on GPIO 14/15 so there is no SPI bus conflict.
+// GPIO 10-17 are contiguous general-purpose pins on S3 DevKitC-1.
+#define W5500_SCK_PIN       10
+#define W5500_MISO_PIN      11
+#define W5500_MOSI_PIN      12
+#define W5500_CS_PIN        13
+#define W5500_USE_DHCP      true
+#define W5500_STATIC_IP     "192.168.1.100"
+#define W5500_STATIC_GATEWAY "192.168.1.1"
+#define W5500_STATIC_SUBNET "255.255.255.0"
+#define W5500_STATIC_DNS    "8.8.8.8"
+
+// ------------------------- OLED Display -----------------------------
+// I2C (Wire) bus on ESP32-S3.
+//   OLED SDA -> GPIO 16
+//   OLED SCL -> GPIO 17
+#define OLED_SDA_PIN        16
+#define OLED_SCL_PIN        17
+#define OLED_WIDTH          128
+#define OLED_HEIGHT         64
+#define OLED_RESET_PIN     -1
+
+// ------------------------- Transport mode ---------------------------
+#define TRANSPORT_WIFI      0
+#define TRANSPORT_ETHERNET  1
+#define DEFAULT_TRANSPORT   TRANSPORT_WIFI
+
 // ------------------------- Dual core task layout ----------------------
-// ESP32 WROOM-32 has 2 cores. We pin:
+// ESP32-S3 is dual-core Xtensa LX7. True pinning:
 //   core 0 : HX711 read + filter + calibration math
-//   core 1 : networking (web portal + DNS + Modbus TCP)
-//
-// ESP32-C3 / ESP32-S3 single-core: both tasks run on core 0.
-#if defined(ESP32C3) || defined(ESP32S3)
-#define CORE_SCALE          0
-#define CORE_NETWORK        0
-#else
+//   core 1 : networking (web portal + DNS + Modbus TCP + OLED updates)
 #define CORE_SCALE          0
 #define CORE_NETWORK        1
-#endif
 #define TASK_STACK_SCALE    4096
 #define TASK_STACK_NETWORK  8192
 
 // Optional button to force the setup (AP) mode / factory reset on boot.
-// Set to a GPIO number (e.g. 15) to enable, -1 to disable.
+// Set to a GPIO number (e.g. 8 or 9) to enable, -1 to disable.
 #define FORCE_AP_PIN        -1
 #define FORCE_AP_HOLD_MS    3000
 
@@ -78,5 +105,5 @@
 #define PREF_NAMESPACE      "scale"
 
 // ------------------------- Firmware ----------------------------------
-#define FW_VERSION          0x0103   // major<<8 | minor  (1.3)
+#define FW_VERSION          0x0104   // major<<8 | minor  (1.4)
 #endif // SCALE_CONFIG_H

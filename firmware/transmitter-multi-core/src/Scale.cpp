@@ -33,7 +33,7 @@ void ScaleSensor::begin(SharedState* shared, SettingsStore* settings) {
 static bool hxPoll(HX711& hx, int waitMs) {
   int waited = 0;
   while (!hx.is_ready()) {
-    delay(1);
+    yield();
     if (++waited > waitMs) return false;
   }
   return true;

@@ -30,6 +30,20 @@
     valWifiRssi: el('valWifiRssi'),
     valWifiAp: el('valWifiAp'),
 
+    transportForm: el('transportForm'),
+    transportMode: el('transportMode'),
+    ethernetFields: el('ethernetFields'),
+    w5500Dhcp: el('w5500Dhcp'),
+    w5500StaticIp: el('w5500StaticIp'),
+    w5500StaticGateway: el('w5500StaticGateway'),
+    w5500StaticSubnet: el('w5500StaticSubnet'),
+    w5500StaticDns: el('w5500StaticDns'),
+    btnSaveTransport: el('btnSaveTransport'),
+
+    valTransportMode: el('valTransportMode'),
+    valEthernetStatus: el('valEthernetStatus'),
+    valEthernetIp: el('valEthernetIp'),
+
     knownKg: el('knownKg'),
     btnTare: el('btnTare'),
     btnCapturePoint: el('btnCapturePoint'),
@@ -311,6 +325,21 @@
     if (ui.valWifiAp) {
       ui.valWifiAp.textContent = `${w.apSsid || 'ENYX-SMARTHUB'} @ ${w.apIp || '192.168.4.1'}`;
     }
+
+    const transport = data.transport || {};
+    if (ui.valTransportMode) {
+      ui.valTransportMode.textContent = transport.modeName || 'WiFi';
+    }
+
+    if (ui.valEthernetStatus) {
+      const ethActive = transport.ethernetActive;
+      ui.valEthernetStatus.textContent = ethActive ? 'Active' : 'Inactive';
+      ui.valEthernetStatus.style.color = ethActive ? 'var(--status-ok)' : 'var(--text-muted)';
+    }
+
+    if (ui.valEthernetIp) {
+      ui.valEthernetIp.textContent = transport.ethernetIp || '--';
+    }
   }
 
   async function loadConfig() {
@@ -324,7 +353,28 @@
     if (ui.eusr) ui.eusr.value = cfg.entUsername || '';
     if (ui.epwd) ui.epwd.value = cfg.entPassword || '';
 
+    if (ui.transportMode) {
+      const modeVal = String(cfg.transportMode || 0);
+      const radio = document.querySelector(`input[name="transportMode"][value="${modeVal}"]`);
+      if (radio) radio.checked = true;
+      updateTransportVisibility();
+    }
+
+    if (ui.w5500Dhcp) ui.w5500Dhcp.value = cfg.w5500UseDhcp ? 'true' : 'false';
+    if (ui.w5500StaticIp) ui.w5500StaticIp.value = cfg.w5500StaticIp || '';
+    if (ui.w5500StaticGateway) ui.w5500StaticGateway.value = cfg.w5500StaticGateway || '';
+    if (ui.w5500StaticSubnet) ui.w5500StaticSubnet.value = cfg.w5500StaticSubnet || '';
+    if (ui.w5500StaticDns) ui.w5500StaticDns.value = cfg.w5500StaticDns || '';
+
     updateModeVisibility();
+  }
+
+  function updateTransportVisibility() {
+    const selected = document.querySelector('input[name="transportMode"]:checked');
+    const isEthernet = selected && selected.value === '1';
+    if (ui.ethernetFields) {
+      ui.ethernetFields.style.display = isEthernet ? 'block' : 'none';
+    }
   }
 
   function updateModeVisibility() {
@@ -344,6 +394,46 @@
   function initEvents() {
     if (ui.wmode) {
       ui.wmode.addEventListener('change', updateModeVisibility);
+    }
+
+    document.querySelectorAll('input[name="transportMode"]').forEach(radio => {
+      radio.addEventListener('change', updateTransportVisibility);
+    });
+
+    if (ui.transportForm) {
+      ui.transportForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const mode = document.querySelector('input[name="transportMode"]:checked')?.value || '0';
+        const body = `mode=${encodeURIComponent(mode)}`;
+
+        setBusy(ui.btnSaveTransport, true, 'Saving...', 'Save Transport Configuration');
+
+        try {
+          const res = await apiCall('/api/transport', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body
+          });
+
+          if (!res) {
+            showToast('No response from the transmitter. Retry in a few seconds.', true);
+            return;
+          }
+          if (!res.ok) {
+            showToast(res.message || 'Transport configuration rejected', true);
+            return;
+          }
+
+          showToast(res.message || 'Transport configuration saved.', false);
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          await refreshStatus();
+        } catch (err) {
+          showToast('Error applying transport configuration', true);
+        } finally {
+          setBusy(ui.btnSaveTransport, false, 'Saving...', 'Save Transport Configuration');
+        }
+      });
     }
 
     document.querySelectorAll('.chip').forEach(btn => {
@@ -423,8 +513,6 @@
             return;
           }
 
-          // Calibration is stored in NVS and the transmitter restarts, so wait
-          // for it to come back and then reload the page with fresh values.
           showToast(res.message || 'Calibration saved. Device is rebooting...', false);
           await handleRebootFlow();
         } catch (e) {

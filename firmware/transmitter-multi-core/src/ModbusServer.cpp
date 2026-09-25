@@ -26,25 +26,38 @@ float ModbusServer::getFloat(uint16_t offset) {
 }
 
 // ---- begin: store pointers, do not start server yet ----
-void ModbusServer::begin(SharedState* shared, SettingsStore* settings) {
+void ModbusServer::begin(SharedState* shared, SettingsStore* settings, uint8_t transportMode) {
   _shared   = shared;
   _settings = settings;
+  _transportMode = transportMode;
 }
 
-// ---- startServer: allocate all holding registers and start TCP ----
+// ---- startServer: allocate all holding registers and start WiFi TCP ----
 void ModbusServer::startServer() {
-  // Allocate all NUM_REGS holding registers, initialised to zero.
   for (uint16_t i = 0; i < NUM_REGS; i++) {
     _mb.addHreg(i, 0);
   }
 
-  // Write static/boot-time values that do not change during runtime.
   _mb.Hreg(REG_FW_VER, (uint16_t)FW_VERSION);
-
-  _mb.server(MODBUS_PORT);   // start TCP listener
+  _mb.server(MODBUS_PORT);
   _started = true;
 
-  Serial.printf("[modbus] Server started on port %u (%u holding regs)\n",
+  Serial.printf("[modbus] WiFi server started on port %u (%u holding regs)\n",
+                (unsigned)MODBUS_PORT, (unsigned)NUM_REGS);
+}
+
+// ---- startEthernetServer: allocate all holding registers and start Ethernet TCP ----
+void ModbusServer::startEthernetServer() {
+  for (uint16_t i = 0; i < NUM_REGS; i++) {
+    _mb.addHreg(i, 0);
+  }
+
+  _mb.Hreg(REG_FW_VER, (uint16_t)FW_VERSION);
+  _ethServer.begin(MODBUS_PORT);
+  _ethServerStarted = true;
+  _started = true;
+
+  Serial.printf("[modbus] Ethernet server started on port %u (%u holding regs)\n",
                 (unsigned)MODBUS_PORT, (unsigned)NUM_REGS);
 }
 
@@ -52,21 +65,56 @@ void ModbusServer::startServer() {
 void ModbusServer::loop() {
   if (!_started) return;
 
-  _mb.task();   // service all Modbus TCP traffic (accept + read/write)
+  if (_transportMode == TRANSPORT_WIFI) {
+    _mb.task();
 
-  // Check if a Modbus client wrote the command register.
-  uint16_t cmd = _mb.Hreg(REG_CMD);
-  if (cmd != 0) {
-    float arg = getFloat(REG_CMD_ARG);
-    switch (cmd) {
-      case 1:  _shared->requestCommand(CMD_TARE);          break;
-      case 2:  _shared->requestCommand(CMD_CALIBRATE, arg); break;
-      case 3:  _shared->requestCommand(CMD_RESET_SESSION); break;
-      case 4:  _shared->requestCommand(CMD_FLUSH);         break;
-      case 99: _shared->requestCommand(CMD_WIPE_WIFI);     break;
-      default: break;
+    uint16_t cmd = _mb.Hreg(REG_CMD);
+    if (cmd != 0) {
+      float arg = getFloat(REG_CMD_ARG);
+      Serial.printf("[modbus] state=cmd-wifi cmd=%u arg=%.4f\n",
+                    (unsigned)cmd, arg);
+      switch (cmd) {
+        case 1:  _shared->requestCommand(CMD_TARE);          break;
+        case 2:  _shared->requestCommand(CMD_CALIBRATE, arg); break;
+        case 3:  _shared->requestCommand(CMD_RESET_SESSION); break;
+        case 4:  _shared->requestCommand(CMD_FLUSH);         break;
+        case 99: _shared->requestCommand(CMD_WIPE_WIFI);     break;
+        default:
+          Serial.printf("[modbus] state=cmd-unknown cmd=%u\n", (unsigned)cmd);
+          break;
+      }
+      _mb.Hreg(REG_CMD, 0);
     }
-    _mb.Hreg(REG_CMD, 0);   // clear the command register
+  } else if (_transportMode == TRANSPORT_ETHERNET) {
+    if (_ethClient && !_ethClient.connected()) {
+      _ethClient.stop();
+    }
+
+    if (!_ethClient) {
+      _ethClient = _ethServer.available();
+    }
+
+    if (_ethClient) {
+      _mb.task();
+
+      uint16_t cmd = _mb.Hreg(REG_CMD);
+      if (cmd != 0) {
+        float arg = getFloat(REG_CMD_ARG);
+        Serial.printf("[modbus] state=cmd-ethernet cmd=%u arg=%.4f\n",
+                      (unsigned)cmd, arg);
+        switch (cmd) {
+          case 1:  _shared->requestCommand(CMD_TARE);          break;
+          case 2:  _shared->requestCommand(CMD_CALIBRATE, arg); break;
+          case 3:  _shared->requestCommand(CMD_RESET_SESSION); break;
+          case 4:  _shared->requestCommand(CMD_FLUSH);         break;
+          case 99: _shared->requestCommand(CMD_WIPE_WIFI);     break;
+          default:
+            Serial.printf("[modbus] state=cmd-unknown cmd=%u\n", (unsigned)cmd);
+            break;
+        }
+        _mb.Hreg(REG_CMD, 0);
+      }
+    }
   }
 
   publish(_rssiCache, _wifiModeCache);
@@ -78,10 +126,38 @@ void ModbusServer::setRuntime(int8_t rssi, uint8_t wifiMode) {
   _wifiModeCache = wifiMode;
 }
 
+// ---- setTransportMode: switch between WiFi and Ethernet Modbus ----
+void ModbusServer::setTransportMode(uint8_t mode) {
+  _transportMode = mode;
+  _started = false;
+  _ethServerStarted = false;
+  _mb.server(0);
+
+  if (_ethClient) {
+    _ethClient.stop();
+    _ethClient = EthernetClient();
+  }
+
+  if (mode == TRANSPORT_WIFI) {
+    startServer();
+  } else if (mode == TRANSPORT_ETHERNET) {
+    startEthernetServer();
+  }
+
+  Serial.printf("[modbus] transport mode -> %s\n",
+                mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+}
+
 // ---- clientConnected: true if at least one TCP client is active ----
 bool ModbusServer::clientConnected() {
   if (!_started) return false;
-  return _mb.isConnected(_mb.eventSource());
+
+  if (_transportMode == TRANSPORT_WIFI) {
+    return _mb.isConnected(_mb.eventSource());
+  } else if (_transportMode == TRANSPORT_ETHERNET) {
+    return _ethClient && _ethClient.connected();
+  }
+  return false;
 }
 
 // ---- publish: push all current values into holding registers ----

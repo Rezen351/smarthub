@@ -79,6 +79,15 @@ void SettingsStore::load(AppSettings& s) {
     s.calPointRawCounts[i] = _prefs.getFloat(rKey);
   }
 
+  s.transportMode = _prefs.isKey("transportMode") ? _prefs.getUChar("transportMode") : DEFAULT_TRANSPORT;
+  s.oledEnabled = _prefs.isKey("oledEnabled") ? _prefs.getBool("oledEnabled") : true;
+
+  s.w5500UseDhcp = _prefs.isKey("w5500Dhcp") ? _prefs.getBool("w5500Dhcp") : W5500_USE_DHCP;
+  s.w5500StaticIp = _prefs.isKey("w5500Ip") ? _prefs.getString("w5500Ip") : W5500_STATIC_IP;
+  s.w5500StaticGateway = _prefs.isKey("w5500Gw") ? _prefs.getString("w5500Gw") : W5500_STATIC_GATEWAY;
+  s.w5500StaticSubnet = _prefs.isKey("w5500Sn") ? _prefs.getString("w5500Sn") : W5500_STATIC_SUBNET;
+  s.w5500StaticDns = _prefs.isKey("w5500Dns") ? _prefs.getString("w5500Dns") : W5500_STATIC_DNS;
+
   close();
 
   if (s.calibrated && s.countsPerKg <= 0.0f) {
@@ -94,6 +103,7 @@ void SettingsStore::saveAll(const AppSettings& s) {
   saveWifi(s);
   saveCalibration(s);
   saveTotals(s.totalG, s.sampleCount);
+  saveTransportSettings(s);
 }
 
 void SettingsStore::saveWifi(const AppSettings& s) {
@@ -135,6 +145,20 @@ void SettingsStore::saveTotals(double totalG, uint32_t count) {
   openWrite();
   _prefs.putFloat("totalG", (float)totalG);
   _prefs.putUInt("count", count);
+  close();
+  unlockNvs();
+}
+
+void SettingsStore::saveTransportSettings(const AppSettings& s) {
+  lockNvs();
+  openWrite();
+  _prefs.putUChar("transportMode", s.transportMode);
+  _prefs.putBool("oledEnabled", s.oledEnabled);
+  _prefs.putBool("w5500Dhcp", s.w5500UseDhcp);
+  _prefs.putString("w5500Ip", s.w5500StaticIp);
+  _prefs.putString("w5500Gw", s.w5500StaticGateway);
+  _prefs.putString("w5500Sn", s.w5500StaticSubnet);
+  _prefs.putString("w5500Dns", s.w5500StaticDns);
   close();
   unlockNvs();
 }
