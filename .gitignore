@@ -36,6 +36,10 @@ firmware/transmitter-multi-core/.pio
 firmware/transmitter-single-core/.pio/
 firmware/transmitter-single-core/.pio
 
+firmware/transmitter-single-core/.pio
+firmware/esp32s3-ethernet/.pio/
+firmware/esp32s3-ethernet/.pio
+
 # Uploads
 backend/uploads/*
 !backend/uploads/.gitkeep
