@@ -1,5 +1,6 @@
 #include "Scale.h"
 #include "config.h"
+#include "Logger.h"
 
 void ScaleSensor::begin(SharedState* shared, SettingsStore* settings) {
   _s = shared;
@@ -26,7 +27,7 @@ void ScaleSensor::begin(SharedState* shared, SettingsStore* settings) {
     _s->addCalibrationPoint(persisted.calPointWeightKg[i], persisted.calPointRawCounts[i]);
   }
 
-  Serial.println("[scale] HX711 initialised, calibration loaded from NVS");
+  LOG_INFO("[scale] HX711 initialised, calibration loaded from NVS");
 }
 
 // Returns true once the HX711 has produced a datum.
@@ -81,10 +82,10 @@ void ScaleSensor::loop() {
         float slope = arg;
         float intercept = arg2;
         if (slope > 0.0f) {
-          Serial.printf("[scale] CMD_CALIBRATE_MLR countsPerKg=%.4f intercept=%.4f\n", slope, intercept);
+          LOG_INFO("[scale] CMD_CALIBRATE_MLR countsPerKg=%.4f intercept=%.4f", slope, intercept);
           applyCalibration(slope, intercept);
         } else {
-          Serial.println("[scale] CMD_CALIBRATE_MLR ignored: slope <= 0");
+          LOG_WARN("[scale] CMD_CALIBRATE_MLR ignored: slope <= 0");
         }
         break;
       }
@@ -97,7 +98,7 @@ void ScaleSensor::loop() {
             raw = expectedRaw;
           }
           _s->addCalibrationPoint(weightKg, raw);
-          Serial.printf("[scale] CMD_CAPTURE_CAL_POINT captured %.3f kg -> %.1f counts (total points: %d)\n",
+          LOG_INFO("[scale] CMD_CAPTURE_CAL_POINT captured %.3f kg -> %.1f counts (total points: %d)",
                         weightKg, raw, (int)_s->calibrationPointCount());
         }
         break;
@@ -106,11 +107,10 @@ void ScaleSensor::loop() {
         float slope = 0.0f;
         float intercept = 0.0f;
         if (_s->computeLinearRegression(slope, intercept)) {
-          Serial.printf("[scale] CMD_FINISH_CALIBRATION computed slope=%.4f intercept=%.4f\n",
-                        slope, intercept);
+          LOG_INFO("[scale] CMD_FINISH_CALIBRATION computed slope=%.4f intercept=%.4f", slope, intercept);
           applyCalibration(slope, intercept);
         } else {
-          Serial.println("[scale] CMD_FINISH_CALIBRATION ignored: need at least 2 points with non-zero slope");
+          LOG_WARN("[scale] CMD_FINISH_CALIBRATION ignored: need at least 2 points with non-zero slope");
         }
         break;
       }
@@ -196,6 +196,6 @@ void ScaleSensor::applyCalibration(float slope, float intercept) {
   // Persist only the calibration math: the tare offset stays untouched so a
   // concurrent portal write can never be overwritten with a stale copy.
   _st->saveCalibrationValues(slope, intercept, true);
-  Serial.printf("[scale] calibration applied countsPerKg=%.4f intercept=%.4f calibrated=%d\n",
-                slope, intercept, snap.calibrated);
+  LOG_INFO("[scale] calibration applied countsPerKg=%.4f intercept=%.4f calibrated=%d",
+            slope, intercept, snap.calibrated);
 }

@@ -14,9 +14,10 @@
 #include <Ethernet.h>
 #include "SharedState.h"
 #include "Settings.h"
+#include "Transport.h"
 
 class ModbusServer {
-public:
+ public:
   // Store shared-state and settings pointers.
   void begin(SharedState* shared, SettingsStore* settings, uint8_t transportMode = DEFAULT_TRANSPORT);
 
@@ -66,7 +67,7 @@ public:
   static const uint16_t REG_INTERCEPT     = 29;  // 40030-31  F32 R
   static const uint16_t NUM_REGS          = 31;  // offsets 0..30
 
-private:
+ private:
   ModbusTCP      _mb;
   EthernetServer _ethServer;
   EthernetClient _ethClient;
@@ -79,8 +80,8 @@ private:
   int8_t  _rssiCache     = -127;
   uint8_t _wifiModeCache = 0;
   uint8_t _transportMode = DEFAULT_TRANSPORT;
-  bool    _transportPending = false;
-  uint8_t _transportPendingMode = DEFAULT_TRANSPORT;
+  TransportState _transportState = TransportState::WiFi;
+  uint8_t _transportTarget = DEFAULT_TRANSPORT;
 
   // Encode/decode float <-> two consecutive holding registers (big-endian).
   void  putFloat(uint16_t offset, float val);

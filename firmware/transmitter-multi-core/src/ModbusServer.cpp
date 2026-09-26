@@ -1,5 +1,6 @@
 #include "ModbusServer.h"
 #include "config.h"
+#include "Logger.h"
 
 // =====================================================================
 //  E-Tani Smart Hub - Weight Transmitter
@@ -42,8 +43,7 @@ void ModbusServer::startServer() {
   _mb.server(MODBUS_PORT);
   _started = true;
 
-  Serial.printf("[modbus] WiFi server started on port %u (%u holding regs)\n",
-                (unsigned)MODBUS_PORT, (unsigned)NUM_REGS);
+  LOG_INFO("[modbus] WiFi server started on port %u (%u holding regs)", (unsigned)MODBUS_PORT, (unsigned)NUM_REGS);
 }
 
 // ---- startEthernetServer: allocate all holding registers and start Ethernet TCP ----
@@ -57,39 +57,37 @@ void ModbusServer::startEthernetServer() {
   _ethServerStarted = true;
   _started = true;
 
-  Serial.printf("[modbus] Ethernet server started on port %u (%u holding regs)\n",
-                (unsigned)MODBUS_PORT, (unsigned)NUM_REGS);
+  LOG_INFO("[modbus] Ethernet server started on port %u (%u holding regs)", (unsigned)MODBUS_PORT, (unsigned)NUM_REGS);
 }
 
 // ---- loop: poll Modbus stack, then publish if interval elapsed ----
 void ModbusServer::loop() {
   if (!_started) return;
 
-  if (_transportPending) {
+  if (_transportState == TransportState::Switching) {
     applyPendingTransportMode();
   }
 
-  if (_transportMode == TRANSPORT_WIFI) {
+  if (_transportState == TransportState::WiFi) {
     _mb.task();
 
-    uint16_t cmd = _mb.Hreg(REG_CMD);
-    if (cmd != 0) {
-      float arg = getFloat(REG_CMD_ARG);
-      Serial.printf("[modbus] state=cmd-wifi cmd=%u arg=%.4f\n",
-                    (unsigned)cmd, arg);
-      switch (cmd) {
-        case 1:  _shared->requestCommand(CMD_TARE);          break;
-        case 2:  _shared->requestCommand(CMD_CALIBRATE, arg); break;
-        case 3:  _shared->requestCommand(CMD_RESET_SESSION); break;
-        case 4:  _shared->requestCommand(CMD_FLUSH);         break;
-        case 99: _shared->requestCommand(CMD_WIPE_WIFI);     break;
-        default:
-          Serial.printf("[modbus] state=cmd-unknown cmd=%u\n", (unsigned)cmd);
-          break;
-      }
+      uint16_t cmd = _mb.Hreg(REG_CMD);
+      if (cmd != 0) {
+        float arg = getFloat(REG_CMD_ARG);
+        LOG_INFO("[modbus] state=cmd-wifi cmd=%u arg=%.4f", (unsigned)cmd, arg);
+        switch (cmd) {
+          case 1:  _shared->requestCommand(CMD_TARE);          break;
+          case 2:  _shared->requestCommand(CMD_CALIBRATE, arg); break;
+          case 3:  _shared->requestCommand(CMD_RESET_SESSION); break;
+          case 4:  _shared->requestCommand(CMD_FLUSH);         break;
+          case 99: _shared->requestCommand(CMD_WIPE_WIFI);     break;
+          default:
+            LOG_WARN("[modbus] state=cmd-unknown cmd=%u", (unsigned)cmd);
+            break;
+        }
       _mb.Hreg(REG_CMD, 0);
     }
-  } else if (_transportMode == TRANSPORT_ETHERNET) {
+  } else if (_transportState == TransportState::Ethernet) {
     if (_ethClient && !_ethClient.connected()) {
       _ethClient.stop();
     }
@@ -104,8 +102,7 @@ void ModbusServer::loop() {
       uint16_t cmd = _mb.Hreg(REG_CMD);
       if (cmd != 0) {
         float arg = getFloat(REG_CMD_ARG);
-        Serial.printf("[modbus] state=cmd-ethernet cmd=%u arg=%.4f\n",
-                      (unsigned)cmd, arg);
+        LOG_INFO("[modbus] state=cmd-ethernet cmd=%u arg=%.4f", (unsigned)cmd, arg);
         switch (cmd) {
           case 1:  _shared->requestCommand(CMD_TARE);          break;
           case 2:  _shared->requestCommand(CMD_CALIBRATE, arg); break;
@@ -113,7 +110,7 @@ void ModbusServer::loop() {
           case 4:  _shared->requestCommand(CMD_FLUSH);         break;
           case 99: _shared->requestCommand(CMD_WIPE_WIFI);     break;
           default:
-            Serial.printf("[modbus] state=cmd-unknown cmd=%u\n", (unsigned)cmd);
+            LOG_WARN("[modbus] state=cmd-unknown cmd=%u", (unsigned)cmd);
             break;
         }
         _mb.Hreg(REG_CMD, 0);
@@ -133,6 +130,7 @@ void ModbusServer::setRuntime(int8_t rssi, uint8_t wifiMode) {
 // ---- setTransportMode: switch between WiFi and Ethernet Modbus ----
 void ModbusServer::setTransportMode(uint8_t mode) {
   _transportMode = mode;
+  _transportState = mode == TRANSPORT_WIFI ? TransportState::WiFi : TransportState::Ethernet;
   _started = false;
   _ethServerStarted = false;
   _mb.server(0);
@@ -148,23 +146,21 @@ void ModbusServer::setTransportMode(uint8_t mode) {
     startEthernetServer();
   }
 
-  Serial.printf("[modbus] transport mode -> %s\n",
-                mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+  LOG_INFO("[modbus] transport mode -> %s", mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 }
 
 void ModbusServer::requestTransportMode(uint8_t mode) {
-  _transportPending = true;
-  _transportPendingMode = mode;
-  Serial.printf("[modbus] transport mode change requested: %s (will apply from loop)\n",
-                mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+  _transportState = TransportState::Switching;
+  _transportTarget = mode;
+  LOG_INFO("[modbus] transport mode change requested: %s (will apply from loop)", mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 }
 
 void ModbusServer::applyPendingTransportMode() {
-  if (!_transportPending) return;
-  _transportPending = false;
+  if (_transportState != TransportState::Switching) return;
 
-  uint8_t mode = _transportPendingMode;
+  uint8_t mode = _transportTarget;
   _transportMode = mode;
+  _transportState = mode == TRANSPORT_WIFI ? TransportState::WiFi : TransportState::Ethernet;
   _started = false;
   _ethServerStarted = false;
   _mb.server(0);
@@ -180,17 +176,16 @@ void ModbusServer::applyPendingTransportMode() {
     startEthernetServer();
   }
 
-  Serial.printf("[modbus] transport mode -> %s\n",
-                mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+  LOG_INFO("[modbus] transport mode -> %s", mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 }
 
 // ---- clientConnected: true if at least one TCP client is active ----
 bool ModbusServer::clientConnected() {
   if (!_started) return false;
 
-  if (_transportMode == TRANSPORT_WIFI) {
+  if (_transportState == TransportState::WiFi) {
     return _mb.isConnected(_mb.eventSource());
-  } else if (_transportMode == TRANSPORT_ETHERNET) {
+  } else if (_transportState == TransportState::Ethernet) {
     return _ethClient && _ethClient.connected();
   }
   return false;

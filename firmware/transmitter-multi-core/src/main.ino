@@ -8,7 +8,9 @@
 // =====================================================================
 
 #include <Arduino.h>
+#include "Logger.h"
 #include "config.h"
+#include "DeepSleep.h"
 #include "SharedState.h"
 #include "Settings.h"
 #include "Scale.h"
@@ -43,7 +45,7 @@ static void checkForceApButton() {
     delay(10);
   }
   if ((millis() - t0) >= FORCE_AP_HOLD_MS) {
-    Serial.println("[setup] Boot button held -> clearing WiFi credentials");
+    LOG_INFO("[setup] Boot button held -> clearing WiFi credentials");
     AppSettings r; gSettings.load(r);
     r.wifiMode = WIFI_MODE_NONE;
     r.ssid = ""; r.wpaPassword = ""; r.entIdentity = ""; r.entUsername = ""; r.entPassword = "";
@@ -59,17 +61,17 @@ static void checkBootHealth() {
   bootCount++;
   prefs.putInt("boot_count", bootCount);
 
-  Serial.printf("[ota] boot_count=%d\n", bootCount);
+  LOG_INFO("[ota] boot_count=%d", bootCount);
 
   if (bootCount <= 2) {
     prefs.putInt("boot_count", 0);
     bool isHealthy = prefs.getBool("healthy", false);
     if (!isHealthy) {
       prefs.putBool("healthy", true);
-      Serial.println("[ota] boot health: OK");
+      LOG_INFO("[ota] boot health: OK");
     }
   } else if (bootCount > 3) {
-    Serial.println("[ota] CRITICAL: boot failure detected multiple times, attempting rollback");
+    LOG_ERROR("[ota] CRITICAL: boot failure detected multiple times, attempting rollback");
 
     const esp_partition_t* running = esp_ota_get_running_partition();
     const esp_partition_t* next = esp_ota_get_next_update_partition(NULL);
@@ -77,9 +79,9 @@ static void checkBootHealth() {
     if (running != NULL && next != NULL && running != next) {
       esp_ota_set_boot_partition(next);
       prefs.putInt("boot_count", 0);
-      Serial.println("[ota] rollback initiated, rebooting");
+      LOG_INFO("[ota] rollback initiated, rebooting");
     } else {
-      Serial.println("[ota] ERROR: cannot perform rollback - no alternate partition");
+      LOG_ERROR("[ota] ERROR: cannot perform rollback - no alternate partition");
     }
 
     delay(1000);
@@ -106,22 +108,22 @@ static void otaSetup() {
   }
 
   ArduinoOTA.onStart([]() {
-    Serial.println("[ota] update start");
+    LOG_INFO("[ota] update start");
   });
   ArduinoOTA.onEnd([]() {
-    Serial.println("\n[ota] update end, restarting");
+    LOG_INFO("\n[ota] update end, restarting");
   });
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     unsigned int pct = (progress * 100) / total;
-    Serial.printf("[ota] progress=%u%% (%u/%u bytes)\n", pct, progress, total);
+    LOG_INFO("[ota] progress=%u%% (%u/%u bytes)", pct, progress, total);
   });
   ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("[ota] error=%d\n", (int)error);
+    LOG_ERROR("[ota] error=%d", (int)error);
   });
 
   ArduinoOTA.begin();
-  Serial.printf("[ota] hostname=%s port=%u\n",
-                ArduinoOTA.getHostname(), (unsigned)OTA_PORT);
+  LOG_INFO("[ota] hostname=%s port=%u",
+            ArduinoOTA.getHostname(), (unsigned)OTA_PORT);
 }
 
 // ---- core 1 : networking ----
@@ -155,8 +157,8 @@ static void networkTask(void* pvParameters) {
     if ((millis() - lastStateLog) >= 5000) {
       lastStateLog = millis();
       ScaleSnapshot s = gShared.getSnapshot();
-      Serial.printf("[state] weight_raw=%.1f stable=%.1f cal=%d cmdPending=%d "
-                    "ap=%s sta=%s rssi=%d transport=%s uptime=%lus fw=%d.%d\n",
+      LOG_INFO("[state] weight_raw=%.1f stable=%.1f cal=%d cmdPending=%d "
+                    "ap=%s sta=%s rssi=%d transport=%s uptime=%lus fw=%d.%d",
                     s.rawSample, s.stableWeightG, s.calibrated ? 1 : 0,
                     gShared.commandPending() ? 1 : 0,
                     gWifi.apActive() ? "up" : "down",
@@ -177,21 +179,21 @@ static void scaleTask(void* pvParameters) {
   for (;;) {
     TaskWatchdog::feed("scale", 5000);
     gScale.loop();
+    DeepSleep::maybeSleep();
     vTaskDelay(5);
   }
 }
 
 void setup() {
-  Serial.begin(115200);
-  delay(300);
-  Serial.println("\n[scale] E-Tani Weight Transmitter booting");
+  Logger::begin();
+  LOG_INFO("\n[scale] E-Tani Weight Transmitter booting");
 
   checkBootHealth();
 
   TaskWatchdog::init();
 
-  Serial.printf("[scale] FW %d.%d  chipCores=%u\n",
-                FW_VERSION >> 8, FW_VERSION & 0xFF, (unsigned)ESP.getChipCores());
+  LOG_INFO("[scale] FW %d.%d  chipCores=%u",
+            FW_VERSION >> 8, FW_VERSION & 0xFF, (unsigned)ESP.getChipCores());
 
   gSettings.begin();              // create the cross-core NVS mutex first
   gSettings.load(gAppSettings);
@@ -213,6 +215,8 @@ void setup() {
 
   otaSetup();
 
+  DeepSleep::begin();
+
   // Pin workload to the two ESP32 cores.
   BaseType_t okNet = xTaskCreatePinnedToCore(networkTask, "net",
                                              TASK_STACK_NETWORK, nullptr, 2,
@@ -222,11 +226,14 @@ void setup() {
                                                nullptr, CORE_SCALE);
   TaskWatchdog::feed("net", 5000);
   TaskWatchdog::feed("scale", 5000);
-  Serial.printf("[scale] tasks pinned net=%u scale=%u\n", (unsigned)okNet, (unsigned)okScale);
-  Serial.println("[scale] AP: " + gWifi.apSsid() + " @ " + gWifi.apIP().toString());
-  Serial.printf("[setup] transport=%s oled=%s\n",
-                gAppSettings.transportMode == TRANSPORT_ETHERNET ? "Ethernet" : "WiFi",
-                gAppSettings.oledEnabled ? "on" : "off");
+  LOG_INFO("[scale] tasks pinned net=%u scale=%u", (unsigned)okNet, (unsigned)okScale);
+  {
+    String apIp = gWifi.apIP().toString();
+    LOG_INFO("[scale] AP: %s @ %s", gWifi.apSsid().c_str(), apIp.c_str());
+  }
+  LOG_INFO("[setup] transport=%s oled=%s",
+            gAppSettings.transportMode == TRANSPORT_ETHERNET ? "Ethernet" : "WiFi",
+            gAppSettings.oledEnabled ? "on" : "off");
 }
 
 void loop() {

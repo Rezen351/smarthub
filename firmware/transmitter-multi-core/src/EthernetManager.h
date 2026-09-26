@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <SPIFFS.h>
 #include "Settings.h"
+#include "Transport.h"
 
 class EthernetManager {
  public:
@@ -30,12 +31,29 @@ class EthernetManager {
 
   AppSettings _pendingCfg;
   uint8_t _transportMode = 0;
-  bool _transportPending = false;
-  uint8_t _transportPendingMode = 0;
+  TransportState _transportState = TransportState::WiFi;
+  uint8_t _transportTarget = 0;
 
   bool _active = false;
   IPAddress _ip;
   uint32_t _retryAtMs = 0;
+
+  enum class DhcpState : uint8_t {
+    Idle,
+    Attempting,
+    FallbackStatic,
+    LinkWait,
+    Complete
+  };
+
+  DhcpState _dhcpState = DhcpState::Idle;
+  uint8_t _dhcpAttempt = 0;
+  uint32_t _dhcpNextMs = 0;
+  uint32_t _linkWaitStart = 0;
+  uint8_t _ipBytes[4];
+  uint8_t _gwBytes[4];
+  uint8_t _snBytes[4];
+  uint8_t _dnsBytes[4];
 };
 
 #endif

@@ -1,4 +1,5 @@
 #include "Settings.h"
+#include "Logger.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
@@ -45,7 +46,7 @@ static void close() {
 
 void SettingsStore::begin() {
   nvsMutex();
-  Serial.printf("[nvs] SettingsStore ready (namespace '%s')\n", PREF_NAMESPACE);
+  LOG_INFO("[nvs] SettingsStore ready (namespace '%s')", PREF_NAMESPACE);
 }
 
 void SettingsStore::load(AppSettings& s) {

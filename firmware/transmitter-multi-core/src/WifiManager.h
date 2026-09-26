@@ -6,6 +6,8 @@
 #include "Settings.h"
 #include "SharedState.h"
 #include "EthernetManager.h"
+#include "Transport.h"
+#include "OfflineBuffer.h"
 
 class WifiManager {
  public:
@@ -33,13 +35,16 @@ class WifiManager {
   IPAddress    ethernetIp() const { return _ethMgr.localIp(); }
 
   void         requestTransportMode(uint8_t mode);
-  bool         transportModePending() const { return _transportPending; }
+  bool         transportModePending() const { return _transportState == TransportState::Switching; }
 
   void         updatePendingEthernetConfig(const AppSettings& s);
   void         syncPendingEthernetConfig(const AppSettings& s);
 
   void         loadEthernetConfigFromJson(AppSettings& s);
   void         saveEthernetConfigToJson(const AppSettings& s);
+
+  OfflineBuffer& offlineBuffer() { return _offline; }
+  bool         offlineBufferMounted() const { return _offline.mounted(); }
 
  private:
   uint8_t      _savedMode = WIFI_MODE_NONE;
@@ -52,9 +57,15 @@ class WifiManager {
   AppSettings  _pendingCfg;
 
   uint8_t      _transportMode = DEFAULT_TRANSPORT;
-  bool         _transportPending = false;
-  uint8_t      _transportPendingMode = DEFAULT_TRANSPORT;
+  TransportState _transportState = TransportState::WiFi;
+  uint8_t      _transportTarget = DEFAULT_TRANSPORT;
 
+  bool         _wifiWasConnected = false;
+  uint32_t     _wifiReconnectDelayMs = 5000;
+  uint32_t     _wifiLastReconnectMs = 0;
+  uint32_t     _offlineBufferLastAppendMs = 0;
+
+  OfflineBuffer _offline;
   EthernetManager _ethMgr;
 
   void  startSta(const AppSettings& s);

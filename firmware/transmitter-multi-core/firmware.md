@@ -105,6 +105,9 @@ GPIO -1       | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset bu
 | **Deterministic sensor loop** | Scale task runs on core 0 with a fixed 30 ms tick, isolated from all networking latency. |
 | **Always-reachable portal** | Soft-AP + DNS never stop regardless of STA status. Configuration is possible even without an upstream router. |
 | **Robust persistence** | NVS writes are batched by category and serialised by a recursive mutex (`SettingsStore`); calibration survives power cycles; WiFi creds are separate from calibration data so a factory WiFi reset cannot erase calibration. |
+| **Structured logging** | All debug/error paths flow through compile-time `LOG_LEVEL` macros in `Logger.h`, replacing ad-hoc `Serial.print*` calls with level-gated output. |
+| **Non-blocking transports** | Ethernet DHCP retry, WiFi reconnect, and transport switches are driven by `millis()`-based state machines with WDT feeding, avoiding blind `delay()` loops. |
+| **Bounded allocations** | JSON responses use `snprintf` paths with fixed buffers; SPIFFS-backed offline buffering is capped; deep-sleep hooks are compile-time opt-in. |
 | **Zero-placeholder rule** | All code is complete and functional; no TODO stubs shipped in production. |
 
 ### 3.2 Module Dependency Graph
@@ -114,17 +117,19 @@ GPIO -1       | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset bu
 |                          main.ino                                 |
 |  (boot, FreeRTOS task creation, singleton wiring)                 |
 +------+----------+-------------+----------------+-----------------+
-       |          |             |                |
-   config.h   Settings      SharedState      (future: MQTT, RTU...)
-   (compile   Store         (mutex IPC)
-   constants) (NVS/Prefs)       |
-       |          |         +---+------------------------+
-   ScaleSensor    |         |                            |
-   (core 0)       +---------+  WifiManager       ModbusServer
-                             (core 1)              (core 1)
-                                  |
-                             WebPortal
-                             (core 1, HTTP + DNS)
+        |          |             |                |
+    config.h   Logger      Settings      (future: MQTT, RTU...)
+    (compile   (level      Store         (mutex IPC)
+    constants) gated       (NVS/Prefs)       |
+    DeepSleep   output)         |         +---+------------------------+
+    OfflineBuffer)     |         |                            |
+        |          |         |                            |
+    ScaleSensor    |         +---------+  WifiManager       ModbusServer
+    Transport.h    |                   (core 1)              (core 1)
+    (core 0)       +----------------------------------+
+                                                      |
+                                                 WebPortal
+                                                 (core 1, HTTP + DNS)
 ```
 
 ### 3.3 FreeRTOS Task Layout
@@ -137,11 +142,12 @@ Core 0 ---------------------------------------------------------------
   |   ScaleSensor::loop()  every 30 ms
   |   HX711 read -> EMA filter -> SharedState::setSnapshot()
   +-- Consume commands from SharedState (tare, calibrate, reset...)
+  +-- DeepSleep::maybeSleep() when compile-time deep-sleep is enabled
 
 Core 1 ---------------------------------------------------------------
   Task: "net"     Priority 2   Stack 8192 B
   |   WebPortal::handleClient()    HTTP + DNS per iteration
-  |   WifiManager::loop()          STA reconnect supervision
+  |   WifiManager::loop()          STA reconnect supervision + OfflineBuffer drain
   +-- ModbusServer::loop()         every 100 ms (MODBUS_POLL_MS)
         +-- reads SharedState::getSnapshot() -> updates Holding Regs
 
@@ -211,6 +217,7 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 | `FORCE_AP_HOLD_MS` | 3000 | Hold duration to trigger force-AP (ms) |
 | `PREF_NAMESPACE` | `"scale"` | NVS namespace |
 | `FW_VERSION` | `0x0104` | Major.Minor encoded (1.4) |
+| `DEEP_SLEEP_ENABLED` | `0` | Compile-time deep-sleep opt-in for battery/solar deployments |
 
 ---
 
@@ -246,7 +253,110 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 
 ---
 
-### 4.3 `SharedState` — Inter-Core IPC
+### 4.2 `Logger` — Compile-Time Logging
+
+**Files:** [`Logger.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/Logger.h) / [`Logger.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/Logger.cpp)
+
+All firmware debug/error output is routed through level-gated macros instead of ad-hoc `Serial.print*` calls. The log level is selected at compile time via `LOG_LEVEL`:
+
+| Macro | Level | Default enabled |
+|-------|-------|-----------------|
+| `LOG_DEBUG(fmt, ...)` | 4 | No |
+| `LOG_INFO(fmt, ...)` | 3 | Yes |
+| `LOG_WARN(fmt, ...)` | 2 | Yes |
+| `LOG_ERROR(fmt, ...)` | 1 | Yes |
+
+Setting `LOG_LEVEL=LOG_LEVEL_ERROR` strips all lower-severity output at compile time, reducing flash usage and CPU cycles on the network task. `Logger::begin()` initialises the serial port; all macros delegate to `Serial.printf` with a consistent `[domain]` prefix.
+
+---
+
+### 4.3 `TransportState` — Minimal Transport FSM
+
+**Files:** [`Transport.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/Transport.h)
+
+Shared `TransportState` enum used by `WifiManager`, `EthernetManager`, and `ModbusServer`:
+
+| State | Meaning |
+|-------|---------|
+| `WiFi` | WiFi AP+STA active; Modbus TCP over WiFi |
+| `Ethernet` | W5500 Ethernet active; WiFi STA disconnected |
+| `Switching` | Transition in progress; deferred apply from `loop()` |
+
+Transport changes are requested via `requestTransportMode(mode)` and applied on the next loop iteration, keeping HTTP handlers and ISR-safe code free of blocking radio calls.
+
+---
+
+### 4.4 `EthernetManager` — W5500 Non-Blocking DHCP
+
+**Files:** [`EthernetManager.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/EthernetManager.h) / [`EthernetManager.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/EthernetManager.cpp)
+
+The old implementation blocked inside `initEthernet()` with `delay(500)` until DHCP succeeded or 3 s elapsed. The new implementation uses an explicit `DhcpState` machine:
+
+| DhcpState | Behaviour |
+|-----------|-----------|
+| `Idle` | No Ethernet request pending |
+| `Attempting` | Calls `Ethernet.begin(mac)` on a `millis()`-based timer with exponential backoff: 500 ms → 1 s → 2 s → 4 s → 8 s |
+| `FallbackStatic` | After 6 failed attempts, falls back to the configured static IP |
+| `LinkWait` | Waits 1 s for the link to come up before declaring `active` |
+| `Complete` | Terminal state; `loop()` reports active |
+
+The WDT is fed on every DHCP attempt and during link wait, so a flaky W5500 link cannot trip the task watchdog. The outer `EthernetManager::loop()` also retains a 5 s retry timer for full re-initialisation if the link drops after becoming active.
+
+---
+
+### 4.5 `WifiManager` — WiFi Exponential Backoff
+
+**Files:** [`WifiManager.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/WifiManager.h) / [`WifiManager.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/WifiManager.cpp)
+
+STA reconnect uses a bounded exponential backoff instead of a fixed 5 s retry:
+
+| Event | Next reconnect delay |
+|-------|----------------------|
+| First disconnect after connect | 5 s (reset to baseline) |
+| 1st retry | 10 s |
+| 2nd retry | 30 s |
+| 3rd+ retry | 60 s |
+
+State transitions are logged once (`[wifi] state=sta-connected`, `[wifi] state=sta-disconnected`) using instance flags, avoiding log spam in the 5-second polling loop.
+
+---
+
+### 4.6 `OfflineBuffer` — SPIFFS Bounded Queue
+
+**Files:** [`OfflineBuffer.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/OfflineBuffer.h)
+
+A minimal JSON-lines buffer for deferred telemetry when the STA uplink is down:
+
+| Property | Value |
+|----------|-------|
+| Backing store | SPIFFS `/offline.jsonl` |
+| Max entries | 50 |
+| Max entry size | 200 bytes |
+| Append behaviour | Throttled to one entry every 5 s |
+| Drain behaviour | One entry popped per WiFi reconnect cycle |
+
+`WifiManager::loop()` appends a minimal timestamped payload when disconnected and drains the oldest entry once `staConnected()` becomes true. The queue is bounded so a long outage cannot exhaust flash.
+
+---
+
+### 4.7 `DeepSleep` — Optional Battery Mode
+
+**Files:** [`DeepSleep.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/DeepSleep.h)
+**Control:** `DEEP_SLEEP_ENABLED` in `config.h` (default `0`)
+
+When enabled, the scale task calls `DeepSleep::maybeSleep()` after each acquisition cycle. Hook points are provided for timer-based or HX711-data-ready wake-up. Default-disabled preserves existing always-on behaviour for wired deployments.
+
+---
+
+### 4.8 `WebPortal` — Bounded JSON Responses
+
+**Files:** [`WebPortal.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/WebPortal.h) / [`WebPortal.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/WebPortal.cpp)
+
+High-traffic GET endpoints use `sendJsonBounded()` with a 512-byte stack buffer to avoid unbounded `String` concatenation. Calibration success responses also use bounded formatting.
+
+---
+
+### 4.9 `SharedState` — Inter-Core IPC
 
 **Files:** [`SharedState.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/SharedState.h) / [`SharedState.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/SharedState.cpp)
 **Mechanism:** Single FreeRTOS `SemaphoreHandle_t` mutex protecting a value-copy struct (`ScaleSnapshot`) and a one-deep command slot.
@@ -358,6 +468,8 @@ begin(AppSettings)
 
 Called every network task iteration. Checks STA state every 5 s; if disconnected and a saved SSID exists, re-initiates connection without restarting the AP or portal. When Ethernet transport is active and the link is down, attempts to reinitialize W5500.
 
+STA reconnect uses exponential backoff: 5 s → 10 s → 30 s → 60 s. `OfflineBuffer` appends a minimal timestamped JSON line when disconnected and drains one entry per reconnect cycle when STA comes back.
+
 #### Deferred configuration apply (why `POST /api/wifi` answers immediately)
 
 | Step | Where | What happens |
@@ -376,6 +488,8 @@ The delay is what makes "Apply Configuration" feel instant: the browser receives
 - **Non-blocking connect:** `WiFi.begin()` is non-blocking; `loop()` polls `WiFi.status()` and retries on `WL_DISCONNECTED` / `WL_CONNECTION_LOST`.
 - **No radio work inside HTTP handlers:** WiFi reconfiguration is queued and executed by the network task loop, so the web server never stalls mid-response.
 - **WPA2-Enterprise:** Uses `esp_wifi_sta_wpa2_ent_*` API for PEAP/MSCHAPv2. When the outer identity is left empty the inner username is used instead, and a missing inner username is rejected by the portal with a validation error.
+- **Transport FSM:** `TransportState::WiFi/Ethernet/Switching` replaces scattered boolean flags. `requestTransportMode()` defers the actual switch to `loop()`, keeping HTTP handlers and radio transitions deterministic.
+- **Exponential backoff:** WiFi reconnect delay grows 5 s → 10 s → 30 s → 60 s to avoid storming the AP during prolonged outages.
 
 ---
 
@@ -392,7 +506,7 @@ Supports two transports:
 - **WiFi**: `ModbusTCP` server from modbus-esp8266
 - **Ethernet**: `EthernetServer` + `EthernetClient` from EthernetENC
 
-Transport is switched at runtime via `setTransportMode()`. The register map is identical for both transports.
+Transport is switched at runtime via `requestTransportMode()` / `applyPendingTransportMode()` using the shared `TransportState` FSM. The register map is identical for both transports.
 
 #### Holding Register Map
 
@@ -852,12 +966,17 @@ firmware/transmitter-multi-core/
 +-- src/
     +-- main.ino                <- boot, task creation, singleton wiring
     +-- config.h                <- ALL compile-time constants
+    +-- Logger.h/.cpp           <- compile-time log-level macros (DEBUG/INFO/WARN/ERROR)
+    +-- Transport.h             <- shared TransportState FSM enum
+    +-- DeepSleep.h             <- optional deep-sleep hooks (compile-time opt-in)
+    +-- OfflineBuffer.h         <- SPIFFS bounded JSON-lines queue (50 entries / 200 B)
     +-- SharedState.h/.cpp      <- mutex-guarded inter-core data bus + command slot
     +-- Settings.h/.cpp         <- NVS persistence (AppSettings struct) + cross-core mutex
     +-- Scale.h/.cpp            <- HX711 acquisition, EMA filter, calibration
-    +-- WifiManager.h/.cpp      <- AP+STA dual-mode WiFi management, deferred config apply, W5500 Ethernet
+    +-- WifiManager.h/.cpp      <- AP+STA dual-mode WiFi, exponential backoff, OfflineBuffer
+    +-- EthernetManager.h/.cpp  <- W5500 non-blocking DHCP with millis backoff + WDT feed
     +-- ModbusServer.h/.cpp     <- Modbus TCP server (WiFi/Ethernet), holding register publish
-    +-- WebPortal.h/.cpp        <- HTTP captive portal, SPIFFS static server, REST API, deferred reboot
+    +-- WebPortal.h/.cpp        <- HTTP captive portal, bounded JSON responses, deferred reboot
     +-- Display.h/.cpp          <- SSD1306 OLED driver (I2C)
 ```
 

@@ -108,6 +108,12 @@
 // ------------------------- Firmware ----------------------------------
 #define FW_VERSION          0x0104   // major<<8 | minor  (1.4)
 
+// Optional deep sleep for battery/solar deployments. Default disabled so
+// existing hardware behavior is unchanged.
+#ifndef DEEP_SLEEP_ENABLED
+#define DEEP_SLEEP_ENABLED 0
+#endif
+
 // ------------------------- Arduino OTA -------------------------------
 // Hostname used for mDNS / OTA discovery.
 // Empty string = fallback to AP_SSID_PREFIX + last 6 of MAC.

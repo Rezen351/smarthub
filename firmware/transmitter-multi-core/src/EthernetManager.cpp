@@ -1,5 +1,6 @@
 #include "EthernetManager.h"
 #include "config.h"
+#include "Logger.h"
 #include "TaskWatchdog.h"
 #include <Ethernet.h>
 #include <WiFi.h>
@@ -33,28 +34,28 @@ void EthernetManager::begin(const AppSettings& s) {
   mac[4] = (efuseMac >> 8)  & 0xFF;
   mac[5] =  efuseMac        & 0xFF;
 
-  Serial.printf("[eth] initialized (transport=%s, dhcp=%u, ip=%s)\n",
-                _transportMode == TRANSPORT_ETHERNET ? "Ethernet" : "WiFi",
-                (unsigned)_pendingCfg.w5500UseDhcp,
-                _pendingCfg.w5500StaticIp.c_str());
+  LOG_INFO("[eth] initialized (transport=%s, dhcp=%u, ip=%s)",
+            _transportMode == TRANSPORT_ETHERNET ? "Ethernet" : "WiFi",
+            (unsigned)_pendingCfg.w5500UseDhcp,
+            _pendingCfg.w5500StaticIp.c_str());
 }
 
 void EthernetManager::loop() {
   uint32_t now = millis();
 
-  if (_transportPending) {
+  if (_transportState == TransportState::Switching) {
     applyPendingTransportMode();
     now = millis();
   }
 
-  if (_transportMode == TRANSPORT_ETHERNET) {
+  if (_transportState == TransportState::Ethernet) {
     if (!_active) {
       if (_retryAtMs == 0 || (int32_t)(now - _retryAtMs) >= 0) {
-        Serial.println("[eth] state=ethernet (starting W5500)");
+        LOG_INFO("[eth] state=ethernet (starting W5500)");
         initEthernet(_pendingCfg);
         _retryAtMs = millis() + 5000;
       } else {
-        Serial.printf("[eth] state=ethernet (retry in %u ms)\n",
+        LOG_INFO("[eth] state=ethernet (retry in %u ms)",
                       (unsigned)(_retryAtMs - now));
       }
     }
@@ -69,25 +70,26 @@ void EthernetManager::loop() {
 void EthernetManager::setTransportMode(uint8_t mode) {
   _transportMode = mode;
   _pendingCfg.transportMode = mode;
+  _transportState = mode == TRANSPORT_WIFI ? TransportState::WiFi : TransportState::Ethernet;
 
   if (mode == TRANSPORT_ETHERNET) {
     WiFi.disconnect(false);
-    Serial.println("[eth] state=transport-wifi->ethernet");
+    LOG_INFO("[eth] state=transport-wifi->ethernet");
     initEthernet(_pendingCfg);
   } else {
-    Serial.println("[eth] state=transport-ethernet->wifi");
+    LOG_INFO("[eth] state=transport-ethernet->wifi");
     stopEthernet();
   }
 
-  Serial.printf("[eth] transport mode -> %s\n",
-                mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+  LOG_INFO("[eth] transport mode -> %s",
+            mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 }
 
 void EthernetManager::requestTransportMode(uint8_t mode) {
-  _transportPending = true;
-  _transportPendingMode = mode;
-  Serial.printf("[eth] transport mode change requested: %s (will apply from loop)\n",
-                mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+  _transportState = TransportState::Switching;
+  _transportTarget = mode;
+  LOG_INFO("[eth] transport mode change requested: %s (will apply from loop)",
+            mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 }
 
 void EthernetManager::updatePendingEthernetConfig(const AppSettings& s) {
@@ -97,96 +99,117 @@ void EthernetManager::updatePendingEthernetConfig(const AppSettings& s) {
   _pendingCfg.w5500StaticSubnet = s.w5500StaticSubnet;
   _pendingCfg.w5500StaticDns = s.w5500StaticDns;
   _retryAtMs = 0;
-  Serial.printf("[eth] pending ethernet config updated: dhcp=%u ip=%s\n",
-                (unsigned)s.w5500UseDhcp, s.w5500StaticIp.c_str());
+  LOG_INFO("[eth] pending ethernet config updated: dhcp=%u ip=%s",
+            (unsigned)s.w5500UseDhcp, s.w5500StaticIp.c_str());
 }
 
 void EthernetManager::applyPendingTransportMode() {
-  if (!_transportPending) return;
-  _transportPending = false;
+  if (_transportState != TransportState::Switching) return;
 
-  uint8_t mode = _transportPendingMode;
+  uint8_t mode = _transportTarget;
   _transportMode = mode;
   _pendingCfg.transportMode = mode;
+  _transportState = mode == TRANSPORT_WIFI ? TransportState::WiFi : TransportState::Ethernet;
   _retryAtMs = 0;
 
   if (mode == TRANSPORT_ETHERNET) {
     WiFi.disconnect(false);
-    Serial.println("[eth] state=transport-wifi->ethernet");
+    LOG_INFO("[eth] state=transport-wifi->ethernet");
     initEthernet(_pendingCfg);
   } else {
-    Serial.println("[eth] state=transport-ethernet->wifi");
+    LOG_INFO("[eth] state=transport-ethernet->wifi");
     stopEthernet();
   }
 
-  Serial.printf("[eth] transport mode -> %s\n",
-                mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+  LOG_INFO("[eth] transport mode -> %s",
+            mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 }
 
 void EthernetManager::initEthernet(const AppSettings& s) {
   if (_active) {
-    Serial.println("[eth] state=already-active");
+    LOG_INFO("[eth] state=already-active");
     return;
   }
 
-  Serial.println("[eth] state=initializing W5500");
-  SPI.begin(W5500_SCK_PIN, W5500_MISO_PIN, W5500_MOSI_PIN, W5500_CS_PIN);
-  Ethernet.init(W5500_CS_PIN);
+  if (_dhcpState == DhcpState::Idle) {
+    LOG_INFO("[eth] state=initializing W5500");
+    SPI.begin(W5500_SCK_PIN, W5500_MISO_PIN, W5500_MOSI_PIN, W5500_CS_PIN);
+    Ethernet.init(W5500_CS_PIN);
 
-  uint8_t ip[4], gw[4], sn[4], dns[4];
-  memset(ip, 0, sizeof(ip));
-  memset(gw, 0, sizeof(gw));
-  memset(sn, 0, sizeof(sn));
-  memset(dns, 0, sizeof(dns));
-  sscanf(s.w5500StaticIp.c_str(), "%hhu.%hhu.%hhu.%hhu", &ip[0], &ip[1], &ip[2], &ip[3]);
-  sscanf(s.w5500StaticGateway.c_str(), "%hhu.%hhu.%hhu.%hhu", &gw[0], &gw[1], &gw[2], &gw[3]);
-  sscanf(s.w5500StaticSubnet.c_str(), "%hhu.%hhu.%hhu.%hhu", &sn[0], &sn[1], &sn[2], &sn[3]);
-  sscanf(s.w5500StaticDns.c_str(), "%hhu.%hhu.%hhu.%hhu", &dns[0], &dns[1], &dns[2], &dns[3]);
+    memset(_ipBytes, 0, sizeof(_ipBytes));
+    memset(_gwBytes, 0, sizeof(_gwBytes));
+    memset(_snBytes, 0, sizeof(_snBytes));
+    memset(_dnsBytes, 0, sizeof(_dnsBytes));
+    sscanf(s.w5500StaticIp.c_str(), "%hhu.%hhu.%hhu.%hhu", &_ipBytes[0], &_ipBytes[1], &_ipBytes[2], &_ipBytes[3]);
+    sscanf(s.w5500StaticGateway.c_str(), "%hhu.%hhu.%hhu.%hhu", &_gwBytes[0], &_gwBytes[1], &_gwBytes[2], &_gwBytes[3]);
+    sscanf(s.w5500StaticSubnet.c_str(), "%hhu.%hhu.%hhu.%hhu", &_snBytes[0], &_snBytes[1], &_snBytes[2], &_snBytes[3]);
+    sscanf(s.w5500StaticDns.c_str(), "%hhu.%hhu.%hhu.%hhu", &_dnsBytes[0], &_dnsBytes[1], &_dnsBytes[2], &_dnsBytes[3]);
 
-  bool dhcpOk = false;
-  if (s.w5500UseDhcp) {
-    Serial.println("[eth] state=dhcp-request");
-    uint32_t t0 = millis();
-    while ((millis() - t0) < 3000) {
-      TaskWatchdog::feed("net", 5000);
-      if (Ethernet.begin(mac) != 0) {
-        dhcpOk = true;
-        break;
-      }
-      delay(500);
+    if (s.w5500UseDhcp) {
+      _dhcpState = DhcpState::Attempting;
+      _dhcpAttempt = 0;
+      _dhcpNextMs = millis();
+      LOG_INFO("[eth] state=dhcp-request");
+    } else {
+      LOG_INFO("[eth] state=static-ip ip=%s gw=%s sn=%s dns=%s",
+                    s.w5500StaticIp.c_str(), s.w5500StaticGateway.c_str(),
+                    s.w5500StaticSubnet.c_str(), s.w5500StaticDns.c_str());
+      Ethernet.begin(mac, IPAddress(_ipBytes[0], _ipBytes[1], _ipBytes[2], _ipBytes[3]),
+                     IPAddress(_gwBytes[0], _gwBytes[1], _gwBytes[2], _gwBytes[3]),
+                     IPAddress(_snBytes[0], _snBytes[1], _snBytes[2], _snBytes[3]),
+                     IPAddress(_dnsBytes[0], _dnsBytes[1], _dnsBytes[2], _dnsBytes[3]));
+      _dhcpState = DhcpState::LinkWait;
+      _linkWaitStart = millis();
     }
-    if (!dhcpOk) {
-      Serial.println("[eth] state=dhcp-timeout, fallback to static");
-      Ethernet.begin(mac, IPAddress(ip[0], ip[1], ip[2], ip[3]),
-                     IPAddress(gw[0], gw[1], gw[2], gw[3]),
-                     IPAddress(sn[0], sn[1], sn[2], sn[3]),
-                     IPAddress(dns[0], dns[1], dns[2], dns[3]));
-    }
-  } else {
-    Serial.printf("[eth] state=static-ip ip=%s gw=%s sn=%s dns=%s\n",
-                  s.w5500StaticIp.c_str(), s.w5500StaticGateway.c_str(),
-                  s.w5500StaticSubnet.c_str(), s.w5500StaticDns.c_str());
-    Ethernet.begin(mac, IPAddress(ip[0], ip[1], ip[2], ip[3]),
-                   IPAddress(gw[0], gw[1], gw[2], gw[3]),
-                   IPAddress(sn[0], sn[1], sn[2], sn[3]),
-                   IPAddress(dns[0], dns[1], dns[2], dns[3]));
+    return;
   }
 
-  uint32_t ethT0 = millis();
-  while ((millis() - ethT0) < 1000) {
+  if (_dhcpState == DhcpState::Attempting) {
+    if ((int32_t)(millis() - _dhcpNextMs) < 0) {
+      return;
+    }
     TaskWatchdog::feed("net", 5000);
-    yield();
+    if (Ethernet.begin(mac) != 0) {
+      _dhcpState = DhcpState::LinkWait;
+      _linkWaitStart = millis();
+      return;
+    }
+    _dhcpAttempt++;
+    if (_dhcpAttempt >= 6) {
+      LOG_INFO("[eth] state=dhcp-timeout, fallback to static");
+      Ethernet.begin(mac, IPAddress(_ipBytes[0], _ipBytes[1], _ipBytes[2], _ipBytes[3]),
+                     IPAddress(_gwBytes[0], _gwBytes[1], _gwBytes[2], _gwBytes[3]),
+                     IPAddress(_snBytes[0], _snBytes[1], _snBytes[2], _snBytes[3]),
+                     IPAddress(_dnsBytes[0], _dnsBytes[1], _dnsBytes[2], _dnsBytes[3]));
+      _dhcpState = DhcpState::LinkWait;
+      _linkWaitStart = millis();
+      return;
+    }
+    uint32_t backoff = 500;
+    if (_dhcpAttempt >= 2) backoff = 1000;
+    if (_dhcpAttempt >= 3) backoff = 2000;
+    if (_dhcpAttempt >= 4) backoff = 4000;
+    if (_dhcpAttempt >= 5) backoff = 8000;
+    _dhcpNextMs = millis() + backoff;
+    return;
   }
 
-  _ip = Ethernet.localIP();
-  _active = true;
-
-  Serial.printf("[eth] state=active ip=%s\n", _ip.toString().c_str());
+  if (_dhcpState == DhcpState::LinkWait) {
+    TaskWatchdog::feed("net", 5000);
+    if ((millis() - _linkWaitStart) < 1000) {
+      return;
+    }
+    _dhcpState = DhcpState::Idle;
+    _ip = Ethernet.localIP();
+    _active = true;
+    LOG_INFO("[eth] state=active ip=%s", _ip.toString().c_str());
+    return;
+  }
 }
 
 void EthernetManager::stopEthernet() {
   if (!_active) {
-    Serial.println("[eth] state=already-stopped");
+    LOG_INFO("[eth] state=already-stopped");
     return;
   }
 
@@ -194,24 +217,26 @@ void EthernetManager::stopEthernet() {
   _active = false;
   _ip = IPAddress(0, 0, 0, 0);
   _retryAtMs = 0;
+  _dhcpState = DhcpState::Idle;
+  _dhcpAttempt = 0;
 
-  Serial.println("[eth] state=stopped");
+  LOG_INFO("[eth] state=stopped");
 }
 
 void EthernetManager::loadEthernetConfigFromJson(AppSettings& s) {
   if (!SPIFFS.begin(false)) {
-    Serial.println("[eth] config.json not available: SPIFFS not mounted");
+    LOG_INFO("[eth] config.json not available: SPIFFS not mounted");
     return;
   }
 
   if (!SPIFFS.exists("/config.json")) {
-    Serial.println("[eth] config.json not found, using defaults/NVS");
+    LOG_INFO("[eth] config.json not found, using defaults/NVS");
     return;
   }
 
   File file = SPIFFS.open("/config.json", "r");
   if (!file) {
-    Serial.println("[eth] failed to open config.json");
+    LOG_INFO("[eth] failed to open config.json");
     return;
   }
 
@@ -262,13 +287,13 @@ void EthernetManager::loadEthernetConfigFromJson(AppSettings& s) {
     }
   }
 
-  Serial.printf("[eth] loaded ethernet config from JSON: dhcp=%u ip=%s\n",
-                (unsigned)s.w5500UseDhcp, s.w5500StaticIp.c_str());
+  LOG_INFO("[eth] loaded ethernet config from JSON: dhcp=%u ip=%s",
+            (unsigned)s.w5500UseDhcp, s.w5500StaticIp.c_str());
 }
 
 void EthernetManager::saveEthernetConfigToJson(const AppSettings& s) {
   if (!SPIFFS.begin(false)) {
-    Serial.println("[eth] cannot save config.json: SPIFFS not mounted");
+    LOG_INFO("[eth] cannot save config.json: SPIFFS not mounted");
     return;
   }
 
@@ -284,11 +309,11 @@ void EthernetManager::saveEthernetConfigToJson(const AppSettings& s) {
 
   File file = SPIFFS.open("/config.json", "w");
   if (!file) {
-    Serial.println("[eth] failed to open config.json for writing");
+    LOG_INFO("[eth] failed to open config.json for writing");
     return;
   }
 
   file.print(json);
   file.close();
-  Serial.println("[eth] saved ethernet config to config.json");
+  LOG_INFO("[eth] saved ethernet config to config.json");
 }
