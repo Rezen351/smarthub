@@ -17,6 +17,9 @@
 #include "WebPortal.h"
 #include "Display.h"
 #include <ArduinoOTA.h>
+#include <Preferences.h>
+#include "esp_ota_ops.h"
+#include "esp_partition.h"
 
 // ---- application singletons ----
 SharedState  gShared;
@@ -45,6 +48,44 @@ static void checkForceApButton() {
     r.ssid = ""; r.wpaPassword = ""; r.entIdentity = ""; r.entUsername = ""; r.entPassword = "";
     gSettings.saveWifi(r);
   }
+}
+
+static void checkBootHealth() {
+  Preferences prefs;
+  prefs.begin("ota", false);
+
+  int bootCount = prefs.getInt("boot_count", 0);
+  bootCount++;
+  prefs.putInt("boot_count", bootCount);
+
+  Serial.printf("[ota] boot_count=%d\n", bootCount);
+
+  if (bootCount <= 2) {
+    prefs.putInt("boot_count", 0);
+    bool isHealthy = prefs.getBool("healthy", false);
+    if (!isHealthy) {
+      prefs.putBool("healthy", true);
+      Serial.println("[ota] boot health: OK");
+    }
+  } else if (bootCount > 3) {
+    Serial.println("[ota] CRITICAL: boot failure detected multiple times, attempting rollback");
+
+    const esp_partition_t* running = esp_ota_get_running_partition();
+    const esp_partition_t* next = esp_ota_get_next_update_partition(NULL);
+
+    if (running != NULL && next != NULL && running != next) {
+      esp_ota_set_boot_partition(next);
+      prefs.putInt("boot_count", 0);
+      Serial.println("[ota] rollback initiated, rebooting");
+    } else {
+      Serial.println("[ota] ERROR: cannot perform rollback - no alternate partition");
+    }
+
+    delay(1000);
+    ESP.restart();
+  }
+
+  prefs.end();
 }
 
 static String otaHostname() {
@@ -139,6 +180,9 @@ void setup() {
   Serial.begin(115200);
   delay(300);
   Serial.println("\n[scale] E-Tani Weight Transmitter booting");
+
+  checkBootHealth();
+
   Serial.printf("[scale] FW %d.%d  chipCores=%u\n",
                 FW_VERSION >> 8, FW_VERSION & 0xFF, (unsigned)ESP.getChipCores());
 

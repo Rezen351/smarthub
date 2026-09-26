@@ -41,6 +41,8 @@ void DisplayManager::showSimple(const char* ip, float weightKg) {
   _display.setCursor(12, 0);
   _display.printf("%s", ip);
 
+  _display.drawFastHLine(0, 8, 128, SSD1306_WHITE);
+
   _display.setTextSize(2);
   _display.setCursor(8, 10);
   _display.printf("%.3f kg", weightKg);
