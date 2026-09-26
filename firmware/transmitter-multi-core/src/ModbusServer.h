@@ -39,6 +39,7 @@ public:
   bool serverRunning() const { return _started; }
 
   void setTransportMode(uint8_t mode);
+  void requestTransportMode(uint8_t mode);
   uint8_t transportMode() const { return _transportMode; }
 
   // ---- Holding register offset constants (0-indexed from 40001) ----
@@ -78,6 +79,8 @@ private:
   int8_t  _rssiCache     = -127;
   uint8_t _wifiModeCache = 0;
   uint8_t _transportMode = DEFAULT_TRANSPORT;
+  bool    _transportPending = false;
+  uint8_t _transportPendingMode = DEFAULT_TRANSPORT;
 
   // Encode/decode float <-> two consecutive holding registers (big-endian).
   void  putFloat(uint16_t offset, float val);
@@ -85,6 +88,8 @@ private:
 
   // Push all live values into the holding register bank.
   void publish(int8_t rssi, uint8_t wifiMode);
+
+  void applyPendingTransportMode();
 };
 
 #endif // MODBUS_SERVER_H

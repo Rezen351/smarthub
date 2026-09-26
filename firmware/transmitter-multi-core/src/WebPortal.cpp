@@ -724,8 +724,8 @@ void WebPortal::handleApiTransport() {
   _cfgLoaded = true;
 
   if (_settings) _settings->saveAll(_cfg);
-  if (_wifi) _wifi->setTransportMode((uint8_t)mode);
-  if (_modbus) _modbus->setTransportMode((uint8_t)mode);
+  if (_wifi) _wifi->requestTransportMode((uint8_t)mode);
+  if (_modbus) _modbus->requestTransportMode((uint8_t)mode);
 
   Serial.printf("[portal] /api/transport saved (mode=%u)\n", (unsigned)mode);
   sendJson(200, "{\"ok\":true,\"success\":true,"
@@ -758,7 +758,11 @@ void WebPortal::handleApiEthernetConfig() {
   _cfgLoaded = true;
 
   if (_settings) _settings->saveAll(_cfg);
-  if (_wifi) _wifi->setTransportMode(_cfg.transportMode);
+  if (_wifi) {
+    _wifi->updatePendingEthernetConfig(_cfg);
+    _wifi->requestTransportMode(_cfg.transportMode);
+    _wifi->saveEthernetConfigToJson(_cfg);
+  }
 
   Serial.printf("[portal] /api/ethernet/config saved (dhcp=%u)\n", (unsigned)useDhcp);
   sendJson(200, "{\"ok\":true,\"success\":true,"

@@ -55,17 +55,18 @@
 #define REBOOT_GRACE_MS          500
 
 // ------------------------- W5500 Ethernet ---------------------------
-// Hardware SPI on ESP32-S3 DevKitC-1.
-//   W5500 SCK  -> GPIO 10
-//   W5500 MISO -> GPIO 11
-//   W5500 MOSI -> GPIO 12
-//   W5500 CS   -> GPIO 13
+// Hardware SPI using standard VSPI pins on ESP32 / ESP32-S3.
+//   W5500 SCK  -> GPIO 18
+//   W5500 MISO -> GPIO 19
+//   W5500 MOSI -> GPIO 23
+//   W5500 CS   -> GPIO 5
 // HX711 stays on GPIO 14/15 so there is no SPI bus conflict.
-// GPIO 10-17 are contiguous general-purpose pins on S3 DevKitC-1.
-#define W5500_SCK_PIN       10
-#define W5500_MISO_PIN      11
-#define W5500_MOSI_PIN      12
-#define W5500_CS_PIN        13
+// OLED stays on GPIO 16/17 so there is no SPI bus conflict.
+// Using standard VSPI pins ensures compatibility with both ESP32 and ESP32-S3.
+#define W5500_SCK_PIN       18
+#define W5500_MISO_PIN      19
+#define W5500_MOSI_PIN      23
+#define W5500_CS_PIN        5
 #define W5500_USE_DHCP      true
 #define W5500_STATIC_IP     "192.168.1.100"
 #define W5500_STATIC_GATEWAY "192.168.1.1"

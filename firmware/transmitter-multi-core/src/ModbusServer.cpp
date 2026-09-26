@@ -65,6 +65,10 @@ void ModbusServer::startEthernetServer() {
 void ModbusServer::loop() {
   if (!_started) return;
 
+  if (_transportPending) {
+    applyPendingTransportMode();
+  }
+
   if (_transportMode == TRANSPORT_WIFI) {
     _mb.task();
 
@@ -128,6 +132,38 @@ void ModbusServer::setRuntime(int8_t rssi, uint8_t wifiMode) {
 
 // ---- setTransportMode: switch between WiFi and Ethernet Modbus ----
 void ModbusServer::setTransportMode(uint8_t mode) {
+  _transportMode = mode;
+  _started = false;
+  _ethServerStarted = false;
+  _mb.server(0);
+
+  if (_ethClient) {
+    _ethClient.stop();
+    _ethClient = EthernetClient();
+  }
+
+  if (mode == TRANSPORT_WIFI) {
+    startServer();
+  } else if (mode == TRANSPORT_ETHERNET) {
+    startEthernetServer();
+  }
+
+  Serial.printf("[modbus] transport mode -> %s\n",
+                mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+}
+
+void ModbusServer::requestTransportMode(uint8_t mode) {
+  _transportPending = true;
+  _transportPendingMode = mode;
+  Serial.printf("[modbus] transport mode change requested: %s (will apply from loop)\n",
+                mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+}
+
+void ModbusServer::applyPendingTransportMode() {
+  if (!_transportPending) return;
+  _transportPending = false;
+
+  uint8_t mode = _transportPendingMode;
   _transportMode = mode;
   _started = false;
   _ethServerStarted = false;

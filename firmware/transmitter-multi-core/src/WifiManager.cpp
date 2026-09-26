@@ -1,40 +1,33 @@
 #include "WifiManager.h"
 #include "config.h"
-#include <EthernetENC.h>
-#include <SPI.h>
-
-static uint8_t mac[6];
+#include "TaskWatchdog.h"
+#include <WiFi.h>
 
 static String buildApSsid() {
   uint64_t mac = ESP.getEfuseMac();
   char suffix[13];
   snprintf(suffix, sizeof(suffix), "%02X%02X%02X%02X%02X%02X",
-           (uint8_t)(mac >> 40),
-           (uint8_t)(mac >> 32),
-           (uint8_t)(mac >> 24),
-           (uint8_t)(mac >> 16),
-           (uint8_t)(mac >> 8),
-           (uint8_t)(mac));
+           (uint8_t)(mac >> 40), (uint8_t)(mac >> 32), (uint8_t)(mac >> 24),
+           (uint8_t)(mac >> 16), (uint8_t)(mac >> 8), (uint8_t)mac);
   return String(AP_SSID_PREFIX) + String(suffix);
 }
+
+WifiManager::WifiManager() {}
+
+WifiManager::~WifiManager() {}
 
 void WifiManager::begin(const AppSettings& s) {
   _savedMode = s.wifiMode;
   _savedSsid = s.ssid;
   _apSsid = buildApSsid();
   _transportMode = s.transportMode;
-
-  uint64_t efuseMac = ESP.getEfuseMac();
-  mac[0] = (efuseMac >> 40) & 0xFF;
-  mac[1] = (efuseMac >> 32) & 0xFF;
-  mac[2] = (efuseMac >> 24) & 0xFF;
-  mac[3] = (efuseMac >> 16) & 0xFF;
-  mac[4] = (efuseMac >> 8)  & 0xFF;
-  mac[5] =  efuseMac        & 0xFF;
+  _pendingCfg.transportMode = s.transportMode;
 
   Serial.printf("[wifi] initializing (transport=%s, savedMode=%u, ssid='%s')\n",
                 _transportMode == TRANSPORT_ETHERNET ? "Ethernet" : "WiFi",
                 (unsigned)_savedMode, _savedSsid.c_str());
+
+  _ethMgr.begin(s);
 
   WiFi.disconnect(false);
   WiFi.setSleep(false);
@@ -70,14 +63,11 @@ void WifiManager::begin(const AppSettings& s) {
 
   WiFi.mode(WIFI_AP_STA);
 
-  if (_transportMode == TRANSPORT_ETHERNET) {
-    Serial.println("[wifi] state=ethernet (WiFi STA disabled)");
-    beginEthernet(s);
-    WiFi.disconnect(false);
-  } else {
+  if (_transportMode != TRANSPORT_ETHERNET) {
     Serial.println("[wifi] state=ap+sta");
-    stopEthernet();
     startSta(s);
+  } else {
+    Serial.println("[wifi] state=ethernet (WiFi STA disabled)");
   }
 }
 
@@ -101,8 +91,7 @@ void WifiManager::startSta(const AppSettings& s) {
       Serial.println("[wifi] state=ap-only (enterprise mode ignored: inner username is empty)");
       return;
     }
-    const char* ident = s.entIdentity.length() ? s.entIdentity.c_str()
-                                               : s.entUsername.c_str();
+    const char* ident = s.entIdentity.length() ? s.entIdentity.c_str() : s.entUsername.c_str();
     WiFi.begin(s.ssid.c_str(), WPA2_AUTH_PEAP, ident,
                s.entUsername.c_str(), s.entPassword.c_str());
     Serial.printf("[wifi] state=connecting mode=ent ssid='%s' identity='%s'\n",
@@ -113,8 +102,7 @@ void WifiManager::startSta(const AppSettings& s) {
 void WifiManager::applySettings(const AppSettings& s) {
   _savedMode = s.wifiMode;
   _savedSsid = s.ssid;
-  Serial.printf("[wifi] applySettings mode=%u ssid='%s'\n",
-                (unsigned)s.wifiMode, s.ssid.c_str());
+  Serial.printf("[wifi] applySettings mode=%u ssid='%s'\n", (unsigned)s.wifiMode, s.ssid.c_str());
   startSta(s);
 }
 
@@ -125,8 +113,7 @@ void WifiManager::requestSettings(const AppSettings& s) {
   _applyPending = true;
   _applyAtMs = millis() + WIFI_APPLY_DELAY_MS;
   Serial.printf("[wifi] state=pending mode=%u ssid='%s' deferred=%ums\n",
-                (unsigned)s.wifiMode, s.ssid.c_str(),
-                (unsigned)WIFI_APPLY_DELAY_MS);
+                (unsigned)s.wifiMode, s.ssid.c_str(), (unsigned)WIFI_APPLY_DELAY_MS);
 }
 
 void WifiManager::applyPendingSettings() {
@@ -153,14 +140,17 @@ void WifiManager::loop() {
     now = millis();
   }
 
+  if (_transportPending) {
+    applyPendingTransportMode();
+    now = millis();
+  }
+
+  _ethMgr.loop();
+
   if ((now - _lastCheck) < 5000) return;
   _lastCheck = now;
 
   if (_transportMode == TRANSPORT_ETHERNET) {
-    if (!_ethernetActive) {
-      Serial.println("[wifi] state=ethernet (starting W5500)");
-      beginEthernet(_pendingCfg);
-    }
     return;
   }
 
@@ -200,79 +190,59 @@ void WifiManager::loop() {
 void WifiManager::setTransportMode(uint8_t mode) {
   _transportMode = mode;
   _pendingCfg.transportMode = mode;
-
-  if (mode == TRANSPORT_ETHERNET) {
-    WiFi.disconnect(false);
-    Serial.println("[wifi] state=transport-wifi->ethernet");
-    beginEthernet(_pendingCfg);
-  } else {
-    Serial.println("[wifi] state=transport-ethernet->wifi");
-    stopEthernet();
-    startSta(_pendingCfg);
-  }
+  _ethMgr.setTransportMode(mode);
 
   Serial.printf("[wifi] transport mode -> %s\n",
                 mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 }
 
-void WifiManager::beginEthernet(const AppSettings& s) {
-  if (_ethernetActive) {
-    Serial.println("[eth] state=already-active");
-    return;
-  }
-
-  Serial.println("[eth] state=initializing W5500");
-  SPI.begin(W5500_SCK_PIN, W5500_MISO_PIN, W5500_MOSI_PIN, W5500_CS_PIN);
-  Ethernet.init(W5500_CS_PIN);
-
-  uint8_t ip[4], gw[4], sn[4], dns[4];
-  memset(ip, 0, sizeof(ip));
-  memset(gw, 0, sizeof(gw));
-  memset(sn, 0, sizeof(sn));
-  memset(dns, 0, sizeof(dns));
-  sscanf(s.w5500StaticIp.c_str(), "%hhu.%hhu.%hhu.%hhu", &ip[0], &ip[1], &ip[2], &ip[3]);
-  sscanf(s.w5500StaticGateway.c_str(), "%hhu.%hhu.%hhu.%hhu", &gw[0], &gw[1], &gw[2], &gw[3]);
-  sscanf(s.w5500StaticSubnet.c_str(), "%hhu.%hhu.%hhu.%hhu", &sn[0], &sn[1], &sn[2], &sn[3]);
-  sscanf(s.w5500StaticDns.c_str(), "%hhu.%hhu.%hhu.%hhu", &dns[0], &dns[1], &dns[2], &dns[3]);
-
-  if (s.w5500UseDhcp) {
-    Serial.println("[eth] state=dhcp-request");
-    if (Ethernet.begin(mac) == 0) {
-      Serial.println("[eth] state=dhcp-fallback-static");
-      Ethernet.begin(mac, IPAddress(ip[0], ip[1], ip[2], ip[3]),
-                     IPAddress(gw[0], gw[1], gw[2], gw[3]),
-                     IPAddress(sn[0], sn[1], sn[2], sn[3]),
-                     IPAddress(dns[0], dns[1], dns[2], dns[3]));
-    }
-  } else {
-    Serial.println("[eth] state=static-ip");
-    Ethernet.begin(mac, IPAddress(ip[0], ip[1], ip[2], ip[3]),
-                   IPAddress(gw[0], gw[1], gw[2], gw[3]),
-                   IPAddress(sn[0], sn[1], sn[2], sn[3]),
-                   IPAddress(dns[0], dns[1], dns[2], dns[3]));
-  }
-
-  uint32_t ethT0 = millis();
-  while ((millis() - ethT0) < 500) {
-    yield();
-  }
-
-  _ethernetIp = Ethernet.localIP();
-  _ethernetActive = true;
-
-  Serial.printf("[eth] state=active ip=%s\n",
-                _ethernetIp.toString().c_str());
+void WifiManager::requestTransportMode(uint8_t mode) {
+  _transportPending = true;
+  _transportPendingMode = mode;
+  _ethMgr.requestTransportMode(mode);
+  Serial.printf("[wifi] transport mode change requested: %s (will apply from loop)\n",
+                mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 }
 
-void WifiManager::stopEthernet() {
-  if (!_ethernetActive) {
-    Serial.println("[eth] state=already-stopped");
-    return;
-  }
+void WifiManager::syncPendingEthernetConfig(const AppSettings& s) {
+  _pendingCfg.w5500UseDhcp = s.w5500UseDhcp;
+  _pendingCfg.w5500StaticIp = s.w5500StaticIp;
+  _pendingCfg.w5500StaticGateway = s.w5500StaticGateway;
+  _pendingCfg.w5500StaticSubnet = s.w5500StaticSubnet;
+  _pendingCfg.w5500StaticDns = s.w5500StaticDns;
+  _ethMgr.updatePendingEthernetConfig(s);
+  Serial.printf("[wifi] sync pending ethernet config: dhcp=%u ip=%s\n",
+                (unsigned)s.w5500UseDhcp, s.w5500StaticIp.c_str());
+}
 
-  Ethernet.end();
-  _ethernetActive = false;
-  _ethernetIp = IPAddress(0, 0, 0, 0);
+void WifiManager::updatePendingEthernetConfig(const AppSettings& s) {
+  _pendingCfg.w5500UseDhcp = s.w5500UseDhcp;
+  _pendingCfg.w5500StaticIp = s.w5500StaticIp;
+  _pendingCfg.w5500StaticGateway = s.w5500StaticGateway;
+  _pendingCfg.w5500StaticSubnet = s.w5500StaticSubnet;
+  _pendingCfg.w5500StaticDns = s.w5500StaticDns;
+  _ethMgr.updatePendingEthernetConfig(s);
+  Serial.printf("[wifi] pending ethernet config updated: dhcp=%u ip=%s\n",
+                (unsigned)s.w5500UseDhcp, s.w5500StaticIp.c_str());
+}
 
-  Serial.println("[eth] state=stopped");
+void WifiManager::applyPendingTransportMode() {
+  if (!_transportPending) return;
+  _transportPending = false;
+
+  uint8_t mode = _transportPendingMode;
+  _transportMode = mode;
+  _pendingCfg.transportMode = mode;
+  _ethMgr.requestTransportMode(mode);
+
+  Serial.printf("[wifi] transport mode -> %s\n",
+                mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+}
+
+void WifiManager::loadEthernetConfigFromJson(AppSettings& s) {
+  _ethMgr.loadEthernetConfigFromJson(s);
+}
+
+void WifiManager::saveEthernetConfigToJson(const AppSettings& s) {
+  _ethMgr.saveEthernetConfigToJson(s);
 }

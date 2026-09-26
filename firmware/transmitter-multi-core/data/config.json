@@ -1,0 +1,9 @@
+{
+  "ethernet": {
+    "useDhcp": true,
+    "staticIp": "192.168.1.100",
+    "staticGateway": "192.168.1.1",
+    "staticSubnet": "255.255.255.0",
+    "staticDns": "8.8.8.8"
+  }
+}

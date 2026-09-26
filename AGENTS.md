@@ -110,6 +110,35 @@ Sebelum melakukan modifikasi kode yang bersifat kompleks:
 3. **Styling**: Ikuti sistem styling yang ada (Vanilla CSS atau Tailwind). Pertahankan konsistensi desain sistem.
 4. **Code Formatting & Linting**: Wajib menggunakan `eslint` dan `prettier` sebelum melakukan commit.
 
+### 7.3 Firmware / Embedded Systems (ESP32)
+
+#### 7.3.1 Arsitektur & Pola Desain (Architecture & Design Patterns)
+1. **Hardware Abstraction Layer (HAL)**: Pisahkan logika bisnis aplikasi dari kode yang berinteraksi langsung dengan perangkat keras (pin, sensor, aktuator). Ini memudahkan jika suatu saat modul sensor atau board mikrokontroler diganti (misal dari ESP32 ke STM32).
+2. **Non-Blocking Code (Event-Driven)**: Dilarang keras menggunakan `delay()` atau fungsi pemblokiran (blocking) dalam loop utama. Gunakan pendekatan berbasis waktu (seperti `millis()`) atau manfaatkan RTOS (seperti FreeRTOS) dengan sistem antrean (queue) dan tugas (task).
+3. **Finite State Machine (FSM)**: Gunakan State Machine untuk mengatur status perangkat lunak secara terstruktur (contoh: `STATE_INIT`, `STATE_WIFI_CONNECTING`, `STATE_RUNNING`, `STATE_ERROR`).
+
+#### 7.3.2 Manajemen Memori & Stabilitas Operasional
+1. **Hindari Alokasi Memori Dinamis (Dynamic Allocation)**: Dilarang keras menggunakan kelas `String` (pada Arduino/C++) secara masif atau menggunakan `malloc()`/`new` terus-menerus di dalam loop. Gunakan static array (misal: `char buffer[256]`) atau `std::array` untuk mencegah heap fragmentation yang dapat menyebabkan perangkat crash (Out of Memory) setelah beberapa hari berjalan.
+2. **Watchdog Timer (WDT)**: Wajib mengaktifkan Hardware dan Software Watchdog Timer. Jika program hang (terjebak dalam infinite loop), WDT akan mereset perangkat secara otomatis untuk memulihkan sistem tanpa intervensi fisik.
+3. **Fail-Safe State**: Jika sensor gagal terbaca atau jaringan putus, aktuator (seperti pompa air atau relay) wajib dikembalikan ke status aman (misal: default OFF) untuk mencegah kerusakan atau insiden di lapangan.
+
+#### 7.3.3 Konektivitas & Komunikasi Data (Networking & MQTT)
+1. **Exponential Backoff Reconnection**: Jika koneksi Wi-Fi atau MQTT terputus, jangan melakukan reconnect terus-menerus tanpa henti dalam waktu cepat karena akan menguras daya dan membuat router overload. Gunakan interval yang bertambah (misal: coba lagi setelah 5 detik, lalu 10 detik, 30 detik, maksimal 1 menit).
+2. **Offline Data Buffering**: Jika koneksi terputus saat jadwal pengiriman data sensor, simpan data ke flash storage (`LittleFS`/`SPIFFS`/`EEPROM`) sementara waktu, lalu kirimkan sekaligus (bulk) ketika jaringan kembali pulih.
+3. **Non-Hardcoded Credentials**: Dilarang menyimpan SSID Wi-Fi, password, atau kredensial MQTT langsung (hardcode) ke dalam source code. Gunakan sistem Provisioning (seperti SmartConfig, AP Web Server, atau BLE Provisioning) dan simpan kredensial di NVS (Non-Volatile Storage) yang terenkripsi.
+
+#### 7.3.4 Manajemen Daya (Power Management)
+1. **Sleep Modes**: Untuk perangkat berbasis baterai atau panel surya, wajib menerapkan Deep Sleep atau Light Sleep di sela-sela interval pengiriman data. Matikan periferal (Wi-Fi, Bluetooth, sensor) sebelum masuk ke mode tidur.
+
+#### 7.3.5 Keamanan & Manajemen Pembaruan (Security & Maintenance)
+1. **Over-The-Air (OTA) Updates**: Wajib memiliki mekanisme pembaruan firmware jarak jauh tanpa perlu colok kabel USB.
+2. **A/B Partition (Rollback Protection)**: Gunakan skema partisi A/B untuk OTA. Jika partisi A gagal melakukan pembaruan (misal: listrik mati di tengah download), sistem akan otomatis rollback (kembali) menggunakan partisi B yang masih berfungsi.
+3. **Semantic Versioning**: Versi firmware harus tertanam di dalam kode dan dilaporkan ke MQTT/Backend saat pertama kali booting (contoh: `v1.2.4`), agar memudahkan pelacakan perangkat mana yang belum di-update.
+
+#### 7.3.6 Standardisasi Penulisan & Linting
+1. **Konvensi Gaya C/C++**: Mengikuti standar MISRA C/C++ (versi lightweight) untuk perangkat embedded, yang melarang penggunaan operasi pointer yang tidak aman.
+2. **Logging**: Wajib memiliki modul logger dengan level (`DEBUG`, `INFO`, `WARN`, `ERROR`). Di environment production, level `DEBUG` wajib dimatikan (hanya tampilkan `ERROR`) untuk menghemat siklus CPU pada pencetakan fungsi Serial.
+
 ---
 
 ## 📄 8. Standar Commit & Git Workflow

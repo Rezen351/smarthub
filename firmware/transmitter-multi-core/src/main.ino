@@ -16,6 +16,7 @@
 #include "ModbusServer.h"
 #include "WebPortal.h"
 #include "Display.h"
+#include "TaskWatchdog.h"
 #include <ArduinoOTA.h>
 #include <Preferences.h>
 #include "esp_ota_ops.h"
@@ -125,10 +126,12 @@ static void otaSetup() {
 
 // ---- core 1 : networking ----
 static void networkTask(void* pvParameters) {
+  TaskWatchdog::feed("net", 5000);
   uint32_t lastModbus = 0;
   uint32_t lastDisplay = 0;
   uint32_t lastStateLog = 0;
   for (;;) {
+    TaskWatchdog::feed("net", 5000);
     gPortal.handleClient();
     gWifi.loop();
     ArduinoOTA.handle();
@@ -170,7 +173,9 @@ static void networkTask(void* pvParameters) {
 
 // ---- core 0 : sensor ----
 static void scaleTask(void* pvParameters) {
+  TaskWatchdog::feed("scale", 5000);
   for (;;) {
+    TaskWatchdog::feed("scale", 5000);
     gScale.loop();
     vTaskDelay(5);
   }
@@ -182,6 +187,8 @@ void setup() {
   Serial.println("\n[scale] E-Tani Weight Transmitter booting");
 
   checkBootHealth();
+
+  TaskWatchdog::init();
 
   Serial.printf("[scale] FW %d.%d  chipCores=%u\n",
                 FW_VERSION >> 8, FW_VERSION & 0xFF, (unsigned)ESP.getChipCores());
@@ -211,8 +218,10 @@ void setup() {
                                              TASK_STACK_NETWORK, nullptr, 2,
                                              nullptr, CORE_NETWORK);
   BaseType_t okScale = xTaskCreatePinnedToCore(scaleTask, "scale",
-                                                TASK_STACK_SCALE, nullptr, 2,
-                                                nullptr, CORE_SCALE);
+                                               TASK_STACK_SCALE, nullptr, 2,
+                                               nullptr, CORE_SCALE);
+  TaskWatchdog::feed("net", 5000);
+  TaskWatchdog::feed("scale", 5000);
   Serial.printf("[scale] tasks pinned net=%u scale=%u\n", (unsigned)okNet, (unsigned)okScale);
   Serial.println("[scale] AP: " + gWifi.apSsid() + " @ " + gWifi.apIP().toString());
   Serial.printf("[setup] transport=%s oled=%s\n",
