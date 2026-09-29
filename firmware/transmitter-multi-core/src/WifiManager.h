@@ -33,6 +33,7 @@ class WifiManager {
   void         setTransportMode(uint8_t mode);
   bool         ethernetActive() const { return _ethMgr.active(); }
   IPAddress    ethernetIp() const { return _ethMgr.localIp(); }
+  const char*  transportStateName() const;
 
   void         requestTransportMode(uint8_t mode);
   bool         transportModePending() const { return _transportState == TransportState::Switching; }
@@ -42,6 +43,9 @@ class WifiManager {
 
   void         loadEthernetConfigFromJson(AppSettings& s);
   void         saveEthernetConfigToJson(const AppSettings& s);
+  void         loadWifiConfigFromJson(AppSettings& s);
+  void         saveWifiConfigToJson(const AppSettings& s);
+  void         saveNetworkConfigToJson(const AppSettings& s);
 
   OfflineBuffer& offlineBuffer() { return _offline; }
   bool         offlineBufferMounted() const { return _offline.mounted(); }

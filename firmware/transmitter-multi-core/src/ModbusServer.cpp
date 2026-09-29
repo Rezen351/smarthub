@@ -1,6 +1,9 @@
 #include "ModbusServer.h"
 #include "config.h"
 #include "Logger.h"
+#include "EventBus.h"
+
+extern EventBus gEventBus;
 
 // =====================================================================
 //  E-Tani Smart Hub - Weight Transmitter
@@ -43,7 +46,7 @@ void ModbusServer::startServer() {
   _mb.server(MODBUS_PORT);
   _started = true;
 
-  LOG_INFO("[modbus] WiFi server started on port %u (%u holding regs)", (unsigned)MODBUS_PORT, (unsigned)NUM_REGS);
+  LOG_INFO("modbus", "WiFi server started on port %u (%u holding regs)", (unsigned)MODBUS_PORT, (unsigned)NUM_REGS);
 }
 
 // ---- startEthernetServer: allocate all holding registers and start Ethernet TCP ----
@@ -57,7 +60,7 @@ void ModbusServer::startEthernetServer() {
   _ethServerStarted = true;
   _started = true;
 
-  LOG_INFO("[modbus] Ethernet server started on port %u (%u holding regs)", (unsigned)MODBUS_PORT, (unsigned)NUM_REGS);
+  LOG_INFO("modbus", "Ethernet server started on port %u (%u holding regs)", (unsigned)MODBUS_PORT, (unsigned)NUM_REGS);
 }
 
 // ---- loop: poll Modbus stack, then publish if interval elapsed ----
@@ -74,7 +77,15 @@ void ModbusServer::loop() {
       uint16_t cmd = _mb.Hreg(REG_CMD);
       if (cmd != 0) {
         float arg = getFloat(REG_CMD_ARG);
-        LOG_INFO("[modbus] state=cmd-wifi cmd=%u arg=%.4f", (unsigned)cmd, arg);
+        LOG_INFO("modbus", "state=cmd-wifi cmd=%u arg=%.4f", (unsigned)cmd, arg);
+        Event evt;
+        evt.type = EventType::ACTUATOR_COMMAND_RECEIVED;
+        evt.priority = EventPriority::NORMAL;
+        evt.timestamp_ms = millis();
+        evt.sender_id = 0;
+        evt.actuator_command.actuator_id = cmd;
+        evt.actuator_command.value = arg;
+        gEventBus.post(evt);
         switch (cmd) {
           case 1:  _shared->requestCommand(CMD_TARE);          break;
           case 2:  _shared->requestCommand(CMD_CALIBRATE, arg); break;
@@ -82,7 +93,7 @@ void ModbusServer::loop() {
           case 4:  _shared->requestCommand(CMD_FLUSH);         break;
           case 99: _shared->requestCommand(CMD_WIPE_WIFI);     break;
           default:
-            LOG_WARN("[modbus] state=cmd-unknown cmd=%u", (unsigned)cmd);
+            LOG_WARN("modbus", "state=cmd-unknown cmd=%u", (unsigned)cmd);
             break;
         }
       _mb.Hreg(REG_CMD, 0);
@@ -102,7 +113,15 @@ void ModbusServer::loop() {
       uint16_t cmd = _mb.Hreg(REG_CMD);
       if (cmd != 0) {
         float arg = getFloat(REG_CMD_ARG);
-        LOG_INFO("[modbus] state=cmd-ethernet cmd=%u arg=%.4f", (unsigned)cmd, arg);
+        LOG_INFO("modbus", "state=cmd-ethernet cmd=%u arg=%.4f", (unsigned)cmd, arg);
+        Event evt;
+        evt.type = EventType::ACTUATOR_COMMAND_RECEIVED;
+        evt.priority = EventPriority::NORMAL;
+        evt.timestamp_ms = millis();
+        evt.sender_id = 0;
+        evt.actuator_command.actuator_id = cmd;
+        evt.actuator_command.value = arg;
+        gEventBus.post(evt);
         switch (cmd) {
           case 1:  _shared->requestCommand(CMD_TARE);          break;
           case 2:  _shared->requestCommand(CMD_CALIBRATE, arg); break;
@@ -110,7 +129,7 @@ void ModbusServer::loop() {
           case 4:  _shared->requestCommand(CMD_FLUSH);         break;
           case 99: _shared->requestCommand(CMD_WIPE_WIFI);     break;
           default:
-            LOG_WARN("[modbus] state=cmd-unknown cmd=%u", (unsigned)cmd);
+            LOG_WARN("modbus", "state=cmd-unknown cmd=%u", (unsigned)cmd);
             break;
         }
         _mb.Hreg(REG_CMD, 0);
@@ -146,13 +165,20 @@ void ModbusServer::setTransportMode(uint8_t mode) {
     startEthernetServer();
   }
 
-  LOG_INFO("[modbus] transport mode -> %s", mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+  LOG_INFO("modbus", "transport mode -> %s", mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+
+  Event evt;
+  evt.type = EventType::DEVICE_CONFIG_UPDATED;
+  evt.priority = EventPriority::NORMAL;
+  evt.timestamp_ms = millis();
+  evt.sender_id = 0;
+  gEventBus.post(evt);
 }
 
 void ModbusServer::requestTransportMode(uint8_t mode) {
   _transportState = TransportState::Switching;
   _transportTarget = mode;
-  LOG_INFO("[modbus] transport mode change requested: %s (will apply from loop)", mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+  LOG_INFO("modbus", "transport mode change requested: %s (will apply from loop)", mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 }
 
 void ModbusServer::applyPendingTransportMode() {
@@ -176,7 +202,14 @@ void ModbusServer::applyPendingTransportMode() {
     startEthernetServer();
   }
 
-  LOG_INFO("[modbus] transport mode -> %s", mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+  LOG_INFO("modbus", "transport mode -> %s", mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+
+  Event evt;
+  evt.type = EventType::DEVICE_CONFIG_UPDATED;
+  evt.priority = EventPriority::NORMAL;
+  evt.timestamp_ms = millis();
+  evt.sender_id = 0;
+  gEventBus.post(evt);
 }
 
 // ---- clientConnected: true if at least one TCP client is active ----

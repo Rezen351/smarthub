@@ -1,4 +1,5 @@
 #include "WebPortal.h"
+#include "Logger.h"
 #include "config.h"
 
 static WebPortal* gPortal = nullptr;
@@ -33,12 +34,11 @@ void WebPortal::begin(SharedState* shared, SettingsStore* settings,
 
   _fsOk = SPIFFS.begin(false, "/spiffs", 10, "spiffs");
   if (_fsOk) {
-    Serial.printf("[portal] SPIFFS mounted: %u bytes total, %u bytes used\n",
+    LOG_INFO("portal", "SPIFFS mounted: %u bytes total, %u bytes used",
                   (unsigned)SPIFFS.totalBytes(),
                   (unsigned)SPIFFS.usedBytes());
   } else {
-    Serial.println("[portal] ERROR: SPIFFS mount failed! "
-                   "Run 'pio run -t uploadfs' to flash the filesystem image.");
+    LOG_ERROR("portal", "ERROR: SPIFFS mount failed! Run 'pio run -t uploadfs' to flash the filesystem image.");
   }
 
   _http.on("/",                     HTTP_GET,  hRoot);
@@ -71,16 +71,16 @@ void WebPortal::begin(SharedState* shared, SettingsStore* settings,
   _http.onNotFound(hNotFound);
 
   _http.begin();
-  Serial.println("[portal] HTTP server listening on port 80");
+  LOG_INFO("portal", "HTTP server listening on port 80");
 }
 
 void WebPortal::startDns() {
   if (!_wifi || !WiFi.softAPIP()) {
-    Serial.println("[portal] state=dns-skipped (no AP IP)");
+    LOG_INFO("portal", "state=dns-skipped (no AP IP)");
     return;
   }
   _dns.start(53, "*", WiFi.softAPIP());
-  Serial.printf("[portal] state=dns-active ip=%s\n",
+  LOG_INFO("portal", "state=dns-active ip=%s",
                 WiFi.softAPIP().toString().c_str());
 }
 
@@ -93,7 +93,7 @@ void WebPortal::handleClient() {
 void WebPortal::scheduleReboot(uint32_t delayMs) {
   _rebootPending = true;
   _rebootAtMs = millis() + delayMs;
-  Serial.printf("[portal] state=reboot-scheduled delay=%ums\n", (unsigned)delayMs);
+  LOG_INFO("portal", "state=reboot-scheduled delay=%ums", (unsigned)delayMs);
 }
 
 void WebPortal::processPendingReboot() {
@@ -101,7 +101,7 @@ void WebPortal::processPendingReboot() {
 
   if (_shared && _shared->commandPending()) {
     if (_rebootAtMs != (uint32_t)-1) {
-      Serial.println("[portal] state=reboot-delayed command pending");
+      LOG_INFO("portal", "state=reboot-delayed command pending");
     }
     _rebootAtMs = millis() + REBOOT_GRACE_MS;
     return;
@@ -110,7 +110,7 @@ void WebPortal::processPendingReboot() {
   if ((int32_t)(millis() - _rebootAtMs) < 0) return;
 
   _rebootPending = false;
-  Serial.println("[portal] state=rebooting");
+  LOG_INFO("portal", "state=rebooting");
   Serial.flush();
   delay(50);
   ESP.restart();
@@ -159,7 +159,7 @@ bool WebPortal::serveFromSPIFFS(String path) {
   }
 
   if (!_fsOk) {
-    Serial.println("[portal] serveFromSPIFFS skipped: filesystem not mounted");
+    LOG_INFO("portal", "serveFromSPIFFS skipped: filesystem not mounted");
     return false;
   }
 
@@ -173,7 +173,7 @@ bool WebPortal::serveFromSPIFFS(String path) {
 
   File file = SPIFFS.open(path, "r");
   if (!file) {
-    Serial.printf("[portal] serveFromSPIFFS: failed to open '%s'\n", path.c_str());
+    LOG_INFO("portal", "serveFromSPIFFS: failed to open '%s'", path.c_str());
     return false;
   }
 
@@ -185,7 +185,7 @@ bool WebPortal::serveFromSPIFFS(String path) {
 
 void WebPortal::handleRoot() {
   if (!serveFromSPIFFS("/index.html")) {
-    Serial.println("[portal] fallback: serving inline HTML (SPIFFS image missing or corrupt)");
+    LOG_INFO("portal", "fallback: serving inline HTML (SPIFFS image missing or corrupt)");
     String fallback = "<!DOCTYPE html><html><head><meta charset='utf-8'><title>E-Tani Weight Transmitter</title>"
                       "<style>body{background:#0a150f;color:#e2e8f0;font-family:sans-serif;padding:24px;line-height:1.6;}"
                       "h1{color:#10b981;}.box{background:#162e20;border:1px solid #1e3f2c;padding:16px;border-radius:8px;}</style></head>"
@@ -220,7 +220,7 @@ void WebPortal::handleNotFound() {
     return;
   }
 
-  Serial.printf("[portal] 404: '%s' (fs mounted: %s)\n", uri.c_str(), _fsOk ? "yes" : "no");
+  LOG_INFO("portal", "404: '%s' (fs mounted: %s)", uri.c_str(), _fsOk ? "yes" : "no");
 
   String host = _http.hostHeader();
   IPAddress apIP = _wifi ? _wifi->apIP() : IPAddress(192, 168, 4, 1);
@@ -334,7 +334,7 @@ void WebPortal::handleApiWifi() {
 
   int mode = _http.hasArg("mode") ? _http.arg("mode").toInt() : (int)WIFI_MODE_NONE;
   if (mode < (int)WIFI_MODE_NONE || mode > (int)WIFI_MODE_ENT) {
-    Serial.printf("[portal] /api/wifi rejected: invalid mode %d\n", mode);
+    LOG_INFO("portal", "/api/wifi rejected: invalid mode %d", mode);
     sendJson(400, "{\"ok\":false,\"success\":false,"
                   "\"error\":{\"code\":\"INVALID_WIFI_MODE\","
                   "\"message\":\"WiFi mode must be 0 (soft-AP only), 1 (WPA2-PSK) or 2 (WPA2-Enterprise)\"},"
@@ -354,7 +354,7 @@ void WebPortal::handleApiWifi() {
   _cfgLoaded = true;
 
   if (_cfg.wifiMode != WIFI_MODE_NONE && _cfg.ssid.length() == 0) {
-    Serial.println("[portal] /api/wifi rejected: SSID missing");
+    LOG_INFO("portal", "/api/wifi rejected: SSID missing");
     sendJson(400, "{\"ok\":false,\"success\":false,"
                   "\"error\":{\"code\":\"SSID_REQUIRED\","
                   "\"message\":\"A network SSID is required when an uplink mode is selected\"},"
@@ -364,7 +364,7 @@ void WebPortal::handleApiWifi() {
 
   if (_cfg.wifiMode == WIFI_MODE_PSK &&
       _cfg.wpaPassword.length() > 0 && _cfg.wpaPassword.length() < 8) {
-    Serial.println("[portal] /api/wifi rejected: PSK shorter than 8 characters");
+    LOG_INFO("portal", "/api/wifi rejected: PSK shorter than 8 characters");
     sendJson(400, "{\"ok\":false,\"success\":false,"
                   "\"error\":{\"code\":\"PSK_TOO_SHORT\","
                   "\"message\":\"WPA2-PSK passwords must be at least 8 characters\"},"
@@ -373,7 +373,7 @@ void WebPortal::handleApiWifi() {
   }
 
   if (_cfg.wifiMode == WIFI_MODE_ENT && _cfg.entUsername.length() == 0) {
-    Serial.println("[portal] /api/wifi rejected: enterprise username missing");
+    LOG_INFO("portal", "/api/wifi rejected: enterprise username missing");
     sendJson(400, "{\"ok\":false,\"success\":false,"
                   "\"error\":{\"code\":\"ENTERPRISE_USERNAME_REQUIRED\","
                   "\"message\":\"Username (inner identity) is required for WPA2-Enterprise\"},"
@@ -387,7 +387,7 @@ void WebPortal::handleApiWifi() {
                 "\"message\":\"Configuration saved. Uplink is being applied...\"}");
 
   if (_wifi) _wifi->requestSettings(_cfg);
-  Serial.printf("[portal] /api/wifi saved (mode=%u, ssid='%s')\n",
+  LOG_INFO("portal", "/api/wifi saved (mode=%u, ssid='%s')",
                 (unsigned)_cfg.wifiMode, _cfg.ssid.c_str());
 }
 
@@ -409,7 +409,7 @@ void WebPortal::handleApiCalibrate() {
 
   ScaleSnapshot snap = _shared ? _shared->getSnapshot() : ScaleSnapshot{};
   if (snap.rawSample == 0.0f) {
-    Serial.println("[portal] /api/calibrate rejected: no HX711 reading available");
+    LOG_INFO("portal", "/api/calibrate rejected: no HX711 reading available");
     sendJson(409, "{\"ok\":false,\"success\":false,"
                   "\"error\":{\"code\":\"SENSOR_NOT_READY\","
                   "\"message\":\"No HX711 reading available yet. Check the load cell wiring and tare the scale first\"},"
@@ -435,7 +435,7 @@ void WebPortal::handleApiCalibrate() {
   if (_settings) _settings->saveCalibrationValues(countsPerKg, 0.0f, true);
   if (_shared)   _shared->requestCommand(CMD_CALIBRATE_MLR, countsPerKg, 0.0f);
 
-  Serial.printf("[portal] /api/calibrate persisted countsPerKg=%.4f (reference %.3f kg)\n",
+  LOG_INFO("portal", "/api/calibrate persisted countsPerKg=%.4f (reference %.3f kg)",
                 countsPerKg, kg);
 
   scheduleReboot(CALIBRATION_REBOOT_DELAY_MS);
@@ -449,7 +449,7 @@ void WebPortal::handleApiCalibrate() {
 void WebPortal::handleApiCalibrateMulti() {
   float slope = _http.hasArg("slope") ? _http.arg("slope").toFloat() : 0.0f;
   if (!(slope > 0.0f)) {
-    Serial.println("[portal] /api/calibrate/multi rejected: invalid slope");
+    LOG_INFO("portal", "/api/calibrate/multi rejected: invalid slope");
     sendJson(400, "{\"ok\":false,\"success\":false,"
                   "\"error\":{\"code\":\"INVALID_CALIBRATION_SLOPE\","
                   "\"message\":\"Invalid calibration slope: capture at least one reference point first\"},"
@@ -466,7 +466,7 @@ void WebPortal::handleApiCalibrateMulti() {
   if (_settings) _settings->saveCalibrationValues(slope, 0.0f, true);
   if (_shared)   _shared->requestCommand(CMD_CALIBRATE_MLR, slope, 0.0f);
 
-  Serial.printf("[portal] /api/calibrate/multi persisted countsPerKg=%.4f\n", slope);
+  LOG_INFO("portal", "/api/calibrate/multi persisted countsPerKg=%.4f", slope);
 
   scheduleReboot(CALIBRATION_REBOOT_DELAY_MS);
   sendJson(200, "{\"ok\":true,\"success\":true,"
@@ -479,7 +479,7 @@ void WebPortal::handleApiCalibrationStart() {
   if (_shared) {
     _shared->resetCalibrationPoints();
   }
-  Serial.println("[portal] /api/calibration/start cleared previous calibration points");
+  LOG_INFO("portal", "/api/calibration/start cleared previous calibration points");
   sendJson(200, "{\"ok\":true,\"success\":true,"
                 "\"message\":\"Calibration session started. Place a known weight and capture points.\"}");
 }
@@ -508,7 +508,7 @@ void WebPortal::handleApiCalibrationCapture() {
   }
 
   uint8_t count = _shared ? _shared->calibrationPointCount() : 0;
-  Serial.printf("[portal] /api/calibration/capture queued %.3f kg (points: %d)\n", kg, (int)count);
+  LOG_INFO("portal", "/api/calibration/capture queued %.3f kg (points: %d)", kg, (int)count);
 
   sendJson(200, "{\"ok\":true,\"success\":true,"
                 "\"data\":{\"weightKg\":" + String(kg, 4) +
@@ -567,7 +567,7 @@ void WebPortal::handleApiCalibrationFinish() {
     _shared->requestCommand(CMD_CALIBRATE_MLR, slope, intercept);
   }
 
-  Serial.printf("[portal] /api/calibration/finish persisted slope=%.4f intercept=%.4f points=%d\n",
+  LOG_INFO("portal", "/api/calibration/finish persisted slope=%.4f intercept=%.4f points=%d",
                 slope, intercept, (int)pointCount);
 
   scheduleReboot(CALIBRATION_REBOOT_DELAY_MS);
@@ -671,7 +671,7 @@ void WebPortal::handleApiTransport() {
   if (_wifi) _wifi->setTransportMode((uint8_t)mode);
   if (_modbus) _modbus->setTransportMode((uint8_t)mode);
 
-  Serial.printf("[portal] /api/transport saved (mode=%u)\n", (unsigned)mode);
+  LOG_INFO("portal", "/api/transport saved (mode=%u)", (unsigned)mode);
   sendJson(200, "{\"ok\":true,\"success\":true,"
                 "\"message\":\"Transport mode saved. Applying...\"}");
 }
@@ -704,7 +704,7 @@ void WebPortal::handleApiEthernetConfig() {
   if (_settings) _settings->saveAll(_cfg);
   if (_wifi) _wifi->setTransportMode(_cfg.transportMode);
 
-  Serial.printf("[portal] /api/ethernet/config saved (dhcp=%u)\n", (unsigned)useDhcp);
+  LOG_INFO("portal", "/api/ethernet/config saved (dhcp=%u)", (unsigned)useDhcp);
   sendJson(200, "{\"ok\":true,\"success\":true,"
                 "\"message\":\"Ethernet configuration saved. Applying...\"}");
 }
@@ -726,7 +726,7 @@ void WebPortal::handleApiDisplayConfig() {
 
   if (_settings) _settings->saveAll(_cfg);
 
-  Serial.printf("[portal] /api/display/config saved (oled=%u)\n", (unsigned)enabled);
+  LOG_INFO("portal", "/api/display/config saved (oled=%u)", (unsigned)enabled);
   sendJson(200, "{\"ok\":true,\"success\":true,"
                 "\"message\":\"Display configuration saved\"}");
 }

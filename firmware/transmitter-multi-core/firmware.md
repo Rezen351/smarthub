@@ -47,19 +47,19 @@ The design is intentionally **protocol-agnostic at the top level**: the `SharedS
 ### 2.2 Pin Assignment
 
 ```
-ESP32-S3 GPIO  | Signal        | Connected to
---------------+---------------+-------------------------------
-GPIO 14       | LOADCELL_DOUT | HX711 DT  (data out)
-GPIO 15       | LOADCELL_SCK  | HX711 PD_SCK (clock)
-GPIO 16       | OLED_SDA      | SSD1306 SDA (I2C)
-GPIO 17       | OLED_SCL      | SSD1306 SCL (I2C)
-GPIO 10       | W5500_SCK     | W5500 SPI clock
-GPIO 11       | W5500_MISO    | W5500 SPI MISO
-GPIO 12       | W5500_MOSI    | W5500 SPI MOSI
-GPIO 13       | W5500_CS      | W5500 SPI chip select
-3.3 V         | HX711 VCC     | HX711 power (or 5 V)
-GND           | HX711 GND     | Common ground
-GPIO -1       | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset button)
+ESP32 / ESP32-S3 GPIO | Signal        | Connected to
+-----------------------+---------------+-------------------------------
+GPIO 14               | LOADCELL_DOUT | HX711 DT  (data out)
+GPIO 15               | LOADCELL_SCK  | HX711 PD_SCK (clock)
+GPIO 16               | OLED_SDA      | SSD1306 SDA (I2C)
+GPIO 17               | OLED_SCL      | SSD1306 SCL (I2C)
+GPIO 18               | W5500_SCK     | W5500 SPI clock
+GPIO 19               | W5500_MISO    | W5500 SPI MISO
+GPIO 23               | W5500_MOSI    | W5500 SPI MOSI
+GPIO 5                | W5500_CS      | W5500 SPI chip select
+3.3 V / 5 V           | HX711 VCC     | HX711 power (check module silkscreen)
+GND                   | HX711 GND     | Common ground
+GPIO -1               | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset button)
 ```
 
 #### Bus topology
@@ -68,17 +68,14 @@ GPIO -1       | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset bu
 |-----|-----------|------|------|-------|
 | Software GPIO | HX711 | 14, 15 | Bit-banged | Uses `HX711` library; does **not** use SPI peripheral |
 | I2C (Wire) | SSD1306 | 16, 17 | I2C | `Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN)` |
-| Hardware SPI | W5500 | 10, 11, 12, 13 | SPI | `SPI.begin(SCK, MISO, MOSI, CS)` |
+| Hardware SPI (VSPI) | W5500 | 18, 19, 23, 5 | SPI | `SPI.begin(SCK, MISO, MOSI)` + `Ethernet.init(CS)` |
 
 #### Pin conflict prevention
 
-- HX711 is bit-banged on GPIO 14/15 and does not touch the SPI peripheral, so hardware SPI on GPIO 10/11/12/13 is safe.
-- All peripherals use contiguous GPIO blocks:
-  - W5500 SPI: GPIO 10-13
-  - HX711: GPIO 14-15
-  - OLED I2C: GPIO 16-17
-- GPIO 10-17 are general-purpose pins on ESP32-S3 DevKitC-1 with no boot-time restrictions, so they are safe for all three peripherals.
-- Do **not** move HX711 to GPIO 10-13 without also updating W5500 SPI pins.
+- HX711 is bit-banged on GPIO 14/15 and does not touch the SPI peripheral, so hardware SPI on GPIO 18/19/23/5 is safe.
+- W5500 uses standard VSPI pins (GPIO 18/19/23) with CS on GPIO 5. This pinout is compatible with both ESP32 and ESP32-S3.
+- OLED I2C uses GPIO 16/17, separate from both HX711 and W5500.
+- Do **not** move HX711 to GPIO 18/19/23 without also updating W5500 SPI pins.
 
 #### Electrical notes
 
@@ -91,7 +88,7 @@ GPIO -1       | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset bu
 > breaks timing on fast MCUs.
 >
 > HX711 is bit-banged via the HX711 library and does not use the SPI peripheral, so
-> hardware SPI on GPIO 10/11/12/13 is safe for W5500.
+> hardware SPI on GPIO 18/19/23/5 is safe for W5500.
 
 ---
 
@@ -196,8 +193,8 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 
 | Constant | Default | Purpose |
 |----------|---------|---------|
-| `LOADCELL_DOUT_PIN` | 2 | HX711 data pin |
-| `LOADCELL_SCK_PIN` | 4 | HX711 clock pin |
+| `LOADCELL_DOUT_PIN` | 14 | HX711 data pin |
+| `LOADCELL_SCK_PIN` | 15 | HX711 clock pin |
 | `HX711_FAST_PROCESSOR` | true | Removes software delay for ESP32 |
 | `HX711_READS` | 10 | Samples averaged per raw reading |
 | `SCALE_SAMPLE_MS` | 30 | Sensor task period (ms) |

@@ -60,6 +60,8 @@ public:
   void    loadCalibrationPoints(AppSettings& s);
   void    clearCalibrationPoints();
   void    saveTransportSettings(const AppSettings& s);
+
+  void    validate(AppSettings& s);
 };
 
 #endif // SETTINGS_H

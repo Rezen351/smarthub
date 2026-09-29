@@ -44,6 +44,9 @@ struct AppSettings {
   String   w5500StaticDns;
 };
 
+bool isValidIp(const String& s);
+void loadWifiConfigFromJson(AppSettings& s);
+
 class SettingsStore {
 public:
   // Creates the cross-core NVS mutex. Call once from setup() before any
@@ -62,6 +65,8 @@ public:
   void    loadCalibrationPoints(AppSettings& s);
   void    clearCalibrationPoints();
   void    saveTransportSettings(const AppSettings& s);
+
+  void    validate(AppSettings& s);
 };
 
 #endif // SETTINGS_H

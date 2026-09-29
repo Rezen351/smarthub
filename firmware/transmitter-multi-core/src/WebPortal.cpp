@@ -6,7 +6,7 @@
 static WebPortal* gPortal = nullptr;
 
 static void sendJsonBounded(WebServer& http, uint16_t code, const char* fmt, ...) {
-  char buf[512];
+  char buf[2048];
   va_list args;
   va_start(args, fmt);
   vsnprintf(buf, sizeof(buf), fmt, args);
@@ -34,6 +34,7 @@ static void hResetSession()    { if (gPortal) gPortal->handleApiResetSession(); 
 static void hForceAp()         { if (gPortal) gPortal->handleApiForceAp(); }
 static void hFactory()         { if (gPortal) gPortal->handleApiFactoryReset(); }
 static void hTransport()       { if (gPortal) gPortal->handleApiTransport(); }
+static void hNetworkConfig()   { if (gPortal) gPortal->handleApiNetworkConfig(); }
 static void hEthernetConfig()  { if (gPortal) gPortal->handleApiEthernetConfig(); }
 static void hDisplayConfig()   { if (gPortal) gPortal->handleApiDisplayConfig(); }
 
@@ -52,11 +53,11 @@ void WebPortal::begin(SharedState* shared, SettingsStore* settings,
   // Mount SPIFFS filesystem (formatOnFail = false to avoid silent corruption)
   _fsOk = SPIFFS.begin(false, "/spiffs", 10, "spiffs");
   if (_fsOk) {
-    LOG_INFO("[portal] SPIFFS mounted: %u bytes total, %u bytes used",
+    LOG_INFO("portal", "SPIFFS mounted: %u bytes total, %u bytes used",
                   (unsigned)SPIFFS.totalBytes(),
                   (unsigned)SPIFFS.usedBytes());
   } else {
-    LOG_ERROR("[portal] ERROR: SPIFFS mount failed! "
+    LOG_ERROR("portal", "ERROR: SPIFFS mount failed! "
                    "Run 'pio run -t uploadfs' to flash the filesystem image.");
   }
 
@@ -84,6 +85,7 @@ void WebPortal::begin(SharedState* shared, SettingsStore* settings,
   _http.on("/api/factory",          HTTP_POST, hFactory);
   _http.on("/api/transport",        HTTP_GET,  hTransport);
   _http.on("/api/transport",        HTTP_POST, hTransport);
+  _http.on("/api/network/config",   HTTP_POST, hNetworkConfig);
   _http.on("/api/ethernet/config",  HTTP_GET,  hEthernetConfig);
   _http.on("/api/ethernet/config",  HTTP_POST, hEthernetConfig);
   _http.on("/api/display/config",   HTTP_GET,  hDisplayConfig);
@@ -93,13 +95,13 @@ void WebPortal::begin(SharedState* shared, SettingsStore* settings,
   _http.onNotFound(hNotFound);
 
   _http.begin();
-  LOG_INFO("[portal] HTTP server listening on port 80");
+  LOG_INFO("portal", "HTTP server listening on port 80");
 }
 
 void WebPortal::startDns() {
   if (!_wifi || !WiFi.softAPIP()) return;
   _dns.start(53, "*", WiFi.softAPIP());
-  LOG_INFO("[portal] DNS captive responder started on %s", WiFi.softAPIP().toString().c_str());
+  LOG_INFO("portal", "DNS captive responder started on %s", WiFi.softAPIP().toString().c_str());
 }
 
 void WebPortal::handleClient() {
@@ -120,7 +122,7 @@ void WebPortal::handleClient() {
 void WebPortal::scheduleReboot(uint32_t delayMs) {
   _rebootPending = true;
   _rebootAtMs = millis() + delayMs;
-  LOG_INFO("[portal] restart scheduled in %u ms", (unsigned)delayMs);
+  LOG_INFO("portal", "restart scheduled in %u ms", (unsigned)delayMs);
 }
 
 void WebPortal::processPendingReboot() {
@@ -136,7 +138,7 @@ void WebPortal::processPendingReboot() {
   if ((int32_t)(millis() - _rebootAtMs) < 0) return;
 
   _rebootPending = false;
-  LOG_INFO("[portal] restarting transmitter now");
+  LOG_INFO("portal", "restarting transmitter now");
   Serial.flush();
   delay(50);
   ESP.restart();
@@ -188,7 +190,7 @@ bool WebPortal::serveFromSPIFFS(String path) {
   }
 
   if (!_fsOk) {
-    LOG_INFO("[portal] serveFromSPIFFS skipped: filesystem not mounted");
+    LOG_INFO("portal", "serveFromSPIFFS skipped: filesystem not mounted");
     return false;
   }
 
@@ -202,7 +204,7 @@ bool WebPortal::serveFromSPIFFS(String path) {
 
   File file = SPIFFS.open(path, "r");
   if (!file) {
-    LOG_INFO("[portal] serveFromSPIFFS: failed to open '%s'", path.c_str());
+    LOG_INFO("portal", "serveFromSPIFFS: failed to open '%s'", path.c_str());
     return false;
   }
 
@@ -217,7 +219,7 @@ bool WebPortal::serveFromSPIFFS(String path) {
 // =====================================================================
 void WebPortal::handleRoot() {
   if (!serveFromSPIFFS("/index.html")) {
-    LOG_INFO("[portal] fallback: serving inline HTML (SPIFFS image missing or corrupt)");
+    LOG_INFO("portal", "fallback: serving inline HTML (SPIFFS image missing or corrupt)");
     String fallback = "<!DOCTYPE html><html><head><meta charset='utf-8'><title>E-Tani Weight Transmitter</title>"
                       "<style>body{background:#0a150f;color:#e2e8f0;font-family:sans-serif;padding:24px;line-height:1.6;}"
                       "h1{color:#10b981;}.box{background:#162e20;border:1px solid #1e3f2c;padding:16px;border-radius:8px;}</style></head>"
@@ -254,7 +256,7 @@ void WebPortal::handleNotFound() {
     return;
   }
 
-  LOG_INFO("[portal] 404: '%s' (fs mounted: %s)", uri.c_str(), _fsOk ? "yes" : "no");
+  LOG_INFO("portal", "404: '%s' (fs mounted: %s)", uri.c_str(), _fsOk ? "yes" : "no");
 
   // If request comes from an unexpected domain on captive portal, redirect to root
   String host = _http.hostHeader();
@@ -295,7 +297,7 @@ void WebPortal::handleApiStatus() {
     "\"modbusClients\":%u,\"uptime\":%lu,\"fw\":\"%d.%d\","
     "\"wifi\":{\"modeName\":\"%s\",\"mode\":%d,\"ssid\":\"%s\",\"status\":\"%s\","
     "\"rssi\":%d,\"staIp\":\"%s\",\"apSsid\":\"%s\",\"apIp\":\"%s\"},"
-    "\"transport\":{\"mode\":%u,\"modeName\":\"%s\",\"ethernetActive\":%s,"
+    "\"transport\":{\"mode\":%u,\"modeName\":\"%s\",\"state\":\"%s\",\"ethernetActive\":%s,"
     "\"ethernetIp\":\"%s\",\"w5500UseDhcp\":%s,\"w5500StaticIp\":\"%s\","
     "\"w5500StaticGateway\":\"%s\",\"w5500StaticSubnet\":\"%s\",\"w5500StaticDns\":\"%s\"},"
     "\"display\":{\"oledEnabled\":%s}}",
@@ -319,6 +321,7 @@ void WebPortal::handleApiStatus() {
     _wifi ? _wifi->apIP().toString().c_str() : "",
     _cfg.transportMode,
     _cfg.transportMode == TRANSPORT_WIFI ? "WiFi" : "Ethernet",
+    _wifi ? _wifi->transportStateName() : "unknown",
     _wifi && _wifi->ethernetActive() ? "true" : "false",
     _wifi ? _wifi->ethernetIp().toString().c_str() : "",
     _cfg.w5500UseDhcp ? "true" : "false",
@@ -365,7 +368,7 @@ void WebPortal::handleApiWifi() {
 
   int mode = _http.hasArg("mode") ? _http.arg("mode").toInt() : (int)WIFI_MODE_NONE;
   if (mode < (int)WIFI_MODE_NONE || mode > (int)WIFI_MODE_ENT) {
-    LOG_INFO("[portal] /api/wifi rejected: invalid mode %d", mode);
+    LOG_INFO("portal", "/api/wifi rejected: invalid mode %d", mode);
     sendJson(400, "{\"ok\":false,\"success\":false,"
                   "\"error\":{\"code\":\"INVALID_WIFI_MODE\","
                   "\"message\":\"WiFi mode must be 0 (soft-AP only), 1 (WPA2-PSK) or 2 (WPA2-Enterprise)\"},"
@@ -385,7 +388,7 @@ void WebPortal::handleApiWifi() {
   _cfgLoaded = true;
 
   if (_cfg.wifiMode != WIFI_MODE_NONE && _cfg.ssid.length() == 0) {
-    LOG_INFO("[portal] /api/wifi rejected: SSID missing");
+    LOG_INFO("portal", "/api/wifi rejected: SSID missing");
     sendJson(400, "{\"ok\":false,\"success\":false,"
                   "\"error\":{\"code\":\"SSID_REQUIRED\","
                   "\"message\":\"A network SSID is required when an uplink mode is selected\"},"
@@ -395,7 +398,7 @@ void WebPortal::handleApiWifi() {
 
   if (_cfg.wifiMode == WIFI_MODE_PSK &&
       _cfg.wpaPassword.length() > 0 && _cfg.wpaPassword.length() < 8) {
-    LOG_INFO("[portal] /api/wifi rejected: PSK shorter than 8 characters");
+    LOG_INFO("portal", "/api/wifi rejected: PSK shorter than 8 characters");
     sendJson(400, "{\"ok\":false,\"success\":false,"
                   "\"error\":{\"code\":\"PSK_TOO_SHORT\","
                   "\"message\":\"WPA2-PSK passwords must be at least 8 characters\"},"
@@ -404,7 +407,7 @@ void WebPortal::handleApiWifi() {
   }
 
   if (_cfg.wifiMode == WIFI_MODE_ENT && _cfg.entUsername.length() == 0) {
-    LOG_INFO("[portal] /api/wifi rejected: enterprise username missing");
+    LOG_INFO("portal", "/api/wifi rejected: enterprise username missing");
     sendJson(400, "{\"ok\":false,\"success\":false,"
                   "\"error\":{\"code\":\"ENTERPRISE_USERNAME_REQUIRED\","
                   "\"message\":\"Username (inner identity) is required for WPA2-Enterprise\"},"
@@ -419,7 +422,7 @@ void WebPortal::handleApiWifi() {
                 "\"message\":\"Configuration saved. Uplink is being applied...\"}");
 
   if (_wifi) _wifi->requestSettings(_cfg);
-  LOG_INFO("[portal] /api/wifi saved (mode=%u, ssid='%s')",
+  LOG_INFO("portal", "/api/wifi saved (mode=%u, ssid='%s')",
             (unsigned)_cfg.wifiMode, _cfg.ssid.c_str());
 }
 
@@ -446,7 +449,7 @@ void WebPortal::handleApiCalibrate() {
 
   ScaleSnapshot snap = _shared ? _shared->getSnapshot() : ScaleSnapshot{};
   if (snap.rawSample == 0.0f) {
-    LOG_INFO("[portal] /api/calibrate rejected: no HX711 reading available");
+    LOG_INFO("portal", "/api/calibrate rejected: no HX711 reading available");
     sendJson(409, "{\"ok\":false,\"success\":false,"
                   "\"error\":{\"code\":\"SENSOR_NOT_READY\","
                   "\"message\":\"No HX711 reading available yet. Check the load cell wiring and tare the scale first\"},"
@@ -474,7 +477,7 @@ void WebPortal::handleApiCalibrate() {
   if (_settings) _settings->saveCalibrationValues(countsPerKg, 0.0f, true);
   if (_shared)   _shared->requestCommand(CMD_CALIBRATE_MLR, countsPerKg, 0.0f);
 
-  LOG_INFO("[portal] /api/calibrate persisted countsPerKg=%.4f (reference %.3f kg)", countsPerKg, kg);
+  LOG_INFO("portal", "/api/calibrate persisted countsPerKg=%.4f (reference %.3f kg)", countsPerKg, kg);
 
   scheduleReboot(CALIBRATION_REBOOT_DELAY_MS);
   sendJsonBounded(_http, 200,
@@ -491,7 +494,7 @@ void WebPortal::handleApiCalibrate() {
 void WebPortal::handleApiCalibrateMulti() {
   float slope = _http.hasArg("slope") ? _http.arg("slope").toFloat() : 0.0f;
   if (!(slope > 0.0f)) {
-    LOG_INFO("[portal] /api/calibrate/multi rejected: invalid slope");
+    LOG_INFO("portal", "/api/calibrate/multi rejected: invalid slope");
     sendJson(400, "{\"ok\":false,\"success\":false,"
                   "\"error\":{\"code\":\"INVALID_CALIBRATION_SLOPE\","
                   "\"message\":\"Invalid calibration slope: capture at least one reference point first\"},"
@@ -508,7 +511,7 @@ void WebPortal::handleApiCalibrateMulti() {
   if (_settings) _settings->saveCalibrationValues(slope, 0.0f, true);
   if (_shared)   _shared->requestCommand(CMD_CALIBRATE_MLR, slope, 0.0f);
 
-  LOG_INFO("[portal] /api/calibrate/multi persisted countsPerKg=%.4f", slope);
+  LOG_INFO("portal", "/api/calibrate/multi persisted countsPerKg=%.4f", slope);
 
   scheduleReboot(CALIBRATION_REBOOT_DELAY_MS);
   sendJsonBounded(_http, 200,
@@ -523,7 +526,7 @@ void WebPortal::handleApiCalibrationStart() {
   if (_shared) {
     _shared->resetCalibrationPoints();
   }
-  LOG_INFO("[portal] /api/calibration/start cleared previous calibration points");
+  LOG_INFO("portal", "/api/calibration/start cleared previous calibration points");
   sendJson(200, "{\"ok\":true,\"success\":true,"
                 "\"message\":\"Calibration session started. Place a known weight and capture points.\"}");
 }
@@ -552,7 +555,7 @@ void WebPortal::handleApiCalibrationCapture() {
   }
 
   uint8_t count = _shared ? _shared->calibrationPointCount() : 0;
-  LOG_INFO("[portal] /api/calibration/capture queued %.3f kg (points: %d)", kg, (int)count);
+  LOG_INFO("portal", "/api/calibration/capture queued %.3f kg (points: %d)", kg, (int)count);
 
   sendJsonBounded(_http, 200,
     "{\"ok\":true,\"success\":true,"
@@ -611,7 +614,7 @@ void WebPortal::handleApiCalibrationFinish() {
     _shared->requestCommand(CMD_CALIBRATE_MLR, slope, intercept);
   }
 
-  LOG_INFO("[portal] /api/calibration/finish persisted slope=%.4f intercept=%.4f points=%d",
+  LOG_INFO("portal", "/api/calibration/finish persisted slope=%.4f intercept=%.4f points=%d",
             slope, intercept, (int)pointCount);
 
   scheduleReboot(CALIBRATION_REBOOT_DELAY_MS);
@@ -697,6 +700,7 @@ void WebPortal::handleApiTransport() {
     sendJsonBounded(_http, 200,
       "{\"transportMode\":%u,\"wifiMode\":%u,\"ssid\":\"%s\","
       "\"staConnected\":%s,\"ethernetActive\":%s,\"ethernetIp\":\"%s\","
+      "\"transportState\":\"%s\","
       "\"apSsid\":\"%s\",\"apIp\":\"%s\"}",
       _cfg.transportMode,
       _cfg.wifiMode,
@@ -704,6 +708,7 @@ void WebPortal::handleApiTransport() {
       _wifi && _wifi->staConnected() ? "true" : "false",
       _wifi && _wifi->ethernetActive() ? "true" : "false",
       _wifi ? _wifi->ethernetIp().toString().c_str() : "",
+      _wifi ? _wifi->transportStateName() : "unknown",
       _wifi ? _wifi->apSsid().c_str() : "",
       _wifi ? _wifi->apIP().toString().c_str() : "");
     return;
@@ -724,9 +729,93 @@ void WebPortal::handleApiTransport() {
   if (_wifi) _wifi->requestTransportMode((uint8_t)mode);
   if (_modbus) _modbus->requestTransportMode((uint8_t)mode);
 
-  LOG_INFO("[portal] /api/transport saved (mode=%u)", (unsigned)mode);
+  LOG_INFO("portal", "/api/transport saved (mode=%u)", (unsigned)mode);
   sendJson(200, "{\"ok\":true,\"success\":true,"
                 "\"message\":\"Transport mode saved. Applying...\"}");
+}
+
+void WebPortal::handleApiNetworkConfig() {
+  ensureCfg();
+
+  int mode = _http.hasArg("transportMode") ? _http.arg("transportMode").toInt() : (int)_cfg.transportMode;
+  if (mode != TRANSPORT_WIFI && mode != TRANSPORT_ETHERNET) {
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"INVALID_TRANSPORT_MODE\",\"message\":\"Transport mode must be 0 (WiFi) or 1 (Ethernet)\"},"
+                  "\"message\":\"Invalid transport mode\"}");
+    return;
+  }
+
+  _cfg.transportMode = (uint8_t)mode;
+
+  if (mode == TRANSPORT_WIFI) {
+    int wifiMode = _http.hasArg("wifiMode") ? _http.arg("wifiMode").toInt() : (int)_cfg.wifiMode;
+    if (wifiMode < (int)WIFI_MODE_NONE || wifiMode > (int)WIFI_MODE_ENT) {
+      sendJson(400, "{\"ok\":false,\"success\":false,"
+                    "\"error\":{\"code\":\"INVALID_WIFI_MODE\",\"message\":\"WiFi mode must be 0, 1 or 2\"},"
+                    "\"message\":\"Invalid WiFi mode\"}");
+      return;
+    }
+
+    _cfg.wifiMode = (uint8_t)wifiMode;
+    _cfg.ssid         = _http.hasArg("ssid")         ? _http.arg("ssid")         : _cfg.ssid;
+    _cfg.wpaPassword  = _http.hasArg("psk")           ? _http.arg("psk")           : _cfg.wpaPassword;
+    _cfg.entIdentity  = _http.hasArg("eid")           ? _http.arg("eid")           : _cfg.entIdentity;
+    _cfg.entUsername  = _http.hasArg("eusr")          ? _http.arg("eusr")          : _cfg.entUsername;
+    _cfg.entPassword  = _http.hasArg("epwd")          ? _http.arg("epwd")          : _cfg.entPassword;
+    _cfg.ssid.trim();
+    _cfg.entIdentity.trim();
+    _cfg.entUsername.trim();
+
+    if (_cfg.wifiMode != WIFI_MODE_NONE && _cfg.ssid.length() == 0) {
+      sendJson(400, "{\"ok\":false,\"success\":false,"
+                    "\"error\":{\"code\":\"SSID_REQUIRED\",\"message\":\"SSID is required when uplink is enabled\"},"
+                    "\"message\":\"SSID is required\"}");
+      return;
+    }
+
+    if (_cfg.wifiMode == WIFI_MODE_PSK &&
+        _cfg.wpaPassword.length() > 0 && _cfg.wpaPassword.length() < 8) {
+      sendJson(400, "{\"ok\":false,\"success\":false,"
+                    "\"error\":{\"code\":\"PSK_TOO_SHORT\",\"message\":\"WPA2-PSK password must be at least 8 characters\"},"
+                    "\"message\":\"WPA2 password is too short\"}");
+      return;
+    }
+
+    if (_cfg.wifiMode == WIFI_MODE_ENT && _cfg.entUsername.length() == 0) {
+      sendJson(400, "{\"ok\":false,\"success\":false,"
+                    "\"error\":{\"code\":\"ENTERPRISE_USERNAME_REQUIRED\",\"message\":\"Enterprise username is required\"},"
+                    "\"message\":\"Enterprise username is required\"}");
+      return;
+    }
+  }
+
+  if (mode == TRANSPORT_ETHERNET) {
+    _cfg.w5500UseDhcp      = _http.hasArg("w5500UseDhcp")      ? (_http.arg("w5500UseDhcp") == "true") : _cfg.w5500UseDhcp;
+    _cfg.w5500StaticIp     = _http.hasArg("w5500StaticIp")     ? _http.arg("w5500StaticIp")     : _cfg.w5500StaticIp;
+    _cfg.w5500StaticGateway= _http.hasArg("w5500StaticGateway")? _http.arg("w5500StaticGateway"): _cfg.w5500StaticGateway;
+    _cfg.w5500StaticSubnet = _http.hasArg("w5500StaticSubnet") ? _http.arg("w5500StaticSubnet") : _cfg.w5500StaticSubnet;
+    _cfg.w5500StaticDns    = _http.hasArg("w5500StaticDns")    ? _http.arg("w5500StaticDns")    : _cfg.w5500StaticDns;
+  }
+
+  _cfgLoaded = true;
+
+  if (_settings) _settings->saveAll(_cfg);
+
+  if (_wifi) {
+    _wifi->updatePendingEthernetConfig(_cfg);
+    _wifi->requestTransportMode(_cfg.transportMode);
+    if (mode == TRANSPORT_WIFI) {
+      _wifi->requestSettings(_cfg);
+    }
+    _wifi->saveNetworkConfigToJson(_cfg);
+  }
+
+  if (_modbus) _modbus->requestTransportMode(_cfg.transportMode);
+
+  LOG_INFO("portal", "/api/network/config saved (transport=%u wifiMode=%u ssid='%s')",
+           (unsigned)_cfg.transportMode, (unsigned)_cfg.wifiMode, _cfg.ssid.c_str());
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"message\":\"Network configuration saved. Applying...\"}");
 }
 
 void WebPortal::handleApiEthernetConfig() {
@@ -759,10 +848,10 @@ void WebPortal::handleApiEthernetConfig() {
   if (_wifi) {
     _wifi->updatePendingEthernetConfig(_cfg);
     _wifi->requestTransportMode(_cfg.transportMode);
-    _wifi->saveEthernetConfigToJson(_cfg);
+    _wifi->saveNetworkConfigToJson(_cfg);
   }
 
-  LOG_INFO("[portal] /api/ethernet/config saved (dhcp=%u)", (unsigned)useDhcp);
+  LOG_INFO("portal", "/api/ethernet/config saved (dhcp=%u)", (unsigned)useDhcp);
   sendJson(200, "{\"ok\":true,\"success\":true,"
                 "\"message\":\"Ethernet configuration saved. Applying...\"}");
 }
@@ -782,7 +871,7 @@ void WebPortal::handleApiDisplayConfig() {
   if (_display) _display->setEnabled(enabled);
   if (_settings) _settings->saveAll(_cfg);
 
-  LOG_INFO("[portal] /api/display/config saved (oled=%u)", (unsigned)enabled);
+  LOG_INFO("portal", "/api/display/config saved (oled=%u)", (unsigned)enabled);
   sendJson(200, "{\"ok\":true,\"success\":true,"
                 "\"message\":\"Display configuration saved\"}");
 }

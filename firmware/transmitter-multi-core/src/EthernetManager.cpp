@@ -2,10 +2,13 @@
 #include "config.h"
 #include "Logger.h"
 #include "TaskWatchdog.h"
+#include "EventBus.h"
 #include <Ethernet.h>
 #include <WiFi.h>
 #include <SPI.h>
 #include <SPIFFS.h>
+
+extern EventBus gEventBus;
 
 static uint8_t mac[6];
 
@@ -18,13 +21,18 @@ EthernetManager::~EthernetManager() {
 void EthernetManager::begin(const AppSettings& s) {
   _transportMode = s.transportMode;
   _pendingCfg.transportMode = s.transportMode;
-  _pendingCfg.w5500UseDhcp = s.w5500UseDhcp;
-  _pendingCfg.w5500StaticIp = s.w5500StaticIp;
-  _pendingCfg.w5500StaticGateway = s.w5500StaticGateway;
-  _pendingCfg.w5500StaticSubnet = s.w5500StaticSubnet;
-  _pendingCfg.w5500StaticDns = s.w5500StaticDns;
 
+  // 1) Load defaults from SPIFFS first (factory defaults / cached web config).
   loadEthernetConfigFromJson(_pendingCfg);
+
+  // 2) NVS is the source of truth. Whatever the user last saved via the
+  //    web portal wins over the SPIFFS cache. This also makes the setting
+  //    survive firmware/OTA uploads and filesystem reflashes.
+  _pendingCfg.w5500UseDhcp      = s.w5500UseDhcp;
+  _pendingCfg.w5500StaticIp     = s.w5500StaticIp;
+  _pendingCfg.w5500StaticGateway= s.w5500StaticGateway;
+  _pendingCfg.w5500StaticSubnet = s.w5500StaticSubnet;
+  _pendingCfg.w5500StaticDns    = s.w5500StaticDns;
 
   uint64_t efuseMac = ESP.getEfuseMac();
   mac[0] = (efuseMac >> 40) & 0xFF;
@@ -34,10 +42,19 @@ void EthernetManager::begin(const AppSettings& s) {
   mac[4] = (efuseMac >> 8)  & 0xFF;
   mac[5] =  efuseMac        & 0xFF;
 
-  LOG_INFO("[eth] initialized (transport=%s, dhcp=%u, ip=%s)",
-            _transportMode == TRANSPORT_ETHERNET ? "Ethernet" : "WiFi",
-            (unsigned)_pendingCfg.w5500UseDhcp,
-            _pendingCfg.w5500StaticIp.c_str());
+  LOG_INFO("eth", "initialized (transport=%s, dhcp=%u, ip=%s)",
+           _transportMode == TRANSPORT_ETHERNET ? "Ethernet" : "WiFi",
+           (unsigned)_pendingCfg.w5500UseDhcp,
+           _pendingCfg.w5500StaticIp.c_str());
+
+  // If the device boots straight into Ethernet transport, start the W5500
+  // immediately instead of waiting for a state transition that never comes.
+  if (_transportMode == TRANSPORT_ETHERNET) {
+    _transportState = TransportState::Ethernet;
+    LOG_INFO("eth", "W5500 ready to connect via %s",
+             _pendingCfg.w5500UseDhcp ? "DHCP" : "static");
+    initEthernet(_pendingCfg);
+  }
 }
 
 void EthernetManager::loop() {
@@ -51,11 +68,17 @@ void EthernetManager::loop() {
   if (_transportState == TransportState::Ethernet) {
     if (!_active) {
       if (_retryAtMs == 0 || (int32_t)(now - _retryAtMs) >= 0) {
-        LOG_INFO("[eth] state=ethernet (starting W5500)");
+        if (_dhcpState == DhcpState::Idle && _linkAttempt >= MAX_LINK_ATTEMPTS) {
+          _linkAttempt = 0;
+          _dhcpAttempt = 0;
+          LOG_INFO("eth", "state=ethernet (retry after failure)");
+        } else if (_dhcpState != DhcpState::Idle) {
+          LOG_INFO("eth", "state=ethernet (retrying init)");
+        }
         initEthernet(_pendingCfg);
         _retryAtMs = millis() + 5000;
       } else {
-        LOG_INFO("[eth] state=ethernet (retry in %u ms)",
+        LOG_INFO("eth", "state=ethernet (retry in %u ms)",
                       (unsigned)(_retryAtMs - now));
       }
     }
@@ -73,22 +96,23 @@ void EthernetManager::setTransportMode(uint8_t mode) {
   _transportState = mode == TRANSPORT_WIFI ? TransportState::WiFi : TransportState::Ethernet;
 
   if (mode == TRANSPORT_ETHERNET) {
+    TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
     WiFi.disconnect(false);
-    LOG_INFO("[eth] state=transport-wifi->ethernet");
+    LOG_INFO("eth", "state=transport-wifi->ethernet");
     initEthernet(_pendingCfg);
   } else {
-    LOG_INFO("[eth] state=transport-ethernet->wifi");
+    LOG_INFO("eth", "state=transport-ethernet->wifi");
     stopEthernet();
   }
 
-  LOG_INFO("[eth] transport mode -> %s",
+  LOG_INFO("eth", "transport mode -> %s",
             mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 }
 
 void EthernetManager::requestTransportMode(uint8_t mode) {
   _transportState = TransportState::Switching;
   _transportTarget = mode;
-  LOG_INFO("[eth] transport mode change requested: %s (will apply from loop)",
+  LOG_INFO("eth", "transport mode change requested: %s (will apply from loop)",
             mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 }
 
@@ -99,7 +123,7 @@ void EthernetManager::updatePendingEthernetConfig(const AppSettings& s) {
   _pendingCfg.w5500StaticSubnet = s.w5500StaticSubnet;
   _pendingCfg.w5500StaticDns = s.w5500StaticDns;
   _retryAtMs = 0;
-  LOG_INFO("[eth] pending ethernet config updated: dhcp=%u ip=%s",
+  LOG_INFO("eth", "pending ethernet config updated: dhcp=%u ip=%s",
             (unsigned)s.w5500UseDhcp, s.w5500StaticIp.c_str());
 }
 
@@ -113,26 +137,27 @@ void EthernetManager::applyPendingTransportMode() {
   _retryAtMs = 0;
 
   if (mode == TRANSPORT_ETHERNET) {
+    TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
     WiFi.disconnect(false);
-    LOG_INFO("[eth] state=transport-wifi->ethernet");
+    LOG_INFO("eth", "state=transport-wifi->ethernet");
     initEthernet(_pendingCfg);
   } else {
-    LOG_INFO("[eth] state=transport-ethernet->wifi");
+    LOG_INFO("eth", "state=transport-ethernet->wifi");
     stopEthernet();
   }
 
-  LOG_INFO("[eth] transport mode -> %s",
+  LOG_INFO("eth", "transport mode -> %s",
             mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 }
 
 void EthernetManager::initEthernet(const AppSettings& s) {
   if (_active) {
-    LOG_INFO("[eth] state=already-active");
+    LOG_INFO("eth", "state=already-active");
     return;
   }
 
   if (_dhcpState == DhcpState::Idle) {
-    LOG_INFO("[eth] state=initializing W5500");
+    LOG_INFO("eth", "state=initializing W5500");
     SPI.begin(W5500_SCK_PIN, W5500_MISO_PIN, W5500_MOSI_PIN, W5500_CS_PIN);
     Ethernet.init(W5500_CS_PIN);
 
@@ -145,15 +170,18 @@ void EthernetManager::initEthernet(const AppSettings& s) {
     sscanf(s.w5500StaticSubnet.c_str(), "%hhu.%hhu.%hhu.%hhu", &_snBytes[0], &_snBytes[1], &_snBytes[2], &_snBytes[3]);
     sscanf(s.w5500StaticDns.c_str(), "%hhu.%hhu.%hhu.%hhu", &_dnsBytes[0], &_dnsBytes[1], &_dnsBytes[2], &_dnsBytes[3]);
 
+    _linkAttempt = 0;
+
     if (s.w5500UseDhcp) {
       _dhcpState = DhcpState::Attempting;
       _dhcpAttempt = 0;
       _dhcpNextMs = millis();
-      LOG_INFO("[eth] state=dhcp-request");
+      LOG_INFO("eth", "state=dhcp-request");
     } else {
-      LOG_INFO("[eth] state=static-ip ip=%s gw=%s sn=%s dns=%s",
+      LOG_INFO("eth", "state=static-ip ip=%s gw=%s sn=%s dns=%s",
                     s.w5500StaticIp.c_str(), s.w5500StaticGateway.c_str(),
                     s.w5500StaticSubnet.c_str(), s.w5500StaticDns.c_str());
+      TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
       Ethernet.begin(mac, IPAddress(_ipBytes[0], _ipBytes[1], _ipBytes[2], _ipBytes[3]),
                      IPAddress(_gwBytes[0], _gwBytes[1], _gwBytes[2], _gwBytes[3]),
                      IPAddress(_snBytes[0], _snBytes[1], _snBytes[2], _snBytes[3]),
@@ -168,7 +196,7 @@ void EthernetManager::initEthernet(const AppSettings& s) {
     if ((int32_t)(millis() - _dhcpNextMs) < 0) {
       return;
     }
-    TaskWatchdog::feed("net", 5000);
+    TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
     if (Ethernet.begin(mac) != 0) {
       _dhcpState = DhcpState::LinkWait;
       _linkWaitStart = millis();
@@ -176,7 +204,7 @@ void EthernetManager::initEthernet(const AppSettings& s) {
     }
     _dhcpAttempt++;
     if (_dhcpAttempt >= 6) {
-      LOG_INFO("[eth] state=dhcp-timeout, fallback to static");
+      LOG_INFO("eth", "state=dhcp-timeout, fallback to static");
       Ethernet.begin(mac, IPAddress(_ipBytes[0], _ipBytes[1], _ipBytes[2], _ipBytes[3]),
                      IPAddress(_gwBytes[0], _gwBytes[1], _gwBytes[2], _gwBytes[3]),
                      IPAddress(_snBytes[0], _snBytes[1], _snBytes[2], _snBytes[3]),
@@ -195,21 +223,46 @@ void EthernetManager::initEthernet(const AppSettings& s) {
   }
 
   if (_dhcpState == DhcpState::LinkWait) {
-    TaskWatchdog::feed("net", 5000);
-    if ((millis() - _linkWaitStart) < 1000) {
+    TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
+    if ((millis() - _linkWaitStart) < LINK_WAIT_MS) {
       return;
     }
-    _dhcpState = DhcpState::Idle;
+
     _ip = Ethernet.localIP();
-    _active = true;
-    LOG_INFO("[eth] state=active ip=%s", _ip.toString().c_str());
+    if (_ip != IPAddress(0, 0, 0, 0)) {
+      _dhcpState = DhcpState::Idle;
+      _active = true;
+      _linkAttempt = 0;
+      LOG_INFO("eth", "state=active ip=%s", _ip.toString().c_str());
+      Event evt;
+      evt.type = EventType::NETWORK_CONNECTED;
+      evt.priority = EventPriority::PRIO_HIGH;
+      evt.timestamp_ms = millis();
+      evt.sender_id = 0;
+      gEventBus.post(evt);
+      return;
+    }
+
+    _linkAttempt++;
+    if (_linkAttempt >= MAX_LINK_ATTEMPTS) {
+      _dhcpState = DhcpState::Idle;
+      _active = false;
+      LOG_ERROR("eth", "state=failed link=%u attempts=%u", (unsigned)_linkAttempt, (unsigned)MAX_LINK_ATTEMPTS);
+      return;
+    }
+
+    LOG_INFO("eth", "state=link-wait retry=%u/%u", (unsigned)_linkAttempt, (unsigned)MAX_LINK_ATTEMPTS);
+    _linkWaitStart = millis();
+    if (_dhcpState == DhcpState::Attempting) {
+      _dhcpState = DhcpState::Attempting;
+    }
     return;
   }
 }
 
 void EthernetManager::stopEthernet() {
   if (!_active) {
-    LOG_INFO("[eth] state=already-stopped");
+    LOG_INFO("eth", "state=already-stopped");
     return;
   }
 
@@ -219,24 +272,25 @@ void EthernetManager::stopEthernet() {
   _retryAtMs = 0;
   _dhcpState = DhcpState::Idle;
   _dhcpAttempt = 0;
+  _linkAttempt = 0;
 
-  LOG_INFO("[eth] state=stopped");
+  LOG_INFO("eth", "state=stopped");
 }
 
 void EthernetManager::loadEthernetConfigFromJson(AppSettings& s) {
   if (!SPIFFS.begin(false)) {
-    LOG_INFO("[eth] config.json not available: SPIFFS not mounted");
+    LOG_INFO("eth", "config.json not available: SPIFFS not mounted");
     return;
   }
 
   if (!SPIFFS.exists("/config.json")) {
-    LOG_INFO("[eth] config.json not found, using defaults/NVS");
+    LOG_INFO("eth", "config.json not found, using defaults/NVS");
     return;
   }
 
   File file = SPIFFS.open("/config.json", "r");
   if (!file) {
-    LOG_INFO("[eth] failed to open config.json");
+    LOG_INFO("eth", "failed to open config.json");
     return;
   }
 
@@ -287,13 +341,13 @@ void EthernetManager::loadEthernetConfigFromJson(AppSettings& s) {
     }
   }
 
-  LOG_INFO("[eth] loaded ethernet config from JSON: dhcp=%u ip=%s",
+  LOG_INFO("eth", "loaded ethernet config from JSON: dhcp=%u ip=%s",
             (unsigned)s.w5500UseDhcp, s.w5500StaticIp.c_str());
 }
 
 void EthernetManager::saveEthernetConfigToJson(const AppSettings& s) {
   if (!SPIFFS.begin(false)) {
-    LOG_INFO("[eth] cannot save config.json: SPIFFS not mounted");
+    LOG_INFO("eth", "cannot save config.json: SPIFFS not mounted");
     return;
   }
 
@@ -309,11 +363,11 @@ void EthernetManager::saveEthernetConfigToJson(const AppSettings& s) {
 
   File file = SPIFFS.open("/config.json", "w");
   if (!file) {
-    LOG_INFO("[eth] failed to open config.json for writing");
+    LOG_INFO("eth", "failed to open config.json for writing");
     return;
   }
 
   file.print(json);
   file.close();
-  LOG_INFO("[eth] saved ethernet config to config.json");
+  LOG_INFO("eth", "saved ethernet config to config.json");
 }

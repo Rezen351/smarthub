@@ -9,6 +9,7 @@
   const ui = {
     barUptime: el('barUptime'),
     barFw: el('barFw'),
+    barTransport: el('barTransport'),
     barIp: el('barIp'),
 
     badgeSensor: el('badgeSensor'),
@@ -30,15 +31,17 @@
     valWifiRssi: el('valWifiRssi'),
     valWifiAp: el('valWifiAp'),
 
-    transportForm: el('transportForm'),
+    transportForm: el('networkForm'),
     transportMode: el('transportMode'),
+    wifiFields: el('wifiFields'),
     ethernetFields: el('ethernetFields'),
+    wifiMode: el('wifiMode'),
     w5500Dhcp: el('w5500Dhcp'),
     w5500StaticIp: el('w5500StaticIp'),
     w5500StaticGateway: el('w5500StaticGateway'),
     w5500StaticSubnet: el('w5500StaticSubnet'),
     w5500StaticDns: el('w5500StaticDns'),
-    btnSaveTransport: el('btnSaveTransport'),
+    btnSaveNetwork: el('btnSaveNetwork'),
 
     valTransportMode: el('valTransportMode'),
     valEthernetStatus: el('valEthernetStatus'),
@@ -66,7 +69,7 @@
     valStdErr: el('valStdErr'),
 
     wifiForm: el('wifiForm'),
-    wmode: el('wmode'),
+    wifiMode: el('wifiMode'),
     ssid: el('ssid'),
     psk: el('psk'),
     pskGroup: el('pskGroup'),
@@ -267,6 +270,57 @@
     }
   }
 
+  function isValidIp(ip) {
+    if (!ip || typeof ip !== 'string') return false;
+    const parts = ip.split('.');
+    if (parts.length !== 4) return false;
+    for (let i = 0; i < 4; i++) {
+      const n = Number(parts[i]);
+      if (!Number.isInteger(n) || n < 0 || n > 255) return false;
+    }
+    return true;
+  }
+
+  function validateNetworkForm() {
+    const useDhcp = ui.w5500Dhcp ? ui.w5500Dhcp.value === 'false' : false;
+    if (useDhcp) return true;
+    const ip = ui.w5500StaticIp ? ui.w5500StaticIp.value.trim() : '';
+    const gw = ui.w5500StaticGateway ? ui.w5500StaticGateway.value.trim() : '';
+    const sn = ui.w5500StaticSubnet ? ui.w5500StaticSubnet.value.trim() : '';
+    const dns = ui.w5500StaticDns ? ui.w5500StaticDns.value.trim() : '';
+    if (!isValidIp(ip)) {
+      showToast('Invalid static IP address. Use format: 192.168.1.100', true);
+      return false;
+    }
+    if (!isValidIp(gw)) {
+      showToast('Invalid gateway. Use format: 192.168.1.1', true);
+      return false;
+    }
+    if (!isValidIp(sn)) {
+      showToast('Invalid subnet mask. Use format: 255.255.255.0', true);
+      return false;
+    }
+    if (!isValidIp(dns)) {
+      showToast('Invalid DNS server. Use format: 8.8.8.8', true);
+      return false;
+    }
+    return true;
+  }
+
+  function setNetworkFormDisabled(disabled) {
+    if (!ui.transportForm) return;
+    const inputs = ui.transportForm.querySelectorAll('input, select, button');
+    inputs.forEach(el => { el.disabled = disabled; });
+    if (ui.btnSaveNetwork) {
+      ui.btnSaveNetwork.disabled = disabled;
+      ui.btnSaveNetwork.textContent = disabled ? 'Saving...' : 'Save Configuration';
+    }
+  }
+
+  function updateTransportStateUI(state) {
+    setNetworkFormDisabled(state === 'switching');
+  }
+
   function applyStatus(data) {
     if (ui.valWeightKg) ui.valWeightKg.textContent = (data.weightKg !== undefined) ? data.weightKg.toFixed(3) : '0.000';
     if (ui.valStableKg) ui.valStableKg.textContent = formatGramsToKg(data.stableG) + ' kg';
@@ -309,6 +363,15 @@
     if (ui.barUptime) ui.barUptime.textContent = 'Uptime: ' + (data.uptime || 0) + 's';
     if (ui.barFw) ui.barFw.textContent = 'FW: v' + (data.fw || '1.0');
 
+    const transport = data.transport || {};
+    const modeName = transport.modeName || 'WiFi';
+
+    if (ui.barTransport) {
+      const short = modeName === 'Ethernet' ? 'ETH' : 'WI';
+      ui.barTransport.textContent = short;
+      ui.barTransport.className = 'badge ' + (modeName === 'Ethernet' ? 'badge-ok' : 'badge-neutral');
+    }
+
     const w = data.wifi || {};
     if (ui.barIp) ui.barIp.textContent = 'IP: ' + (w.staIp || w.apIp || '--');
 
@@ -326,27 +389,59 @@
       ui.valWifiAp.textContent = `${w.apSsid || 'ENYX-SMARTHUB'} @ ${w.apIp || '192.168.4.1'}`;
     }
 
-    const transport = data.transport || {};
     if (ui.valTransportMode) {
-      ui.valTransportMode.textContent = transport.modeName || 'WiFi';
+      const state = transport.state || 'unknown';
+      let stateLabel = '';
+      if (modeName === 'Ethernet') {
+        if (state === 'active') stateLabel = 'Active';
+        else if (state === 'switching') stateLabel = 'Applying...';
+        else if (state === 'failed') stateLabel = 'Failed';
+        else stateLabel = 'Inactive';
+      } else {
+        stateLabel = 'WiFi';
+      }
+      ui.valTransportMode.textContent = stateLabel;
+      ui.valTransportMode.style.color =
+        state === 'failed' ? 'var(--danger)' :
+        state === 'active' ? 'var(--status-ok)' :
+        modeName === 'Ethernet' ? 'var(--text-secondary)' : 'var(--text)';
     }
 
     if (ui.valEthernetStatus) {
       const ethActive = transport.ethernetActive;
-      ui.valEthernetStatus.textContent = ethActive ? 'Active' : 'Inactive';
-      ui.valEthernetStatus.style.color = ethActive ? 'var(--status-ok)' : 'var(--text-muted)';
+      const state = transport.state || 'unknown';
+      let statusText = 'Inactive';
+      let statusColor = 'var(--text-muted)';
+      if (modeName === 'Ethernet') {
+        if (state === 'active') { statusText = 'Active'; statusColor = 'var(--status-ok)'; }
+        else if (state === 'switching') { statusText = 'Applying...'; statusColor = 'var(--warning)'; }
+        else if (state === 'failed') { statusText = 'Failed'; statusColor = 'var(--danger)'; }
+        else { statusText = 'Inactive'; statusColor = 'var(--text-muted)'; }
+      }
+      ui.valEthernetStatus.textContent = statusText;
+      ui.valEthernetStatus.style.color = statusColor;
     }
 
     if (ui.valEthernetIp) {
-      ui.valEthernetIp.textContent = transport.ethernetIp || '--';
+      const ip = transport.ethernetIp || '--';
+      ui.valEthernetIp.textContent = ip;
+      if (transport.state === 'failed') {
+        ui.valEthernetIp.style.color = 'var(--danger)';
+      } else if (transport.ethernetActive) {
+        ui.valEthernetIp.style.color = 'var(--status-ok)';
+      } else {
+        ui.valEthernetIp.style.color = 'var(--text)';
+      }
     }
+
+    updateTransportStateUI(transport.state || 'unknown');
   }
 
   async function loadConfig() {
     const cfg = await apiCall('/api/config');
     if (!cfg) return;
 
-    if (ui.wmode) ui.wmode.value = String(cfg.wifiMode || 0);
+    if (ui.wifiMode) ui.wifiMode.value = String(cfg.wifiMode || 0);
     if (ui.ssid) ui.ssid.value = cfg.ssid || '';
     if (ui.psk) ui.psk.value = cfg.wpaPassword || '';
     if (ui.eid) ui.eid.value = cfg.entIdentity || '';
@@ -372,13 +467,16 @@
   function updateTransportVisibility() {
     const selected = document.querySelector('input[name="transportMode"]:checked');
     const isEthernet = selected && selected.value === '1';
+    if (ui.wifiFields) {
+      ui.wifiFields.style.display = isEthernet ? 'none' : 'block';
+    }
     if (ui.ethernetFields) {
       ui.ethernetFields.style.display = isEthernet ? 'block' : 'none';
     }
   }
 
   function updateModeVisibility() {
-    const mode = ui.wmode ? ui.wmode.value : '0';
+    const mode = ui.wifiMode ? ui.wifiMode.value : '0';
     const isEnterprise = (mode === '2');
     const isPsk = (mode === '1');
 
@@ -392,8 +490,8 @@
 
   // Event Listeners Setup
   function initEvents() {
-    if (ui.wmode) {
-      ui.wmode.addEventListener('change', updateModeVisibility);
+    if (ui.wifiMode) {
+      ui.wifiMode.addEventListener('change', updateModeVisibility);
     }
 
     document.querySelectorAll('input[name="transportMode"]').forEach(radio => {
@@ -404,13 +502,27 @@
       ui.transportForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const mode = document.querySelector('input[name="transportMode"]:checked')?.value || '0';
-        const body = `mode=${encodeURIComponent(mode)}`;
+        if (!validateNetworkForm()) return;
 
-        setBusy(ui.btnSaveTransport, true, 'Saving...', 'Save Transport Configuration');
+        const transportMode = document.querySelector('input[name="transportMode"]:checked')?.value || '0';
+        const wifiMode = ui.wifiMode ? ui.wifiMode.value : '0';
+        const ssid = encodeURIComponent(ui.ssid.value.trim());
+        const psk  = encodeURIComponent(ui.psk.value);
+        const eid  = encodeURIComponent(ui.eid.value.trim());
+        const eusr = encodeURIComponent(ui.eusr.value.trim());
+        const epwd = encodeURIComponent(ui.epwd.value);
+        const w5500UseDhcp = ui.w5500Dhcp ? ui.w5500Dhcp.value : 'true';
+        const w5500StaticIp = encodeURIComponent(ui.w5500StaticIp.value.trim());
+        const w5500StaticGateway = encodeURIComponent(ui.w5500StaticGateway.value.trim());
+        const w5500StaticSubnet = encodeURIComponent(ui.w5500StaticSubnet.value.trim());
+        const w5500StaticDns = encodeURIComponent(ui.w5500StaticDns.value.trim());
+
+        const body = `transportMode=${transportMode}&wifiMode=${wifiMode}&ssid=${ssid}&psk=${psk}&eid=${eid}&eusr=${eusr}&epwd=${epwd}&w5500UseDhcp=${w5500UseDhcp}&w5500StaticIp=${w5500StaticIp}&w5500StaticGateway=${w5500StaticGateway}&w5500StaticSubnet=${w5500StaticSubnet}&w5500StaticDns=${w5500StaticDns}`;
+
+        setBusy(ui.btnSaveNetwork, true, 'Saving...', 'Save Configuration');
 
         try {
-          const res = await apiCall('/api/transport', {
+          const res = await apiCall('/api/network/config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: body
@@ -421,17 +533,17 @@
             return;
           }
           if (!res.ok) {
-            showToast(res.message || 'Transport configuration rejected', true);
+            showToast(res.message || 'Configuration rejected', true);
             return;
           }
 
-          showToast(res.message || 'Transport configuration saved.', false);
+          showToast(res.message || 'Network configuration saved.', false);
           await new Promise((resolve) => setTimeout(resolve, 1500));
           await refreshStatus();
         } catch (err) {
-          showToast('Error applying transport configuration', true);
+          showToast('Error applying network configuration', true);
         } finally {
-          setBusy(ui.btnSaveTransport, false, 'Saving...', 'Save Transport Configuration');
+          setBusy(ui.btnSaveNetwork, false, 'Saving...', 'Save Configuration');
         }
       });
     }
@@ -562,7 +674,7 @@
       ui.wifiForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const mode = ui.wmode.value;
+        const mode = ui.wifiMode.value;
         const ssid = encodeURIComponent(ui.ssid.value.trim());
         const psk  = encodeURIComponent(ui.psk.value);
         const eid  = encodeURIComponent(ui.eid.value.trim());

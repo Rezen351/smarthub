@@ -89,5 +89,44 @@
 #define PREF_NAMESPACE      "scale"
 
 // ------------------------- Firmware ----------------------------------
-#define FW_VERSION          0x0103   // major<<8 | minor  (1.3)
+#define FW_VERSION          0x0104   // major<<8 | minor  (1.4)
+
+// ------------------------- State Machine ------------------------------
+#define STATE_MACHINE_TASK_PRIORITY  2
+#define STATE_MACHINE_TASK_STACK    4096
+
+// ------------------------- Event Bus ---------------------------------
+#define EVENT_BUS_QUEUE_SIZE  32
+
+// ------------------------- MQTT --------------------------------------
+#define MQTT_SERVER          "192.168.1.100"
+#define MQTT_PORT            1883
+#define MQTT_CLIENT_ID       "enyx-weight-transmitter"
+#define MQTT_USERNAME        ""
+#define MQTT_PASSWORD        ""
+#define MQTT_TOPIC_PREFIX    "smartfarm"
+#define MQTT_TELEMETRY_INTERVAL_MS 5000
+#define MQTT_KEEPALIVE       60
+#define MQTT_QOS             0
+#define MQTT_RETAIN          0
+
+// ------------------------- Driver Registry ---------------------------
+#define DRIVER_REGISTRY_MAX_SENSORS    8
+#define DRIVER_REGISTRY_MAX_ACTUATORS  8
+#define DRIVER_REGISTRY_MAX_PROTOCOLS  8
+
+// ------------------------- Power Management --------------------------
+#ifndef DEEP_SLEEP_ENABLED
+#define DEEP_SLEEP_ENABLED 0
+#endif
+
+// ------------------------- Config Validation -------------------------
+#define CONFIG_MIN_SSID_LEN      1
+#define CONFIG_MAX_SSID_LEN      32
+#define CONFIG_MIN_PSK_LEN       8
+#define CONFIG_MAX_PSK_LEN       63
+#define CONFIG_MIN_ENT_USER_LEN  1
+#define CONFIG_MAX_ENT_USER_LEN  64
+#define CONFIG_MIN_ENT_PASS_LEN  1
+#define CONFIG_MAX_ENT_PASS_LEN  64
 #endif // SCALE_CONFIG_H

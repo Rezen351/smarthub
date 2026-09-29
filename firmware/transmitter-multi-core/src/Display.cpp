@@ -13,7 +13,7 @@ void DisplayManager::begin() {
   }
 
   if (!_display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    LOG_ERROR("[display] SSD1306 init failed");
+    LOG_ERROR("display", "SSD1306 init failed");
     return;
   }
 
@@ -21,7 +21,7 @@ void DisplayManager::begin() {
   _display.display();
   _enabled = true;
 
-  LOG_INFO("[display] SSD1306 initialized (128x64)");
+  LOG_INFO("display", "SSD1306 initialized (128x64)");
 }
 
 void DisplayManager::loop() {
@@ -32,15 +32,19 @@ void DisplayManager::loop() {
   _lastUpdate = now;
 }
 
-void DisplayManager::showSimple(const char* ip, float weightKg) {
+void DisplayManager::showSimple(const char* ip, float weightKg, uint8_t transportMode) {
   if (!_enabled) return;
 
   _display.clearDisplay();
   _display.setTextColor(SSD1306_WHITE);
 
   _display.setTextSize(1);
-  _display.setCursor(12, 0);
+  _display.setCursor(0, 0);
   _display.printf("%s", ip);
+
+  const char* modeText = (transportMode == TRANSPORT_ETHERNET) ? "ETH" : "WI";
+  _display.setCursor(128 - (strlen(modeText) * 6), 0);
+  _display.printf("%s", modeText);
 
   _display.drawFastHLine(0, 8, 128, SSD1306_WHITE);
 

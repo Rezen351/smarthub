@@ -20,6 +20,7 @@ class EthernetManager {
 
   bool active() const { return _active; }
   IPAddress localIp() const { return _ip; }
+  bool failed() const { return _transportState == TransportState::Ethernet && !_active && _linkAttempt >= MAX_LINK_ATTEMPTS; }
 
   void loadEthernetConfigFromJson(AppSettings& s);
   void saveEthernetConfigToJson(const AppSettings& s);
@@ -54,6 +55,10 @@ class EthernetManager {
   uint8_t _gwBytes[4];
   uint8_t _snBytes[4];
   uint8_t _dnsBytes[4];
+
+  uint8_t _linkAttempt = 0;
+  static constexpr uint32_t LINK_WAIT_MS = 1000;
+  static constexpr uint8_t MAX_LINK_ATTEMPTS = 3;
 };
 
 #endif

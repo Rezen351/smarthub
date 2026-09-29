@@ -1,5 +1,9 @@
 #include "ModbusServer.h"
+#include "Logger.h"
 #include "config.h"
+#include "EventBus.h"
+
+extern EventBus gEventBus;
 
 void ModbusServer::putFloat(uint16_t offset, float val) {
   uint32_t raw;
@@ -30,7 +34,7 @@ void ModbusServer::startServer() {
   _mb.server(MODBUS_PORT);
   _started = true;
 
-  Serial.printf("[modbus] WiFi server started on port %u (%u holding regs)\n",
+  LOG_INFO("modbus", "WiFi server started on port %u (%u holding regs)",
                 (unsigned)MODBUS_PORT, (unsigned)NUM_REGS);
 }
 
@@ -43,7 +47,7 @@ void ModbusServer::startEthernetServer() {
   _ethServer.begin(MODBUS_PORT);
   _started = true;
 
-  Serial.printf("[modbus] Ethernet server started on port %u (%u holding regs)\n",
+  LOG_INFO("modbus", "Ethernet server started on port %u (%u holding regs)",
                 (unsigned)MODBUS_PORT, (unsigned)NUM_REGS);
 }
 
@@ -56,8 +60,15 @@ void ModbusServer::loop() {
     uint16_t cmd = _mb.Hreg(REG_CMD);
     if (cmd != 0) {
       float arg = getFloat(REG_CMD_ARG);
-      Serial.printf("[modbus] state=cmd-wifi cmd=%u arg=%.4f\n",
-                    (unsigned)cmd, arg);
+      LOG_INFO("modbus", "state=cmd-wifi cmd=%u arg=%.4f", (unsigned)cmd, arg);
+      Event evt;
+      evt.type = EventType::ACTUATOR_COMMAND_RECEIVED;
+      evt.priority = EventPriority::NORMAL;
+      evt.timestamp_ms = millis();
+      evt.sender_id = 0;
+      evt.actuator_command.actuator_id = cmd;
+      evt.actuator_command.value = arg;
+      gEventBus.post(evt);
       switch (cmd) {
         case 1:  _shared->requestCommand(CMD_TARE);          break;
         case 2:  _shared->requestCommand(CMD_CALIBRATE, arg); break;
@@ -65,7 +76,7 @@ void ModbusServer::loop() {
         case 4:  _shared->requestCommand(CMD_FLUSH);         break;
         case 99: _shared->requestCommand(CMD_WIPE_WIFI);     break;
         default:
-          Serial.printf("[modbus] state=cmd-unknown cmd=%u\n", (unsigned)cmd);
+          LOG_INFO("modbus", "state=cmd-unknown cmd=%u", (unsigned)cmd);
           break;
       }
       _mb.Hreg(REG_CMD, 0);
@@ -85,8 +96,15 @@ void ModbusServer::loop() {
       uint16_t cmd = _mb.Hreg(REG_CMD);
       if (cmd != 0) {
         float arg = getFloat(REG_CMD_ARG);
-        Serial.printf("[modbus] state=cmd-ethernet cmd=%u arg=%.4f\n",
-                      (unsigned)cmd, arg);
+        LOG_INFO("modbus", "state=cmd-ethernet cmd=%u arg=%.4f", (unsigned)cmd, arg);
+        Event evt;
+        evt.type = EventType::ACTUATOR_COMMAND_RECEIVED;
+        evt.priority = EventPriority::NORMAL;
+        evt.timestamp_ms = millis();
+        evt.sender_id = 0;
+        evt.actuator_command.actuator_id = cmd;
+        evt.actuator_command.value = arg;
+        gEventBus.post(evt);
         switch (cmd) {
           case 1:  _shared->requestCommand(CMD_TARE);          break;
           case 2:  _shared->requestCommand(CMD_CALIBRATE, arg); break;
@@ -94,7 +112,7 @@ void ModbusServer::loop() {
           case 4:  _shared->requestCommand(CMD_FLUSH);         break;
           case 99: _shared->requestCommand(CMD_WIPE_WIFI);     break;
           default:
-            Serial.printf("[modbus] state=cmd-unknown cmd=%u\n", (unsigned)cmd);
+            LOG_INFO("modbus", "state=cmd-unknown cmd=%u", (unsigned)cmd);
             break;
         }
         _mb.Hreg(REG_CMD, 0);
@@ -126,8 +144,14 @@ void ModbusServer::setTransportMode(uint8_t mode) {
     startEthernetServer();
   }
 
-  Serial.printf("[modbus] transport mode -> %s\n",
-                mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+  LOG_INFO("modbus", "transport mode -> %s", mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+
+  Event evt;
+  evt.type = EventType::DEVICE_CONFIG_UPDATED;
+  evt.priority = EventPriority::NORMAL;
+  evt.timestamp_ms = millis();
+  evt.sender_id = 0;
+  gEventBus.post(evt);
 }
 
 bool ModbusServer::clientConnected() {

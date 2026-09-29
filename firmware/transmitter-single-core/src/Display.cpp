@@ -1,4 +1,5 @@
 #include "Display.h"
+#include "Logger.h"
 #include "config.h"
 
 void DisplayManager::begin() {
@@ -12,7 +13,7 @@ void DisplayManager::begin() {
   }
 
   if (!_display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println("[display] SSD1306 init failed");
+    LOG_INFO("display", "SSD1306 init failed");
     return;
   }
 
@@ -20,7 +21,7 @@ void DisplayManager::begin() {
   _display.display();
   _enabled = true;
 
-  Serial.println("[display] SSD1306 initialized (128x64)");
+  LOG_INFO("display", "SSD1306 initialized (128x64)");
 }
 
 void DisplayManager::loop() {

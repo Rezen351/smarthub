@@ -11,7 +11,7 @@ class DisplayManager {
   void begin();
   void loop();
 
-  void showSimple(const char* ip, float weightKg);
+  void showSimple(const char* ip, float weightKg, uint8_t transportMode);
   void clear();
 
   bool enabled() { return _enabled; }

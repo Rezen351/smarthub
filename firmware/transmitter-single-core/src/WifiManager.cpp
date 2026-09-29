@@ -1,7 +1,11 @@
 #include "WifiManager.h"
+#include "Logger.h"
 #include "config.h"
+#include "EventBus.h"
 #include <EthernetENC.h>
 #include <SPI.h>
+
+extern EventBus gEventBus;
 
 static uint8_t mac[6];
 
@@ -32,7 +36,7 @@ void WifiManager::begin(const AppSettings& s) {
   mac[4] = (efuseMac >> 8)  & 0xFF;
   mac[5] =  efuseMac        & 0xFF;
 
-  Serial.printf("[wifi] initializing (transport=%s, savedMode=%u, ssid='%s')\n",
+  LOG_INFO("wifi", "initializing (transport=%s, savedMode=%u, ssid='%s')",
                 _transportMode == TRANSPORT_ETHERNET ? "Ethernet" : "WiFi",
                 (unsigned)_savedMode, _savedSsid.c_str());
 
@@ -45,14 +49,14 @@ void WifiManager::begin(const AppSettings& s) {
   WiFi.mode(WIFI_AP);
   delay(50);
 
-  Serial.printf("[wifi] starting softAP ssid='%s' channel=%u maxConn=%u hidden=%u\n",
+  LOG_INFO("wifi", "starting softAP ssid='%s' channel=%u maxConn=%u hidden=%u",
                 _apSsid.c_str(), (unsigned)AP_CHANNEL,
                 (unsigned)AP_MAX_CONNECTIONS, (unsigned)AP_HIDDEN);
 
   bool apOk = WiFi.softAP(_apSsid.c_str(), AP_SSID_PASSWORD,
                           AP_CHANNEL, AP_HIDDEN, AP_MAX_CONNECTIONS);
   if (!apOk) {
-    Serial.println("[wifi] ERROR: softAP() returned false, retrying after mode reset...");
+    LOG_INFO("wifi", "ERROR: softAP() returned false, retrying after mode reset...");
     WiFi.mode(WIFI_AP_STA);
     delay(100);
     apOk = WiFi.softAP(_apSsid.c_str(), AP_SSID_PASSWORD,
@@ -64,11 +68,11 @@ void WifiManager::begin(const AppSettings& s) {
   while (WiFi.softAPIP() == IPAddress(0, 0, 0, 0)) {
     yield();
     if ((millis() - apT0) > 3000) {
-      Serial.println("[wifi] ERROR: softAP IP still 0.0.0.0 after 3 s");
+      LOG_INFO("wifi", "ERROR: softAP IP still 0.0.0.0 after 3 s");
       break;
     }
   }
-  Serial.printf("[wifi] softAP IP=%s (started=%s)\n",
+  LOG_INFO("wifi", "softAP IP=%s (started=%s)",
                 WiFi.softAPIP().toString().c_str(),
                 apOk ? "yes" : "NO");
 
@@ -76,11 +80,11 @@ void WifiManager::begin(const AppSettings& s) {
   WiFi.mode(WIFI_AP_STA);
 
   if (_transportMode == TRANSPORT_ETHERNET) {
-    Serial.println("[wifi] state=ethernet (WiFi STA disabled)");
+    LOG_INFO("wifi", "state=ethernet (WiFi STA disabled)");
     beginEthernet(s);
     WiFi.disconnect(false);
   } else {
-    Serial.println("[wifi] state=ap+sta");
+    LOG_INFO("wifi", "state=ap+sta");
     stopEthernet();
     startSta(s);
   }
@@ -90,7 +94,7 @@ void WifiManager::startSta(const AppSettings& s) {
   if (s.wifiMode == WIFI_MODE_NONE || s.ssid.length() == 0) {
     WiFi.setAutoReconnect(false);
     WiFi.disconnect(false);
-    Serial.println("[wifi] state=ap-only (uplink disabled)");
+    LOG_INFO("wifi", "state=ap-only (uplink disabled)");
     return;
   }
 
@@ -100,17 +104,17 @@ void WifiManager::startSta(const AppSettings& s) {
 
   if (s.wifiMode == WIFI_MODE_PSK) {
     WiFi.begin(s.ssid.c_str(), s.wpaPassword.c_str());
-    Serial.printf("[wifi] state=connecting mode=psk ssid='%s'\n", s.ssid.c_str());
+    LOG_INFO("wifi", "state=connecting mode=psk ssid='%s'", s.ssid.c_str());
   } else if (s.wifiMode == WIFI_MODE_ENT) {
     if (s.entUsername.length() == 0) {
-      Serial.println("[wifi] state=ap-only (enterprise mode ignored: inner username is empty)");
+      LOG_INFO("wifi", "state=ap-only (enterprise mode ignored: inner username is empty)");
       return;
     }
     const char* ident = s.entIdentity.length() ? s.entIdentity.c_str()
                                                : s.entUsername.c_str();
     WiFi.begin(s.ssid.c_str(), WPA2_AUTH_PEAP, ident,
                s.entUsername.c_str(), s.entPassword.c_str());
-    Serial.printf("[wifi] state=connecting mode=ent ssid='%s' identity='%s'\n",
+    LOG_INFO("wifi", "state=connecting mode=ent ssid='%s' identity='%s'",
                   s.ssid.c_str(), ident);
   }
 }
@@ -118,7 +122,7 @@ void WifiManager::startSta(const AppSettings& s) {
 void WifiManager::applySettings(const AppSettings& s) {
   _savedMode = s.wifiMode;
   _savedSsid = s.ssid;
-  Serial.printf("[wifi] applySettings mode=%u ssid='%s'\n",
+  LOG_INFO("wifi", "applySettings mode=%u ssid='%s'",
                 (unsigned)s.wifiMode, s.ssid.c_str());
   startSta(s);
 }
@@ -129,7 +133,7 @@ void WifiManager::requestSettings(const AppSettings& s) {
   _savedSsid = s.ssid;
   _applyPending = true;
   _applyAtMs = millis() + WIFI_APPLY_DELAY_MS;
-  Serial.printf("[wifi] state=pending mode=%u ssid='%s' deferred=%ums\n",
+  LOG_INFO("wifi", "state=pending mode=%u ssid='%s' deferred=%ums",
                 (unsigned)s.wifiMode, s.ssid.c_str(),
                 (unsigned)WIFI_APPLY_DELAY_MS);
 }
@@ -137,7 +141,7 @@ void WifiManager::requestSettings(const AppSettings& s) {
 void WifiManager::applyPendingSettings() {
   AppSettings cfg = _pendingCfg;
   _applyPending = false;
-  Serial.println("[wifi] state=applying deferred configuration");
+  LOG_INFO("wifi", "state=applying deferred configuration");
   startSta(cfg);
   _lastCheck = millis();
 }
@@ -163,7 +167,7 @@ void WifiManager::loop() {
 
   if (_transportMode == TRANSPORT_ETHERNET) {
     if (!_ethernetActive) {
-      Serial.println("[wifi] state=ethernet (starting W5500)");
+      LOG_INFO("wifi", "state=ethernet (starting W5500)");
       beginEthernet(_pendingCfg);
     }
     return;
@@ -173,7 +177,7 @@ void WifiManager::loop() {
     if (WiFi.status() != WL_CONNECTED && WiFi.getMode() & WIFI_STA) {
       static bool apOnlyLogged = false;
       if (!apOnlyLogged) {
-        Serial.println("[wifi] state=ap-only (no uplink configured)");
+        LOG_INFO("wifi", "state=ap-only (no uplink configured)");
         apOnlyLogged = true;
       }
     }
@@ -183,7 +187,7 @@ void WifiManager::loop() {
   if (staConnected()) {
     static bool wasConnected = false;
     if (!wasConnected) {
-      Serial.printf("[wifi] state=sta-connected ssid='%s' rssi=%d ip=%s\n",
+      LOG_INFO("wifi", "state=sta-connected ssid='%s' rssi=%d ip=%s",
                     _savedSsid.c_str(), (int)WiFi.RSSI(),
                     WiFi.localIP().toString().c_str());
       wasConnected = true;
@@ -194,7 +198,7 @@ void WifiManager::loop() {
   // Not connected — attempt reconnect.
   static bool wasDisconnected = false;
   if (!wasDisconnected) {
-    Serial.printf("[wifi] state=sta-disconnected mode=%u ssid='%s' status=%d\n",
+    LOG_INFO("wifi", "state=sta-disconnected mode=%u ssid='%s' status=%d",
                   (unsigned)_savedMode, _savedSsid.c_str(), (int)WiFi.status());
     wasDisconnected = true;
   }
@@ -209,25 +213,32 @@ void WifiManager::setTransportMode(uint8_t mode) {
 
   if (mode == TRANSPORT_ETHERNET) {
     WiFi.disconnect(false);
-    Serial.println("[wifi] state=transport-wifi->ethernet");
+    LOG_INFO("wifi", "state=transport-wifi->ethernet");
     beginEthernet(_pendingCfg);
   } else {
-    Serial.println("[wifi] state=transport-ethernet->wifi");
+    LOG_INFO("wifi", "state=transport-ethernet->wifi");
     stopEthernet();
     startSta(_pendingCfg);
   }
 
-  Serial.printf("[wifi] transport mode -> %s\n",
-                mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+  LOG_INFO("wifi", "transport mode -> %s",
+            mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+
+  Event evt;
+  evt.type = EventType::DEVICE_CONFIG_UPDATED;
+  evt.priority = EventPriority::NORMAL;
+  evt.timestamp_ms = millis();
+  evt.sender_id = 0;
+  gEventBus.post(evt);
 }
 
 void WifiManager::beginEthernet(const AppSettings& s) {
   if (_ethernetActive) {
-    Serial.println("[eth] state=already-active");
+    LOG_INFO("eth", "state=already-active");
     return;
   }
 
-  Serial.println("[eth] state=initializing W5500");
+  LOG_INFO("eth", "state=initializing W5500");
   SPI.begin(W5500_SCK_PIN, W5500_MISO_PIN, W5500_MOSI_PIN, W5500_CS_PIN);
   Ethernet.init(W5500_CS_PIN);
 
@@ -242,16 +253,16 @@ void WifiManager::beginEthernet(const AppSettings& s) {
   sscanf(s.w5500StaticDns.c_str(), "%hhu.%hhu.%hhu.%hhu", &dns[0], &dns[1], &dns[2], &dns[3]);
 
   if (s.w5500UseDhcp) {
-    Serial.println("[eth] state=dhcp-request");
+    LOG_INFO("eth", "state=dhcp-request");
     if (Ethernet.begin(mac) == 0) {
-      Serial.println("[eth] state=dhcp-fallback-static");
+      LOG_INFO("eth", "state=dhcp-fallback-static");
       Ethernet.begin(mac, IPAddress(ip[0], ip[1], ip[2], ip[3]),
                      IPAddress(gw[0], gw[1], gw[2], gw[3]),
                      IPAddress(sn[0], sn[1], sn[2], sn[3]),
                      IPAddress(dns[0], dns[1], dns[2], dns[3]));
     }
   } else {
-    Serial.println("[eth] state=static-ip");
+    LOG_INFO("eth", "state=static-ip");
     Ethernet.begin(mac, IPAddress(ip[0], ip[1], ip[2], ip[3]),
                    IPAddress(gw[0], gw[1], gw[2], gw[3]),
                    IPAddress(sn[0], sn[1], sn[2], sn[3]),
@@ -267,13 +278,19 @@ void WifiManager::beginEthernet(const AppSettings& s) {
   _ethernetIp = Ethernet.localIP();
   _ethernetActive = true;
 
-  Serial.printf("[eth] state=active ip=%s\n",
-                _ethernetIp.toString().c_str());
+  LOG_INFO("eth", "state=active ip=%s", _ethernetIp.toString().c_str());
+
+  Event evt;
+  evt.type = EventType::NETWORK_CONNECTED;
+  evt.priority = EventPriority::PRIO_HIGH;
+  evt.timestamp_ms = millis();
+  evt.sender_id = 0;
+  gEventBus.post(evt);
 }
 
 void WifiManager::stopEthernet() {
   if (!_ethernetActive) {
-    Serial.println("[eth] state=already-stopped");
+    LOG_INFO("eth", "state=already-stopped");
     return;
   }
 
@@ -281,5 +298,5 @@ void WifiManager::stopEthernet() {
   _ethernetActive = false;
   _ethernetIp = IPAddress(0, 0, 0, 0);
 
-  Serial.println("[eth] state=stopped");
+  LOG_INFO("eth", "state=stopped");
 }

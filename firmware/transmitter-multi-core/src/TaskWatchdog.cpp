@@ -21,7 +21,7 @@ void TaskWatchdog::init() {
   _initialized = true;
 
   xTaskCreate(watchdogTask, "watchdog", 2048, nullptr, 3, &_watchdogTask);
-  LOG_INFO("[watchdog] initialized");
+  LOG_INFO("watchdog", "initialized");
 }
 
 void TaskWatchdog::feed(const char* name, uint32_t timeoutMs) {
@@ -38,7 +38,7 @@ void TaskWatchdog::feed(const char* name, uint32_t timeoutMs) {
     _name[idx] = name;
     _lastFeedMs[idx] = millis();
     _timeoutMs[idx] = timeoutMs;
-    LOG_INFO("[watchdog] registered task '%s' timeout=%u ms", name, (unsigned)timeoutMs);
+    LOG_INFO("watchdog", "registered task '%s' timeout=%u ms", name, (unsigned)timeoutMs);
   }
 }
 
@@ -46,7 +46,7 @@ void TaskWatchdog::loop() {
   uint32_t now = millis();
   for (uint8_t i = 0; i < _count; i++) {
     if (_timeoutMs[i] > 0 && (now - _lastFeedMs[i]) > _timeoutMs[i]) {
-      LOG_ERROR("[watchdog] CRITICAL: task '%s' hung for %u ms, rebooting",
+      LOG_ERROR("watchdog", "CRITICAL: task '%s' hung for %u ms, rebooting",
                     _name[i], (unsigned)(now - _lastFeedMs[i]));
       delay(100);
       ESP.restart();

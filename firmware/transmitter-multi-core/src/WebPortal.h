@@ -38,6 +38,7 @@ public:
   void handleApiForceAp();
   void handleApiFactoryReset();
   void handleApiTransport();
+  void handleApiNetworkConfig();
   void handleApiEthernetConfig();
   void handleApiDisplayConfig();
 
