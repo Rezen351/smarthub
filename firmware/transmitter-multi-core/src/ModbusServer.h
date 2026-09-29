@@ -6,7 +6,7 @@
 //  ModbusServer — Modbus TCP server (port 502)
 //
 //  Uses ModbusTCP from emelianov/modbus-esp8266.
-//  Supports WiFi (ModbusTCP) and Ethernet (W5500 via EthernetENC).
+//  Supports WiFi (ModbusTCP) and Ethernet (W5500 via Arduino Ethernet library).
 // =====================================================================
 
 #include <Arduino.h>

@@ -48,15 +48,16 @@ The design is intentionally **protocol-agnostic at the top level**: the `SharedS
 
 ```
 ESP32 / ESP32-S3 GPIO | Signal        | Connected to
------------------------+---------------+-------------------------------
+----------------------+---------------+-------------------------------
 GPIO 14               | LOADCELL_DOUT | HX711 DT  (data out)
 GPIO 15               | LOADCELL_SCK  | HX711 PD_SCK (clock)
 GPIO 16               | OLED_SDA      | SSD1306 SDA (I2C)
 GPIO 17               | OLED_SCL      | SSD1306 SCL (I2C)
-GPIO 18               | W5500_SCK     | W5500 SPI clock
-GPIO 19               | W5500_MISO    | W5500 SPI MISO
-GPIO 23               | W5500_MOSI    | W5500 SPI MOSI
-GPIO 5                | W5500_CS      | W5500 SPI chip select
+GPIO 12               | W5500_SCK     | W5500 SPI clock
+GPIO 13               | W5500_MISO    | W5500 SPI MISO
+GPIO 11               | W5500_MOSI    | W5500 SPI MOSI
+GPIO 10               | W5500_CS      | W5500 SPI chip select
+GPIO 9                | W5500_RST     | W5500 hardware reset
 3.3 V / 5 V           | HX711 VCC     | HX711 power (check module silkscreen)
 GND                   | HX711 GND     | Common ground
 GPIO -1               | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset button)
@@ -68,19 +69,20 @@ GPIO -1               | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-
 |-----|-----------|------|------|-------|
 | Software GPIO | HX711 | 14, 15 | Bit-banged | Uses `HX711` library; does **not** use SPI peripheral |
 | I2C (Wire) | SSD1306 | 16, 17 | I2C | `Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN)` |
-| Hardware SPI (VSPI) | W5500 | 18, 19, 23, 5 | SPI | `SPI.begin(SCK, MISO, MOSI)` + `Ethernet.init(CS)` |
+| Hardware SPI | W5500 | 12, 13, 11, 10 | SPI | `SPI.begin(SCK, MISO, MOSI)` + `Ethernet.init(CS)` + optional RST on GPIO 9 |
 
 #### Pin conflict prevention
 
-- HX711 is bit-banged on GPIO 14/15 and does not touch the SPI peripheral, so hardware SPI on GPIO 18/19/23/5 is safe.
-- W5500 uses standard VSPI pins (GPIO 18/19/23) with CS on GPIO 5. This pinout is compatible with both ESP32 and ESP32-S3.
+- HX711 is bit-banged on GPIO 14/15 and does not touch the SPI peripheral, so hardware SPI on GPIO 12/13/11/10 is safe.
+- W5500 uses SPI pins GPIO 12/13/11 with CS on GPIO 10 and hardware reset on GPIO 9. This pinout matches the proven `esp32s3-ethernet` reference firmware.
 - OLED I2C uses GPIO 16/17, separate from both HX711 and W5500.
-- Do **not** move HX711 to GPIO 18/19/23 without also updating W5500 SPI pins.
+- Do **not** move HX711 to GPIO 11/12/13 without also updating W5500 SPI pins.
 
 #### Electrical notes
 
 - HX711 VCC can be 3.3 V or 5 V depending on module variant; check module silkscreen.
-- W5500 CS must be pulled low during SPI transactions; `EthernetENC` handles this automatically via `Ethernet.init(W5500_CS_PIN)`.
+- W5500 CS must be pulled low during SPI transactions; the Arduino Ethernet library handles this via `Ethernet.init(W5500_CS_PIN)`.
+- W5500 RST is driven actively low for 10 ms during init to guarantee a clean hardware reset.
 - OLED reset pin is `-1` (unused) because the SSD1306 is held in reset by default and initialized via I2C address `0x3C`.
 
 > **Note:** `HX711_FAST_PROCESSOR = true` is mandatory for ESP32 because the core can
@@ -501,7 +503,7 @@ The device acts as a **Modbus TCP server** (formerly "slave"). Holding registers
 
 Supports two transports:
 - **WiFi**: `ModbusTCP` server from modbus-esp8266
-- **Ethernet**: `EthernetServer` + `EthernetClient` from EthernetENC
+- **Ethernet**: `EthernetServer` + `EthernetClient` from the vendored Arduino Ethernet library (`arduino-libraries/Ethernet@^2.0.0`)
 
 Transport is switched at runtime via `requestTransportMode()` / `applyPendingTransportMode()` using the shared `TransportState` FSM. The register map is identical for both transports.
 
@@ -944,7 +946,7 @@ pio run -t uploadfs
 | `WiFi` | ESP32 Arduino SDK | AP+STA WiFi (built-in) |
 | `Adafruit SSD1306` | Adafruit | OLED display driver |
 | `Adafruit GFX` | Adafruit | Graphics primitives for OLED |
-| `EthernetENC` | jandrassy | W5500 Ethernet driver |
+| `Ethernet` | Arduino official library | W5500 Ethernet driver, vendored in `lib/Ethernet` |
 
 ---
 
