@@ -75,10 +75,10 @@ GPIO 13    | W5500_MISO    | W5500 SPI MISO
 GPIO 12    | W5500_MOSI    | W5500 SPI MOSI
 GPIO 15    | W5500_CS      | W5500 SPI chip select
 GPIO 16    | W5500_RST     | W5500 hardware reset
-GPIO 14    | LOADCELL_DOUT | HX711 DT  (data out)
-GPIO 15    | LOADCELL_SCK  | HX711 PD_SCK (clock)
-GPIO 16    | OLED_SDA      | SSD1306 SDA (I2C)
-GPIO 17    | OLED_SCL      | SSD1306 SCL (I2C)
+GPIO 4     | LOADCELL_DOUT | HX711 DT  (data out)
+GPIO 5     | LOADCELL_SCK  | HX711 PD_SCK (clock)
+GPIO 21    | OLED_SDA      | SSD1306 SDA (I2C)
+GPIO 22    | OLED_SCL      | SSD1306 SCL (I2C)
 ```
 
 #### Bus topology
@@ -92,7 +92,7 @@ GPIO 17    | OLED_SCL      | SSD1306 SCL (I2C)
 #### Pin conflict prevention
 
 - **ESP32-S3**: W5500 SPI is fully isolated from HX711 and OLED; no conflicts.
-- **ESP32 / ESP32-DOIT-V1**: W5500 shares GPIO 14/15/16 with HX711/OLED. `config.h` selects the board-specific pinout. Ensure your wiring matches the target board before flashing.
+- **ESP32 / ESP32-DOIT-V1**: W5500 uses GPIO 14/13/12/15/16. HX711 moved to GPIO 4/5 and OLED moved to GPIO 21/22 to avoid SPI/RST conflicts.
 - Do **not** move HX711 to GPIO 11/12/13 on ESP32-S3 without also updating W5500 SPI pins.
 
 #### Electrical notes

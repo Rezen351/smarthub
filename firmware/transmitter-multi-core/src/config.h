@@ -12,10 +12,8 @@
 //   HX711 PD_SCK (clock)         -> GPIO pin below
 //   HX711 VCC / GND              -> 3.3V / GND (or 5V, see module)
 //
-// ESP32-S3: HX711 is bit-banged via HX711 library, safe to share bus
-// with hardware SPI on other pins.
-#define LOADCELL_DOUT_PIN    14     // GPIO 14 (DOUT)
-#define LOADCELL_SCK_PIN     15     // GPIO 15 (PD_SCK)
+// Pin assignment is board-specific because W5500 Ethernet may share or
+// collide with these GPIOs. See the W5500 section for per-board mapping.
 #define HX711_FAST_PROCESSOR true   // ESP32 can toggle IO < 0.4us -> must be true
 #define HX711_READS          10     // samples averaged per reading
 #define SCALE_SAMPLE_MS      30     // sensor task period
@@ -71,6 +69,10 @@
 //   W5500 MOSI -> GPIO 12
 //   W5500 CS   -> GPIO 15
 //   W5500 RST  -> GPIO 16
+//   HX711 DOUT -> GPIO 4
+//   HX711 SCK  -> GPIO 5
+//   OLED SDA   -> GPIO 21
+//   OLED SCL   -> GPIO 22
 //
 // NOTE: On ESP32dev these W5500 pins share GPIO 14/15/16 with HX711/OLED.
 // Ensure your actual wiring matches the selected board before flashing.
@@ -80,12 +82,20 @@
 #define W5500_MOSI_PIN      11
 #define W5500_CS_PIN        10
 #define W5500_RST_PIN       9
+#define LOADCELL_DOUT_PIN   14
+#define LOADCELL_SCK_PIN    15
+#define OLED_SDA_PIN        16
+#define OLED_SCL_PIN        17
 #else
 #define W5500_SCK_PIN       14
 #define W5500_MISO_PIN      13
 #define W5500_MOSI_PIN      12
 #define W5500_CS_PIN        15
 #define W5500_RST_PIN       16
+#define LOADCELL_DOUT_PIN   4
+#define LOADCELL_SCK_PIN    5
+#define OLED_SDA_PIN        21
+#define OLED_SCL_PIN        22
 #endif
 #define W5500_USE_DHCP      true
 #define W5500_STATIC_IP     "192.168.1.100"
@@ -94,11 +104,7 @@
 #define W5500_STATIC_DNS    "8.8.8.8"
 
 // ------------------------- OLED Display -----------------------------
-// I2C (Wire) bus on ESP32-S3.
-//   OLED SDA -> GPIO 16
-//   OLED SCL -> GPIO 17
-#define OLED_SDA_PIN        16
-#define OLED_SCL_PIN        17
+// I2C (Wire) bus pins are board-specific; see W5500 section above.
 #define OLED_WIDTH          128
 #define OLED_HEIGHT         64
 #define OLED_RESET_PIN     -1
