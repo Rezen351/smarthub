@@ -6,7 +6,7 @@ void ScaleSensor::begin(SharedState* shared, SettingsStore* settings) {
   _s = shared;
   _st = settings;
 
-  _hx.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN, HX711_FAST_PROCESSOR);
+  _hx.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN, HX711_FAST_PROCESSOR, false);
   _hx.power_up();
 
   AppSettings persisted;
