@@ -11,7 +11,7 @@
 
 #include <Arduino.h>
 #include <ModbusTCP.h>
-#include <Ethernet3.h>
+#include <Ethernet.h>
 #include "SharedState.h"
 #include "Settings.h"
 #include "Transport.h"

@@ -3,7 +3,7 @@
 #include "Logger.h"
 #include "TaskWatchdog.h"
 #include "EventBus.h"
-#include <Ethernet3.h>
+#include <Ethernet.h>
 #include <WiFi.h>
 #include <SPI.h>
 #include <SPIFFS.h>

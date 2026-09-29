@@ -55,7 +55,7 @@
 #define REBOOT_GRACE_MS          500
 
 // ------------------------- W5500 Ethernet ---------------------------
-// Match proven esp32s3-ethernet firmware wiring with Ethernet3 library.
+// Match proven esp32s3-ethernet firmware wiring with Arduino Ethernet library.
 //   W5500 SCK  -> GPIO 12
 //   W5500 MISO -> GPIO 13
 //   W5500 MOSI -> GPIO 11
