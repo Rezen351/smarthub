@@ -55,19 +55,38 @@
 #define REBOOT_GRACE_MS          500
 
 // ------------------------- W5500 Ethernet ---------------------------
-// Match proven esp32s3-ethernet firmware wiring with Arduino Ethernet library.
+// Pinout differs by board because the proven reference firmware uses
+// different wiring for ESP32-S3 versus classic ESP32.
+//
+// ESP32-S3 (proven in firmware/esp32s3-ethernet):
 //   W5500 SCK  -> GPIO 12
 //   W5500 MISO -> GPIO 13
 //   W5500 MOSI -> GPIO 11
 //   W5500 CS   -> GPIO 10
 //   W5500 RST  -> GPIO 9
-// HX711 stays on GPIO 14/15 so there is no SPI bus conflict.
-// OLED stays on GPIO 16/17 so there is no SPI bus conflict.
+//
+// ESP32 / ESP32-DOIT-V1 (esp32dev):
+//   W5500 SCK  -> GPIO 14
+//   W5500 MISO -> GPIO 13
+//   W5500 MOSI -> GPIO 12
+//   W5500 CS   -> GPIO 15
+//   W5500 RST  -> GPIO 16
+//
+// NOTE: On ESP32dev these W5500 pins share GPIO 14/15/16 with HX711/OLED.
+// Ensure your actual wiring matches the selected board before flashing.
+#ifdef ESP32S3
 #define W5500_SCK_PIN       12
 #define W5500_MISO_PIN      13
 #define W5500_MOSI_PIN      11
 #define W5500_CS_PIN        10
 #define W5500_RST_PIN       9
+#else
+#define W5500_SCK_PIN       14
+#define W5500_MISO_PIN      13
+#define W5500_MOSI_PIN      12
+#define W5500_CS_PIN        15
+#define W5500_RST_PIN       16
+#endif
 #define W5500_USE_DHCP      true
 #define W5500_STATIC_IP     "192.168.1.100"
 #define W5500_STATIC_GATEWAY "192.168.1.1"

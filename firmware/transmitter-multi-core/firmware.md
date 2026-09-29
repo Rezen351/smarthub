@@ -46,37 +46,54 @@ The design is intentionally **protocol-agnostic at the top level**: the `SharedS
 
 ### 2.2 Pin Assignment
 
+#### ESP32-S3 (DevKitC-1 / esp32s3)
+
 ```
-ESP32 / ESP32-S3 GPIO | Signal        | Connected to
-----------------------+---------------+-------------------------------
-GPIO 14               | LOADCELL_DOUT | HX711 DT  (data out)
-GPIO 15               | LOADCELL_SCK  | HX711 PD_SCK (clock)
-GPIO 16               | OLED_SDA      | SSD1306 SDA (I2C)
-GPIO 17               | OLED_SCL      | SSD1306 SCL (I2C)
-GPIO 12               | W5500_SCK     | W5500 SPI clock
-GPIO 13               | W5500_MISO    | W5500 SPI MISO
-GPIO 11               | W5500_MOSI    | W5500 SPI MOSI
-GPIO 10               | W5500_CS      | W5500 SPI chip select
-GPIO 9                | W5500_RST     | W5500 hardware reset
-3.3 V / 5 V           | HX711 VCC     | HX711 power (check module silkscreen)
-GND                   | HX711 GND     | Common ground
-GPIO -1               | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset button)
+ESP32-S3 GPIO | Signal        | Connected to
+--------------+---------------+-------------------------------
+GPIO 14       | LOADCELL_DOUT | HX711 DT  (data out)
+GPIO 15       | LOADCELL_SCK  | HX711 PD_SCK (clock)
+GPIO 16       | OLED_SDA      | SSD1306 SDA (I2C)
+GPIO 17       | OLED_SCL      | SSD1306 SCL (I2C)
+GPIO 12       | W5500_SCK     | W5500 SPI clock
+GPIO 13       | W5500_MISO    | W5500 SPI MISO
+GPIO 11       | W5500_MOSI    | W5500 SPI MOSI
+GPIO 10       | W5500_CS      | W5500 SPI chip select
+GPIO 9        | W5500_RST     | W5500 hardware reset
+3.3 V / 5 V   | HX711 VCC     | HX711 power (check module silkscreen)
+GND           | HX711 GND     | Common ground
+GPIO -1       | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset button)
+```
+
+#### ESP32 / ESP32-DOIT-V1 (esp32dev)
+
+```
+ESP32 GPIO | Signal        | Connected to
+-----------+---------------+-------------------------------
+GPIO 14    | W5500_SCK     | W5500 SPI clock
+GPIO 13    | W5500_MISO    | W5500 SPI MISO
+GPIO 12    | W5500_MOSI    | W5500 SPI MOSI
+GPIO 15    | W5500_CS      | W5500 SPI chip select
+GPIO 16    | W5500_RST     | W5500 hardware reset
+GPIO 14    | LOADCELL_DOUT | HX711 DT  (data out)
+GPIO 15    | LOADCELL_SCK  | HX711 PD_SCK (clock)
+GPIO 16    | OLED_SDA      | SSD1306 SDA (I2C)
+GPIO 17    | OLED_SCL      | SSD1306 SCL (I2C)
 ```
 
 #### Bus topology
 
 | Bus | Peripheral | GPIO | Mode | Notes |
 |-----|-----------|------|------|-------|
+| Hardware SPI | W5500 | board-dependent | SPI | See pin assignment per board above |
 | Software GPIO | HX711 | 14, 15 | Bit-banged | Uses `HX711` library; does **not** use SPI peripheral |
 | I2C (Wire) | SSD1306 | 16, 17 | I2C | `Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN)` |
-| Hardware SPI | W5500 | 12, 13, 11, 10 | SPI | `SPI.begin(SCK, MISO, MOSI)` + `Ethernet.init(CS)` + optional RST on GPIO 9 |
 
 #### Pin conflict prevention
 
-- HX711 is bit-banged on GPIO 14/15 and does not touch the SPI peripheral, so hardware SPI on GPIO 12/13/11/10 is safe.
-- W5500 uses SPI pins GPIO 12/13/11 with CS on GPIO 10 and hardware reset on GPIO 9. This pinout matches the proven `esp32s3-ethernet` reference firmware.
-- OLED I2C uses GPIO 16/17, separate from both HX711 and W5500.
-- Do **not** move HX711 to GPIO 11/12/13 without also updating W5500 SPI pins.
+- **ESP32-S3**: W5500 SPI is fully isolated from HX711 and OLED; no conflicts.
+- **ESP32 / ESP32-DOIT-V1**: W5500 shares GPIO 14/15/16 with HX711/OLED. `config.h` selects the board-specific pinout. Ensure your wiring matches the target board before flashing.
+- Do **not** move HX711 to GPIO 11/12/13 on ESP32-S3 without also updating W5500 SPI pins.
 
 #### Electrical notes
 
@@ -90,7 +107,7 @@ GPIO -1               | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-
 > breaks timing on fast MCUs.
 >
 > HX711 is bit-banged via the HX711 library and does not use the SPI peripheral, so
-> hardware SPI on GPIO 18/19/23/5 is safe for W5500.
+> the W5500 hardware-SPI pins are safe from HX711 contention.
 
 ---
 
