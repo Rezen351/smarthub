@@ -1,6 +1,6 @@
 # Weight Transmitter — Firmware Design Document
 
-> **E-Tani Smart Hub · Firmware v1.4**
+> **E-Tani Smart Hub · Firmware v1.5**
 > Target: ESP32-S3 (dual-core Xtensa LX7, 240 MHz, native USB)
 > Build system: PlatformIO · framework-arduinoespressif32 6.6.0 · RTOS: FreeRTOS 10.4
 
@@ -11,9 +11,10 @@
 The **Weight Transmitter** is an autonomous edge device that:
 
 1. Acquires mass data from a strain-gauge load cell via an **HX711** 24-bit ADC.
-2. Publishes real-time weight over **Modbus TCP** (acting as a Modbus server on port 502).
-3. Provides a **captive-portal web UI** for device configuration and calibration — always reachable regardless of upstream network state.
+2. Publishes real-time weight over **Modbus TCP** on both **WiFi** and **Ethernet** simultaneously (dual-transport), acting as a Modbus server on port 502.
+3. Provides a **captive-portal web UI** for device configuration and calibration — reachable **only via WiFi Soft-AP** (`192.168.4.1`), regardless of Ethernet or STA state.
 4. Runs in **dual WiFi mode** simultaneously: Soft-AP (configuration hotspot) + STA uplink (user network), both always-on.
+5. Uses **W5500 Ethernet** for Modbus TCP only; portal access and WiFi STA remain independent.
 
 The design is intentionally **protocol-agnostic at the top level**: the `SharedState` bus decouples sensor acquisition from transport, allowing additional protocols (MQTT, Modbus RTU, OPC-UA, etc.) to be added as independent modules in future iterations without touching the sensor or portal code.
 
@@ -232,7 +233,7 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 | `FORCE_AP_PIN` | -1 | GPIO for force-AP button (-1 = disabled) |
 | `FORCE_AP_HOLD_MS` | 3000 | Hold duration to trigger force-AP (ms) |
 | `PREF_NAMESPACE` | `"scale"` | NVS namespace |
-| `FW_VERSION` | `0x0104` | Major.Minor encoded (1.4) |
+| `FW_VERSION` | `0x0105` | Major.Minor encoded (1.5) |
 | `DEEP_SLEEP_ENABLED` | `0` | Compile-time deep-sleep opt-in for battery/solar deployments |
 
 ---
@@ -458,10 +459,10 @@ The ESP32 WiFi stack supports simultaneous **AP + STA** mode (`WIFI_AP_STA`). Bo
 
 | Mode | Value | Behavior |
 |------|-------|----------|
-| `TRANSPORT_WIFI` | 0 | Soft-AP + STA uplink, Modbus TCP over WiFi |
-| `TRANSPORT_ETHERNET` | 1 | Soft-AP only, W5500 Ethernet for Modbus TCP |
+| `TRANSPORT_WIFI` | 0 | Soft-AP + STA uplink, Modbus TCP over WiFi + Ethernet |
+| `TRANSPORT_ETHERNET` | 1 | Soft-AP only, Modbus TCP over Ethernet only |
 
-When Ethernet is selected, STA is disconnected and W5500 is initialized via hardware SPI. When WiFi is selected, Ethernet is stopped and STA reconnect supervision resumes.
+> **Note:** `transportMode` now only controls WiFi STA behavior. W5500 Ethernet is always initialized regardless of mode. Modbus TCP is served on **both WiFi and Ethernet simultaneously** in `TRANSPORT_WIFI` mode. In `TRANSPORT_ETHERNET` mode, WiFi STA is disconnected and Modbus TCP is served over Ethernet only. The captive portal remains WiFi Soft-AP only (`192.168.4.1`).
 
 #### Boot sequence
 
@@ -509,20 +510,21 @@ The delay is what makes "Apply Configuration" feel instant: the browser receives
 
 ---
 
-### 4.6 `ModbusServer` — Modbus TCP Register Map
+### 4.6 `ModbusServer` — Dual-Transport Modbus TCP Register Map
 
-**Files:** [`ModbusServer.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/ModbusServer.h) / `ModbusServer.cpp`
-**Library:** `emelianov/modbus-esp8266 @ 4.1.0`
+**Files:** [`ModbusServer.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/ModbusServer.h) / [`ModbusServer.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/ModbusServer.cpp)
+**WiFi library:** `emelianov/modbus-esp8266 @ 4.1.0`
+**Ethernet library:** Arduino `Ethernet` library (vendored)
 **Runs on:** Core 1, polled every `MODBUS_POLL_MS` = 100 ms
 **Port:** 502 (TCP)
 
 The device acts as a **Modbus TCP server** (formerly "slave"). Holding registers (FC 03/06/16) are used. All multi-word values are **big-endian, high word first** (IEEE 754 float split into two 16-bit registers).
 
-Supports two transports:
+Supports **dual-transport** simultaneously:
 - **WiFi**: `ModbusTCP` server from modbus-esp8266
-- **Ethernet**: `EthernetServer` + `EthernetClient` from the vendored Arduino Ethernet library (`arduino-libraries/Ethernet@^2.0.0`)
+- **Ethernet**: Manual MBAP parser over `EthernetServer`/`EthernetClient` from Arduino Ethernet library
 
-Transport is switched at runtime via `requestTransportMode()` / `applyPendingTransportMode()` using the shared `TransportState` FSM. The register map is identical for both transports.
+Both transports share the same holding register bank. The WiFi path uses the modbus-esp8266 library (`_mb.task()`); the Ethernet path uses a custom parser (`processEthernetModbus()`) that decodes MBAP frames manually and reads/writes registers via `_mb.Hreg()`.
 
 #### Holding Register Map
 
@@ -762,7 +764,7 @@ setup()
   +- gShared.begin()                     <- create mutex, zero state
   +- gScale.begin()                      <- HX711 power up, restore calibration
   +- gWifi.begin()                       <- start AP + STA (if configured)
-  +- gModbus.begin() + startServer()     <- register holding regs, listen :502
+  +- gModbus.begin() + startServer() + startEthernetServer()  <- register holding regs, listen :502 on WiFi and Ethernet
   +- gPortal.begin() + startDns()        <- bind HTTP :80, DNS wildcard
   |
   +- xTaskCreatePinnedToCore(networkTask, "net",   8192, core=1)
@@ -812,31 +814,37 @@ setup()
 ## 7. WiFi Dual-Mode Design
 
 ```
-                     +-------------------------------+
-                     |   ESP32 WiFi Stack            |
-                     |   mode: WIFI_AP_STA           |
-                     |                               |
-              +------+ Soft-AP (ALWAYS ON)           |
-               |      |  SSID: ENYX-SMARTHUB-AABBCCDDEEFF    |
-              |      |  IP:   192.168.4.1            |
-              |      |  Open network                 |
-              |      +-------------------------------+
-              |
-  Phone /     |   Configuration
-  Laptop      |   GET/POST /api/*
-              |   Captive portal auto-triggered
-              |
-              |      +-------------------------------+
-              +------+ STA uplink (when configured)  |
-                     |  WPA2-PSK or WPA2-Enterprise  |
-                     |  DHCP IP from router          |
-                     +---------------+---------------+
-                                     |
-                              LAN / industrial network
-                                     |
-                           Modbus TCP master
-                           (SCADA, PLC, Node-RED,
-                            E-Tani Smart Hub)
+                      +-------------------------------+
+                      |   ESP32 WiFi Stack            |
+                      |   mode: WIFI_AP_STA           |
+                      |                               |
+               +------+ Soft-AP (ALWAYS ON)           |
+                |      |  SSID: ENYX-SMARTHUB-AABBCCDDEEFF    |
+               |      |  IP:   192.168.4.1            |
+               |      |  Open network                 |
+               |      +-------------------------------+
+               |
+   Phone /     |   Configuration (WiFi-only)
+   Laptop      |   GET/POST /api/*
+               |   Captive portal auto-triggered
+               |
+               |      +-------------------------------+
+               +------+ STA uplink (when configured)  |
+                      |  WPA2-PSK or WPA2-Enterprise  |
+                      |  DHCP IP from router          |
+                      +---------------+---------------+
+                                      |
+                               LAN / industrial network
+                                      |
+                            Modbus TCP master
+                            (SCADA, PLC, Node-RED,
+                             E-Tani Smart Hub)
+
+   Ethernet (W5500) runs in parallel for Modbus TCP only:
+         +-------------------------------+
+         |   W5500 Ethernet              |
+         |   Modbus TCP server :502      |
+         +-------------------------------+
 ```
 
 Both interfaces run concurrently. The AP is **never disabled** — if STA credentials are wrong or the upstream router is offline, the operator can always connect to the AP, access the portal, and reconfigure without a hardware reset.

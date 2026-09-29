@@ -137,7 +137,7 @@
 #define PREF_NAMESPACE      "scale"
 
 // ------------------------- Firmware ----------------------------------
-#define FW_VERSION          0x0104   // major<<8 | minor  (1.4)
+#define FW_VERSION          0x0105   // major<<8 | minor  (1.5)
 
 // ------------------------- State Machine ------------------------------
 #define STATE_MACHINE_TASK_PRIORITY  2
