@@ -56,7 +56,7 @@ void ModbusServer::startEthernetServer() {
   }
 
   _mb.Hreg(REG_FW_VER, (uint16_t)FW_VERSION);
-  _ethServer.begin(MODBUS_PORT);
+  _ethServer.begin();
   _ethServerStarted = true;
   _started = true;
 

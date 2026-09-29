@@ -11,7 +11,7 @@
 
 #include <Arduino.h>
 #include <ModbusTCP.h>
-#include <Ethernet.h>
+#include <Ethernet3.h>
 #include "SharedState.h"
 #include "Settings.h"
 #include "Transport.h"
@@ -69,7 +69,7 @@ class ModbusServer {
 
  private:
   ModbusTCP      _mb;
-  EthernetServer _ethServer;
+  EthernetServer _ethServer{MODBUS_PORT};
   EthernetClient _ethClient;
   bool           _ethServerStarted = false;
 

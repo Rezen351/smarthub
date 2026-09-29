@@ -3,7 +3,7 @@
 #include "Logger.h"
 #include "TaskWatchdog.h"
 #include "EventBus.h"
-#include <Ethernet.h>
+#include <Ethernet3.h>
 #include <WiFi.h>
 #include <SPI.h>
 #include <SPIFFS.h>
@@ -11,6 +11,23 @@
 extern EventBus gEventBus;
 
 static uint8_t mac[6];
+
+static void resetW5500() {
+  pinMode(W5500_RST_PIN, OUTPUT);
+  digitalWrite(W5500_RST_PIN, LOW);
+  delay(10);
+  digitalWrite(W5500_RST_PIN, HIGH);
+  delay(50);
+}
+
+static const char *linkStatusText(int status) {
+  if (status == 1) {
+    return "ON";
+  } else if (status == 0) {
+    return "OFF";
+  }
+  return "UNKNOWN";
+}
 
 EthernetManager::EthernetManager() {}
 
@@ -47,8 +64,8 @@ void EthernetManager::begin(const AppSettings& s) {
            (unsigned)_pendingCfg.w5500UseDhcp,
            _pendingCfg.w5500StaticIp.c_str());
 
-  // If the device boots straight into Ethernet transport, start the W5500
-  // immediately instead of waiting for a state transition that never comes.
+  resetW5500();
+
   if (_transportMode == TRANSPORT_ETHERNET) {
     _transportState = TransportState::Ethernet;
     LOG_INFO("eth", "W5500 ready to connect via %s",
@@ -159,6 +176,7 @@ void EthernetManager::initEthernet(const AppSettings& s) {
   if (_dhcpState == DhcpState::Idle) {
     LOG_INFO("eth", "state=initializing W5500");
     SPI.begin(W5500_SCK_PIN, W5500_MISO_PIN, W5500_MOSI_PIN, W5500_CS_PIN);
+    SPI.setFrequency(32000000);
     Ethernet.init(W5500_CS_PIN);
 
     memset(_ipBytes, 0, sizeof(_ipBytes));
@@ -266,7 +284,6 @@ void EthernetManager::stopEthernet() {
     return;
   }
 
-  Ethernet.end();
   _active = false;
   _ip = IPAddress(0, 0, 0, 0);
   _retryAtMs = 0;
