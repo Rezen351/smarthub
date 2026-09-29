@@ -66,12 +66,10 @@ void EthernetManager::begin(const AppSettings& s) {
 
   resetW5500();
 
-  if (_transportMode == TRANSPORT_ETHERNET) {
-    _transportState = TransportState::Ethernet;
-    LOG_INFO("eth", "W5500 ready to connect via %s",
-             _pendingCfg.w5500UseDhcp ? "DHCP" : "static");
-    initEthernet(_pendingCfg);
-  }
+  _transportState = TransportState::Ethernet;
+  LOG_INFO("eth", "W5500 ready to connect via %s",
+           _pendingCfg.w5500UseDhcp ? "DHCP" : "static");
+  initEthernet(_pendingCfg);
 }
 
 void EthernetManager::loop() {

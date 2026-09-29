@@ -72,6 +72,8 @@ class ModbusServer {
   EthernetServer _ethServer{MODBUS_PORT};
   EthernetClient _ethClient;
   bool           _ethServerStarted = false;
+  uint8_t        _ethRxBuf[256];
+  uint16_t       _ethRxLen = 0;
 
   SharedState*   _shared        = nullptr;
   SettingsStore* _settings      = nullptr;
@@ -89,6 +91,9 @@ class ModbusServer {
 
   // Push all live values into the holding register bank.
   void publish(int8_t rssi, uint8_t wifiMode);
+
+  // ---- Ethernet Modbus TCP handler ----
+  void processEthernetModbus();
 
   void applyPendingTransportMode();
 };

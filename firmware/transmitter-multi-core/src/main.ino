@@ -267,8 +267,9 @@ void setup() {
 
   gWifi.begin(gAppSettings);      // soft-AP (captive portal) + uplink STA
 
-  gModbus.begin(&gShared, &gSettings, gAppSettings.transportMode);
-  gModbus.startServer();
+  gModbus.begin(&gShared, &gSettings, TRANSPORT_WIFI);
+  gModbus.startServer();          // WiFi :502
+  gModbus.startEthernetServer();  // Ethernet :502
 
   gPortal.begin(&gShared, &gSettings, &gWifi, &gModbus, &gDisplay);
   gPortal.startDns();

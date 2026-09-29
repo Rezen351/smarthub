@@ -261,7 +261,8 @@ void WebPortal::handleNotFound() {
   // If request comes from an unexpected domain on captive portal, redirect to root
   String host = _http.hostHeader();
   IPAddress apIP = _wifi ? _wifi->apIP() : IPAddress(192, 168, 4, 1);
-  if (!host.equalsIgnoreCase(apIP.toString()) && !host.equalsIgnoreCase(WiFi.localIP().toString())) {
+  IPAddress ethIP = _wifi ? _wifi->ethernetIp() : IPAddress(0, 0, 0, 0);
+  if (!host.equalsIgnoreCase(apIP.toString()) && !host.equalsIgnoreCase(WiFi.localIP().toString()) && !host.equalsIgnoreCase(ethIP.toString())) {
     handleCaptiveRedirect();
     return;
   }
