@@ -109,16 +109,6 @@ void loop() {
   gEventBus.process();
   gScale.loop();
 
-  ScaleSnapshot s = gShared.getSnapshot();
-  Event evt;
-  evt.type = EventType::SENSOR_READ_COMPLETE;
-  evt.priority = EventPriority::NORMAL;
-  evt.timestamp_ms = millis();
-  evt.sender_id = 0;
-  evt.sensor_reading.sensor_id = 0;
-  evt.sensor_reading.value = s.stableWeightG;
-  gEventBus.post(evt);
-
   gPortal.handleClient();
   gWifi.loop();
 

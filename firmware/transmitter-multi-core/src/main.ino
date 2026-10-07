@@ -225,15 +225,6 @@ static void scaleTask(void* pvParameters) {
   for (;;) {
     TaskWatchdog::feed("scale", 5000);
     gScale.loop();
-    ScaleSnapshot s = gShared.getSnapshot();
-    Event evt;
-    evt.type = EventType::SENSOR_READ_COMPLETE;
-    evt.priority = EventPriority::NORMAL;
-    evt.timestamp_ms = millis();
-    evt.sender_id = 0;
-    evt.sensor_reading.sensor_id = 0;
-    evt.sensor_reading.value = s.stableWeightG;
-    gEventBus.post(evt);
     DeepSleep::maybeSleep();
     vTaskDelay(5);
   }
@@ -269,7 +260,9 @@ void setup() {
 
   gModbus.begin(&gShared, &gSettings, TRANSPORT_WIFI);
   gModbus.startServer();          // WiFi :502
-  gModbus.startEthernetServer();  // Ethernet :502
+  if (gAppSettings.transportMode == TRANSPORT_ETHERNET) {
+    gModbus.startEthernetServer();  // Ethernet :502
+  }
 
   gPortal.begin(&gShared, &gSettings, &gWifi, &gModbus, &gDisplay);
   gPortal.startDns();

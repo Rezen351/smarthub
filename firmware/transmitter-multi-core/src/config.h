@@ -144,7 +144,7 @@
 #define STATE_MACHINE_TASK_STACK    4096
 
 // ------------------------- Event Bus ---------------------------------
-#define EVENT_BUS_QUEUE_SIZE  32
+#define EVENT_BUS_QUEUE_SIZE  64
 
 // ------------------------- MQTT --------------------------------------
 #define MQTT_SERVER          "192.168.1.100"

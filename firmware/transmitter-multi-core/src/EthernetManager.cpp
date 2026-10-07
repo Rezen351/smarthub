@@ -59,12 +59,26 @@ void EthernetManager::begin(const AppSettings& s) {
   mac[4] = (efuseMac >> 8)  & 0xFF;
   mac[5] =  efuseMac        & 0xFF;
 
-  LOG_INFO("eth", "initialized (transport=%s, dhcp=%u, ip=%s)",
-           _transportMode == TRANSPORT_ETHERNET ? "Ethernet" : "WiFi",
+  if (s.transportMode != TRANSPORT_ETHERNET) {
+    _transportState = TransportState::WiFi;
+    LOG_INFO("eth", "state=skipped (transport=wifi)");
+    return;
+  }
+
+  LOG_INFO("eth", "initialized (transport=Ethernet, dhcp=%u, ip=%s)",
            (unsigned)_pendingCfg.w5500UseDhcp,
            _pendingCfg.w5500StaticIp.c_str());
 
   resetW5500();
+
+  Ethernet.init(W5500_CS_PIN);
+  EthernetHardwareStatus hw = Ethernet.hardwareStatus();
+  if (hw == EthernetNoHardware) {
+    LOG_ERROR("eth", "state=no-hardware, W5500 not detected");
+    _transportState = TransportState::WiFi;
+    _active = false;
+    return;
+  }
 
   _transportState = TransportState::Ethernet;
   LOG_INFO("eth", "W5500 ready to connect via %s",
@@ -96,6 +110,13 @@ void EthernetManager::loop() {
         LOG_INFO("eth", "state=ethernet (retry in %u ms)",
                       (unsigned)(_retryAtMs - now));
       }
+    } else {
+      if (Ethernet.linkStatus() == LinkOFF) {
+        LOG_WARN("eth", "state=link-lost, stopping ethernet");
+        stopEthernet();
+        _retryAtMs = millis() + 10000;
+        return;
+      }
     }
     return;
   }
@@ -109,17 +130,7 @@ void EthernetManager::setTransportMode(uint8_t mode) {
   _transportMode = mode;
   _pendingCfg.transportMode = mode;
   _transportState = mode == TRANSPORT_WIFI ? TransportState::WiFi : TransportState::Ethernet;
-
-  if (mode == TRANSPORT_ETHERNET) {
-    TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
-    WiFi.disconnect(false);
-    LOG_INFO("eth", "state=transport-wifi->ethernet");
-    initEthernet(_pendingCfg);
-  } else {
-    LOG_INFO("eth", "state=transport-ethernet->wifi");
-    stopEthernet();
-  }
-
+  _retryAtMs = 0;
   LOG_INFO("eth", "transport mode -> %s",
             mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 }
@@ -154,8 +165,7 @@ void EthernetManager::applyPendingTransportMode() {
   if (mode == TRANSPORT_ETHERNET) {
     TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
     WiFi.disconnect(false);
-    LOG_INFO("eth", "state=transport-wifi->ethernet");
-    initEthernet(_pendingCfg);
+    LOG_INFO("eth", "state=transport-wifi->ethernet (deferred init)");
   } else {
     LOG_INFO("eth", "state=transport-ethernet->wifi");
     stopEthernet();
@@ -176,6 +186,13 @@ void EthernetManager::initEthernet(const AppSettings& s) {
     SPI.begin(W5500_SCK_PIN, W5500_MISO_PIN, W5500_MOSI_PIN, W5500_CS_PIN);
     SPI.setFrequency(32000000);
     Ethernet.init(W5500_CS_PIN);
+
+    if (Ethernet.linkStatus() == LinkOFF) {
+      LOG_INFO("eth", "state=link-off, skipping init");
+      _dhcpState = DhcpState::Idle;
+      _retryAtMs = millis() + 5000;
+      return;
+    }
 
     memset(_ipBytes, 0, sizeof(_ipBytes));
     memset(_gwBytes, 0, sizeof(_gwBytes));
@@ -202,6 +219,7 @@ void EthernetManager::initEthernet(const AppSettings& s) {
                      IPAddress(_gwBytes[0], _gwBytes[1], _gwBytes[2], _gwBytes[3]),
                      IPAddress(_snBytes[0], _snBytes[1], _snBytes[2], _snBytes[3]),
                      IPAddress(_dnsBytes[0], _dnsBytes[1], _dnsBytes[2], _dnsBytes[3]));
+      TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
       _dhcpState = DhcpState::LinkWait;
       _linkWaitStart = millis();
     }
@@ -216,15 +234,18 @@ void EthernetManager::initEthernet(const AppSettings& s) {
     if (Ethernet.begin(mac) != 0) {
       _dhcpState = DhcpState::LinkWait;
       _linkWaitStart = millis();
+      TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
       return;
     }
     _dhcpAttempt++;
     if (_dhcpAttempt >= 6) {
       LOG_INFO("eth", "state=dhcp-timeout, fallback to static");
+      TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
       Ethernet.begin(mac, IPAddress(_ipBytes[0], _ipBytes[1], _ipBytes[2], _ipBytes[3]),
                      IPAddress(_gwBytes[0], _gwBytes[1], _gwBytes[2], _gwBytes[3]),
                      IPAddress(_snBytes[0], _snBytes[1], _snBytes[2], _snBytes[3]),
                      IPAddress(_dnsBytes[0], _dnsBytes[1], _dnsBytes[2], _dnsBytes[3]));
+      TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
       _dhcpState = DhcpState::LinkWait;
       _linkWaitStart = millis();
       return;

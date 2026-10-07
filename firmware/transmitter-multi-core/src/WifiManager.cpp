@@ -265,17 +265,10 @@ void WifiManager::loop() {
 void WifiManager::setTransportMode(uint8_t mode) {
   _transportMode = mode;
   _pendingCfg.transportMode = mode;
-  _ethMgr.setTransportMode(mode);
+  requestTransportMode(mode);
 
   LOG_INFO("wifi", "transport mode -> %s",
             mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
-
-  Event evt;
-  evt.type = mode == TRANSPORT_WIFI ? EventType::DEVICE_CONFIG_UPDATED : EventType::DEVICE_CONFIG_UPDATED;
-  evt.priority = EventPriority::NORMAL;
-  evt.timestamp_ms = millis();
-  evt.sender_id = 0;
-  gEventBus.post(evt);
 }
 
 void WifiManager::requestTransportMode(uint8_t mode) {
