@@ -86,6 +86,19 @@
 #define LOADCELL_SCK_PIN    15
 #define OLED_SDA_PIN        16
 #define OLED_SCL_PIN        17
+#define BUTTON_ROW_1_PIN    1
+#define BUTTON_ROW_2_PIN    2
+#define BUTTON_ROW_3_PIN    4
+#define BUTTON_ROW_4_PIN    5
+#define BUTTON_COL_1_PIN    6
+#define BUTTON_COL_2_PIN    7
+#define BUTTON_COL_3_PIN    8
+#define BUTTON_COL_4_PIN    39
+#define BUTTON_COL_5_PIN    40
+#define STATUS_LED_PIN      38
+#define DISPLAY6932_CLK_PIN 18
+#define DISPLAY6932_DIN_PIN 21
+#define DISPLAY6932_STB_PIN 47
 #else
 #define W5500_SCK_PIN       14
 #define W5500_MISO_PIN      13

@@ -47,24 +47,61 @@ The design is intentionally **protocol-agnostic at the top level**: the `SharedS
 
 ### 2.2 Pin Assignment
 
-#### ESP32-S3 (DevKitC-1 / esp32s3)
+#### ESP32-S3 DevKitC-1 N16R8
+
+This is the canonical assignment for the N16R8 module. GPIO 26–37 are
+reserved by Octal flash/PSRAM and are not application GPIO. GPIO 19/20 are
+kept free for native USB, GPIO 0/3/45/46 are kept free for boot strapping,
+and GPIO 43/44 remain available for the UART0 console.
 
 ```
-ESP32-S3 GPIO | Signal        | Connected to
---------------+---------------+-------------------------------
-GPIO 14       | LOADCELL_DOUT | HX711 DT  (data out)
-GPIO 15       | LOADCELL_SCK  | HX711 PD_SCK (clock)
-GPIO 16       | OLED_SDA      | SSD1306 SDA (I2C)
-GPIO 17       | OLED_SCL      | SSD1306 SCL (I2C)
-GPIO 12       | W5500_SCK     | W5500 SPI clock
-GPIO 13       | W5500_MISO    | W5500 SPI MISO
-GPIO 11       | W5500_MOSI    | W5500 SPI MOSI
-GPIO 10       | W5500_CS      | W5500 SPI chip select
-GPIO 9        | W5500_RST     | W5500 hardware reset
-3.3 V / 5 V   | HX711 VCC     | HX711 power (check module silkscreen)
-GND           | HX711 GND     | Common ground
-GPIO -1       | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset button)
+GPIO       Signal             Connected to
+---------- ------------------ -------------------------------------
+GPIO 12    W5500_SCK          W5500 SPI clock
+GPIO 13    W5500_MISO         W5500 SPI MISO
+GPIO 11    W5500_MOSI         W5500 SPI MOSI
+GPIO 10    W5500_CS           W5500 chip select
+GPIO 9     W5500_RST          W5500 hardware reset
+GPIO 14    LOADCELL_DOUT      HX711 DT / DOUT
+GPIO 15    LOADCELL_SCK       HX711 PD_SCK
+GPIO 16    OLED_SDA           SSD1306 SDA
+GPIO 17    OLED_SCL           SSD1306 SCL
+GPIO 1     MATRIX_ROW_1       Button matrix row 1
+GPIO 2     MATRIX_ROW_2       Button matrix row 2
+GPIO 4     MATRIX_ROW_3       Button matrix row 3
+GPIO 5     MATRIX_ROW_4       Button matrix row 4
+GPIO 6     MATRIX_COL_1       Button matrix column 1
+GPIO 7     MATRIX_COL_2       Button matrix column 2
+GPIO 8     MATRIX_COL_3       Button matrix column 3
+GPIO 39    MATRIX_COL_4       Button matrix column 4 (JTAG-capable)
+GPIO 40    MATRIX_COL_5       Button matrix column 5 (JTAG-capable)
+GPIO 38    STATUS_LED         On-board/external status LED
+GPIO 18    DISPLAY6932_CLK    GN/TA/AiP6932 CLK, shared
+GPIO 21    DISPLAY6932_DIN    GN/TA/AiP6932 DIN, shared
+GPIO 47    DISPLAY6932_STB    GN/TA/AiP6932 STB, shared by both chips
 ```
+
+Power the ESP32-S3 from a stable 5 V rail. Power the W5500 and 6932
+controller/display rail according to their modules, but keep all grounds
+common. The ESP32 GPIO signals must remain at 3.3 V logic; the 6932 inputs
+must use a level shifter if their input high threshold requires it.
+
+GPIO 39/40 are usable during normal firmware execution, but an external JTAG
+debugger cannot use them simultaneously. GPIO 38 is commonly connected to the
+DevKitC-1 RGB LED; do not attach a second LED load unless that board LED is
+accounted for electrically.
+
+#### N16R8 reservation rules
+
+| GPIO | Status | Reason |
+|------|--------|--------|
+| 0, 3, 45, 46 | Reserved | Boot strapping |
+| 19, 20 | Reserved | Native USB D-/D+ |
+| 26–37 | Forbidden | Octal flash/PSRAM |
+| 38 | Assigned with caution | Board RGB LED may be present |
+| 39–42 | Assigned with caution | JTAG-capable; 39/40 used by matrix |
+| 43, 44 | Reserved | UART0 console/programming |
+| 48 | Reserved | Keep free for board LED/debug variants |
 
 #### ESP32 / ESP32-DOIT-V1 (esp32dev)
 
@@ -89,12 +126,19 @@ GPIO 22    | OLED_SCL      | SSD1306 SCL (I2C)
 | Hardware SPI | W5500 | board-dependent | SPI | See pin assignment per board above |
 | Software GPIO | HX711 | 14, 15 | Bit-banged | Uses `HX711` library; does **not** use SPI peripheral |
 | I2C (Wire) | SSD1306 | 16, 17 | I2C | `Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN)` |
+| GPIO | Button matrix | rows 1,2,4,5; columns 6,7,8,39,40 | 4×5 scan |
+| GPIO | GN/TA/AiP6932 | CLK 18, DIN 21, STB 47 | 3-wire serial, shared STB |
+| GPIO | Status LED | 38 | Output |
 
 #### Pin conflict prevention
 
-- **ESP32-S3**: W5500 SPI is fully isolated from HX711 and OLED; no conflicts.
+- **ESP32-S3 N16R8**: W5500 SPI is isolated from HX711, OLED, matrix,
+  status LED, and 6932. The only shared-function caveats are JTAG on GPIO
+  39/40 and the board RGB LED on GPIO 38.
 - **ESP32 / ESP32-DOIT-V1**: W5500 uses GPIO 14/13/12/15/16. HX711 moved to GPIO 4/5 and OLED moved to GPIO 21/22 to avoid SPI/RST conflicts.
 - Do **not** move HX711 to GPIO 11/12/13 on ESP32-S3 without also updating W5500 SPI pins.
+- Do **not** use GPIO 26–37 on N16R8; these pins belong to flash/PSRAM.
+- Do **not** connect the 6932 VDD or LED supply to an ESP32 GPIO.
 
 #### Electrical notes
 
