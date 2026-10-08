@@ -75,7 +75,7 @@ GPIO 7     MATRIX_COL_2       Button matrix column 2
 GPIO 8     MATRIX_COL_3       Button matrix column 3
 GPIO 39    MATRIX_COL_4       Button matrix column 4 (JTAG-capable)
 GPIO 40    MATRIX_COL_5       Button matrix column 5 (JTAG-capable)
-GPIO 38    STATUS_LED         On-board/external status LED
+GPIO 38    STATUS_RGB_LED     Built-in addressable RGB LED (single data pin)
 GPIO 18    DISPLAY6932_CLK    GN/TA/AiP6932 CLK, shared
 GPIO 21    DISPLAY6932_DIN    GN/TA/AiP6932 DIN, shared
 GPIO 47    DISPLAY6932_STB    GN/TA/AiP6932 STB, shared by both chips
@@ -87,9 +87,15 @@ common. The ESP32 GPIO signals must remain at 3.3 V logic; the 6932 inputs
 must use a level shifter if their input high threshold requires it.
 
 GPIO 39/40 are usable during normal firmware execution, but an external JTAG
-debugger cannot use them simultaneously. GPIO 38 is commonly connected to the
-DevKitC-1 RGB LED; do not attach a second LED load unless that board LED is
-accounted for electrically.
+debugger cannot use them simultaneously. GPIO 38 is assigned exclusively to
+the DevKitC-1 built-in addressable RGB LED. Do not connect an external LED to
+this pin and do not drive it as a normal single-color LED; use an addressable
+RGB LED driver with the correct one-wire timing.
+
+The selected N16R8 DevKitC-1 variant must have its built-in RGB LED data line
+on GPIO 38. Some ESP32-S3 DevKit revisions use GPIO 48 instead, so verify the
+silkscreen/schematic before assembly. If the physical board uses GPIO 48,
+change both `STATUS_RGB_LED_PIN` in `src/config.h` and this table together.
 
 #### N16R8 reservation rules
 
@@ -98,7 +104,7 @@ accounted for electrically.
 | 0, 3, 45, 46 | Reserved | Boot strapping |
 | 19, 20 | Reserved | Native USB D-/D+ |
 | 26–37 | Forbidden | Octal flash/PSRAM |
-| 38 | Assigned with caution | Board RGB LED may be present |
+| 38 | Assigned | Built-in addressable RGB LED data line |
 | 39–42 | Assigned with caution | JTAG-capable; 39/40 used by matrix |
 | 43, 44 | Reserved | UART0 console/programming |
 | 48 | Reserved | Keep free for board LED/debug variants |
@@ -121,24 +127,36 @@ GPIO 22    | OLED_SCL      | SSD1306 SCL (I2C)
 
 #### Bus topology
 
+##### ESP32-S3 N16R8
+
 | Bus | Peripheral | GPIO | Mode | Notes |
 |-----|-----------|------|------|-------|
-| Hardware SPI | W5500 | board-dependent | SPI | See pin assignment per board above |
+| Hardware SPI | W5500 | 12, 11, 13, 10, 9 | SPI | See pin assignment per board above |
 | Software GPIO | HX711 | 14, 15 | Bit-banged | Uses `HX711` library; does **not** use SPI peripheral |
 | I2C (Wire) | SSD1306 | 16, 17 | I2C | `Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN)` |
-| GPIO | Button matrix | rows 1,2,4,5; columns 6,7,8,39,40 | 4×5 scan |
+| GPIO | Button matrix | rows 1, 2, 4, 5; columns 6, 7, 8, 39, 40 | 4x5 scan |
 | GPIO | GN/TA/AiP6932 | CLK 18, DIN 21, STB 47 | 3-wire serial, shared STB |
-| GPIO | Status LED | 38 | Output |
+| GPIO | Built-in RGB LED | 38 | Addressable one-wire data output |
+
+##### ESP32 / ESP32-DOIT-V1 (esp32dev)
+
+| Bus | Peripheral | GPIO | Mode | Notes |
+|-----|-----------|------|------|-------|
+| Hardware SPI | W5500 | 14, 12, 13, 15, 16 | SPI | See pin assignment per board above |
+| Software GPIO | HX711 | 4, 5 | Bit-banged | Uses `HX711` library; does **not** use SPI peripheral |
+| I2C (Wire) | SSD1306 | 21, 22 | I2C | `Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN)` |
 
 #### Pin conflict prevention
 
 - **ESP32-S3 N16R8**: W5500 SPI is isolated from HX711, OLED, matrix,
-  status LED, and 6932. The only shared-function caveats are JTAG on GPIO
-  39/40 and the board RGB LED on GPIO 38.
+  built-in RGB LED, and 6932. The only shared-function caveat is JTAG on
+  GPIO 39/40; GPIO 38 is reserved for the onboard RGB LED.
 - **ESP32 / ESP32-DOIT-V1**: W5500 uses GPIO 14/13/12/15/16. HX711 moved to GPIO 4/5 and OLED moved to GPIO 21/22 to avoid SPI/RST conflicts.
 - Do **not** move HX711 to GPIO 11/12/13 on ESP32-S3 without also updating W5500 SPI pins.
 - Do **not** use GPIO 26–37 on N16R8; these pins belong to flash/PSRAM.
 - Do **not** connect the 6932 VDD or LED supply to an ESP32 GPIO.
+- Do **not** add an external status LED to GPIO 38; it is reserved for the
+  onboard addressable RGB LED.
 
 #### Electrical notes
 

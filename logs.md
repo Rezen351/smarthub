@@ -38,6 +38,7 @@
 | 2026-10-08 | GN/TA/AiP6932 section grid correction | ✅ | Corrected section character and DP mapping to sequential blocks: section 1 uses grids 1–5, section 2 uses 6–10, and section 3 uses 11–16. |
 | 2026-10-08 | GN/TA/AiP6932 schematic section illustration | ✅ | Added an ASCII physical-layout illustration to `firmware/display-6932-test/docs/schematic.md`, including indicator positions, seven-segment order, and grid numbers. |
 | 2026-10-08 | ESP32-S3 N16R8 transmitter pin assignment | ✅ | Added conflict-aware assignments for W5500, HX711, 4x5 matrix, SSD1306 OLED, status LED, and shared-STB GN/TA/AiP6932 display; documented flash/PSRAM, USB, strapping, JTAG, and RGB LED reservations. |
+| 2026-10-08 | ESP32-S3 N16R8 built-in RGB status LED | ✅ | Clarified GPIO 38 as the onboard addressable RGB LED data pin, renamed the configuration macro to `STATUS_RGB_LED_PIN`, and documented board-revision verification plus one-wire driver requirements. |
 
 ---
 
