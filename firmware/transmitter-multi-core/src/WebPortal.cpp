@@ -291,7 +291,7 @@ void WebPortal::handleApiStatus() {
   }
 
   sendJsonBounded(_http, 200,
-    "{\"weightKg\":%.4f,\"stableG\":%.1f,\"raw\":%.1f,\"offset\":%.1f,"
+    "{\"weightKg\":%.4f,\"stableG\":%.1f,\"noiseG\":%.1f,\"stable\":%s,\"raw\":%.1f,\"offset\":%.1f,"
     "\"countsPerKg\":%.2f,\"intercept\":%.1f,"
     "\"calibrated\":%s,\"calibrationPoints\":%u,\"rebooting\":%s,\"sensorReady\":%s,"
     "\"totalG\":%.1f,\"sampleCount\":%lu,\"minG\":%.1f,\"maxG\":%.1f,"
@@ -302,7 +302,8 @@ void WebPortal::handleApiStatus() {
     "\"ethernetIp\":\"%s\",\"w5500UseDhcp\":%s,\"w5500StaticIp\":\"%s\","
     "\"w5500StaticGateway\":\"%s\",\"w5500StaticSubnet\":\"%s\",\"w5500StaticDns\":\"%s\"},"
     "\"display\":{\"oledEnabled\":%s}}",
-    s.stableWeightG / 1000.0, s.stableWeightG, s.rawSample, s.offsetCounts,
+    s.stableWeightG / 1000.0, s.stableWeightG, s.noiseG,
+    s.stable ? "true" : "false", s.rawSample, s.offsetCounts,
     s.countsPerKg, s.interceptCounts,
     s.calibrated ? "true" : "false",
     _shared ? _shared->calibrationPointCount() : 0,

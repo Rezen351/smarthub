@@ -1,6 +1,7 @@
 #include "Scale.h"
 #include "config.h"
 #include "Logger.h"
+#include <math.h>
 
 void ScaleSensor::begin(SharedState* shared, SettingsStore* settings) {
   _s = shared;
@@ -8,6 +9,7 @@ void ScaleSensor::begin(SharedState* shared, SettingsStore* settings) {
 
   _hx.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN, HX711_FAST_PROCESSOR, false);
   _hx.power_up();
+  resetFilter();
 
   AppSettings persisted;
   _st->load(persisted);
@@ -40,6 +42,75 @@ static bool hxPoll(HX711& hx, int waitMs) {
   return true;
 }
 
+void ScaleSensor::resetFilter() {
+  _medianCount = 0;
+  _medianIndex = 0;
+  _filterCount = 0;
+  _filterIndex = 0;
+  _filterInitialized = false;
+  _stableSince = 0;
+  _stableSampleCount = 0;
+  for (uint8_t i = 0; i < SCALE_MEDIAN_WINDOW; i++) {
+    _medianHistory[i] = 0.0f;
+  }
+  for (uint8_t i = 0; i < SCALE_FILTER_WINDOW; i++) {
+    _filterHistory[i] = 0.0f;
+  }
+}
+
+float ScaleSensor::medianWeight(float value) {
+  _medianHistory[_medianIndex] = value;
+  _medianIndex = (uint8_t)((_medianIndex + 1) % SCALE_MEDIAN_WINDOW);
+  if (_medianCount < SCALE_MEDIAN_WINDOW) {
+    _medianCount++;
+  }
+
+  float sorted[SCALE_MEDIAN_WINDOW];
+  for (uint8_t i = 0; i < _medianCount; i++) {
+    sorted[i] = _medianHistory[i];
+  }
+  for (uint8_t i = 1; i < _medianCount; i++) {
+    float current = sorted[i];
+    uint8_t j = i;
+    while (j > 0 && sorted[j - 1] > current) {
+      sorted[j] = sorted[j - 1];
+      j--;
+    }
+    sorted[j] = current;
+  }
+  return sorted[_medianCount / 2];
+}
+
+float ScaleSensor::filterWeight(float median) {
+  float filtered = median;
+  if (_filterInitialized) {
+    float delta = fabsf(median - _filterHistory[(_filterIndex + SCALE_FILTER_WINDOW - 1) % SCALE_FILTER_WINDOW]);
+    float alpha = delta >= SCALE_CHANGE_THRESHOLD_G ? SCALE_FAST_ALPHA : SCALE_SLOW_ALPHA;
+    filtered = alpha * median + (1.0f - alpha) *
+      _filterHistory[(_filterIndex + SCALE_FILTER_WINDOW - 1) % SCALE_FILTER_WINDOW];
+  } else {
+    _filterInitialized = true;
+  }
+
+  _filterHistory[_filterIndex] = filtered;
+  _filterIndex = (uint8_t)((_filterIndex + 1) % SCALE_FILTER_WINDOW);
+  if (_filterCount < SCALE_FILTER_WINDOW) {
+    _filterCount++;
+  }
+  return filtered;
+}
+
+float ScaleSensor::filterNoise() const {
+  if (_filterCount == 0) return 0.0f;
+  float minimum = _filterHistory[0];
+  float maximum = _filterHistory[0];
+  for (uint8_t i = 1; i < _filterCount; i++) {
+    if (_filterHistory[i] < minimum) minimum = _filterHistory[i];
+    if (_filterHistory[i] > maximum) maximum = _filterHistory[i];
+  }
+  return maximum - minimum;
+}
+
 void ScaleSensor::loop() {
   uint32_t now = millis();
   if ((now - _lastSample) < SCALE_SAMPLE_MS) return;
@@ -57,6 +128,12 @@ void ScaleSensor::loop() {
           snap.offsetCounts = (float)_hx.get_offset();
           snap.countsPerKg = 0.0f;          // calibration invalid after re-zero
           snap.calibrated = false;
+          snap.medianWeightG = 0.0f;
+          snap.stableWeightG = 0.0f;
+          snap.noiseG = 0.0f;
+          snap.stable = false;
+          snap.stableSampleCount = 0;
+          resetFilter();
           _s->setSnapshot(snap);
 
           AppSettings a; _st->load(a);
@@ -153,17 +230,28 @@ void ScaleSensor::loop() {
   if (snap.calibrated && snap.countsPerKg > 0.0f) {
     float instG = (raw - snap.interceptCounts) / snap.countsPerKg * 1000.0f;
     snap.weightG = instG;
+    snap.medianWeightG = medianWeight(instG);
+    snap.stableWeightG = filterWeight(snap.medianWeightG);
+    snap.noiseG = filterNoise();
 
-    // First reading initialises the filter state.
-    if (snap.stableWeightG == 0.0f && instG != 0.0f) {
-      snap.stableWeightG = instG;
+    bool withinRange = snap.noiseG <= SCALE_STABILITY_RANGE_G &&
+                       fabsf(snap.medianWeightG - snap.stableWeightG) <= SCALE_STABILITY_RANGE_G;
+    if (withinRange) {
+      if (_stableSince == 0) _stableSince = now;
+      if ((now - _stableSince) >= SCALE_STABILITY_HOLD_MS) {
+        snap.stable = true;
+        if (_stableSampleCount < 65535U) _stableSampleCount++;
+      }
     } else {
-      snap.stableWeightG = SCALE_ALPHA * instG + (1.0f - SCALE_ALPHA) * snap.stableWeightG;
+      _stableSince = 0;
+      _stableSampleCount = 0;
+      snap.stable = false;
     }
+    snap.stableSampleCount = _stableSampleCount;
 
-    // Accumulate session totals only from (near-)stable positive mass.
+    // Accumulate session totals only from stable positive mass.
     float stable = snap.stableWeightG;
-    if (stable > 5.0f) {
+    if (snap.stable && stable > 5.0f) {
       uint32_t cnt; double tg, mn, mx;
       _s->getSessionTotals(cnt, tg, mn, mx);
       if (cnt == 0) { mn = stable; mx = stable; }
@@ -191,6 +279,12 @@ void ScaleSensor::applyCalibration(float slope, float intercept) {
   snap.countsPerKg = slope;
   snap.interceptCounts = intercept;
   snap.calibrated = true;
+  snap.medianWeightG = 0.0f;
+  snap.stableWeightG = 0.0f;
+  snap.noiseG = 0.0f;
+  snap.stable = false;
+  snap.stableSampleCount = 0;
+  resetFilter();
   _s->setSnapshot(snap);
 
   // Persist only the calibration math: the tare offset stays untouched so a

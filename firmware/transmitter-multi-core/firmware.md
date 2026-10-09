@@ -42,7 +42,7 @@ The design is intentionally **protocol-agnostic at the top level**: the `SharedS
 | Load cell ADC | HX711 module | 24-bit sigma-delta, 10/80 Hz |
 | Load cell | Any strain-gauge (1-200 kg range) | 4-wire Wheatstone bridge |
 | Ethernet | W5500 module (hardware SPI) | Modbus TCP over Ethernet |
-| Display | SSD1306 128x64 OLED (I2C) | Weight + status display |
+| Display | GN/TA/AiP6932 7-segment display | Weight, unit price, and total price |
 | Power supply | 5 V / 1 A USB or regulated | HX711 may use 3.3 V or 5 V VCC |
 
 ### 2.2 Pin Assignment
@@ -50,8 +50,8 @@ The design is intentionally **protocol-agnostic at the top level**: the `SharedS
 #### ESP32-S3 DevKitC-1 N16R8
 
 This is the canonical assignment for the N16R8 module. GPIO 26–37 are
-reserved by Octal flash/PSRAM and are not application GPIO. GPIO 19/20 are
-kept free for native USB, GPIO 0/3/45/46 are kept free for boot strapping,
+reserved by Octal flash/PSRAM and are not application GPIO. GPIO 20 is kept free for native USB. GPIO 19 is assigned to the validated
+6932 DIN wiring. GPIO 0/3/45/46 are kept free for boot strapping,
 and GPIO 43/44 remain available for the UART0 console.
 
 ```
@@ -77,8 +77,8 @@ GPIO 39    MATRIX_COL_4       Button matrix column 4 (JTAG-capable)
 GPIO 40    MATRIX_COL_5       Button matrix column 5 (JTAG-capable)
 GPIO 38    STATUS_RGB_LED     Built-in addressable RGB LED (single data pin)
 GPIO 18    DISPLAY6932_CLK    GN/TA/AiP6932 CLK, shared
-GPIO 21    DISPLAY6932_DIN    GN/TA/AiP6932 DIN, shared
-GPIO 47    DISPLAY6932_STB    GN/TA/AiP6932 STB, shared by both chips
+GPIO 19    DISPLAY6932_DIN    GN/TA/AiP6932 DIN, shared
+GPIO 21    DISPLAY6932_STB    GN/TA/AiP6932 STB, shared by both chips
 ```
 
 Power the ESP32-S3 from a stable 5 V rail. Power the W5500 and 6932
@@ -102,7 +102,7 @@ change both `STATUS_RGB_LED_PIN` in `src/config.h` and this table together.
 | GPIO | Status | Reason |
 |------|--------|--------|
 | 0, 3, 45, 46 | Reserved | Boot strapping |
-| 19, 20 | Reserved | Native USB D-/D+ |
+| 20 | Reserved | Native USB D+ |
 | 26–37 | Forbidden | Octal flash/PSRAM |
 | 38 | Assigned | Built-in addressable RGB LED data line |
 | 39–42 | Assigned with caution | JTAG-capable; 39/40 used by matrix |
@@ -135,7 +135,7 @@ GPIO 22    | OLED_SCL      | SSD1306 SCL (I2C)
 | Software GPIO | HX711 | 14, 15 | Bit-banged | Uses `HX711` library; does **not** use SPI peripheral |
 | I2C (Wire) | SSD1306 | 16, 17 | I2C | `Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN)` |
 | GPIO | Button matrix | rows 1, 2, 4, 5; columns 6, 7, 8, 39, 40 | 4x5 scan |
-| GPIO | GN/TA/AiP6932 | CLK 18, DIN 21, STB 47 | 3-wire serial, shared STB |
+| GPIO | GN/TA/AiP6932 | CLK 18, DIN 19, STB 21 | 3-wire serial, shared STB |
 | GPIO | Built-in RGB LED | 38 | Addressable one-wire data output |
 
 ##### ESP32 / ESP32-DOIT-V1 (esp32dev)
@@ -150,7 +150,8 @@ GPIO 22    | OLED_SCL      | SSD1306 SCL (I2C)
 
 - **ESP32-S3 N16R8**: W5500 SPI is isolated from HX711, OLED, matrix,
   built-in RGB LED, and 6932. The only shared-function caveat is JTAG on
-  GPIO 39/40; GPIO 38 is reserved for the onboard RGB LED.
+  GPIO 39/40; GPIO 38 is reserved for the onboard RGB LED. GPIO 19 is
+  intentionally assigned to the validated 6932 DIN wiring.
 - **ESP32 / ESP32-DOIT-V1**: W5500 uses GPIO 14/13/12/15/16. HX711 moved to GPIO 4/5 and OLED moved to GPIO 21/22 to avoid SPI/RST conflicts.
 - Do **not** move HX711 to GPIO 11/12/13 on ESP32-S3 without also updating W5500 SPI pins.
 - Do **not** use GPIO 26–37 on N16R8; these pins belong to flash/PSRAM.
@@ -219,7 +220,8 @@ The ESP32 WROOM-32 has two Xtensa LX6 cores. Tasks are pinned to avoid WiFi/sens
 Core 0 ---------------------------------------------------------------
   Task: "scale"   Priority 2   Stack 4096 B
   |   ScaleSensor::loop()  every 30 ms
-  |   HX711 read -> EMA filter -> SharedState::setSnapshot()
+  |   HX711 read -> median-of-5 -> adaptive EMA -> stability detector
+  |            -> SharedState::setSnapshot()
   +-- Consume commands from SharedState (tare, calibrate, reset...)
   +-- DeepSleep::maybeSleep() when compile-time deep-sleep is enabled
 
@@ -280,7 +282,13 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 | `HX711_FAST_PROCESSOR` | true | Removes software delay for ESP32 |
 | `HX711_READS` | 10 | Samples averaged per raw reading |
 | `SCALE_SAMPLE_MS` | 30 | Sensor task period (ms) |
-| `SCALE_ALPHA` | 0.35 | EMA low-pass filter coefficient |
+| `SCALE_MEDIAN_WINDOW` | 5 | Samples used to reject isolated spikes |
+| `SCALE_FILTER_WINDOW` | 10 | Filtered samples used for stability range |
+| `SCALE_SLOW_ALPHA` | 0.10 | EMA coefficient while the load is stable |
+| `SCALE_FAST_ALPHA` | 0.60 | EMA coefficient while the load changes |
+| `SCALE_CHANGE_THRESHOLD_G` | 200 | Change in grams that selects fast EMA |
+| `SCALE_STABILITY_RANGE_G` | 10 | Maximum recent range considered stable |
+| `SCALE_STABILITY_HOLD_MS` | 1000 | Required stable duration |
 | `AP_SSID_PREFIX` | `"ENYX-SMARTHUB-"` | Soft-AP SSID prefix (+ last 3 bytes of MAC) |
 | `AP_SSID_PASSWORD` | `""` | Empty = open AP (recommended for captive portal) |
 | `AP_CHANNEL` | 6 | 2.4 GHz channel for the AP |
@@ -446,7 +454,11 @@ High-traffic GET endpoints use `sendJsonBounded()` with a 512-byte stack buffer 
 |-------|------|-------------|
 | `rawSample` | counts | HX711 reading with tare offset subtracted |
 | `weightG` | grams | Instantaneous calibrated weight |
-| `stableWeightG` | grams | EMA-filtered weight |
+| `medianWeightG` | grams | Median-filtered weight with isolated spikes removed |
+| `stableWeightG` | grams | Adaptively EMA-filtered weight |
+| `noiseG` | grams | Range of recent filtered samples |
+| `stable` | bool | True after the stability range is held for one second |
+| `stableSampleCount` | samples | Samples accumulated while stable |
 | `offsetCounts` | counts | Current tare offset |
 | `countsPerKg` | counts/kg | Calibration slope |
 | `calibrated` | bool | Slope is valid |
@@ -483,17 +495,30 @@ HX711 (24-bit ADC, GPIO 14/15)
        v  / countsPerKg * 1000
   instantaneous weight (grams)
        |
-       v  EMA: stableWeightG = alpha * inst + (1 - alpha) * prev
+       v  median-of-5: medianWeightG
+       |
+       v  adaptive EMA: slow alpha at rest, fast alpha on load changes
   stableWeightG (grams)
        |
-       +-- stable > 5 g  ->  accumulate session totals
+       v  recent range <= stability threshold for one second
+  stable flag
+       +-- stable and > 5 g  ->  accumulate session totals
        |
        +-- SharedState::setSnapshot()  (mutex-guarded)
 ```
 
-#### EMA filter
+#### Filtering and stability
 
-The exponential moving average (EMA) with alpha = 0.35 rejects noise from vibration while still tracking weight changes within ~5 sample periods (~150 ms).
+`HX711_READS` first averages samples inside the HX711 library. A median of
+five calibrated samples then rejects isolated spikes. The adaptive EMA uses
+`SCALE_SLOW_ALPHA` for quiet readings and `SCALE_FAST_ALPHA` when the median
+changes by at least `SCALE_CHANGE_THRESHOLD_G`, preserving responsiveness when
+a load is placed or removed. The last `SCALE_FILTER_WINDOW` filtered samples
+are measured as a range. The `stable` flag is asserted only after that range
+remains within `SCALE_STABILITY_RANGE_G` for `SCALE_STABILITY_HOLD_MS`.
+
+Display, Modbus stable-weight output, MQTT telemetry, and session totals use
+`stableWeightG`. Raw and intermediate values remain available for diagnosis.
 
 | alpha | Effect |
 |-------|--------|
@@ -626,6 +651,7 @@ Base address: **40001** (Modbus convention). Internal offset = Modbus address - 
 | 1 | `0x0002` | Scale calibrated (countsPerKg valid) |
 | 2 | `0x0004` | STA WiFi connected |
 | 3 | `0x0008` | Command pending (not yet consumed) |
+| 4 | `0x0010` | Weight is stable |
 
 #### Modbus command codes (write to register 40016)
 
@@ -727,6 +753,8 @@ Errors carry a machine-readable code and an English message:
 {
   "weightKg": 1.234,
   "stableG": 1234.0,
+  "noiseG": 2.5,
+  "stable": true,
   "raw": 56789.0,
   "offset": 12345.0,
   "countsPerKg": 45678.0,
@@ -913,7 +941,78 @@ Both interfaces run concurrently. The AP is **never disabled** — if STA creden
 
 ---
 
-## 8. NVS Layout
+## 8. Local keypad and 6932 display
+
+The GN/TA/AiP6932 7-segment path is the default for the ESP32-S3
+environment (`DISPLAY_USE_6932=1`). In that mode the OLED is not initialized
+or refreshed. The
+4x5 matrix is enabled automatically and is scanned from `networkTask`, where
+UI state and display writes remain on one core.
+
+The keypad layout is:
+
+```
+C    ADD  TARE ZERO M4
+9    6    3   STORE M3
+8    5    2   .    M2
+7    4    1   0    M1
+```
+
+`TARE` sends `CMD_TARE` to the scale task. `C` clears the current unit-price
+entry. `ADD` calculates `weightKg * unitPrice` using integer cents and adds it
+to the accumulated total. `STORE` persists the total price and requests the
+existing session flush command. `ZERO` clears both the current price entry and
+the accumulated price total, and persists that reset. `M1`–`M4` recall the
+four price presets stored by the portal/NVS.
+
+The display uses fixed-point values to avoid floating-point currency drift:
+unit prices are stored in cents and the accumulated total is stored in
+unsigned 64-bit cents. The section format is:
+
+| Section | Grids | Value | Decimal-point grid |
+|---------|-------|-------|--------------------|
+| 1 | 0–4 | Weight in kg, two decimals | Grid 2 |
+| 2 | 5–9 | Unit price, two decimals | Grid 7 |
+| 3 | 10–15 | Accumulated price, two decimals | Grid 13 |
+
+Leading positions are blank. For example, centi-value `123` is rendered as
+`001.23` in a five-grid section. Decimal-point positions are explicit rather
+than enabling DP on every grid, which keeps numeric output readable.
+
+### 8.2 Serial Monitor display test
+
+With the default `esp32s3` firmware running at 115200 baud, send one command
+per line. `CRLF` or `LF` line endings are accepted. A manual test command
+holds the display in test mode so the live weight refresh does not overwrite
+the test pattern. Send `auto` to resume live display updates.
+
+| Command | Example | Function |
+|---------|---------|----------|
+| `help` | `help` | Print all test commands |
+| `grid` | `grid 1 0xFF` | Write a raw mask to grid 1 |
+| `all` | `all 0x00` | Write the same raw mask to all grids |
+| `char` | `char 1 A` | Render calibrated symbol `A` on grid 1 |
+| `section` | `section 1 12345` | Render section text and its configured DP |
+| `clear` | `clear` | Turn all grids off and stay in test mode |
+| `brightness` | `brightness 1` | Set brightness from 0 to 7 |
+| `auto` | `auto` | Return to live weight/price display |
+
+Grid numbers in commands are **1–16**. Raw masks are hexadecimal values
+`0x00`–`0xFF`. The calibrated segment mapping is the same as the display test
+firmware: `A=0x20`, `B=0x80`, `C=0x01`, `D=0x02`, `E=0x08`, `F=0x10`,
+`G=0x40`, and `DP=0x04`.
+
+### 8.1 Compile-time feature rules
+
+```cpp
+#define DISPLAY_USE_6932 1
+```
+
+This is the default configuration. `KEYPAD_ENABLED` becomes `1` automatically
+for the ESP32-S3 build. The ESP32dev build retains the OLED path and does not
+compile the S3-only matrix/display integration.
+
+## 9. NVS Layout
 
 All keys live in the `"scale"` namespace.
 
@@ -932,7 +1031,12 @@ All keys live in the `"scale"` namespace.
 | `totalG` | Float | Session | Total accumulated grams |
 | `count` | UInt | Session | Sample count |
 | `transportMode` | UChar | Transport | 0=WiFi, 1=Ethernet |
-| `oledEnabled` | Bool | Display | OLED on/off |
+| `oledEnabled` | Bool | Display | Legacy OLED on/off when using ESP32dev |
+| `price1` | Float | Keypad | Unit-price preset 1 |
+| `price2` | Float | Keypad | Unit-price preset 2 |
+| `price3` | Float | Keypad | Unit-price preset 3 |
+| `price4` | Float | Keypad | Unit-price preset 4 |
+| `totalPriceCenti` | ULong64 | Keypad | Accumulated price in cents |
 | `w5500Dhcp` | Bool | Ethernet | DHCP enabled |
 | `w5500Ip` | String | Ethernet | Static IP |
 | `w5500Gw` | String | Ethernet | Static gateway |
@@ -947,7 +1051,7 @@ All keys live in the `"scale"` namespace.
 
 ---
 
-## 9. Security Considerations
+## 10. Security Considerations
 
 | Area | Current posture | Recommendation for production |
 |------|----------------|-------------------------------|
@@ -959,7 +1063,7 @@ All keys live in the `"scale"` namespace.
 
 ---
 
-## 10. Extension Roadmap (Multi-Protocol)
+## 11. Extension Roadmap (Multi-Protocol)
 
 The architecture allows additional protocol modules to be added to core 1 without modifying `ScaleSensor` or `SharedState`:
 
@@ -980,7 +1084,7 @@ No other files need modification.
 
 ---
 
-## 11. Build & Flash
+## 12. Build & Flash
 
 ### Prerequisites
 
@@ -1000,6 +1104,14 @@ pio run
 ```bash
 cd "firmware/transmitter-multi-core"
 pio run -e esp32s3
+```
+
+The default `esp32s3` environment uses the local keypad and GN/TA/AiP6932
+7-segment display. The equivalent explicitly named environment is also
+available:
+
+```bash
+pio run -e esp32s3-6932
 ```
 
 ### Build (ESP32-C3-MINI)
@@ -1037,7 +1149,7 @@ pio run -t uploadfs
 
 ---
 
-## 12. File Structure
+## 13. File Structure
 
 ```
 firmware/transmitter-multi-core/
@@ -1064,6 +1176,10 @@ firmware/transmitter-multi-core/
     +-- ModbusServer.h/.cpp     <- Modbus TCP server (WiFi/Ethernet), holding register publish
     +-- WebPortal.h/.cpp        <- HTTP captive portal, bounded JSON responses, deferred reboot
     +-- Display.h/.cpp          <- SSD1306 OLED driver (I2C)
+    +-- GN6932.h/.cpp           <- GN/TA/AiP6932 low-level driver
+    +-- Gn6932Display.h/.cpp   <- fixed-point three-section renderer
+    +-- MatrixScanner.h/.cpp   <- debounced 4x5 matrix scanner
+    +-- ButtonManager.h/.cpp   <- keypad actions and price state
 ```
 
 ---

@@ -5,11 +5,15 @@ void SharedState::begin() {
   _mutex = xSemaphoreCreateMutex();
   _snap.rawSample = 0.0f;
   _snap.weightG = 0.0f;
+  _snap.medianWeightG = 0.0f;
   _snap.stableWeightG = 0.0f;
+  _snap.noiseG = 0.0f;
   _snap.offsetCounts = 0.0f;
   _snap.countsPerKg = 0.0f;
   _snap.interceptCounts = 0.0f;
   _snap.calibrated = false;
+  _snap.stable = false;
+  _snap.stableSampleCount = 0;
   _cmd = CMD_NONE;
   _cmdArg = 0.0f;
   _cmdArg2 = 0.0f;

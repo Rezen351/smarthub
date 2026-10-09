@@ -332,6 +332,7 @@ void ModbusServer::publish(int8_t rssi, uint8_t wifiMode) {
   if (wifiMode != WIFI_MODE_NONE && rssi > -127)
                                    status |= 0x0004; // STA connected
   if (_shared->commandPending())   status |= 0x0008; // command pending
+  if (s.stable)                   status |= 0x0010; // weight stable
   _mb.Hreg(REG_STATUS, status);
 
   // Radio state

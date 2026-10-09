@@ -23,11 +23,15 @@ enum ScaleCmd : uint8_t {
 struct ScaleSnapshot {
   float rawSample;      // HX711 raw counts (offset subtracted)
   float weightG;        // instant weight (grams)
+  float medianWeightG;  // spike-rejected weight (grams)
   float stableWeightG;  // low-pass filtered weight (grams)
+  float noiseG;         // range of recent filtered samples (grams)
   float offsetCounts;   // tare offset (raw counts)
   float countsPerKg;    // calibration slope (counts per kg)
   float interceptCounts;// calibration intercept (raw counts at 0 kg)
-  bool  calibrated;     // countsPerKg has been set
+  bool calibrated;     // countsPerKg has been set
+  bool stable;          // recent samples remain within the stability range
+  uint16_t stableSampleCount;
 };
 
 struct CalibrationPoint {

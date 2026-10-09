@@ -17,7 +17,13 @@
 #define HX711_FAST_PROCESSOR true   // ESP32 can toggle IO < 0.4us -> must be true
 #define HX711_READS          10     // samples averaged per reading
 #define SCALE_SAMPLE_MS      30     // sensor task period
-#define SCALE_ALPHA          0.35f  // low-pass filter factor for stable weight
+#define SCALE_MEDIAN_WINDOW  5      // reject isolated HX711 spikes
+#define SCALE_FILTER_WINDOW  10     // recent filtered samples used for stability
+#define SCALE_SLOW_ALPHA      0.10f // smoothing while the load is stable
+#define SCALE_FAST_ALPHA      0.60f // response while the load is changing
+#define SCALE_CHANGE_THRESHOLD_G 200.0f
+#define SCALE_STABILITY_RANGE_G 10.0f
+#define SCALE_STABILITY_HOLD_MS 1000
 
 // ------------------------- Soft AP (captive portal) ------------------
 #define AP_SSID_PREFIX      "ENYX-SMARTHUB-"
@@ -97,8 +103,8 @@
 #define BUTTON_COL_5_PIN    40
 #define STATUS_RGB_LED_PIN  38
 #define DISPLAY6932_CLK_PIN 18
-#define DISPLAY6932_DIN_PIN 21
-#define DISPLAY6932_STB_PIN 47
+#define DISPLAY6932_DIN_PIN 19
+#define DISPLAY6932_STB_PIN 21
 #else
 #define W5500_SCK_PIN       14
 #define W5500_MISO_PIN      13
@@ -159,17 +165,7 @@
 // ------------------------- Event Bus ---------------------------------
 #define EVENT_BUS_QUEUE_SIZE  64
 
-// ------------------------- MQTT --------------------------------------
-#define MQTT_SERVER          "192.168.1.100"
-#define MQTT_PORT            1883
-#define MQTT_CLIENT_ID       "enyx-weight-transmitter"
-#define MQTT_USERNAME        ""
-#define MQTT_PASSWORD        ""
-#define MQTT_TOPIC_PREFIX    "smartfarm"
-#define MQTT_TELEMETRY_INTERVAL_MS 5000
-#define MQTT_KEEPALIVE       60
-#define MQTT_QOS             0
-#define MQTT_RETAIN          0
+
 
 // ------------------------- Driver Registry ---------------------------
 #define DRIVER_REGISTRY_MAX_SENSORS    8
@@ -190,6 +186,25 @@
 // existing hardware behavior is unchanged.
 #ifndef DEEP_SLEEP_ENABLED
 #define DEEP_SLEEP_ENABLED 0
+#endif
+
+// ------------------------- GN6932 Display ------------------------------
+// Mutually exclusive with SSD1306 OLED. When enabled, the GN/TA/AiP6932
+// display is used instead of the OLED.
+#ifndef DISPLAY_USE_6932
+#if defined(ESP32S3)
+#define DISPLAY_USE_6932 1
+#else
+#define DISPLAY_USE_6932 0
+#endif
+#endif
+
+// ------------------------- Button Matrix -------------------------------
+// The keypad is available only on the ESP32-S3 6932 hardware variant.
+#if DISPLAY_USE_6932 && defined(ESP32S3)
+#define KEYPAD_ENABLED 1
+#else
+#define KEYPAD_ENABLED 0
 #endif
 
 // ------------------------- Arduino OTA -------------------------------
