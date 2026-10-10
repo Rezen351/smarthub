@@ -4,7 +4,7 @@
 ## Workflow
 
 ```plantuml
-@startuml Pengemasan_Kentang_v2
+@startuml Pengemasan_Kentang_v3
 
 skinparam ActivityBackgroundColor #EAF4FB
 skinparam ActivityBorderColor #1A73E8
@@ -16,139 +16,107 @@ skinparam StartColor #2E7D32
 skinparam EndColor #C62828
 skinparam ConditionStyle diamond
 
-title Alur Kerja Pengemasan Kentang\nPendataan Digital
+title Alur Kerja Pengemasan Kentang\nPendataan Digital — v3
 
 |Petani|
 start
-:Membawa Hasil Panen ke Fasilitas;
+:Membawa Hasil Panen\n& Menunjukkan ID Petani;
 
 |Operator|
 :Scan ID Petani;
-:Select Commodity\n(Kentang / Tomat / Cabai);
+:Siapkan Palet Ber-ID\n(buat jika belum ada);
 
 |Sistem|
-:Auto-fetch Context:
-  - Farmer info
-  - Pallet association
-  - Commodity type (dari pilihan operator);
+:Auto-fetch Context\n(Farmer, Kentang, Palet);
 note right
-  Context disimpan dalam session aktif:
+  Komoditas aktif: Kentang (tunggal).
+  Multi-commodity (Tomat, Cabai, dll.)
+  = rencana pengembangan berikutnya —
+  struktur data sudah mendukung.
+
+  Context session aktif:
   - farmerId
-  - commodityId (dari pilihan operator)
+  - commodityId (auto: Kentang)
   - palletId
-  - grade defaults
+  - grade defaults (A/B/C)
 end note
 
-:Penimbangan Karung\npada Palet Ber-ID;
-note right
-  Timbangan pertama:
-  - Input berat
-  - Commodity dari context (sudah dipilih operator)
-  - Palet otomatis terasosiasi
-end note
+|Operator|
+:Timbang Karung\ndi Box/Palet Ber-ID;
+if (Berat Sesuai?) then (Tidak)
+  :Koreksi / Timbang Ulang;
+  goto timbang
+else (Ya)
+  :Verifikasi & Approve Berat;
+endif
+
+label timbang
 
 |Sistem|
-:Catat Otomatis Data Penimbangan\n(Berat, Waktu, ID Petani, ID Palet, Commodity);
+:Catat Penimbangan\n(Berat, Tanggal Panen, Waktu,\nFarmer, Palet);
 note right
+  Tanggal panen: input operator
+  dari informasi petani saat penerimaan.
+  Status penimbangan: APPROVED
   Keterkaitan Palet ↔ Petani ↔ Commodity
   tersimpan di database
 end note
 
+|Operator|
+:Cetak QR Label Palet (PLT-…)\n→ Tempel di Box/Palet;
+note right
+  QR Code palet:
+  farmer + commodity + berat approved
+end note
+
 |Proses|
 if (Perlu Pencucian?) then (Ya)
-  :Proses Pencucian;
+  :Pencucian;
   :Pengeringan;
 else (Tidak)
 endif
 
-:Sortir & Pengelompokan\nberdasarkan Grade per Commodity;
+:Sortir & Kelompokkan\nberdasarkan Grade;
 
-:Penimbangan Hasil Sortir\nper Grade;
-
-|Sistem|
-:Catat Berat per Grade\nper Commodity per Petani;
-note right
-  Commodity auto-dari context palet/farmer
-  Setiap petani memiliki data per commodity:
-  - Kentang Grade A: x kg
-  - Tomat Size L: x kg
-  - Cabai Grade A: x kg
-end note
+|Operator|
+:Cetak Label Grade (A/B/C)\n→ Tempel pada Kelompok Grade;
 
 |Pengemasan|
-:Masukkan ke Pouch 1 kg\nper Grade;
-
-:Scan Pouch / Cetak Label;
+:Timbang & Isi Pouch 1 kg\nper Grade;
+:Cetak Label Pouch\n(QR GS1 Digital Link + EAN-13);
 note right
-  Label otomatis include commodity info
-  QR Code: farmer + commodity + grade + berat
-  EAN-13: GTIN-13 + commodity + negara (899)
+  Tanpa scan — grade & palet
+  sudah berlabel pada palet.
+
+  QR = GS1 Digital Link (URL):
+  satu simbol, dua pembaca —
+  scanner internal decode GS1 key,
+  smartphone (konsumen/buyer) buka
+  halaman traceability via HTTPS
 end note
 
 |Warehouse|
-:Scan Pallet / Packaging → Warehouse In;
-note right
-  Warehouse in auto-fill:
-  - commodity dari palet/packaging
-  - grade dari item
-  - quantity dari scan
-end note
+:Scan Pouch / Palet → Warehouse In;
 
 |Sistem|
-:Catat Stok Masuk Warehouse\n(Jumlah, Grade, Commodity, Total Berat);
-:Update Kapasitas & Sisa\nWarehouse per Commodity;
+:Update Stok & Kapasitas Warehouse\n(otomatis per Grade);
 
 |Pengemasan|
-fork
-  :Packaging → Ekspor 10 kg\n(10 Pouch × 1 kg);
-  :Cetak & Tempel Barcode\nGS1 ITF-14 pada Packaging;
-  note right
-    ITF-14 include:
-    - GTIN-14 + commodity
-    - Kode negara asal (ID)
-    - Batch / Lot number
-    - Berat bersih & kotor
-  end note
-fork again
-  :Packaging → Ekspor 50 kg\n(50 Pouch × 1 kg);
-  :Cetak & Tempel Barcode\nGS1 ITF-14 pada Packaging;
-end fork
+:Packaging Ekspor (10 kg / 50 kg)\n+ Label GS1 ITF-14;
+note right
+  ITF-14 include:
+  - GTIN-14 + commodity
+  - Kode negara asal (ID)
+  - Batch / Lot number
+  - Berat bersih & kotor
+end note
 
 |Sistem|
-:Catat Stok Keluar Warehouse\n(Jumlah, Commodity, Tujuan, Tanggal);
-:Update Total Kapasitas\n& Sisa Stok Warehouse per Commodity;
-note right
-  Laporan real-time:
-  - Stok masuk / keluar per commodity
-  - Sisa kapasitas per commodity
-  - Stok per grade per commodity
-end note
+:Catat Stok Keluar\n(otomatis);
 
 |Pengiriman|
 :Muat Packaging ke Delivery Truck;
-note right
-  Muatan auto-tag commodity dari packaging
-  Dicatat:
-  - Nomor Polisi Truck
-  - Jumlah Packaging
-  - Total Berat Muatan
-  - Commodity
-  - Tujuan Pengiriman
-end note
-
-:Scan Barcode ITF-14\nVerifikasi Muatan + Commodity;
-note right
-  Sistem memvalidasi:
-  - Kesesuaian jumlah packaging
-  - Commodity sesuai
-  - Kode batch / lot
-  - Tujuan & jadwal kirim
-end note
-
-|Sistem|
-:Catat Keberangkatan Truck\n(Waktu, Tujuan, Nomor Truck, Commodity);
-
-|Pengiriman|
+:Scan ITF-14\n(Verifikasi Muatan + Grade);
 :Truck Berangkat ke Tujuan;
 
 stop
@@ -166,67 +134,37 @@ stop
 
 ## Deskripsi Alur Kerja
 
-### 1. Penerimaan & Verifikasi Petani
-Petani datang membawa hasil panen ke fasilitas. ID Petani di-scan menggunakan perangkat (tablet/scanner). Sistem menampilkan data farmer:
-- Nama petani
-- Lokasi kebun
-- Riwayat setoran
+> **Aturan penimbangan**: penimbangan hanya dilakukan di **Area Penerimaan** (timbang karung per palet) dan **Area Pengepakan** (timbang pouch 1 kg per grade). Area Sortir tidak memiliki timbangan.
 
-### 2. Penimbangan Pertama (Penerimaan) + Pemilihan Commodity
-Karung hasil panen ditimbang di atas palet yang memiliki ID unik. Saat penimbangan pertama:
-1. Operator scan ID petani
-2. Operator **memilih commodity** yang ditimbang (Kentang / Tomat / Cabai / dll.)
-3. Operator input berat dari timbangan
-4. Sistem menyimpan:
-   - Berat dari sensor
-   - Waktu sekarang
-   - ID Petani (dari scan)
-   - ID Palet
-   - **Commodity** (dari pilihan operator)
-5. Palet terhubung langsung dengan farmer dan commodity
+### 1. Penerimaan — *Area Penerimaan*
+**Fungsi**: Operator scan ID petani, menyiapkan palet ber-ID (dibuat jika belum ada), lalu menimbang karung di box/palet. Jika berat tidak sesuai, ditimbang ulang; jika sesuai, operator verifikasi & approve. Sistem menyimpan berat, **tanggal panen** (input operator dari informasi petani), waktu, ID petani, ID palet, komoditas (Kentang), dan status `APPROVED`, lalu mencetak QR label palet (`PLT-…`) untuk ditempel pada box/palet.
 
-> **Catatan**: Commodity dipilih operator karena petani bisa menyetorkan berbagai jenis hasil panen. Pilihan ini menjadi **context** untuk semua langkah berikutnya.
+**Tujuan**: Menetapkan berat setoran resmi sebagai data awal dan memberi identitas fisik (palet ber-ID) yang dapat di-scan pada tahap berikutnya.
 
-### 3. Proses Pencucian *(Opsional)*
-Berdasarkan kondisi komoditas, dilakukan keputusan apakah perlu pencucian atau tidak:
-- **Ya** → Komoditas melalui proses pencucian dan pengeringan sebelum lanjut ke tahap berikutnya.
-- **Tidak** → Komoditas langsung menuju proses sortir.
+### 2. Pencucian *(Opsional)*
+**Fungsi**: Mencuci dan mengeringkan kentang bila kondisinya memerlukan; dilewati jika sudah bersih.
 
-### 4. Sortir & Pengelompokan Grade per Commodity
-Komoditas disortir dan dikelompokkan berdasarkan ukuran dan kualitas sesuai standar commodity:
-- **Kentang**: Grade A, B, C
-- **Tomat**: Size L, M, S
-- **Cabai**: Grade A, B, C
+**Tujuan**: Membersihkan komoditas sebelum sortir agar hasil mutu tidak tercemar kotoran.
 
-Hasil sortir per grade ditimbang kembali. Saat penimbangan kedua/scan kedua:
-- Operator **hanya pilih grade** dan **input berat**
-- **Commodity otomatis terisi** dari context penimbangan pertama
-- Sistem hitung total per grade per commodity per farmer
+### 3. Sortir — *Area Sortir*
+**Fungsi**: Memisahkan kentang ke grade A/B/C, mencetak label grade untuk setiap kelompok, dan menempelkannya pada kelompok yang bersangkutan di palet. Tidak ada penimbangan di area ini.
 
-### 5. Pengemasan Pouch 1 kg
-Komoditas dimasukkan ke dalam pouch transparan berukuran **1 kg per pouch**. Setiap pouch ditempeli label dengan dua jenis kode:
-- **QR Code** — untuk traceabilitas internal (ID Petani, Lokasi Kebun, Tanggal Panen, **Commodity**, Grade, Berat)
-- **EAN-13 Barcode** — standar GS1 internasional untuk kebutuhan ritel dan ekspor (GTIN-13 + **commodity code** + kode negara Indonesia `899`)
+**Tujuan**: Mengelompokkan mutu untuk pengepakan; berat diperoleh dari penimbangan pouch di Area Pengepakan.
 
-### 6. Penyimpanan di Warehouse
-Pouch yang sudah berlabel disimpan di warehouse. Saat warehouse in:
-- Operator scan pallet/packaging
-- Sistem otomatis:
-  - Ambil commodity dari palet/pouch
-  - Ambil grade dari item
-  - Hitung quantity dan total berat
-  - Update stok warehouse per commodity + grade
-- Sistem mencatat stok masuk (jumlah pouch, grade, commodity, total berat) dan memperbarui kapasitas serta sisa ruang warehouse secara real-time.
+### 4. Pengepakan — *Area Pengepakan*
+**Fungsi**: Menimbang & mengisi pouch 1 kg per grade, lalu mencetak label pouch — QR Code **GS1 Digital Link** + EAN-13, tanpa scan, karena grade dan palet sudah berlabel.
 
-### 7. Pengemasan Ekspor (Packaging)
-Pouch dikemas ulang ke dalam packaging untuk keperluan ekspor dalam dua ukuran yang diproses secara paralel:
-- **Packaging 10 kg** — berisi 10 pouch × 1 kg
-- **Packaging 50 kg** — berisi 50 pouch × 1 kg
+**Tujuan**: Menghasilkan unit retail 1 kg dengan berat akurat, identitas GS1, dan traceability; berat per grade dihitung dari jumlah pouch. Satu simbol QR berfungsi ganda: scanner internal mendecode GS1 key, smartphone konsumen/buyer langsung membuka halaman traceability (petani, kebun, tanggal panen, grade, berat) via HTTPS.
 
-Setiap packaging ditempeli label **GS1 ITF-14 Barcode** yang merupakan standar barcode internasional untuk kemasan logistik, memuat GTIN-14, kode negara asal, **commodity code**, nomor batch/lot, serta berat bersih dan kotor.
+### 5. Penyimpanan di Warehouse — *Area Warehouse*
+**Fungsi**: Operator scan pouch/pallet saat warehouse in; sistem otomatis mencatat stok masuk (jumlah, grade, total berat) dan memperbarui kapasitas serta sisa ruang.
 
-### 8. Pengiriman (Delivery Truck)
-Packaging ekspor dimuat ke delivery truck. Sebelum berangkat, barcode ITF-14 pada setiap packaging di-scan ulang untuk **verifikasi muatan** — memastikan kesesuaian jumlah packaging, **commodity**, kode batch, dan tujuan pengiriman. Sistem mencatat waktu keberangkatan, tujuan, nomor polisi truck, dan commodity. Stok keluar warehouse diperbarui secara otomatis per commodity.
+**Tujuan**: Menyimpan stok dalam status terdata dan real-time per grade.
+
+### 6. Pengiriman (Delivery) — *Area Pengiriman*
+**Fungsi**: Pouch ditarik dari warehouse dan dikemas menjadi packaging ekspor 10 kg / 50 kg dengan label ITF-14, dimuat ke truck, lalu barcode ITF-14 di-scan untuk verifikasi muatan (jumlah, grade, batch, tujuan). Keberangkatan dicatat dan stok keluar diperbarui otomatis.
+
+**Tujuan**: Menyiapkan unit logistik ekspor berstandar GS1 dan memastikan muatan sesuai rencana pengiriman dengan stok keluar yang akurat.
 
 ---
 
@@ -234,7 +172,8 @@ Packaging ekspor dimuat ke delivery truck. Sebelum berangkat, barcode ITF-14 pad
 
 | Kemasan | Jenis Barcode | Standar | Fungsi |
 |---------|--------------|---------|--------|
-| Pouch 1 kg | QR Code | Internal | Traceabilitas petani, commodity & produk |
+| Kelompok Grade (di palet) | QR/Barcode Grade | Internal | Identifikasi grade (A/B/C) per kelompok hasil sortir |
+| Pouch 1 kg | QR GS1 Digital Link | GS1 Internal + Publik | Scanner internal decode GS1 key; smartphone konsumen buka halaman traceability |
 | Pouch 1 kg | EAN-13 | GS1 Ritel | Identifikasi produk ritel/ekspor + commodity |
 | Packaging 10 kg / 50 kg | ITF-14 | GS1 Logistik | Identifikasi kemasan logistik ekspor + commodity |
 
@@ -242,13 +181,13 @@ Packaging ekspor dimuat ke delivery truck. Sebelum berangkat, barcode ITF-14 pad
 
 | Lane | Peran |
 |------|-------|
-| **Petani** | Membawa panen, scan ID, penimbangan |
-| **Operator** | Scan pallet/farmer → input berat saja → sistem auto-fill commodity + grade |
-| **Sistem** | Auto-fetch context, pencatatan otomatis, validasi, pembaruan stok & kapasitas per commodity |
-| **Proses** | Pencucian (opsional), sortir grade per commodity, penimbangan hasil sortir |
-| **Pengemasan** | Pengisian pouch, pelabelan, pengemasan packaging ekspor |
-| **Warehouse** | Penyimpanan pouch, manajemen stok masuk/keluar per commodity |
-| **Pengiriman** | Loading truck, verifikasi muatan + commodity, keberangkatan |
+| **Petani** | Membawa panen, menunjukkan ID petani, menyerahkan hasil panen |
+| **Operator** | Scan ID petani, siapkan palet, timbang karung, verifikasi & approve, cetak label palet; saat sortir: cetak label grade (A/B/C) |
+| **Sistem** | Auto-fetch context, pencatatan otomatis (status APPROVED), update stok & kapasitas, resolve GS1 Digital Link → halaman traceability publik |
+| **Proses** | Pencucian (opsional), sortir & pengelompokan grade |
+| **Pengemasan** | Timbang & isi pouch 1 kg per grade, cetak label (QR GS1 Digital Link + EAN-13) — tanpa scan, grade sudah terpisah di palet |
+| **Warehouse** | Warehouse in (scan pouch/pallet), manajemen stok masuk/keluar |
+| **Pengiriman** | Loading truck, verifikasi muatan + grade via ITF-14, keberangkatan |
 
 ---
 
@@ -281,15 +220,15 @@ rectangle "**[ FIELD LEVEL ]**\nPerangkat Lapangan & IoT" as FL #FFEBEE {
   rectangle "Area Penerimaan" as area_recv #FFC1C1 {
     component [Timbangan RS485\n(Kapasitas Besar)] as scale_big
     component [Scanner QR\n(ID Petani & ID Palet)] as scanner_recv
+    component [Printer Label\n(QR Palet)] as printer_pallet
   }
 
   rectangle "Area Sortir" as area_sort #FFC1C1 {
-    component [Timbangan RS485\nGrade A] as scale_a
-    component [Timbangan RS485\nGrade B] as scale_b
-    component [Timbangan RS485\nGrade C] as scale_c
+    component [Printer Label\n(Grade A/B/C)] as printer_grade
   }
 
   rectangle "Area Pengemasan" as area_pack #FFC1C1 {
+    component [Timbangan RS485\n(Pouch 1 kg)] as scale_pouch
     component [Printer Label\n(QR Code / EAN-13)] as printer
   }
 
@@ -317,7 +256,7 @@ rectangle "**[ EDGE / GATEWAY LEVEL ]**\nAkuisisi & Transmisi Data" as EGL #F3E5
     component [MQTT Client\nFirmware] as fw1
   }
 
-  node "Mikrokontroler #2\n(Area Sortir)" as mcu2 {
+  node "Mikrokontroler #2\n(Area Pengemasan)" as mcu2 {
     component [MQTT Client\nFirmware] as fw2
   }
 
@@ -334,6 +273,7 @@ rectangle "**[ APPLICATION LEVEL ]**\nServer Operasional Internal" as AL #FFF3E0
     component [Aplikasi\n(Business Logic)] as app
     component [MQTT Broker\n(Mosquitto)] as broker
     component [Session Context\nManager] as ctx
+    component [Traceability Page\n+ GS1 Digital Link Resolver] as trace_page
     database "Local Database\n(PostgreSQL / MySQL)" as local_db
   }
 }
@@ -359,23 +299,24 @@ rectangle "**[ ENTERPRISE LEVEL ]**\nAkses Pengguna & Internet" as ENT #E8F5E9 {
   actor "Admin\n(Full Access)" as admin
   actor "Operator\n(Operasional)" as operator
   actor "Petani\n(Traceability)" as farmer_user
+  actor "Konsumen / Buyer\n(Scan QR Pouch)" as consumer
 }
 
 ' ============================================================
 ' CONNECTIONS
 ' ============================================================
 
-' Field → Edge (RS485 wired)
+' Field → Edge (RS485 wired) — timbangan hanya di Area Penerimaan & Pengemasan
 scale_big    --> mcu1   : RS485
-scale_a      --> mcu2   : RS485
-scale_b      --> mcu2   : RS485
-scale_c      --> mcu2   : RS485
+scale_pouch  --> mcu2   : RS485
 
 ' Field → Router (USB / LAN)
-scanner_recv --> router : USB / LAN
-printer      --> router : USB / LAN
-scan_in      --> router : USB / LAN
-scan_out     --> router : USB / LAN
+scanner_recv   --> router : USB / LAN
+printer        --> router : USB / LAN
+printer_pallet --> router : USB / LAN
+printer_grade  --> router : USB / LAN
+scan_in        --> router : USB / LAN
+scan_out       --> router : USB / LAN
 
 ' Truck → Departure (notasi logis)
 phone_driver --> domain : Manifest Pengiriman\n(HTTPS / Internet)
@@ -391,9 +332,9 @@ app    <--> ctx
 app    <--> local_db
 app    <--> broker
 ctx    <--> local_db : "read context\n(farmer, commodity, pallet)"
+app    --> trace_page : "resolve URI\n/01//10//21/"
 
 ' Operator input → context lookup
-scanner_recv --> router : USB / LAN
 router --> web : "scan pallet/farmer"
 web --> app : "lookup context"
 app --> ctx : "create/update session"
@@ -407,11 +348,13 @@ web    --> domain : Reverse Proxy\n(HTTPS)
 
 ' Enterprise → Users (RBAC)
 domain --> admin       : RBAC — Full Access
-domain --> operator    : RBAC — Operasional
+domain --> operator    : RBAC — Operasi
 domain --> farmer_user : RBAC — Traceability
+domain --> consumer    : Publik — halaman\ntraceability (tanpa login)
 
 ' Smartphone → Internet
-mobile --> domain : HTTPS (Internet)
+mobile   --> domain : HTTPS (Internet)
+consumer --> domain : Scan QR → traceability\n(HTTPS / Internet)
 
 @enduml
 ```
@@ -422,9 +365,9 @@ mobile --> domain : HTTPS (Internet)
 
 | Layer | Komponen | Fungsi |
 |-------|----------|--------|
-| **Field Level** | Timbangan RS485, Scanner QR, Printer Label, Scanner Warehouse, Scanner Pengiriman, Smartphone Petani | Perangkat fisik di lapangan untuk input data, pengemasan, dan pengiriman |
-| **Edge / Gateway** | Mikrokontroler ×2, Router/Switch | Akuisisi data dari timbangan via RS485, transmisi ke server via MQTT |
-| **Application Level** | PC Server (Web Server + App + MQTT Broker + Session Context + DB) | Pusat logika bisnis, session context management, dan penyimpanan lokal |
+| **Field Level** | Timbangan RS485 (penerimaan & pengemasan), Scanner QR, Printer Label (palet, grade, pouch), Scanner Warehouse, Scanner Pengiriman, Smartphone Petani | Perangkat fisik di lapangan untuk input data, pengemasan, dan pengiriman |
+| **Edge / Gateway** | Mikrokontroler ×2 (Area Penerimaan + Area Pengemasan), Router/Switch | Akuisisi data dari timbangan via RS485, transmisi ke server via MQTT |
+| **Application Level** | PC Server (Web Server + App + MQTT Broker + Session Context + Traceability Page/GS1 Digital Link Resolver + DB) | Pusat logika bisnis, session context management, halaman traceability publik, dan penyimpanan lokal |
 | **Cloud Level** | Cloud Database | Backup berkala dan disaster recovery |
 | **Enterprise Level** | Custom Domain (HTTPS), Admin, Operator, Petani | Akses publik berbasis RBAC melalui internet |
 
@@ -436,7 +379,7 @@ mobile --> domain : HTTPS (Internet)
 | Mikrokontroler → PC Server | **MQTT** | Lightweight, real-time, ideal untuk IoT over LAN/Wi-Fi |
 | Scanner / Printer → PC | **USB / LAN** | Koneksi langsung ke jaringan lokal |
 | PC Server → Cloud | **HTTPS** | Sinkronisasi berkala database ke cloud backup |
-| Pengguna → Aplikasi | **HTTPS** | Akses web aman via custom domain (internet) |
+| Pengguna → Aplikasi | **HTTPS** | Akses web aman via custom domain (internet), termasuk halaman traceability publik untuk konsumen |
 
 ### Manajemen Akses (RBAC)
 
@@ -448,6 +391,7 @@ mobile --> domain : HTTPS (Internet)
 | **Warehouse Operator** | Operasional gudang — warehouse in/out, stok management |
 | **Delivery Operator** | Operasional pengiriman — packaging, delivery, cetak dokumen |
 | **Petani** | Terbatas — riwayat setoran, validasi data panen, traceability |
+| **Konsumen / Buyer** | Publik (tanpa login) — halaman traceability pouch via scan QR GS1 Digital Link |
 
 ---
 
@@ -462,7 +406,7 @@ skinparam ArrowFontName Arial
 skinparam DefaultFontName Arial
 skinparam DefaultFontSize 11
 
-title Skema Database — ENYX-Smart Hub\n(Multi-Commodity)
+title Skema Database — ENYX-Smart Hub\n(Single Commodity: Kentang — Multi-Commodity Ready)
 
 ' ============================================================
 ' CORE MODELS
@@ -507,6 +451,7 @@ entity "Pallet" as pallet {
   *code : VARCHAR <<UNIQUE>>
   *farmerId : UUID <<FK>>
   *commodityId : UUID <<FK>>
+  *harvestDate : DATE
   createdAt : TIMESTAMP
 }
 
@@ -722,7 +667,7 @@ scale }|--o| pallet : "references"
 
 | Tabel | Fungsi | Relasi |
 |-------|--------|--------|
-| `commodities` | Master data commodity (kentang, tomat, cabai) | 1 → N ke semua tabel bisnis |
+| `commodities` | Master data commodity (Kentang aktif; Tomat/Cabai reserved untuk multi-commodity) | 1 → N ke semua tabel bisnis |
 | `users` | User accounts (admin, operator, farmer) | 1 → 1 ke farmer profile |
 | `farmers` | Data petani | N → 1 ke user |
 | `pallets` | Palet pembawa hasil panen | N → 1 ke farmer, N → 1 ke commodity |
@@ -757,9 +702,11 @@ scale }|--o| pallet : "references"
 - **Foreign Keys**: Semua relasi menggunakan UUID dengan cascade rules
 - **Check Constraints**: `status` enum untuk packaging units
 
-#### 5. Multi-Commodity Support
+#### 5. Multi-Commodity Support (Future-Ready)
 
-Setiap tabel bisnis memiliki `commodityId` yang mengacu ke tabel `commodities`. Ini memungkinkan:
+**Status saat ini**: Hanya **Kentang** yang aktif. Semua tabel bisnis sudah memiliki `commodityId` yang mengacu ke tabel `commodities` agar penambahan commodity (Tomat, Cabai, dll.) di masa depan hanya memerlukan data master, tanpa migrasi skema.
+
+Desain ini memungkinkan (pada fase multi-commodity):
 - Petani bisa menyetorkan berbagai jenis hasil panen
 - Setiap commodity punya grading system sendiri
 - Warehouse stock di-track per commodity
@@ -784,15 +731,25 @@ Semua identifier yang discan di lapangan mengikuti format standar berikut:
 - `{SEQ}`: nomor urut 4 digit per hari, contoh `0001`
 - Contoh: `PLT-20260914-0001`
 - Generate: Sistem auto-generate saat pallet dibuat
-- Used in: QR Code pada palet
+- Used in: QR Code pada label palet yang ditempel di box/palet (setelah approve)
 
-**Pouch QR Code** — Format: `PCH-{PALLET_CODE}-{SEQ}`
-- `PCH`: prefix pouch
-- `{PALLET_CODE}`: kode pallet sumber, contoh `PLT-20260914-0001`
-- `{SEQ}`: nomor urut pouch dalam pallet, contoh `001`
-- Contoh: `PCH-PLT-20260914-0001-001`
-- Generate: Sistem auto-generate saat pouch dibuat dari pallet
-- Used in: QR Code pada label pouch 1 kg
+**Grade Label** — Format: `GRD-{PALLET_CODE}-{GRADE}`
+- `GRD`: prefix grade
+- `{PALLET_CODE}`: kode palet sumber, contoh `PLT-20260914-0001`
+- `{GRADE}`: kode grade, contoh `A`, `B`, `C` (ukuran lain seperti `L`, `M`, `S` mengikuti standar commodity saat multi-commodity aktif)
+- Contoh: `GRD-PLT-20260914-0001-A`
+- Generate: Sistem auto-generate saat label grade dicetak di area sortir
+- Used in: Label grade yang ditempel pada kelompok hasil sortir di palet
+
+**Pouch QR Code (GS1 Digital Link)** — Format: `https://{domain}/01/{GTIN-13}/10/{LOT}/21/{SERIAL}`
+- `{domain}`: domain halaman traceability publik, contoh `trace.enyx.id`
+- `/01/` — AI 01 (GTIN-13): sama dengan EAN-13 pouch, contoh `899001000001`
+- `/10/` — AI 10 (batch/lot): `{PALLET_CODE}-{GRADE}`, contoh `PLT-20260914-0001-A`
+- `/21/` — AI 21 (serial): `PCH-{PALLET_CODE}-{SEQ}`, contoh `PCH-PLT-20260914-0001-001`
+- Contoh: `https://trace.enyx.id/01/899001000001/10/PLT-20260914-0001-A/21/PCH-PLT-20260914-0001-001`
+- Generate: Sistem auto-generate saat pouch dibuat dari palet
+- Satu simbol, dua pembaca: scanner internal mendecode element string GS1 (tanpa internet); smartphone (konsumen/buyer) diarahkan ke halaman traceability publik via resolver di server
+- Used in: QR Code pada label pouch 1 kg; EAN-13 tetap dicetak paralel selama transisi 1D → 2D
 
 **Pouch EAN-13** — Format: `899{COMMODITY_CODE}{SEQ}`
 - `899`: kode negara Indonesia (GS1)
@@ -813,10 +770,10 @@ Semua identifier yang discan di lapangan mengikuti format standar berikut:
 - Used in: ITF-14 barcode pada packaging ekspor
 
 **Commodity Code Mapping** (3 digit):
-- `001`: Kentang
-- `002`: Tomat
-- `003`: Cabai
-- Ditambahkan secara dinamis saat commodity baru dibuat
+- `001`: Kentang — **aktif**
+- `002`: Tomat — reserved (multi-commodity, belum aktif)
+- `003`: Cabai — reserved (multi-commodity, belum aktif)
+- Commodity baru ditambahkan saat fase multi-commodity diaktifkan
 
 ---
 

@@ -2,7 +2,7 @@
 
 **The complete harvest-to-shipment operating system for modern agriculture.**
 
-Digitize your entire harvest chain — from farmer delivery to export-ready packaging — with IoT integration, real-time traceability, and GS1-standard barcodes. Built for potatoes, tomatoes, chilies, and any commodity you grow.
+Digitize your entire harvest chain — from farmer delivery to export-ready packaging — with IoT integration, real-time traceability, and GS1-standard barcodes. Built for potatoes today — multi-commodity-ready for tomatoes, chilies, and beyond.
 
 ---
 
@@ -12,7 +12,7 @@ ENYX-Smart Hub transforms traditional agricultural packaging and warehouse opera
 
 | Stage | What Happens | Tech |
 |-------|--------------|------|
-| 🚚 **Receive** | Farmer arrives → scan ID → auto-assign commodity → weigh pallet | MQTT + RS485 Scales |
+| 🚚 **Receive** | Farmer arrives → scan ID → weigh & approve → weigh pallet | MQTT + RS485 Scales |
 | 🧼 **Process** | Wash/dry (optional) → grade sorting → re-weighing per grade | IoT Edge Devices |
 | 📦 **Package** | 1 kg pouches → QR + EAN-13 labels → carton bundling → ITF-14 | GS1 Barcodes |
 | 🚛 **Deliver & Trace** | Truck loading → barcode verification → end-to-end traceability | Real-time Dashboard |
@@ -23,9 +23,9 @@ ENYX-Smart Hub transforms traditional agricultural packaging and warehouse opera
 
 **For Farmers**: Prove your harvest origin, quality, and quantity with digital traceability.  
 **For Operators**: Reduce manual input with smart context auto-fill — scan once, fill everything else automatically.  
-**For Warehouse**: Real-time stock visibility per commodity and grade, with capacity alerts.  
+**For Warehouse**: Real-time stock visibility per grade, with capacity alerts.  
 **For Export**: GS1-standard barcodes (QR, EAN-13, ITF-14) ready for international retail and logistics.  
-**For Admins**: Complete control with role-based access, analytics, and multi-commodity support.
+**For Admins**: Complete control with role-based access, analytics, and multi-commodity-ready architecture.
 
 ---
 
@@ -93,8 +93,8 @@ backend/src/
 
 ## 🔄 How It Works: The Smart Context Flow
 
-**Traditional way**: Operator manually enters farmer, commodity, pallet, grade, weight — 5+ fields, prone to errors.  
-**ENYX way**: Scan once → select commodity → everything else auto-fills.
+**Traditional way**: Operator manually enters farmer, pallet, grade, weight — 4+ fields, prone to errors.  
+**ENYX way**: Scan once → everything else auto-fills.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -102,7 +102,7 @@ backend/src/
 ├─────────────────────────────────────────────────────────────┤
 │  Current Context:                                           │
 │  👤 Farmer: Ahmad Santoso (FRM-2026-0001)                  │
-│  🥔 Commodity: [Kentang ▾]  ← Select once                 │
+│  🥔 Commodity: Kentang (fixed)                             │
 │  📦 Pallet: PLT-20260914-0001                              │
 │  [Reset Context]                                            │
 ├─────────────────────────────────────────────────────────────┤
@@ -118,7 +118,7 @@ backend/src/
 - ⚡ **3x faster** operations — minimal input
 - ✅ **Zero manual errors** — commodity auto-filled from context
 - 🔄 **Persistent session** — 4-hour TTL, auto-renewed
-- 🔁 **Multi-commodity** — one operator, many crop types per day
+- 🔁 **Multi-commodity-ready** — context & schema siap tambah komoditas tanpa refactor
 
 ---
 
@@ -133,31 +133,31 @@ Real-time data from your field to your dashboard:
 | Label Printers | MQTT Commands | Auto-print QR/EAN-13/ITF-14 |
 | Smartphones | HTTPS + Socket.io | Farmer traceability + driver dispatch |
 
-**MQTT Topics** (multi-commodity):
+**MQTT Topics** (Kentang sekarang; multi-commodity-ready):
 
 ```
-enyx/<commodity>/penerimaan/scale/big    → Weighing
-enyx/<commodity>/sortir/scale/grade-a    → Grading
-enyx/warehouse/scan/in                    → Stock In
-enyx/warehouse/scan/out                   → Stock Out
-enyx/<commodity>/pengemasan/print         → Labels
-enyx/delivery/truck/status                → Delivery
+enyx/kentang/penerimaan/scale/big    → Weighing
+enyx/kentang/sortir/scale/grade-a    → Grading
+enyx/warehouse/scan/in                 → Stock In
+enyx/warehouse/scan/out                → Stock Out
+enyx/kentang/pengemasan/print          → Labels
+enyx/delivery/truck/status             → Delivery
 ```
 
-*Replace `<commodity>` with dynamic codes: `kentang`, `tomat`, `cabai`, etc.*
+*Segment `kentang` akan menjadi placeholder `<commodity>` saat multi-commodity diaktifkan.*
 
 ---
 
-## 🎫 Multi-Commodity, One System
+## 🥔 Kentang Dulu, Multi-Commodity Nanti
 
-Don't let your software limit your crops. ENYX-Smart Hub natively supports multiple commodities with:
+Sistem ini saat ini beroperasi untuk **satu komoditas: Kentang**, dengan arsitektur yang sudah multi-commodity-ready:
 
-- **Per-commodity grading** — Kentang (A/B/C), Tomat (L/M/S), Cabai (A/B/C), or define your own
-- **Per-commodity packaging** — Different box sizes, capacities, and barcodes per crop
-- **Per-commodity warehouse tracking** — Real-time stock per grade per crop
-- **Per-commodity delivery logs** — Export documentation per shipment
+- **Per-grade tracking** — Kentang Grade A/B/C
+- **Per-grade packaging** — berbagai ukuran box dan barcode
+- **Real-time warehouse stock** — per grade
+- **Delivery logs** — dokumentasi ekspor per pengiriman
 
-Add a new commodity in minutes — no code changes needed.
+Menambah commodity baru di masa depan (Tomat, Cabai, dll.) hanya memerlukan data master — tanpa migrasi skema.
 
 ---
 
@@ -202,11 +202,8 @@ Add a new commodity in minutes — no code changes needed.
 
 ## 📚 Documentation
 
-- `docs/TECH_STACK.md` — Technology choices and rationale
-- `docs/ARCHITECTURE.md` — Module breakdown + session context design
-- `docs/DIAGRAM.md` — Workflow diagrams + database ERD
-- `docs/API.md` — Complete API reference
-- `docs/PLANNING.md` — Implementation roadmap
+- `docs/DIAGRAM.md` — Workflow diagrams + database ERD (sumber visual utama)
+- `docs/laporan.tex` — Laporan resmi sistem (konsolidasi rancangan: arsitektur, tech stack, API, BOM, UI/UX, rencana implementasi)
 
 ---
 
