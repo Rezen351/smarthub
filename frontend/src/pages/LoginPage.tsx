@@ -3,8 +3,10 @@ import { useNavigate, Navigate, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import Logo from '../components/shared/Logo'
 import Button from '../components/shared/Button'
+import Card from '../components/shared/Card'
 import Icon from '../components/shared/Icon'
 import { Field, Input } from '../components/shared/Form'
+import { Alert, AlertDescription } from '../components/ui/alert'
 
 const demoAccounts = [
   { email: 'admin@enyx.local', role: 'Admin' },
@@ -44,97 +46,94 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full" style={{ maxWidth: 400 }}>
-        <div className="text-center stack-sm" style={{ marginBottom: 20 }}>
-          <Link to="/" className="inline-flex items-center justify-center gap-2.5" aria-label="ENYX Traceability System home">
+      <div className="w-full max-w-sm flex flex-col gap-5">
+        <div className="text-center flex flex-col gap-2">
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center gap-2.5 mx-auto"
+            aria-label="ENYX Traceability System home"
+          >
             <Logo className="h-9 w-auto" markOnly />
             <div className="text-left flex flex-col">
-              <span className="font-bold text-lg tracking-tight leading-tight text-text">Traceability System</span>
-              <span className="text-xs text-text-light font-mono">ENYX Enterprise</span>
+              <span className="font-bold text-lg tracking-tight leading-tight text-foreground">
+                Traceability System
+              </span>
+              <span className="text-xs text-muted-foreground font-mono">ENYX Enterprise</span>
             </div>
           </Link>
-          <div>
-            <h1 className="t-h2">Sign In</h1>
-            <p className="t-small text-text-secondary">Enter your credentials to continue</p>
+          <div className="mt-2">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Sign In</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Enter your credentials to continue</p>
           </div>
         </div>
 
-        <div className="card card-pad-lg stack-md">
-          {error && (
-            <div className="alert alert-danger" role="alert">
-              <Icon name="alert" size={16} />
-              <span>{error}</span>
-            </div>
-          )}
+        <Card padding="lg" className="shadow-sm">
+          <div className="flex flex-col gap-4">
+            {error && (
+              <Alert variant="destructive" className="p-3 text-xs">
+                <Icon name="alert" size={15} />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-          <form onSubmit={handleSubmit} className="stack-md">
-            <Field label="Email" htmlFor="email" required>
-              <Input
-                id="email"
-                type="email"
-                inputMode="email"
-                autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@enyx.local"
-                required
-              />
-            </Field>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <Field label="Email" htmlFor="email" required>
+                <Input
+                  id="email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="username"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@enyx.local"
+                  required
+                />
+              </Field>
 
-            <Field label="Password" htmlFor="password" required>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="password"
-                required
-              />
-            </Field>
+              <Field label="Password" htmlFor="password" required>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="password"
+                  required
+                />
+              </Field>
 
-            <Button type="submit" variant="primary" size="lg" block touch loading={loading}>
-              {loading ? 'Signing in…' : 'Sign In'}
-            </Button>
-          </form>
+              <Button type="submit" variant="primary" size="lg" block touch loading={loading} className="mt-1">
+                {loading ? 'Signing in…' : 'Sign In'}
+              </Button>
+            </form>
 
-          <div className="divider" />
-
-          <div className="stack-sm">
-            <p className="t-caption text-text-secondary">Demo accounts · password: password</p>
-            <div className="stack-xs">
-              {demoAccounts.map((account) => (
-                <button
-                  key={account.email}
-                  type="button"
-                  className="quick-action"
-                  style={{ padding: '10px 12px' }}
-                  onClick={() => {
-                    setEmail(account.email)
-                    setPassword('password')
-                  }}
-                >
-                  <span className="flex items-center justify-between gap-sm w-full">
-                    <span className="mono t-small">{account.email}</span>
-                    <span className="t-caption text-text-secondary">{account.role}</span>
-                  </span>
-                </button>
-              ))}
+            <div className="pt-3 border-t border-border flex flex-col gap-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Demo Accounts (pw: password)
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {demoAccounts.map((account) => (
+                  <button
+                    key={account.email}
+                    type="button"
+                    className="p-1.5 rounded-md border border-border bg-muted/30 hover:bg-muted text-left text-xs transition-colors cursor-pointer"
+                    onClick={() => {
+                      setEmail(account.email)
+                      setPassword('password')
+                    }}
+                  >
+                    <p className="font-medium text-foreground truncate">{account.role}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{account.email}</p>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <p className="t-caption text-text-secondary text-center" style={{ marginTop: 16 }}>
-          <Link to="/traceability" className="flex items-center gap-xs justify-center">
-            <Icon name="search" size={12} />
-            Trace a product without an account
-          </Link>
+        <p className="text-center text-xs text-muted-foreground">
+          © {new Date().getFullYear()} ENYX Enterprise. All rights reserved.
         </p>
-
-        <footer className="text-center" style={{ marginTop: 24, fontSize: '0.75rem', color: 'var(--text-secondary, #64748b)' }}>
-          <p style={{ margin: 0 }}>ENYX Enterprise • Traceability System • v1.0.0</p>
-          <p style={{ margin: '4px 0 0', opacity: 0.8, fontSize: '0.7rem' }}>Type: enyx-enterprise</p>
-        </footer>
       </div>
     </div>
   )

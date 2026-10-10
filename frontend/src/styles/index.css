@@ -322,6 +322,85 @@
   .icon-tile-accent { background: var(--color-accent-soft); border-color: var(--color-accent-border); color: var(--color-accent-hover); }
   .icon-tile-solid { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 
+  /* ── Progress Bar ── */
+  .progress-track { height: 6px; background: var(--color-surface-2); border-radius: var(--radius-full); overflow: hidden; border: 1px solid var(--color-border); }
+  .progress-fill { height: 100%; background: var(--color-accent); border-radius: var(--radius-full); transition: width var(--transition-base); }
+  .progress-fill.is-danger { background: var(--color-danger); }
+
+  /* ── Journey Timeline ── */
+  .journey { display: flex; flex-direction: column; }
+  .journey-step { display: flex; gap: 12px; position: relative; padding-bottom: 18px; }
+  .journey-step:last-child { padding-bottom: 0; }
+  .journey-step::before {
+    content: ""; position: absolute; left: 11px; top: 24px; bottom: 0; width: 2px; background: var(--color-border);
+  }
+  .journey-step:last-child::before { display: none; }
+  .journey-step.is-done::before { background: var(--color-accent); }
+  .journey-dot {
+    width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--color-border); background: var(--color-surface);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 1; color: var(--color-text-light);
+  }
+  .journey-step.is-done .journey-dot { border-color: var(--color-accent); background: var(--color-accent); color: #fff; }
+  .journey-title { font-size: 14px; font-weight: 600; }
+  .journey-meta { font-size: 12px; color: var(--color-text-secondary); }
+
+  /* ── Label Preview ── */
+  .label-preview { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); padding: 16px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .label-qr { width: 96px; height: 96px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; background: var(--color-surface); flex-shrink: 0; }
+  .label-body { min-width: 200px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .label-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+  .label-row dt { color: var(--color-text-secondary); }
+  .label-row dd { font-weight: 500; font-variant-numeric: tabular-nums; }
+  .label-barcode { height: 34px; display: flex; align-items: flex-end; gap: 1px; }
+  .label-barcode span { background: var(--color-text); display: block; }
+
+  /* ── Quick Actions ── */
+  .quick-action {
+    display: flex; flex-direction: column; gap: 8px; padding: 14px;
+    border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface);
+    text-decoration: none; color: var(--color-text); transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    cursor: pointer; font-family: inherit; text-align: left; width: 100%;
+  }
+  .quick-action:hover { border-color: var(--color-text-light); box-shadow: var(--shadow-sm); }
+  .quick-action-label { font-size: 14px; font-weight: 600; }
+  .quick-action-desc { font-size: 12px; color: var(--color-text-secondary); }
+
+  /* ── Form & Settings Helpers ── */
+  .radio-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .radio-card {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; min-height: 44px;
+    border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-surface);
+    font-size: 14px; font-weight: 500; cursor: pointer; transition: all var(--transition-fast);
+  }
+  .radio-card:hover { border-color: var(--color-text-light); }
+  .radio-card input { accent-color: var(--color-primary); width: 16px; height: 16px; }
+  .radio-card.is-active { border-color: var(--color-primary); background: var(--color-text); color: #fff; }
+  .radio-card.is-active input { accent-color: #fff; }
+
+  .code-block {
+    background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+    padding: 10px 12px; font-family: var(--font-mono); font-size: 13px; color: var(--color-text-secondary); word-break: break-all; user-select: all;
+  }
+
+  .section-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .section-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+
+  .card-pad-lg { padding: 28px; }
+  .input-lg { font-size: 18px; }
+  .skeleton-block { height: 96px; }
+
+  /* ── Alert Backwards Compatibility ── */
+  .alert {
+    display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
+    border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-surface-2);
+    font-size: 14px; color: var(--color-text);
+  }
+  .alert-title { font-weight: 600; }
+  .alert-info { background: var(--color-accent-soft); border-color: var(--color-accent-border); color: var(--color-accent-hover); }
+  .alert-success { background: var(--color-success-soft); border-color: var(--color-success-border); color: var(--color-success); }
+  .alert-warning { background: var(--color-warning-soft); border-color: var(--color-warning-border); color: var(--color-warning); }
+  .alert-danger { background: var(--color-danger-soft); border-color: var(--color-danger-border); color: var(--color-danger); }
+
   /* ── Layout Helper Aliases ── */
   .divider { height: 1px; background: var(--color-border); margin: 16px 0; }
   .stack { display: flex; flex-direction: column; }
