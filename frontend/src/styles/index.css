@@ -389,7 +389,7 @@
   .input-lg { font-size: 18px; }
   .skeleton-block { height: 96px; }
 
-  /* ── Alert Backwards Compatibility ── */
+  /* ── Alert & Stat Card Backwards Compatibility ── */
   .alert {
     display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
     border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-surface-2);
@@ -400,6 +400,35 @@
   .alert-success { background: var(--color-success-soft); border-color: var(--color-success-border); color: var(--color-success); }
   .alert-warning { background: var(--color-warning-soft); border-color: var(--color-warning-border); color: var(--color-warning); }
   .alert-danger { background: var(--color-danger-soft); border-color: var(--color-danger-border); color: var(--color-danger); }
+
+  .stat-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-label {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+  }
+  .stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: var(--color-text);
+  }
+  .stat-sub {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
 
   /* ── Layout Helper Aliases ── */
   .divider { height: 1px; background: var(--color-border); margin: 16px 0; }

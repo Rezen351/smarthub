@@ -5,6 +5,7 @@ import Icon from '../components/shared/Icon'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
 
 type Pallet = {
   id: string
@@ -65,13 +66,13 @@ export default function PalletsPage() {
       key: 'code',
       label: 'Pallet Code',
       priority: true,
-      render: (row) => <span className="mono cell-strong">{row.code}</span>,
+      render: (row) => <span className="font-mono font-bold text-foreground">{row.code}</span>,
     },
     {
       key: 'farmer',
       label: 'Farmer',
       priority: true,
-      render: (row) => <span className="t-small cell-strong">{row.farmer}</span>,
+      render: (row) => <span className="text-sm font-semibold text-foreground">{row.farmer}</span>,
     },
     {
       key: 'commodity',
@@ -86,14 +87,14 @@ export default function PalletsPage() {
       key: 'weightKg',
       label: 'Approved Weight (kg)',
       align: 'right',
-      render: (row) => <span className="cell-strong">{row.weightKg.toFixed(3)}</span>,
+      render: (row) => <span className="font-mono font-bold text-foreground">{row.weightKg.toFixed(3)}</span>,
     },
     {
       key: 'depositDate',
       label: 'Deposit Date',
       render: (row) => (
-        <span className="mono t-small cell-secondary">
-          {row.depositDate} <span className="t-caption text-text-light">(Auto)</span>
+        <span className="font-mono text-xs text-foreground">
+          {row.depositDate} <span className="text-xs text-muted-foreground">(Auto)</span>
         </span>
       ),
     },
@@ -123,51 +124,48 @@ export default function PalletsPage() {
   const sortedCount = pallets.filter((item) => item.status === 'SORTED').length
 
   return (
-    <div className="stack stack-lg">
+    <div className="space-y-6">
       <PageHeader
         title="Pallet Register"
         subtitle="Pallet IDs are generated and printed automatically when the weighing operator approves intake weight."
         actions={<Badge tone="accent">{pallets.length} registered</Badge>}
       />
 
-      <div className="grid-stats">
-        <div className="stat-card">
-          <p className="stat-label">Total Pallets</p>
-          <p className="stat-value">{pallets.length}</p>
-          <p className="stat-sub">Generated from approved weights</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-1">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total Pallets</p>
+          <p className="text-2xl font-bold tracking-tight text-foreground">{pallets.length}</p>
+          <p className="text-xs text-muted-foreground">Generated from approved weights</p>
         </div>
-        <div className="stat-card">
-          <p className="stat-label">Awaiting Sorting</p>
-          <p className="stat-value">{weighedCount}</p>
-          <p className="stat-sub">Labeled & ready in receiving</p>
+        <div className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-1">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Awaiting Sorting</p>
+          <p className="text-2xl font-bold tracking-tight text-foreground">{weighedCount}</p>
+          <p className="text-xs text-muted-foreground">Labeled & ready in receiving</p>
         </div>
-        <div className="stat-card">
-          <p className="stat-label">Sorted</p>
-          <p className="stat-value">{sortedCount}</p>
-          <p className="stat-sub">Grading completed</p>
+        <div className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-1">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Sorted</p>
+          <p className="text-2xl font-bold tracking-tight text-foreground">{sortedCount}</p>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Grading completed</p>
         </div>
-        <div className="stat-card">
-          <p className="stat-label">Commodity</p>
-          <p className="stat-value" style={{ fontSize: 20 }}>
-            Kentang
-          </p>
-          <p className="stat-sub">Single active commodity</p>
+        <div className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-1">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Commodity</p>
+          <p className="text-lg font-bold tracking-tight text-foreground">Kentang</p>
+          <p className="text-xs text-muted-foreground">Single active commodity</p>
         </div>
       </div>
 
-      <div className="alert alert-info">
-        <Icon name="info" size={16} />
-        <span>
-          <strong>Automated Lifecycle:</strong> There is no manual "Create Pallet" step. Pallet IDs
-          are automatically issued and sent to the label printer upon official weight approval on
-          the Weighing page.
-        </span>
-      </div>
+      <Alert variant="default" className="bg-primary/5 border-primary/20 text-foreground">
+        <Icon name="info" size={18} className="text-primary shrink-0" />
+        <AlertTitle className="text-primary font-semibold">Automated Lifecycle</AlertTitle>
+        <AlertDescription className="text-xs leading-relaxed text-muted-foreground">
+          There is no manual "Create Pallet" step. Pallet IDs are automatically issued and sent to the label printer upon official weight approval on the Weighing page.
+        </AlertDescription>
+      </Alert>
 
-      <section className="stack-sm">
-        <div className="section-header">
-          <h2 className="section-title">Registered Pallets</h2>
-          <span className="t-caption text-text-secondary">
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold tracking-tight text-foreground">Registered Pallets</h2>
+          <span className="text-xs text-muted-foreground">
             Pallet is the base unit for lot-level traceability into Sorting and Packing
           </span>
         </div>
