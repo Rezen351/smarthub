@@ -16,7 +16,7 @@ The **Weight Transmitter** is an autonomous edge device that:
 4. Runs in **dual WiFi mode** simultaneously: Soft-AP (configuration hotspot) + STA uplink (user network), both always-on.
 5. Uses **W5500 Ethernet** for Modbus TCP only; portal access and WiFi STA remain independent.
 
-The design is intentionally **protocol-agnostic at the top level**: the `SharedState` bus decouples sensor acquisition from transport, allowing additional protocols (MQTT, Modbus RTU, OPC-UA, etc.) to be added as independent modules in future iterations without touching the sensor or portal code.
+The design is intentionally **protocol-agnostic at the top level**: the `SharedState` bus decouples sensor acquisition from transport, allowing additional protocols (Modbus RTU, OPC-UA, etc.) to be added as independent modules in future iterations without touching the sensor or portal code.
 
 ---
 
@@ -198,7 +198,7 @@ GPIO 22    | OLED_SCL      | SSD1306 SCL (I2C)
 |  (boot, FreeRTOS task creation, singleton wiring)                 |
 +------+----------+-------------+----------------+-----------------+
         |          |             |                |
-    config.h   Logger      Settings      (future: MQTT, RTU...)
+    config.h   Logger      Settings      (future: RTU...)
     (compile   (level      Store         (mutex IPC)
     constants) gated       (NVS/Prefs)       |
     DeepSleep   output)         |         +---+------------------------+
@@ -517,7 +517,7 @@ a load is placed or removed. The last `SCALE_FILTER_WINDOW` filtered samples
 are measured as a range. The `stable` flag is asserted only after that range
 remains within `SCALE_STABILITY_RANGE_G` for `SCALE_STABILITY_HOLD_MS`.
 
-Display, Modbus stable-weight output, MQTT telemetry, and session totals use
+Display, Modbus stable-weight output, and session totals use
 `stableWeightG`. Raw and intermediate values remain available for diagnosis.
 
 | alpha | Effect |
@@ -1069,7 +1069,7 @@ The architecture allows additional protocol modules to be added to core 1 withou
 
 ```
 Planned protocols (plug in on core 1):
-  +- MQTT publish  -> SharedState::getSnapshot() -> JSON to broker
+
   +- Modbus RTU    -> RS-485 transceiver on GPIO, ModbusRTU::begin(Serial2)
   +- HTTP push     -> HTTP POST to E-Tani Smart Hub API
   +- BLE (future)  -> GATT characteristic = stableWeightG (float)

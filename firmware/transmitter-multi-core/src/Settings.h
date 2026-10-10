@@ -42,6 +42,12 @@ struct AppSettings {
   String   w5500StaticGateway;
   String   w5500StaticSubnet;
   String   w5500StaticDns;
+
+  float    price1 = 0.0f;
+  float    price2 = 0.0f;
+  float    price3 = 0.0f;
+  float    price4 = 0.0f;
+  uint64_t totalPriceCenti = 0;
 };
 
 bool isValidIp(const String& s);
@@ -65,6 +71,10 @@ public:
   void    loadCalibrationPoints(AppSettings& s);
   void    clearCalibrationPoints();
   void    saveTransportSettings(const AppSettings& s);
+  void    savePricePresets(const AppSettings& s);
+  void    loadPricePresets(AppSettings& s);
+  void    saveTotalPrice(uint64_t totalPriceCenti);
+  uint64_t loadTotalPrice();
 
   void    validate(AppSettings& s);
 };

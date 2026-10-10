@@ -222,6 +222,13 @@ void SettingsStore::load(AppSettings& s) {
   s.w5500StaticSubnet = _prefs.isKey("w5500Sn") ? _prefs.getString("w5500Sn") : W5500_STATIC_SUBNET;
   s.w5500StaticDns = _prefs.isKey("w5500Dns") ? _prefs.getString("w5500Dns") : W5500_STATIC_DNS;
 
+  s.price1 = _prefs.isKey("price1") ? _prefs.getFloat("price1") : 0.0f;
+  s.price2 = _prefs.isKey("price2") ? _prefs.getFloat("price2") : 0.0f;
+  s.price3 = _prefs.isKey("price3") ? _prefs.getFloat("price3") : 0.0f;
+  s.price4 = _prefs.isKey("price4") ? _prefs.getFloat("price4") : 0.0f;
+  s.totalPriceCenti = _prefs.isKey("totalPriceCenti")
+                        ? _prefs.getULong64("totalPriceCenti") : 0;
+
   close();
 
   applyWifiDefaults(s);
@@ -233,6 +240,7 @@ void SettingsStore::load(AppSettings& s) {
 
   if (s.wifiMode == WIFI_MODE_PSK) { s.entIdentity = ""; s.entUsername = ""; s.entPassword = ""; }
   if (s.wifiMode == WIFI_MODE_ENT) { s.wpaPassword = ""; }
+
   unlockNvs();
 }
 
@@ -241,6 +249,8 @@ void SettingsStore::saveAll(const AppSettings& s) {
   saveCalibration(s);
   saveTotals(s.totalG, s.sampleCount);
   saveTransportSettings(s);
+  savePricePresets(s);
+  saveTotalPrice(s.totalPriceCenti);
 }
 
 void SettingsStore::saveWifi(const AppSettings& s) {
@@ -298,6 +308,46 @@ void SettingsStore::saveTransportSettings(const AppSettings& s) {
   _prefs.putString("w5500Dns", s.w5500StaticDns);
   close();
   unlockNvs();
+}
+
+void SettingsStore::savePricePresets(const AppSettings& s) {
+  lockNvs();
+  openWrite();
+  _prefs.putFloat("price1", s.price1);
+  _prefs.putFloat("price2", s.price2);
+  _prefs.putFloat("price3", s.price3);
+  _prefs.putFloat("price4", s.price4);
+  close();
+  unlockNvs();
+}
+
+void SettingsStore::loadPricePresets(AppSettings& s) {
+  lockNvs();
+  openRead();
+  s.price1 = _prefs.isKey("price1") ? _prefs.getFloat("price1") : 0.0f;
+  s.price2 = _prefs.isKey("price2") ? _prefs.getFloat("price2") : 0.0f;
+  s.price3 = _prefs.isKey("price3") ? _prefs.getFloat("price3") : 0.0f;
+  s.price4 = _prefs.isKey("price4") ? _prefs.getFloat("price4") : 0.0f;
+  close();
+  unlockNvs();
+}
+
+void SettingsStore::saveTotalPrice(uint64_t totalPriceCenti) {
+  lockNvs();
+  openWrite();
+  _prefs.putULong64("totalPriceCenti", totalPriceCenti);
+  close();
+  unlockNvs();
+}
+
+uint64_t SettingsStore::loadTotalPrice() {
+  lockNvs();
+  openRead();
+  uint64_t value = _prefs.isKey("totalPriceCenti")
+                     ? _prefs.getULong64("totalPriceCenti") : 0;
+  close();
+  unlockNvs();
+  return value;
 }
 
 void SettingsStore::saveCalibrationPoints(const AppSettings& s) {

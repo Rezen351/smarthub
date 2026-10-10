@@ -12,9 +12,6 @@ enum class EventType : uint16_t {
   SYSTEM_WATCHDOG,
   NETWORK_CONNECTED,
   NETWORK_DISCONNECTED,
-  MQTT_CONNECTED,
-  MQTT_DISCONNECTED,
-  MQTT_MESSAGE_RECEIVED,
   DEVICE_REGISTERED,
   DEVICE_CONFIG_UPDATED,
   SENSOR_READ_COMPLETE,
@@ -38,11 +35,7 @@ struct Event {
   uint32_t timestamp_ms;
   uint32_t sender_id;
   union {
-    struct {
-      const char* topic;
-      const uint8_t* payload;
-      size_t payload_len;
-    } mqtt_message;
+
 
     struct {
       uint8_t sensor_id;
