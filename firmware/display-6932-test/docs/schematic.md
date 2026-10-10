@@ -124,7 +124,7 @@ SECTION 1
   [DP]        [DP]        [DP]        [DP]        [DP]
 
   Firmware order: grid 1, grid 2, grid 3, grid 4, grid 5
-  DP indicators:  grid 1, grid 2, grid 3, grid 4, grid 5
+  Indicator mapping: TARE = grid 1 DP, ZERO = grid 5 DP
 
 
 SECTION 2
@@ -134,7 +134,7 @@ SECTION 2
   [DP]        [DP]        [DP]        [DP]        [DP]
 
   Firmware order: grid 6, grid 7, grid 8, grid 9, grid 10
-  DP indicators:  grid 6, grid 7, grid 8, grid 9, grid 10
+  Indicator mapping: STAB = grid 6 DP
 
 
 SECTION 3
@@ -144,7 +144,7 @@ SECTION 3
   [DP]        [DP]        [DP]        [DP]        [DP]        [DP]
 
   Firmware order: grid 11, grid 12, grid 13, grid 14, grid 15, grid 16
-  DP indicators:  grid 11, grid 12, grid 13, grid 14, grid 15, grid 16
+  DP indicators: none assigned
 ```
 
 The logical command layout is intentionally kept separate from the physical

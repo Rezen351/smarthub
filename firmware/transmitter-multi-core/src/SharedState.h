@@ -15,7 +15,8 @@ enum ScaleCmd : uint8_t {
   CMD_FLUSH         = 4,   // force persist of session totals
   CMD_WIPE_WIFI     = 99,  // forget WiFi config + reboot into AP/setup
   CMD_CAPTURE_CAL_POINT = 6, // capture one calibration reference point (argF = kg, argF2 = expectedRaw)
-  CMD_FINISH_CALIBRATION = 7 // compute regression from captured points and apply
+  CMD_FINISH_CALIBRATION = 7, // compute regression from captured points and apply
+  CMD_ZERO = 8    // capture zero point with empty platform (clears tare)
 };
 
 // Immutable-ish snapshot written by the scale task and read by the
@@ -31,6 +32,8 @@ struct ScaleSnapshot {
   float interceptCounts;// calibration intercept (raw counts at 0 kg)
   bool calibrated;     // countsPerKg has been set
   bool stable;          // recent samples remain within the stability range
+  bool tareActive;      // a container tare is applied (RAM only, cleared on reboot)
+  bool atZero;          // median weight is inside the center-of-zero lamp band
   uint16_t stableSampleCount;
 };
 

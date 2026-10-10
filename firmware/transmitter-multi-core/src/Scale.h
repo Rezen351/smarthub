@@ -33,6 +33,8 @@ public:
   bool           _filterInitialized = false;
   uint32_t       _stableSince = 0;
   uint16_t       _stableSampleCount = 0;
+  float          _zeroCounts = 0.0f;   // persisted zero point (HX711 offset)
+  float          _tareCounts = 0.0f;   // container tare (RAM only, not persisted)
 
   void applyCalibration(float slope, float intercept);
   void resetFilter();

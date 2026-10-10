@@ -77,6 +77,7 @@ void EthernetManager::begin(const AppSettings& s) {
     LOG_ERROR("eth", "state=no-hardware, W5500 not detected");
     _transportState = TransportState::WiFi;
     _active = false;
+    _noHardware = true;
     return;
   }
 

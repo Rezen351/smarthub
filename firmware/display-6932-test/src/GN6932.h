@@ -23,7 +23,8 @@ private:
   static constexpr uint8_t COMMAND_WRITE_AUTO_INCREMENT = 0x40;
   static constexpr uint8_t COMMAND_WRITE_FIXED_ADDRESS = 0x44;
   static constexpr uint8_t COMMAND_DISPLAY_CONTROL = 0x80;
-  static constexpr uint8_t COMMAND_ADDRESS = 0x00;
+  // GN/TA/AiP6932 grid registers are addressed from 0xC0 through 0xCF.
+  static constexpr uint8_t COMMAND_ADDRESS = 0xC0;
 
   void sendCommand(uint8_t command);
   void writeRegister(uint8_t grid, uint8_t segments);

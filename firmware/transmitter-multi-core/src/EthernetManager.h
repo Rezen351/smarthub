@@ -20,6 +20,7 @@ class EthernetManager {
 
   bool active() const { return _active; }
   IPAddress localIp() const { return _ip; }
+  bool noHardware() const { return _noHardware; }
   bool failed() const { return _transportState == TransportState::Ethernet && !_active && _linkAttempt >= MAX_LINK_ATTEMPTS; }
 
   void loadEthernetConfigFromJson(AppSettings& s);
@@ -38,6 +39,7 @@ class EthernetManager {
   bool _active = false;
   IPAddress _ip;
   uint32_t _retryAtMs = 0;
+  bool _noHardware = false;
 
   enum class DhcpState : uint8_t {
     Idle,

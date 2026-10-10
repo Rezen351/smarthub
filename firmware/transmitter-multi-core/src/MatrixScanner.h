@@ -6,7 +6,8 @@
 enum class ButtonEvent : uint8_t {
     None,
     Pressed,
-    Released
+    Released,
+    Held
 };
 
 struct MatrixEvent {
@@ -15,18 +16,19 @@ struct MatrixEvent {
 };
 
 class MatrixScanner {
- public:
+  public:
     MatrixScanner();
 
     void begin();
     MatrixEvent update();
 
- private:
+  private:
     static constexpr uint8_t ROW_COUNT = 4;
     static constexpr uint8_t COL_COUNT = 5;
     static constexpr uint8_t BUTTON_COUNT = ROW_COUNT * COL_COUNT;
     static constexpr uint32_t DEBOUNCE_MS = 5;
     static constexpr uint16_t ROW_SETTLE_US = 20;
+    static constexpr uint32_t LONG_PRESS_MS = KEYPAD_LONG_PRESS_MS;
 
     uint8_t rowPins[ROW_COUNT];
     uint8_t colPins[COL_COUNT];
@@ -34,6 +36,7 @@ class MatrixScanner {
     uint8_t lastRawState[BUTTON_COUNT];
     uint8_t stableState[BUTTON_COUNT];
     unsigned long lastChangeTime[BUTTON_COUNT];
+    bool holdReported[BUTTON_COUNT];
 
     uint8_t activeRow;
 

@@ -13,6 +13,8 @@ void SharedState::begin() {
   _snap.interceptCounts = 0.0f;
   _snap.calibrated = false;
   _snap.stable = false;
+  _snap.tareActive = false;
+  _snap.atZero = false;
   _snap.stableSampleCount = 0;
   _cmd = CMD_NONE;
   _cmdArg = 0.0f;

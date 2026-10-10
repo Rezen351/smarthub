@@ -32,6 +32,7 @@ class WifiManager {
   uint8_t      transportMode() const { return _transportMode; }
   void         setTransportMode(uint8_t mode);
   bool         ethernetActive() const { return _ethMgr.active(); }
+  bool         ethNoHardware() const { return _ethMgr.noHardware(); }
   IPAddress    ethernetIp() const { return _ethMgr.localIp(); }
   const char*  transportStateName() const;
 

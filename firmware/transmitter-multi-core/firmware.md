@@ -1,6 +1,6 @@
 # Weight Transmitter — Firmware Design Document
 
-> **E-Tani Smart Hub · Firmware v1.5**
+> **E-Tani Smart Hub · Firmware v1.7**
 > Target: ESP32-S3 (dual-core Xtensa LX7, 240 MHz, native USB)
 > Build system: PlatformIO · framework-arduinoespressif32 6.6.0 · RTOS: FreeRTOS 10.4
 
@@ -79,6 +79,7 @@ GPIO 38    STATUS_RGB_LED     Built-in addressable RGB LED (single data pin)
 GPIO 18    DISPLAY6932_CLK    GN/TA/AiP6932 CLK, shared
 GPIO 19    DISPLAY6932_DIN    GN/TA/AiP6932 DIN, shared
 GPIO 21    DISPLAY6932_STB    GN/TA/AiP6932 STB, shared by both chips
+GPIO 47    BUZZER             Passive piezo buzzer (LEDC PWM, ~2.7 kHz)
 ```
 
 Power the ESP32-S3 from a stable 5 V rail. Power the W5500 and 6932
@@ -107,6 +108,7 @@ change both `STATUS_RGB_LED_PIN` in `src/config.h` and this table together.
 | 38 | Assigned | Built-in addressable RGB LED data line |
 | 39–42 | Assigned with caution | JTAG-capable; 39/40 used by matrix |
 | 43, 44 | Reserved | UART0 console/programming |
+| 47 | Assigned | Passive piezo buzzer driven by LEDC PWM |
 | 48 | Reserved | Keep free for board LED/debug variants |
 
 #### ESP32 / ESP32-DOIT-V1 (esp32dev)
@@ -137,6 +139,7 @@ GPIO 22    | OLED_SCL      | SSD1306 SCL (I2C)
 | GPIO | Button matrix | rows 1, 2, 4, 5; columns 6, 7, 8, 39, 40 | 4x5 scan |
 | GPIO | GN/TA/AiP6932 | CLK 18, DIN 19, STB 21 | 3-wire serial, shared STB |
 | GPIO | Built-in RGB LED | 38 | Addressable one-wire data output |
+| LEDC | Piezo buzzer | 47 | PWM tone | Patterns only, no continuous tone |
 
 ##### ESP32 / ESP32-DOIT-V1 (esp32dev)
 
@@ -303,7 +306,11 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 | `FORCE_AP_PIN` | -1 | GPIO for force-AP button (-1 = disabled) |
 | `FORCE_AP_HOLD_MS` | 3000 | Hold duration to trigger force-AP (ms) |
 | `PREF_NAMESPACE` | `"scale"` | NVS namespace |
-| `FW_VERSION` | `0x0105` | Major.Minor encoded (1.5) |
+| `FW_VERSION` | `0x0107` | Major.Minor encoded (1.7) |
+| `KEYPAD_LONG_PRESS_MS` | 1500 | `M1`–`M3` hold duration that saves a preset |
+| `SCALE_ZERO_LAMP_BAND_G` | 20.0 | Median-weight band that lights the ZERO lamp |
+| `NET_INFO_PAGE1_MS` | 1200 | M4 page 1 (mode + link status) duration |
+| `NET_INFO_PAGE2_MS` | 2800 | M4 page 2 (IP address) duration |
 | `DEEP_SLEEP_ENABLED` | `0` | Compile-time deep-sleep opt-in for battery/solar deployments |
 
 ---
@@ -462,17 +469,20 @@ High-traffic GET endpoints use `sendJsonBounded()` with a 512-byte stack buffer 
 | `offsetCounts` | counts | Current tare offset |
 | `countsPerKg` | counts/kg | Calibration slope |
 | `calibrated` | bool | Slope is valid |
+| `tareActive` | bool | A container tare is applied (RAM only) |
+| `atZero` | bool | Median weight is inside the center-of-zero lamp band |
 
 #### Command slot (written by network core, consumed by sensor core)
 
 | Command enum | Value | Argument |
 |-------------|-------|---------|
 | `CMD_NONE` | 0 | — |
-| `CMD_TARE` | 1 | — |
+| `CMD_TARE` | 1 | — (container tare, RAM only, calibration preserved) |
 | `CMD_CALIBRATE` | 2 | Known weight in kg (float) |
 | `CMD_CALIBRATE_MLR` | 5 | `countsPerKg` (float) + intercept (float) |
 | `CMD_RESET_SESSION` | 3 | — |
 | `CMD_FLUSH` | 4 | — |
+| `CMD_ZERO` | 8 | — (capture zero point, persisted, clears tare) |
 | `CMD_WIPE_WIFI` | 99 | — (triggers reboot) |
 
 The command slot is a single-producer / single-consumer queue of depth 1. The sensor task calls `takeCommand()` at the start of every loop; only one pending command can exist at a time, which is sufficient because portal interactions are human-paced.
@@ -526,12 +536,30 @@ Display, Modbus stable-weight output, and session totals use
 | 0.35 | **Default** — balanced for packaging-line use |
 | 0.70 | Fast response, noisier output |
 
+#### Two-offset zero/tare model
+
+The scale keeps two independent offsets so an operator can zero the empty
+platform and tare a container without ever touching the calibration:
+
+| Offset | Storage | Set by | Effect |
+|--------|---------|--------|--------|
+| Zero point | NVS (`calOff`) | `CMD_ZERO` | HX711 library offset; survives reboot |
+| Container tare | RAM only | `CMD_TARE` | Subtracted from every raw reading; cleared on reboot and by `CMD_ZERO` |
+
+`weight = (raw - intercept - tare) / countsPerKg * 1000` grams, where `raw` is
+the offset-subtracted HX711 reading. `snap.rawSample` keeps the zero-subtracted
+meaning (tare excluded) so Modbus and the portal still see the physical reading.
+`CMD_ZERO` persists the zero point through a full load-modify-save of the
+calibration struct (`saveCalibration()` writes `calOff` plus the calibration
+values), which is why it can never wipe `countsPerKg`/`calIntercept`.
+
 #### Two-point / Multi-Point calibration procedure
 
-1. **Tare** — Empty platform. Send `CMD_TARE`. HX711 library sets internal offset to current raw average. Offset persisted to NVS (calibration is invalidated until it is applied again).
-2. **Single-point calibrate** — Place known reference mass (kg) and call `POST /api/calibrate?kg=<mass>`. The portal computes `countsPerKg = rawCounts / knownKg` from the live snapshot, persists it with `SettingsStore::saveCalibrationValues()` and schedules a restart (~1.2 s).
-3. **Multi-point calibrate** — Capture 1–10 raw readings at different known masses via the web UI. The browser computes the average ratio `countsPerKg = mean(rawCounts / weightKg)` and calls `POST /api/calibrate/multi?slope=<countsPerKg>`. The portal persists the value (`calIntercept` is forced to `0`) and schedules a restart.
-4. **Restart** — Applying a calibration always restarts the ESP32. The coefficients are written to NVS *before* the reset, so the transmitter boots with the new calibration loaded, exactly like after a power cycle. The web UI shows a "Transmitter restarting" overlay, polls `/api/status` until the device answers again and then reloads the page.
+1. **Zero** — Empty platform. Send `CMD_ZERO` (keypad `ZERO`). The HX711 library sets its internal offset to the current raw average and the value is persisted to NVS. Calibration is preserved.
+2. **Tare** — With an empty container on the platform, send `CMD_TARE` (keypad `TARE`). A RAM-only tare offset is captured; nothing is written to NVS and the calibration stays valid.
+3. **Single-point calibrate** — Place known reference mass (kg) and call `POST /api/calibrate?kg=<mass>`. The portal computes `countsPerKg = rawCounts / knownKg` from the live snapshot, persists it with `SettingsStore::saveCalibrationValues()` and schedules a restart (~1.2 s).
+4. **Multi-point calibrate** — Capture 1–10 raw readings at different known masses via the web UI. The browser computes the average ratio `countsPerKg = mean(rawCounts / weightKg)` and calls `POST /api/calibrate/multi?slope=<countsPerKg>`. The portal persists the value (`calIntercept` is forced to `0`) and schedules a restart.
+5. **Restart** — Applying a calibration always restarts the ESP32. The coefficients are written to NVS *before* the reset, so the transmitter boots with the new calibration loaded, exactly like after a power cycle. The web UI shows a "Transmitter restarting" overlay, polls `/api/status` until the device answers again and then reloads the page.
 
 ---
 
@@ -958,12 +986,21 @@ C    ADD  TARE ZERO M4
 7    4    1   0    M1
 ```
 
-`TARE` sends `CMD_TARE` to the scale task. `C` clears the current unit-price
-entry. `ADD` calculates `weightKg * unitPrice` using integer cents and adds it
-to the accumulated total. `STORE` persists the total price and requests the
-existing session flush command. `ZERO` clears both the current price entry and
-the accumulated price total, and persists that reset. `M1`–`M4` recall the
-four price presets stored by the portal/NVS.
+`TARE` sends `CMD_TARE` to the scale task: it captures a RAM-only container
+tare while keeping the calibration valid. `ZERO` sends `CMD_ZERO`: it captures
+a new scale zero point with an empty platform, persists it to NVS, and clears
+any active tare. The two commands are independent because the scale keeps two
+offsets — the persisted zero point and the volatile tare — so taring a
+container never destroys the calibration. `C` clears the current unit-price
+entry and resets the accumulated money total (persisted). `ADD` calculates
+`weightKg * unitPrice` using integer cents and adds it to the accumulated
+total. `STORE` persists the total price and requests the existing session
+flush command. `M1`–`M3` recall a stored price preset on key release; a
+press-and-hold of `KEYPAD_LONG_PRESS_MS` (1.5 s) saves the current unit price
+into that preset slot instead, confirmed by the buzzer (save never touches the
+display). `M4` shows the two-page network info page below. Preset recall is
+deliberately deferred to the release event so a long-press save always reads
+the entry as typed instead of a freshly recalled value.
 
 The display uses fixed-point values to avoid floating-point currency drift:
 unit prices are stored in cents and the accumulated total is stored in
@@ -972,12 +1009,79 @@ unsigned 64-bit cents. The section format is:
 | Section | Grids | Value | Decimal-point grid |
 |---------|-------|-------|--------------------|
 | 1 | 0–4 | Weight in kg, two decimals | Grid 2 |
-| 2 | 5–9 | Unit price, two decimals | Grid 7 |
-| 3 | 10–15 | Accumulated price, two decimals | Grid 13 |
+| 2 | 5–9 | Unit price | Dynamic (see money rule) |
+| 3 | 10–15 | Accumulated price | Dynamic (see money rule) |
 
-Leading positions are blank. For example, centi-value `123` is rendered as
-`001.23` in a five-grid section. Decimal-point positions are explicit rather
-than enabling DP on every grid, which keeps numeric output readable.
+Leading positions are blank. For example, weight `12.34` kg renders as ` 12.34`
+in section 1 and centi-value `1234` renders as `12.50` in a five-grid section.
+Decimal-point positions are explicit rather than enabling DP on every grid,
+which keeps numeric output readable. The weight is clamped at `999.99` kg.
+
+#### Money rule (sections 2 and 3)
+
+A value in cents renders with the most decimals that fit the section width,
+after rounding at each tier:
+
+1. A zero fraction renders as a plain integer when it fits
+   (`2500` cents -> `2500`, `30750` cents -> `30750`).
+2. Otherwise two decimals are tried (`1250` cents -> `12.50`),
+3. then one decimal (`123456` cents -> `1234.6` in five grids,
+   `12345.7` in six grids),
+4. and finally zero decimals clamped to the section width.
+
+Each tier rounds first and re-checks the width, so a rounding carry steps down
+instead of overflowing the section: `999996` cents is `9999.96`, which does not
+fit five grids, rounds to `10000.0` at one decimal, which still does not fit,
+and finally renders as `10000`.
+
+#### Unit-price entry cursor
+
+Section 2 shows the entry exactly as typed and right-aligned, so digits grow
+from the right edge of the section. The decimal point only appears when the
+operator presses `.`; round prices therefore display as plain integers
+(`2500`, not `2500.00`). A recalled preset renders the same way. When the
+entry needs more than five digit positions the section falls back to the
+money rule on the parsed centi-value.
+
+#### Status indicators
+
+Three decimal-point lamps are overlaid on every live render. They occupy
+grids that never carry a value decimal point, so a lamp never disturbs the
+displayed number:
+
+| Indicator | Grid | Section | Meaning |
+|-----------|------|---------|---------|
+| TARE | 0 (char 1) | 1 | A container tare is active |
+| ZERO | 4 (char 5) | 1 | Median weight is within `SCALE_ZERO_LAMP_BAND_G` (20 g) of zero |
+| STAB | 5 (char 6) | 2 | Weight is stable |
+
+TARE and ZERO are mutually exclusive: ZERO wins when the platform reads
+inside the zero band. The lamps are driven from the `tareActive`, `atZero`,
+and `stable` fields of `ScaleSnapshot`, which the scale task publishes and the
+network task only reads.
+
+#### Price presets (M1–M3)
+
+A short press recalls a preset on release; a 1.5 s hold saves the current unit
+price. Saving requires a non-empty entry — an empty entry is rejected with the
+error beep and no NVS write. Successful saves persist through
+`savePricePresets()` (full load-modify-save) and are confirmed with the
+buzzer `Confirm` pattern. The four NVS preset slots remain shared with the
+portal/NVS store; the keypad writes slots 1–3 only.
+
+#### M4 network info page
+
+Pressing `M4` replaces the live display for one two-step page:
+
+| Step | Duration | Section 1 | Section 2 | Section 3 |
+|------|----------|-----------|-----------|-----------|
+| 1 | `NET_INFO_PAGE1_MS` (1.2 s) | `ETHER` or `WWIFI` | `UP` or `DOWN` | blank |
+| 2 | `NET_INFO_PAGE2_MS` (2.8 s) | first IP octet | second IP octet | last two octets |
+
+The IP is the Ethernet address when the active transport is Ethernet,
+otherwise the STA address when connected, otherwise the Soft-AP address
+(`192.168.4.1`). After the second step the live weight/price/total display
+resumes.
 
 ### 8.2 Serial Monitor test commands
 
@@ -986,23 +1090,50 @@ per line. `CRLF` or `LF` line endings are accepted.
 
 | Command | Example | Function |
 |---------|---------|----------|
-| `test display` | `test display` | Runs a single quick loop: `8` on section 1, then 2, then 3 (~800 ms each), then automatically returns to live display |
-| `test keypad` | `test keypad` | Toggles keypad test mode; every press/release is printed with its button id and label, normal keypad actions are suspended while active |
-| `exit` | `exit` | Leaves any active test mode immediately (display test and/or keypad test) and resumes normal operation |
+| `test display` | `test display` | Enters exclusive display-test mode and runs `8` on section 1, then 2, then 3 (~800 ms each), then remains in test mode; manual `section`, `grid`, `char`, and `clear` commands are accepted only in this mode |
+| `test keypad` | `test keypad` | Enters exclusive keypad-test mode; every press/release is printed with its button id and label, normal keypad actions and press beeps are suspended |
+| `test buzzer` | `test buzzer` | Enters exclusive buzzer-test mode and plays the buzzer self-test: startup pattern, then press click, then error pattern, each separated by a 200 ms gap |
+| `section` | `section 2` | In display-test mode, displays `88888` or `888888` on the selected section (1–3) |
+| `grid` | `grid 3 0xA5` | In display-test mode, writes a raw 8-bit segment mask to one grid (grid 1–16, mask decimal or `0x` hex) |
+| `char` | `char 1 A` | In display-test mode, writes one calibrated character to one grid; `char 1 DP` lights only the decimal point |
+| `clear` | `clear` | In display-test mode, blanks all 16 grids |
+| `auto` | `auto` | Exits any test mode, performs a complete live display refresh, and resumes normal operation |
+| `exit` | `exit` | Exits any active test mode, cancels an active buzzer pattern, performs a complete live display refresh, and resumes normal operation |
+
+Grid and character commands require `test display` first. Display, keypad, and
+buzzer tests are mutually exclusive: display rendering, keypad scanning, and
+buzzer patterns from normal operation are disabled according to the active test.
+Send `auto` (or `exit`) to return to the live display. The firmware performs
+one complete weight/price/total refresh after leaving a test, preventing stale
+test frames from being overwritten piecemeal. Grid numbering is 1–16
+following the schematic, i.e. section 1 is grids 1–5, section 2 is grids 6–10,
+and section 3 is grids 11–16.
 
 `test display` lights all grids of section 1 (`88888`), then section 2
 (`88888`), then section 3 (`888888`), holding each section for roughly 800 ms
 with a brief clear frame in between. The sequence runs in the background
 (non-blocking, `millis()`-driven) while Modbus polling, the web portal, and the
-periodic state log keep running. After the last section the firmware clears the
-test overlay automatically and the live weight/price display resumes on its
-next 500 ms refresh tick, so no manual resume command is needed.
+periodic state log keep running. After the last section, the firmware remains
+in display-test mode so the operator can inspect individual grids and
+characters without a time limit. Use `section <1-3>`, `grid`, `char`, or
+`clear` for further testing, then send `auto` or `exit` to resume the live
+weight/price display.
 
 While keypad test mode is active, every press and release is reported as
 `KEYPAD TEST: pressed id=<id> [<label>]` or `KEYPAD TEST: released id=<id>
-[<label>]`, and the normal keypad actions (price entry, TARE, ADD, preset
-recall, STORE, ZERO) are suspended so testing cannot change live pricing data.
-The mode can be left by sending `test keypad` again (toggle) or `exit`.
+[<label>]`, and the normal keypad actions (price entry, TARE, ZERO, ADD,
+preset recall, preset save, STORE, M4 network page) are suspended so testing
+cannot change live pricing data. Press-and-hold is reported as
+`KEYPAD TEST: held id=<id> [<label>]` after `KEYPAD_LONG_PRESS_MS`.
+The mode can be left by sending `auto` or `exit`.
+
+`test buzzer` prints `OK: buzzer self-test started` and then plays the
+startup pattern, the press click, and the error pattern in sequence. It
+does not write to the live 6932 display or scan the keypad while active;
+Modbus polling, the web portal, and the periodic state log keep running. On
+builds without the buzzer (for example
+`esp32dev`), `test buzzer` reports that the buzzer is not available in this
+build.
 
 Keypad test output uses the verified button id mapping:
 
@@ -1032,6 +1163,31 @@ keypad is not available in this build.
 This is the default configuration. `KEYPAD_ENABLED` becomes `1` automatically
 for the ESP32-S3 build. The ESP32dev build retains the OLED path and does not
 compile the S3-only matrix/display integration.
+
+### 8.3 Buzzer
+
+The buzzer is a **passive** piezo transducer on **GPIO 47**, driven by LEDC
+channel 0 as a 2.7 kHz PWM tone (8-bit resolution, 50% duty). It is compiled
+in only for ESP32-S3 builds (`BUZZER_ENABLED`); the `esp32dev` build compiles
+the whole buzzer out.
+
+Wiring: GPIO 47 -> 100 Ω resistor -> piezo buzzer -> GND. No transistor is
+needed because a passive piezo draws only a few milliamps at 3.3 V logic,
+which is safe for an ESP32 GPIO. If an active buzzer module is used instead,
+drop the resistor and do not feed a tone, only DC on/off; the documented
+patterns assume a passive transducer.
+
+| Pattern | Sound | Fired when |
+|---------|-------|------------|
+| Startup | 2 beeps, 80 ms on / 80 ms off | FSM enters `NORMAL` at the end of `setup()` |
+| Press | 1 click, 25 ms | Any keypad button press during normal operation |
+| Error | 3 beeps, 100 ms on / 100 ms off | Boot failure rollback, OTA error, softAP failure, W5500 no-hardware, SPIFFS mount failure, `ADD` rejected (unit price zero / negative stable weight), preset save rejected (empty entry) |
+| Confirm | 2 short beeps + 1 long beep, 80 ms / 80 ms / 250 ms | Preset saved successfully with `M1`–`M3` hold |
+| SelfTest | Startup + press + error with 200 ms gaps | `test buzzer` serial command |
+
+The pattern engine is non-blocking: `play()` only requests a pattern
+(latest request wins) and `Buzzer::update()` steps it forward once per
+`networkTask` iteration, so no `delay()` is introduced in any loop.
 
 ## 9. NVS Layout
 
@@ -1127,13 +1283,11 @@ cd "firmware/transmitter-multi-core"
 pio run -e esp32s3
 ```
 
-The default `esp32s3` environment uses the local keypad and GN/TA/AiP6932
-7-segment display. The equivalent explicitly named environment is also
-available:
-
-```bash
-pio run -e esp32s3-6932
-```
+The `esp32s3` environment builds the local keypad and GN/TA/AiP6932
+7-segment display path: `DISPLAY_USE_6932` defaults to `1` for ESP32-S3 in
+`src/config.h`, which also enables the keypad and the buzzer. The `esp32dev`
+environment keeps the legacy OLED path and compiles the S3-only matrix,
+display, and buzzer integration out.
 
 ### Build (ESP32-C3-MINI)
 
@@ -1201,6 +1355,7 @@ firmware/transmitter-multi-core/
     +-- Gn6932Display.h/.cpp   <- fixed-point three-section renderer
     +-- MatrixScanner.h/.cpp   <- debounced 4x5 matrix scanner
     +-- ButtonManager.h/.cpp   <- keypad actions and price state
+    +-- Buzzer.h/.cpp          <- non-blocking LEDC piezo pattern engine (ESP32-S3 only)
 ```
 
 ---

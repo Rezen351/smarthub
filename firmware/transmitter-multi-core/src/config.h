@@ -24,6 +24,7 @@
 #define SCALE_CHANGE_THRESHOLD_G 200.0f
 #define SCALE_STABILITY_RANGE_G 10.0f
 #define SCALE_STABILITY_HOLD_MS 1000
+#define SCALE_ZERO_LAMP_BAND_G 20.0f  // |weight| within this band lights the ZERO lamp
 
 // ------------------------- Soft AP (captive portal) ------------------
 #define AP_SSID_PREFIX      "ENYX-SMARTHUB-"
@@ -105,6 +106,7 @@
 #define DISPLAY6932_CLK_PIN 18
 #define DISPLAY6932_DIN_PIN 19
 #define DISPLAY6932_STB_PIN 21
+#define BUZZER_PIN         47
 #else
 #define W5500_SCK_PIN       14
 #define W5500_MISO_PIN      13
@@ -156,7 +158,7 @@
 #define PREF_NAMESPACE      "scale"
 
 // ------------------------- Firmware ----------------------------------
-#define FW_VERSION          0x0105   // major<<8 | minor  (1.5)
+#define FW_VERSION          0x0107   // major<<8 | minor  (1.7)
 
 // ------------------------- State Machine ------------------------------
 #define STATE_MACHINE_TASK_PRIORITY  2
@@ -206,6 +208,43 @@
 #else
 #define KEYPAD_ENABLED 0
 #endif
+
+// Press-and-hold duration (ms) on M1-M3 that saves a preset instead of
+// recalling it. A short press still recalls the preset on key release.
+#define KEYPAD_LONG_PRESS_MS 1500
+
+// M4 network info page timings: page 1 (mode + link status) then page 2
+// (IP address split over the three sections) before the live display resumes.
+#define NET_INFO_PAGE1_MS 1200
+#define NET_INFO_PAGE2_MS 2800
+
+// ------------------------- Buzzer --------------------------------------
+// Passive piezo buzzer driven by LEDC PWM. GPIO 47 exists only on the
+// ESP32-S3 package, so the buzzer is disabled on every other board.
+#if defined(ESP32S3)
+#define BUZZER_ENABLED 1
+#else
+#define BUZZER_ENABLED 0
+#endif
+
+// LEDC PWM configuration for the buzzer tone.
+#define BUZZER_LEDC_CHANNEL      0
+#define BUZZER_FREQ_HZ           2700
+#define BUZZER_RESOLUTION_BITS   8
+#define BUZZER_DUTY_ON           128      // 50% of 8-bit
+
+// Beep pattern timings (ms). Each step is an on-phase followed by an
+// off-phase; a zero off-phase ends the pattern immediately.
+#define BUZZER_STARTUP_BEEP_MS   80
+#define BUZZER_STARTUP_GAP_MS    80
+#define BUZZER_PRESS_MS          25
+#define BUZZER_ERROR_BEEP_MS     100
+#define BUZZER_ERROR_GAP_MS      100
+#define BUZZER_ERROR_REPEAT      3
+#define BUZZER_SELFTEST_GAP_MS   200
+#define BUZZER_CONFIRM_BEEP_MS   80      // preset saved: beep, beep, beeeep
+#define BUZZER_CONFIRM_GAP_MS    80
+#define BUZZER_CONFIRM_LONG_MS   250
 
 // ------------------------- Arduino OTA -------------------------------
 // Hostname used for mDNS / OTA discovery.

@@ -17,6 +17,8 @@ void ScaleSensor::begin(SharedState* shared, SettingsStore* settings) {
   if (persisted.calOffset != 0.0f || persisted.calibrated) {
     _hx.set_offset((int32_t)persisted.calOffset);
   }
+  _zeroCounts = (float)_hx.get_offset();   // zero point = current HX711 offset
+  _tareCounts = 0.0f;                      // tare is RAM-only, cleared on boot
 
   ScaleSnapshot snap = _s->getSnapshot();
   snap.offsetCounts = persisted.calOffset;
@@ -123,24 +125,32 @@ void ScaleSensor::loop() {
     switch (cmd) {
       case CMD_TARE: {
         if (hxPoll(_hx, 500)) {
-          _hx.tare();                       // sets offset to current raw
+          _tareCounts = (float)_hx.get_value();      // counts above the zero point
           ScaleSnapshot snap = _s->getSnapshot();
-          snap.offsetCounts = (float)_hx.get_offset();
-          snap.countsPerKg = 0.0f;          // calibration invalid after re-zero
-          snap.calibrated = false;
-          snap.medianWeightG = 0.0f;
-          snap.stableWeightG = 0.0f;
-          snap.noiseG = 0.0f;
-          snap.stable = false;
-          snap.stableSampleCount = 0;
+          snap.tareActive = true;
+          snap.medianWeightG = 0.0f; snap.stableWeightG = 0.0f; snap.noiseG = 0.0f;
+          snap.stable = false; snap.stableSampleCount = 0;
           resetFilter();
           _s->setSnapshot(snap);
-
+          LOG_INFO("scale", "tare applied tareCounts=%.1f counts (calibration kept)", _tareCounts);
+        }
+        break;
+      }
+      case CMD_ZERO: {
+        if (hxPoll(_hx, 500)) {
+          _hx.tare();                               // new zero point = current raw average
+          _zeroCounts = (float)_hx.get_offset();
+          _tareCounts = 0.0f;                       // a fresh zero replaces any tare
+          ScaleSnapshot snap = _s->getSnapshot();
+          snap.tareActive = false;
+          snap.medianWeightG = 0.0f; snap.stableWeightG = 0.0f; snap.noiseG = 0.0f;
+          snap.stable = false; snap.stableSampleCount = 0;
+          resetFilter();
+          _s->setSnapshot(snap);
           AppSettings a; _st->load(a);
-          a.calOffset = snap.offsetCounts;
-          a.countsPerKg = 0.0f;
-          a.calibrated = false;
+          a.calOffset = _zeroCounts;                // persist zero point, keep calibration values
           _st->saveCalibration(a);
+          LOG_INFO("scale", "zero point captured offsetCounts=%.1f (tare cleared)", _zeroCounts);
         }
         break;
       }
@@ -223,16 +233,20 @@ void ScaleSensor::loop() {
   if (!hxPoll(_hx, 40)) return;              // HX711 not responding yet
 
   float raw = (float)_hx.get_value();        // offset-subtracted counts
+  float netRaw = raw - _tareCounts;          // container tare excluded from weight
 
   ScaleSnapshot snap = _s->getSnapshot();
   snap.rawSample = raw;
 
   if (snap.calibrated && snap.countsPerKg > 0.0f) {
-    float instG = (raw - snap.interceptCounts) / snap.countsPerKg * 1000.0f;
+    float instG = (netRaw - snap.interceptCounts) / snap.countsPerKg * 1000.0f;
     snap.weightG = instG;
     snap.medianWeightG = medianWeight(instG);
     snap.stableWeightG = filterWeight(snap.medianWeightG);
     snap.noiseG = filterNoise();
+
+    snap.atZero = fabsf(snap.medianWeightG) <= SCALE_ZERO_LAMP_BAND_G;
+    snap.tareActive = (_tareCounts != 0.0f);
 
     bool withinRange = snap.noiseG <= SCALE_STABILITY_RANGE_G &&
                        fabsf(snap.medianWeightG - snap.stableWeightG) <= SCALE_STABILITY_RANGE_G;

@@ -26,6 +26,7 @@ void MatrixScanner::begin() {
         lastRawState[i] = HIGH;
         stableState[i] = HIGH;
         lastChangeTime[i] = 0;
+        holdReported[i] = false;
     }
 }
 
@@ -74,6 +75,7 @@ MatrixEvent MatrixScanner::update() {
                 if (stableState[idx] != raw) {
                     uint8_t prevStable = stableState[idx];
                     stableState[idx] = raw;
+                    holdReported[idx] = false;   // arm the hold latch on every transition
 
                     if (ev.type == ButtonEvent::None) {
                         if (prevStable == HIGH && stableState[idx] == LOW) {
@@ -85,6 +87,15 @@ MatrixEvent MatrixScanner::update() {
                         }
                     }
                 }
+            }
+
+            // Press-and-hold: one Held event per hold, after the debounced
+            // transition branch so the one-event-per-call rule still holds.
+            if (ev.type == ButtonEvent::None && stableState[idx] == LOW &&
+                !holdReported[idx] && (millis() - lastChangeTime[idx]) >= LONG_PRESS_MS) {
+                holdReported[idx] = true;
+                ev.type = ButtonEvent::Held;
+                ev.buttonId = idx;
             }
         }
     }
