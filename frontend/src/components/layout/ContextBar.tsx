@@ -13,7 +13,7 @@ export default function ContextBar() {
   const { farmer, pallet, defaultGrade, active, remainingMs, offline, reset } = useSessionContext()
   const [confirmOpen, setConfirmOpen] = useState(false)
 
-  if (!active || !farmer || !pallet) return null
+  if (!active || !farmer) return null
 
   const progress = Math.max(0, Math.min(100, (remainingMs / SESSION_TTL_MS) * 100))
   const hours = Math.floor(remainingMs / 3600000)
@@ -28,16 +28,20 @@ export default function ContextBar() {
             <span className="context-chip-label">Farmer</span>
             <span className="context-chip-value">{farmer.name}</span>
           </span>
-          <span className="context-chip">
-            <Icon name="pallet" size={14} />
-            <span className="context-chip-label">Pallet</span>
-            <span className="context-chip-value mono">{pallet.code}</span>
-          </span>
-          <span className="context-chip hide-mobile">
-            <Icon name="grade" size={14} />
-            <span className="context-chip-label">Default grade</span>
-            <span className="context-chip-value">{defaultGrade ?? '—'}</span>
-          </span>
+          {pallet?.code && (
+            <span className="context-chip">
+              <Icon name="pallet" size={14} />
+              <span className="context-chip-label">Pallet</span>
+              <span className="context-chip-value mono">{pallet.code}</span>
+            </span>
+          )}
+          {defaultGrade && (
+            <span className="context-chip hide-mobile">
+              <Icon name="grade" size={14} />
+              <span className="context-chip-label">Default grade</span>
+              <span className="context-chip-value">{defaultGrade}</span>
+            </span>
+          )}
           {offline ? (
             <Badge tone="warning" icon="wifi-off">
               Offline — not synced
@@ -68,8 +72,13 @@ export default function ContextBar() {
         title="Reset session context?"
         description={
           <>
-            Farmer <strong>{farmer.name}</strong> and pallet <strong>{pallet.code}</strong> will be cleared.
-            Any unsaved weighing will be lost.
+            Farmer <strong>{farmer.name}</strong>
+            {pallet?.code ? (
+              <>
+                {' '}and pallet <strong>{pallet.code}</strong>
+              </>
+            ) : null}{' '}
+            will be cleared. Any unsaved weighing will be lost.
           </>
         }
         confirmLabel="Yes, Reset"

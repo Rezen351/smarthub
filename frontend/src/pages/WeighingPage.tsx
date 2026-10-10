@@ -1,16 +1,19 @@
 /**
  * Weighing — Area Penerimaan (Receiving).
  *
- * Implements the receiving workflow from docs/laporan.pdf §9.4:
- *   Scan farmer ID → create pallet → weigh (Auto / Manual) → approve → print pallet label.
- * Weighing is only performed in the Receiving and Packing areas.
+ * Implements the revised receiving intake workflow:
+ *   1. Scan / select Farmer ID (session context).
+ *   2. Pure harvest intake weighing — deposit date is automatic by the system.
+ *      No grade, no pallet ID prior to weighing, and no note.
+ *   3. Approve official weight → automatically generates Pallet ID.
+ *   4. Step: Print & affix Pallet Label (PLT-...).
  */
 import { useState, useEffect } from 'react'
 import Card from '../components/shared/Card'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import Icon from '../components/shared/Icon'
-import { Field, Input, Select, Textarea } from '../components/shared/Form'
+import { Field, Select } from '../components/shared/Form'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
 import ConfirmDialog from '../components/feedback/ConfirmDialog'
@@ -23,14 +26,13 @@ type WeighingStatus = 'PENDING' | 'APPROVED'
 
 type WeighingRecord = {
   id: string
-  palletCode: string
+  farmerId: string
   farmerName: string
-  grade: string
   weightKg: number
-  harvestDate: string
-  note: string
+  depositDate: string
   time: string
   status: WeighingStatus
+  palletCode?: string
 }
 
 const FARMERS = [
@@ -39,7 +41,6 @@ const FARMERS = [
   { id: 'farmer-3', name: 'Siti Rahayu', village: 'Pangalengan, Bandung' },
 ]
 
-const GRADES = ['A', 'B', 'C']
 const SCALE_CAPACITY_KG = 150
 
 const nextPalletCode = (index: number) => {
@@ -56,47 +57,45 @@ const statusTone: Record<WeighingStatus, 'success' | 'warning'> = {
 
 export default function WeighingPage() {
   const toast = useToast()
-  const { farmer, pallet, active, startScan } = useSessionContext()
+  const { farmer, active, startScan } = useSessionContext()
 
   /* ── Scan & context ── */
   const [scanFarmerId, setScanFarmerId] = useState('')
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState('')
 
-  /* ── Weighing form ── */
-  const [grade, setGrade] = useState('A')
+  /* ── Weighing form (purely weight) ── */
   const [weightKg, setWeightKg] = useState('')
-  const [harvestDate, setHarvestDate] = useState('')
-  const [note, setNote] = useState('')
   const [formError, setFormError] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [confirmApprove, setConfirmApprove] = useState<WeighingRecord | null>(null)
 
+  /* ── Step: Print Pallet Label Modal ── */
+  const [printModalRecord, setPrintModalRecord] = useState<WeighingRecord | null>(null)
+  const [isPrinting, setIsPrinting] = useState(false)
+
   const [records, setRecords] = useState<WeighingRecord[]>([
     {
       id: '1',
-      palletCode: 'PLT-20260914-0001',
+      farmerId: 'farmer-1',
       farmerName: 'Ahmad Santoso',
-      grade: 'A',
       weightKg: 45.5,
-      harvestDate: '2026-09-12',
-      note: '',
+      depositDate: today(),
       time: '10:15',
       status: 'APPROVED',
+      palletCode: 'PLT-20261010-0001',
     },
     {
       id: '2',
-      palletCode: 'PLT-20260913-0002',
+      farmerId: 'farmer-2',
       farmerName: 'Budi Prasetyo',
-      grade: 'B',
       weightKg: 38.2,
-      harvestDate: '2026-09-12',
-      note: '',
+      depositDate: today(),
       time: '09:45',
       status: 'PENDING',
     },
   ])
-  const [palletCounter, setPalletCounter] = useState(3)
+  const [palletCounter, setPalletCounter] = useState(2)
 
   /* ── Transmitter configuration (firmware transport) ── */
   const [transportMode, setTransportMode] = useState<TransportMode>('wifi')
@@ -149,32 +148,29 @@ export default function WeighingPage() {
     }
   }
 
-  /* ── Scan farmer ID: opens the session context ── */
+  /* ── Scan farmer ID: binds farmer context ── */
   const handleScan = async () => {
     setScanError('')
     const selected = FARMERS.find((item) => item.id === scanFarmerId)
     if (!selected) {
-      setScanError('Barcode not recognized — try manual input.')
+      setScanError('Farmer barcode not recognized — select a farmer from the list.')
       return
     }
 
     setScanning(true)
-    const code = nextPalletCode(palletCounter)
-    setPalletCounter((value) => value + 1)
-
-    await new Promise((resolve) => window.setTimeout(resolve, 450))
-    startScan({ id: selected.id, name: selected.name }, code, harvestDate || today(), grade)
+    await new Promise((resolve) => window.setTimeout(resolve, 350))
+    startScan({ id: selected.id, name: selected.name })
     setScanning(false)
-    toast.success(`Context set: ${selected.name} · ${code}`)
+    toast.success(`Context set: ${selected.name}`)
   }
 
-  /* ── Save / approve / correct ── */
+  /* ── Record pure harvest weighing ── */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
 
-    if (!active || !pallet || !farmer) {
-      setFormError('Scan a farmer ID first to set the session context.')
+    if (!active || !farmer) {
+      setFormError('Select or scan a farmer first to set the session context.')
       return
     }
     if (!(Number(weightKg) > 0)) {
@@ -182,18 +178,16 @@ export default function WeighingPage() {
       return
     }
     if (Number(weightKg) > SCALE_CAPACITY_KG) {
-      setFormError(`Weight exceeds the scale capacity of ${SCALE_CAPACITY_KG} kg.`)
+      setFormError(`Weight exceeds scale capacity of ${SCALE_CAPACITY_KG} kg.`)
       return
     }
 
     const payload: WeighingRecord = {
       id: editingId ?? String(Date.now()),
-      palletCode: pallet.code,
+      farmerId: farmer.id,
       farmerName: farmer.name,
-      grade,
       weightKg: Number(Number(weightKg).toFixed(3)),
-      harvestDate: harvestDate || pallet.harvestDate || today(),
-      note,
+      depositDate: today(), // Automatic by system
       time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
       status: 'PENDING',
     }
@@ -204,31 +198,40 @@ export default function WeighingPage() {
       toast.info('Weighing updated — awaiting approval.')
     } else {
       setRecords((current) => [payload, ...current])
-      toast.success('Weighing recorded — pending approval.')
+      toast.success('Harvest weighing recorded — pending approval.')
     }
 
     setWeightKg('')
-    setNote('')
   }
 
+  /* ── Approval: generates Pallet ID and triggers Print Pallet Label step ── */
   const handleApprove = () => {
     if (!confirmApprove) return
+    const assignedCode = confirmApprove.palletCode || nextPalletCode(palletCounter)
+    if (!confirmApprove.palletCode) {
+      setPalletCounter((value) => value + 1)
+    }
+
+    const updatedRecord: WeighingRecord = {
+      ...confirmApprove,
+      status: 'APPROVED',
+      palletCode: assignedCode,
+    }
+
     setRecords((current) =>
-      current.map((item) =>
-        item.id === confirmApprove.id ? { ...item, status: 'APPROVED' as WeighingStatus } : item,
-      ),
+      current.map((item) => (item.id === confirmApprove.id ? updatedRecord : item)),
     )
-    toast.success(`Weight approved for pallet ${confirmApprove.palletCode}`)
+    toast.success(`Weight approved! Pallet ${assignedCode} created.`)
     setConfirmApprove(null)
+
+    // Trigger step print pallet label immediately
+    setPrintModalRecord(updatedRecord)
   }
 
-  /* Koreksi: muat kembali data ke form untuk ditimbang ulang */
+  /* Koreksi: reload weight back to form for re-weighing */
   const handleKoreksi = (record: WeighingRecord) => {
     setEditingId(record.id)
-    setGrade(record.grade)
     setWeightKg(String(record.weightKg))
-    setHarvestDate(record.harvestDate)
-    setNote(record.note)
     setRecords((current) => current.filter((item) => item.id !== record.id))
     toast.warning('Record loaded back for re-weighing.')
   }
@@ -238,8 +241,17 @@ export default function WeighingPage() {
       toast.error('Only approved records can print a pallet label.')
       return
     }
-    toast.warning('Printing pallet label…')
-    window.setTimeout(() => toast.success(`Label ${record.palletCode} sent to printer.`), 900)
+    setPrintModalRecord(record)
+  }
+
+  const triggerPhysicalPrint = () => {
+    if (!printModalRecord) return
+    setIsPrinting(true)
+    toast.warning('Sending pallet label to thermal printer…')
+    window.setTimeout(() => {
+      setIsPrinting(false)
+      toast.success(`Label ${printModalRecord.palletCode} successfully sent to printer.`)
+    }, 900)
   }
 
   const columns: Column<WeighingRecord>[] = [
@@ -249,33 +261,26 @@ export default function WeighingPage() {
       render: (row) => <span className="mono t-small">{row.time}</span>,
     },
     {
-      key: 'palletCode',
-      label: 'Pallet',
-      priority: true,
-      render: (row) => <span className="mono cell-strong">{row.palletCode}</span>,
-    },
-    {
       key: 'farmerName',
       label: 'Farmer',
       priority: true,
-      render: (row) => <span className="t-small">{row.farmerName}</span>,
-    },
-    {
-      key: 'grade',
-      label: 'Grade',
-      priority: true,
-      render: (row) => <Badge tone="accent">{row.grade}</Badge>,
+      render: (row) => <span className="cell-strong">{row.farmerName}</span>,
     },
     {
       key: 'weightKg',
       label: 'Weight (kg)',
+      priority: true,
       align: 'right',
       render: (row) => <span className="cell-strong">{row.weightKg.toFixed(3)}</span>,
     },
     {
-      key: 'harvestDate',
-      label: 'Harvest date',
-      render: (row) => <span className="mono t-small cell-secondary">{row.harvestDate}</span>,
+      key: 'depositDate',
+      label: 'Deposit Date',
+      render: (row) => (
+        <span className="mono t-small cell-secondary">
+          {row.depositDate} <span className="t-caption text-text-light">(Auto)</span>
+        </span>
+      ),
     },
     {
       key: 'status',
@@ -285,6 +290,16 @@ export default function WeighingPage() {
           {row.status}
         </Badge>
       ),
+    },
+    {
+      key: 'palletCode',
+      label: 'Pallet ID',
+      render: (row) =>
+        row.palletCode ? (
+          <span className="mono cell-strong">{row.palletCode}</span>
+        ) : (
+          <span className="t-caption text-text-light italic">Generated upon approval</span>
+        ),
     },
     {
       key: 'actions',
@@ -301,7 +316,7 @@ export default function WeighingPage() {
             </Button>
           </div>
         ) : (
-          <Button size="sm" variant="ghost" icon="print" onClick={() => handlePrintPalletLabel(row)}>
+          <Button size="sm" variant="outline" icon="print" onClick={() => handlePrintPalletLabel(row)}>
             Print Label
           </Button>
         ),
@@ -315,7 +330,7 @@ export default function WeighingPage() {
     <div className="stack stack-lg">
       <PageHeader
         title="Weighing"
-        subtitle="Receiving area — scan the farmer ID, weigh the sacks, then approve the official weight."
+        subtitle="Receiving area — identify farmer, weigh harvest intake (pure weighing), approve to generate pallet and print label."
         actions={
           <Button
             variant="outline"
@@ -338,16 +353,16 @@ export default function WeighingPage() {
           <p className="stat-label">Approved today</p>
           <p className="stat-value">{approvedToday}</p>
           <p className="stat-sub stat-trend-up">
-            <Icon name="arrow-up" size={12} /> labels ready to print
+            <Icon name="arrow-up" size={12} /> Pallets ready for sorting
           </p>
         </div>
         <div className="stat-card">
-          <p className="stat-label">Scale</p>
+          <p className="stat-label">Scale Connection</p>
           <p className="stat-value" style={{ fontSize: 20 }}>
             {transportStatus.ethernetActive ? 'Ethernet' : transportMode === 'wifi' ? 'WiFi' : 'WiFi'}
           </p>
           <p className="stat-sub">
-            {transportStatus.staConnected ? 'Transmitter online' : 'Transmitter offline'}
+            {transportStatus.staConnected ? 'Transmitter online' : 'Transmitter ready'}
           </p>
         </div>
         <div className="stat-card">
@@ -357,14 +372,14 @@ export default function WeighingPage() {
         </div>
       </div>
 
-      {/* ── Scan & context ── */}
+      {/* ── Farmer Identification & Deposit Date ── */}
       <Card
-        title="Scan & Context"
-        subtitle="Scan the farmer ID to bind every weighing to the right farmer and pallet."
+        title="Farmer Intake Identification"
+        subtitle="Select or scan the farmer barcode to associate the incoming harvest deposit."
         action={
-          active ? (
+          active && farmer ? (
             <Badge tone="success" dot>
-              Context active
+              Context: {farmer.name}
             </Badge>
           ) : (
             <Badge tone="neutral" dot>
@@ -380,84 +395,65 @@ export default function WeighingPage() {
             handleScan()
           }}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md">
-            <Field
-              label="Farmer ID"
-              htmlFor="scan-farmer"
-              required
-              hint="Select the scanned farmer barcode."
-              error={scanError || undefined}
-            >
-              <Select
-                id="scan-farmer"
-                value={scanFarmerId}
-                onChange={(e) => setScanFarmerId(e.target.value)}
-                invalid={Boolean(scanError)}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-md items-end">
+            <div className="sm:col-span-2">
+              <Field
+                label="Farmer ID / Barcode"
+                htmlFor="scan-farmer"
+                required
+                hint="Scan the barcode on the farmer's membership card or select from the directory."
+                error={scanError || undefined}
               >
-                <option value="">Scan or select farmer</option>
-                {FARMERS.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} — {item.id}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+                <Select
+                  id="scan-farmer"
+                  value={scanFarmerId}
+                  onChange={(e) => setScanFarmerId(e.target.value)}
+                  invalid={Boolean(scanError)}
+                >
+                  <option value="">Scan or select farmer</option>
+                  {FARMERS.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} ({item.id}) — {item.village}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
 
-            <Field label="Harvest date" htmlFor="scan-harvest-date" hint="From the farmer's information.">
-              <Input
-                id="scan-harvest-date"
-                type="date"
-                value={harvestDate}
-                onChange={(e) => setHarvestDate(e.target.value)}
-              />
-            </Field>
-
-            <Field label="Default grade" htmlFor="scan-grade">
-              <Select id="scan-grade" value={grade} onChange={(e) => setGrade(e.target.value)}>
-                {GRADES.map((item) => (
-                  <option key={item} value={item}>
-                    Grade {item}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            <div className="flex items-end">
+            <div>
               <Button type="submit" variant="primary" icon="scan" block touch loading={scanning}>
-                {scanning ? 'Scanning…' : 'Scan Farmer ID'}
+                {scanning ? 'Scanning…' : 'Scan / Select Farmer'}
               </Button>
             </div>
           </div>
 
           <div
-            className={`scan-frame ${scanning ? 'is-scanning' : active ? 'is-success' : ''}`}
+            className={`scan-frame ${scanning ? 'is-scanning' : active && farmer ? 'is-success' : ''}`}
             aria-live="polite"
           >
-            <Icon name={active ? 'check-circle' : 'scan'} size={22} />
+            <Icon name={active && farmer ? 'check-circle' : 'scan'} size={22} />
             <p className="t-small font-semibold">
-              {active ? 'Session context active' : 'Waiting for the first scan'}
+              {active && farmer ? `Active Intake: ${farmer.name}` : 'Waiting for farmer identification'}
             </p>
             <p className="t-caption text-text-secondary">
-              {active
-                ? `Farmer ${farmer?.name} · pallet ${pallet?.code}`
-                : 'The context bar above shows the active farmer and pallet once a scan succeeds.'}
+              Deposit date is automatic ({today()}). No grade or pallet ID is required prior to weighing.
             </p>
           </div>
         </form>
       </Card>
 
-      {/* ── Weighing form ── */}
+      {/* ── Weighing form (Purely Weighing) ── */}
       <Card
-        title={editingId ? 'Re-weigh record' : 'New Weighing'}
-        subtitle="Weighing is only performed at the Receiving and Packing areas."
+        title={editingId ? 'Re-weigh Harvest' : 'Weigh Harvest Intake'}
+        subtitle="Pure harvest weighing. Deposit date is automatic; pallet ID is generated upon approval."
       >
         <form className="stack-md" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-lg items-start">
             <div className="stack-md">
               <ScaleWeightInput
                 id="weighing-weight"
-                label="Weight (kg)"
-                hint="Locked from the live scale reading, or enter the indicator value manually."
+                label="Harvest Weight (kg)"
+                hint="Auto-locks from live scale reading (Modbus TCP/MQTT) or enter manually."
                 value={weightKg}
                 onChange={setWeightKg}
                 capacityKg={SCALE_CAPACITY_KG}
@@ -471,49 +467,40 @@ export default function WeighingPage() {
               )}
             </div>
 
-            <div className="stack-md">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
-                <Field label="Pallet" htmlFor="weighing-pallet">
-                  <Input
-                    id="weighing-pallet"
-                    mono
-                    value={pallet?.code ?? ''}
-                    placeholder="Set by the scan above"
-                    readOnly
-                  />
-                </Field>
-                <Field label="Grade" htmlFor="weighing-grade" required>
-                  <Select id="weighing-grade" value={grade} onChange={(e) => setGrade(e.target.value)}>
-                    {GRADES.map((item) => (
-                      <option key={item} value={item}>
-                        Grade {item}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
+            {/* Context & metadata summary */}
+            <div className="stack-sm p-4 bg-surface-2 border border-border rounded-lg">
+              <div className="row gap-xs items-center text-text-secondary t-caption uppercase font-semibold">
+                <Icon name="info" size={14} /> Intake Metadata (System Generated)
               </div>
 
-              <Field label="Harvest date" htmlFor="weighing-harvest-date" required>
-                <Input
-                  id="weighing-harvest-date"
-                  type="date"
-                  value={harvestDate || pallet?.harvestDate || ''}
-                  onChange={(e) => setHarvestDate(e.target.value)}
-                />
-              </Field>
+              <div className="grid grid-cols-2 gap-sm pt-2">
+                <div>
+                  <span className="t-caption text-text-secondary block">Active Farmer</span>
+                  <span className="cell-strong text-sm">{farmer ? farmer.name : '—'}</span>
+                </div>
+                <div>
+                  <span className="t-caption text-text-secondary block">Commodity</span>
+                  <span className="cell-strong text-sm">Kentang (Potatoes)</span>
+                </div>
+                <div>
+                  <span className="t-caption text-text-secondary block">Deposit Date (Tanggal Setor)</span>
+                  <span className="mono text-sm cell-strong">
+                    {today()} <Badge tone="accent">Auto</Badge>
+                  </span>
+                </div>
+                <div>
+                  <span className="t-caption text-text-secondary block">Pallet & Grading</span>
+                  <span className="t-small text-text-secondary">Assigned at Approval & Sortir</span>
+                </div>
+              </div>
 
-              <Field label="Note (optional)" htmlFor="weighing-note">
-                <Textarea
-                  id="weighing-note"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Condition of the sacks, moisture, remarks…"
-                />
-              </Field>
+              <p className="t-caption text-text-light pt-2 border-t border-border mt-2">
+                This intake step records pure harvest weight. Pallet ID will be created and printed upon approval.
+              </p>
             </div>
           </div>
 
-          <div className="row gap-sm flex-wrap">
+          <div className="row gap-sm flex-wrap items-center pt-2">
             <Button type="submit" variant="primary" icon="check" touch>
               {editingId ? 'Update Weighing' : 'Record Weighing'}
             </Button>
@@ -524,23 +511,22 @@ export default function WeighingPage() {
                 onClick={() => {
                   setEditingId(null)
                   setWeightKg('')
-                  setNote('')
                 }}
               >
                 Cancel edit
               </Button>
             )}
             <span className="t-caption text-text-light">
-              Records are saved as PENDING until an operator approves the weight.
+              Record is saved as PENDING until verified by the weighing operator.
             </span>
           </div>
         </form>
       </Card>
 
-      {/* ── Records ── */}
+      {/* ── Records Table ── */}
       <div id="weighing-records" className="stack-sm">
         <div className="section-header">
-          <h2 className="section-title">Today's records</h2>
+          <h2 className="section-title">Today's Harvest Weighing Records</h2>
           <span className="t-caption text-text-secondary">
             {pendingCount} pending · {approvedToday} approved
           </span>
@@ -549,16 +535,16 @@ export default function WeighingPage() {
           columns={columns}
           data={records}
           rowKey={(row) => row.id}
-          emptyTitle="No weighing records today."
-          emptyDescription="Scan a farmer ID and record the first weighing of the day."
-          caption="Approve verifies the weight; koreksi loads the record back into the form for re-weighing."
+          emptyTitle="No harvest weighing records today."
+          emptyDescription="Select a farmer and record the first harvest weighing."
+          caption="Approve commits the weight and generates a Pallet ID for label printing; Koreksi reloads the weight into the scale form."
         />
       </div>
 
       {/* ── Transmitter configuration ── */}
       <Card
         title="Transmitter Configuration"
-        subtitle="Network transport used by the weighing transmitter."
+        subtitle="Network transport used by the weighing indicator transmitter."
       >
         <form className="stack-md" onSubmit={handleTransportSave}>
           <div className="radio-row" role="group" aria-label="Transport mode">
@@ -611,22 +597,125 @@ export default function WeighingPage() {
         </form>
       </Card>
 
+      {/* ── Approval confirmation dialog ── */}
       <ConfirmDialog
         open={Boolean(confirmApprove)}
-        tone="danger"
-        title="Approve weight?"
+        tone="accent"
+        title="Approve harvest weight?"
         description={
           confirmApprove ? (
             <>
-              Approve weight <strong>{confirmApprove.weightKg.toFixed(3)} kg</strong> for pallet{' '}
-              <strong>{confirmApprove.palletCode}</strong>? This cannot be changed after approval.
+              Approve official weight <strong>{confirmApprove.weightKg.toFixed(3)} kg</strong> for{' '}
+              <strong>{confirmApprove.farmerName}</strong>? Upon approval, a Pallet ID will be generated
+              and you will be prompted to print the pallet label.
             </>
           ) : null
         }
-        confirmLabel="Yes, Approve"
+        confirmLabel="Yes, Approve Weight"
         onConfirm={handleApprove}
         onCancel={() => setConfirmApprove(null)}
       />
+
+      {/* ── Step: Print Pallet Label Modal ── */}
+      {printModalRecord && (
+        <div
+          className="dialog-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="print-dialog-title"
+        >
+          <div className="dialog" style={{ width: 'min(500px, 100%)' }}>
+            <div className="row gap-xs items-center mb-2">
+              <Badge tone="success" dot>
+                Step: Print Pallet Label
+              </Badge>
+              <span className="t-caption text-text-secondary ml-auto">Approved</span>
+            </div>
+
+            <h2 className="dialog-title" id="print-dialog-title">
+              Pallet Label Ready
+            </h2>
+            <p className="dialog-desc">
+              Weight has been verified. Print the label below and affix it directly to the pallet box.
+            </p>
+
+            {/* Label Mockup Preview */}
+            <div
+              className="p-4 rounded-lg my-4 bg-white text-black border-2 border-dashed border-gray-400 font-mono shadow-sm"
+              style={{ backgroundColor: '#ffffff', color: '#111827' }}
+            >
+              <div className="text-center pb-2 border-b border-gray-300">
+                <span className="text-xs uppercase tracking-wider font-bold block text-gray-700">
+                  E-Tani Smart Hub · Receiving Pallet
+                </span>
+                <span className="text-xl font-bold tracking-tight block text-gray-900 mt-1">
+                  {printModalRecord.palletCode}
+                </span>
+              </div>
+
+              {/* Barcode/QR simulation visualization */}
+              <div className="flex items-center justify-center py-3 border-b border-gray-200">
+                <div className="flex flex-col items-center gap-1">
+                  <div
+                    className="flex gap-1 h-10 items-center justify-center px-4 bg-gray-100 rounded"
+                    aria-label="Barcode simulation"
+                  >
+                    {[3, 1, 4, 2, 1, 3, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 2].map((w, idx) => (
+                      <span
+                        key={idx}
+                        className="bg-black inline-block h-8"
+                        style={{ width: `${w * 2}px` }}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[10px] tracking-widest text-gray-600">
+                    *{printModalRecord.palletCode}*
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs pt-3">
+                <div>
+                  <span className="text-gray-500 block text-[10px] uppercase">Farmer</span>
+                  <span className="font-semibold">{printModalRecord.farmerName}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block text-[10px] uppercase">Commodity</span>
+                  <span className="font-semibold">Kentang (Potatoes)</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block text-[10px] uppercase">Official Net Weight</span>
+                  <span className="font-bold text-sm text-green-700">
+                    {printModalRecord.weightKg.toFixed(3)} kg
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block text-[10px] uppercase">Deposit Date</span>
+                  <span className="font-semibold">{printModalRecord.depositDate} (Auto)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="dialog-actions">
+              <Button
+                variant="outline"
+                onClick={() => setPrintModalRecord(null)}
+                disabled={isPrinting}
+              >
+                Close
+              </Button>
+              <Button
+                variant="primary"
+                icon="print"
+                loading={isPrinting}
+                onClick={triggerPhysicalPrint}
+              >
+                {isPrinting ? 'Printing…' : 'Print Pallet Label'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

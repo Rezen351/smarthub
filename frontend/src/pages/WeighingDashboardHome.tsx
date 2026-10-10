@@ -39,14 +39,14 @@ const stats: Stat[] = [
 
 const quickActions: QuickAction[] = [
   { label: 'New Weighing', path: '/dashboard/weighing', icon: 'scale', desc: 'Scan, weigh, approve', primary: true },
-  { label: 'Pallets', path: '/dashboard/pallets', icon: 'pallet', desc: 'Pallet register' },
+  { label: 'Pallet Register', path: '/dashboard/pallets', icon: 'pallet', desc: 'View approved pallets' },
   { label: 'Weighing History', path: '/dashboard/weighing', icon: 'history', desc: "Today's records" },
 ]
 
 const activities: Activity[] = [
-  { time: '10:15', action: 'Weighing recorded: 45.5 kg — Grade A', icon: 'scale', status: 'Approved', tone: 'success' },
-  { time: '09:45', action: 'Weighing recorded: 30.0 kg — Grade B', icon: 'scale', status: 'Approved', tone: 'success' },
-  { time: '09:30', action: 'Pallet PLT-20260914-0002 created', icon: 'pallet', status: 'Pending', tone: 'warning' },
+  { time: '10:15', action: 'Harvest weighed: 45.5 kg (Pallet PLT-20260914-0001)', icon: 'scale', status: 'Approved', tone: 'success' },
+  { time: '09:45', action: 'Harvest weighed: 30.0 kg (Pallet PLT-20260914-0002)', icon: 'scale', status: 'Approved', tone: 'success' },
+  { time: '09:30', action: 'Intake weighing recorded: 38.2 kg', icon: 'scale', status: 'Pending', tone: 'warning' },
 ]
 
 export default function WeighingDashboardHome() {

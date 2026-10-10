@@ -1,9 +1,7 @@
 import { useState } from 'react'
-import Card from '../components/shared/Card'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import Icon from '../components/shared/Icon'
-import { Field, Input, Select } from '../components/shared/Form'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
@@ -13,188 +11,174 @@ type Pallet = {
   code: string
   farmer: string
   commodity: string
-  harvestDate: string
-  status: 'ACTIVE' | 'WEIGHED' | 'SORTED'
+  weightKg: number
+  depositDate: string
+  status: 'WEIGHED' | 'SORTED'
 }
 
 const STATUS_TONE: Record<Pallet['status'], 'success' | 'accent' | 'warning'> = {
-  ACTIVE: 'accent',
-  WEIGHED: 'warning',
+  WEIGHED: 'accent',
   SORTED: 'success',
-}
-
-const nextCode = (index: number) => {
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-  return `PLT-${date}-${String(index).padStart(4, '0')}`
 }
 
 export default function PalletsPage() {
   const toast = useToast()
-  const [form, setForm] = useState({ farmerId: '', commodityId: 'Kentang', harvestDate: '', location: '' })
-  const [pallets, setPallets] = useState<Pallet[]>([
-    { id: '1', code: 'PLT-20260914-0001', farmer: 'Ahmad Santoso', commodity: 'Kentang', harvestDate: '2026-09-12', status: 'WEIGHED' },
-    { id: '2', code: 'PLT-20260914-0002', farmer: 'Budi Prasetyo', commodity: 'Kentang', harvestDate: '2026-09-13', status: 'ACTIVE' },
+  const [pallets] = useState<Pallet[]>([
+    {
+      id: '1',
+      code: 'PLT-20261010-0001',
+      farmer: 'Ahmad Santoso',
+      commodity: 'Kentang',
+      weightKg: 45.5,
+      depositDate: '2026-10-10',
+      status: 'WEIGHED',
+    },
+    {
+      id: '2',
+      code: 'PLT-20261010-0002',
+      farmer: 'Budi Prasetyo',
+      commodity: 'Kentang',
+      weightKg: 38.2,
+      depositDate: '2026-10-10',
+      status: 'WEIGHED',
+    },
+    {
+      id: '3',
+      code: 'PLT-20261009-0003',
+      farmer: 'Siti Rahayu',
+      commodity: 'Kentang',
+      weightKg: 52.0,
+      depositDate: '2026-10-09',
+      status: 'SORTED',
+    },
   ])
-  const [counter, setCounter] = useState(3)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!form.farmerId.trim()) {
-      toast.error('Farmer ID is required to create a pallet.')
-      return
-    }
-    const code = nextCode(counter)
-    setCounter((value) => value + 1)
-    setPallets([
-      {
-        id: String(counter),
-        code,
-        farmer: form.farmerId,
-        commodity: form.commodityId,
-        harvestDate: form.harvestDate || new Date().toISOString().slice(0, 10),
-        status: 'ACTIVE' as Pallet['status'],
-      },
-      ...pallets,
-    ])
-    setForm({ farmerId: '', commodityId: 'Kentang', harvestDate: '', location: '' })
-    toast.success(`Pallet ${code} created.`)
+  const handlePrintLabel = (pallet: Pallet) => {
+    toast.warning(`Sending label ${pallet.code} to printer…`)
+    window.setTimeout(() => {
+      toast.success(`Label ${pallet.code} successfully printed.`)
+    }, 800)
   }
 
   const columns: Column<Pallet>[] = [
     {
       key: 'code',
-      label: 'Pallet code',
+      label: 'Pallet Code',
       priority: true,
       render: (row) => <span className="mono cell-strong">{row.code}</span>,
     },
-    { key: 'farmer', label: 'Farmer', priority: true, render: (row) => <span className="t-small">{row.farmer}</span> },
-    { key: 'commodity', label: 'Commodity', render: (row) => <Badge tone="accent" icon="leaf">{row.commodity}</Badge> },
     {
-      key: 'harvestDate',
-      label: 'Harvest date',
-      render: (row) => <span className="mono t-small cell-secondary">{row.harvestDate}</span>,
+      key: 'farmer',
+      label: 'Farmer',
+      priority: true,
+      render: (row) => <span className="t-small cell-strong">{row.farmer}</span>,
+    },
+    {
+      key: 'commodity',
+      label: 'Commodity',
+      render: (row) => (
+        <Badge tone="accent" icon="leaf">
+          {row.commodity}
+        </Badge>
+      ),
+    },
+    {
+      key: 'weightKg',
+      label: 'Approved Weight (kg)',
+      align: 'right',
+      render: (row) => <span className="cell-strong">{row.weightKg.toFixed(3)}</span>,
+    },
+    {
+      key: 'depositDate',
+      label: 'Deposit Date',
+      render: (row) => (
+        <span className="mono t-small cell-secondary">
+          {row.depositDate} <span className="t-caption text-text-light">(Auto)</span>
+        </span>
+      ),
     },
     {
       key: 'status',
       label: 'Status',
       priority: true,
-      render: (row) => <Badge tone={STATUS_TONE[row.status]} dot>{row.status}</Badge>,
+      render: (row) => (
+        <Badge tone={STATUS_TONE[row.status]} dot>
+          {row.status}
+        </Badge>
+      ),
+    },
+    {
+      key: 'actions',
+      label: 'Action',
+      align: 'right',
+      render: (row) => (
+        <Button size="sm" variant="outline" icon="print" onClick={() => handlePrintLabel(row)}>
+          Print Label
+        </Button>
+      ),
     },
   ]
 
-  const activeCount = pallets.filter((item) => item.status === 'ACTIVE').length
+  const weighedCount = pallets.filter((item) => item.status === 'WEIGHED').length
+  const sortedCount = pallets.filter((item) => item.status === 'SORTED').length
 
   return (
     <div className="stack stack-lg">
       <PageHeader
-        title="Pallets"
-        subtitle="Create pallets with a farmer link — the pallet is the base unit for all traceability."
+        title="Pallet Register"
+        subtitle="Pallet IDs are generated and printed automatically when the weighing operator approves intake weight."
         actions={<Badge tone="accent">{pallets.length} registered</Badge>}
       />
 
       <div className="grid-stats">
         <div className="stat-card">
-          <p className="stat-label">Active pallets</p>
-          <p className="stat-value">{activeCount}</p>
-          <p className="stat-sub">Awaiting weighing</p>
+          <p className="stat-label">Total Pallets</p>
+          <p className="stat-value">{pallets.length}</p>
+          <p className="stat-sub">Generated from approved weights</p>
         </div>
         <div className="stat-card">
-          <p className="stat-label">Weighed</p>
-          <p className="stat-value">{pallets.filter((item) => item.status === 'WEIGHED').length}</p>
-          <p className="stat-sub">Approved weights</p>
+          <p className="stat-label">Awaiting Sorting</p>
+          <p className="stat-value">{weighedCount}</p>
+          <p className="stat-sub">Labeled & ready in receiving</p>
         </div>
         <div className="stat-card">
           <p className="stat-label">Sorted</p>
-          <p className="stat-value">{pallets.filter((item) => item.status === 'SORTED').length}</p>
-          <p className="stat-sub">Grade labels issued</p>
+          <p className="stat-value">{sortedCount}</p>
+          <p className="stat-sub">Grading completed</p>
         </div>
         <div className="stat-card">
           <p className="stat-label">Commodity</p>
-          <p className="stat-value" style={{ fontSize: 20 }}>Kentang</p>
+          <p className="stat-value" style={{ fontSize: 20 }}>
+            Kentang
+          </p>
           <p className="stat-sub">Single active commodity</p>
         </div>
       </div>
 
-      <Card title="Create Pallet" subtitle="Pallet codes are generated as PLT-YYYYMMDD-SEQ.">
-        <form className="stack-md" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md">
-            <Field label="Farmer ID" htmlFor="pallet-farmer" required hint="Scan or type the farmer ID.">
-              <Input
-                id="pallet-farmer"
-                mono
-                value={form.farmerId}
-                onChange={(e) => setForm({ ...form, farmerId: e.target.value })}
-                placeholder="farmer-1"
-                required
-              />
-            </Field>
-
-            <Field label="Commodity" htmlFor="pallet-commodity" required>
-              <Select
-                id="pallet-commodity"
-                value={form.commodityId}
-                onChange={(e) => setForm({ ...form, commodityId: e.target.value })}
-              >
-                <option value="Kentang">Kentang</option>
-                <option value="Tomat" disabled>
-                  Tomat (not in scope)
-                </option>
-                <option value="Cabai" disabled>
-                  Cabai (not in scope)
-                </option>
-              </Select>
-            </Field>
-
-            <Field label="Harvest date" htmlFor="pallet-harvest-date" hint="From the farmer's information.">
-              <Input
-                id="pallet-harvest-date"
-                type="date"
-                value={form.harvestDate}
-                onChange={(e) => setForm({ ...form, harvestDate: e.target.value })}
-              />
-            </Field>
-
-            <Field label="Location" htmlFor="pallet-location">
-              <Input
-                id="pallet-location"
-                value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                placeholder="Area Penerimaan"
-              />
-            </Field>
-          </div>
-
-          <div className="row gap-sm">
-            <Button type="submit" variant="primary" icon="plus" touch>
-              Create Pallet
-            </Button>
-            <span className="t-caption text-text-light">
-              Weighing is only performed at the Receiving and Packing areas.
-            </span>
-          </div>
-        </form>
-      </Card>
+      <div className="alert alert-info">
+        <Icon name="info" size={16} />
+        <span>
+          <strong>Automated Lifecycle:</strong> There is no manual "Create Pallet" step. Pallet IDs
+          are automatically issued and sent to the label printer upon official weight approval on
+          the Weighing page.
+        </span>
+      </div>
 
       <section className="stack-sm">
         <div className="section-header">
-          <h2 className="section-title">Pallet register</h2>
+          <h2 className="section-title">Registered Pallets</h2>
+          <span className="t-caption text-text-secondary">
+            Pallet is the base unit for lot-level traceability into Sorting and Packing
+          </span>
         </div>
         <DataTable
           columns={columns}
           data={pallets}
           rowKey={(row) => row.id}
-          emptyTitle="No pallets registered."
-          emptyDescription="Create the first pallet to link it to a farmer."
+          emptyTitle="No pallets registered yet."
+          emptyDescription="Pallets are created automatically once the weighing operator approves intake weight."
         />
       </section>
-
-      <div className="alert alert-info">
-        <Icon name="info" size={16} />
-        <span>
-          Each pallet carries the farmer, commodity and harvest date, and becomes the identity printed
-          on the pallet QR label after the weight is approved.
-        </span>
-      </div>
     </div>
   )
 }

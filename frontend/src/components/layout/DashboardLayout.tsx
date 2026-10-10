@@ -26,7 +26,7 @@ const roleMenu: Record<string, MenuItem[]> = {
   WEIGHING_OPERATOR: [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
     { label: 'Weighing', path: '/dashboard/weighing', icon: 'scale' },
-    { label: 'Pallets', path: '/dashboard/pallets', icon: 'pallet' },
+    { label: 'Pallet Register', path: '/dashboard/pallets', icon: 'pallet' },
   ],
   SORTING_OPERATOR: [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },

@@ -12,14 +12,19 @@ import type { ReactNode } from 'react'
 
 export interface SessionContextValue {
   farmer: { id: string; name: string } | null
-  pallet: { code: string; harvestDate: string } | null
+  pallet: { code: string; harvestDate?: string } | null
   defaultGrade: string | null
   active: boolean
   remainingMs: number
   offline: boolean
   setOffline: (offline: boolean) => void
   /** Called after a successful scan of the farmer ID. */
-  startScan: (farmer: { id: string; name: string }, palletCode: string, harvestDate: string, grade?: string) => void
+  startScan: (
+    farmer: { id: string; name: string },
+    palletCode?: string,
+    harvestDate?: string,
+    grade?: string,
+  ) => void
   reset: () => void
   extend: () => void
 }
@@ -29,8 +34,8 @@ const STORAGE_KEY = 'enyx.session-context'
 
 interface StoredContext {
   farmer: { id: string; name: string }
-  pallet: { code: string; harvestDate: string }
-  defaultGrade: string | null
+  pallet?: { code: string; harvestDate?: string } | null
+  defaultGrade?: string | null
   expiresAt: number
 }
 
@@ -84,7 +89,7 @@ export function SessionContextProvider({ children }: { children: ReactNode }) {
     (farmer, palletCode, harvestDate, grade) => {
       persist({
         farmer,
-        pallet: { code: palletCode, harvestDate },
+        pallet: palletCode ? { code: palletCode, harvestDate } : null,
         defaultGrade: grade ?? null,
         expiresAt: Date.now() + TTL_MS,
       })

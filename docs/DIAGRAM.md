@@ -23,26 +23,21 @@ start
 :Membawa Hasil Panen\n& Menunjukkan ID Petani;
 
 |Operator|
-:Scan ID Petani;
-:Siapkan Palet Ber-ID\n(buat jika belum ada);
+:Scan / Pilih ID Petani;
 
 |Sistem|
-:Auto-fetch Context\n(Farmer, Kentang, Palet);
+:Auto-fetch Context Petani\n& Set Tanggal Setor Otomatis;
 note right
   Komoditas aktif: Kentang (tunggal).
-  Multi-commodity (Tomat, Cabai, dll.)
-  = rencana pengembangan berikutnya —
-  struktur data sudah mendukung.
-
-  Context session aktif:
-  - farmerId
-  - commodityId (auto: Kentang)
-  - palletId
-  - grade defaults (A/B/C)
+  Tanggal setor: otomatis oleh sistem (hari ini).
+  Murni penimbangan intake:
+  - Tanpa input grade (grade ditentukan di Sortir)
+  - Tanpa pallet ID di awal
+  - Tanpa field note
 end note
 
 |Operator|
-:Timbang Karung\ndi Box/Palet Ber-ID;
+:Timbang Hasil Panen\n(Pure Penimbangan);
 if (Berat Sesuai?) then (Tidak)
   :Koreksi / Timbang Ulang;
   goto timbang
@@ -53,20 +48,21 @@ endif
 label timbang
 
 |Sistem|
-:Catat Penimbangan\n(Berat, Tanggal Panen, Waktu,\nFarmer, Palet);
+:Approve Resmi & Generate Pallet ID (PLT-…)\n(Berat Resmi, Tanggal Setor Otomatis,\nFarmer ID, Status APPROVED);
 note right
-  Tanggal panen: input operator
-  dari informasi petani saat penerimaan.
-  Status penimbangan: APPROVED
-  Keterkaitan Palet ↔ Petani ↔ Commodity
-  tersimpan di database
+  Pallet ID diterbitkan otomatis
+  saat operator melakukan approval.
+  Keterkaitan Palet ↔ Petani ↔ Tanggal Setor
+  tersimpan di sistem.
 end note
 
 |Operator|
-:Cetak QR Label Palet (PLT-…)\n→ Tempel di Box/Palet;
+:Step Cetak QR Label Palet (PLT-…)\n→ Tempel di Box/Palet;
 note right
-  QR Code palet:
-  farmer + commodity + berat approved
+  Label Palet memuat:
+  Pallet Code, Petani, Berat Resmi,
+  Tanggal Setor, Komoditas Kentang.
+  QR Code palet: farmer + commodity + berat approved
 end note
 
 |Proses|
@@ -137,9 +133,9 @@ stop
 > **Aturan penimbangan**: penimbangan hanya dilakukan di **Area Penerimaan** (timbang karung per palet) dan **Area Pengepakan** (timbang pouch 1 kg per grade). Area Sortir tidak memiliki timbangan.
 
 ### 1. Penerimaan — *Area Penerimaan*
-**Fungsi**: Operator scan ID petani, menyiapkan palet ber-ID (dibuat jika belum ada), lalu menimbang karung di box/palet. Jika berat tidak sesuai, ditimbang ulang; jika sesuai, operator verifikasi & approve. Sistem menyimpan berat, **tanggal panen** (input operator dari informasi petani), waktu, ID petani, ID palet, komoditas (Kentang), dan status `APPROVED`, lalu mencetak QR label palet (`PLT-…`) untuk ditempel pada box/palet.
+**Fungsi**: Operator scan/pilih ID petani untuk menetapkan konteks intake. Pada halaman penimbangan, operator murni hanya menimbang hasil panen saja. Tanggal setor dicatat otomatis oleh sistem tanpa input manual tanggal panen. Tidak ada input grade, pallet ID, maupun note saat proses penimbangan. Operator memeriksa pembacaan berat; jika belum sesuai dapat dilakukan koreksi/timbang ulang, jika sudah sesuai operator melakukan verifikasi & approve berat resmi. Setelah berat di-approve, sistem secara otomatis menerbitkan Pallet ID (`PLT-…`) berstatus `APPROVED` dan membuka step cetak QR label palet untuk ditempelkan pada box/palet sebelum dialirkan ke tahap sortir.
 
-**Tujuan**: Menetapkan berat setoran resmi sebagai data awal dan memberi identitas fisik (palet ber-ID) yang dapat di-scan pada tahap berikutnya.
+**Tujuan**: Menetapkan berat setoran resmi secara murni, mencatat tanggal setor otomatis, dan menerbitkan identitas fisik palet ber-QR untuk penelusuran (traceability) tahap berikutnya.
 
 ### 2. Pencucian *(Opsional)*
 **Fungsi**: Mencuci dan mengeringkan kentang bila kondisinya memerlukan; dilewati jika sudah bersih.
@@ -386,7 +382,7 @@ consumer --> domain : Scan QR → traceability\n(HTTPS / Internet)
 | Role | Hak Akses |
 |------|-----------|
 | **Admin** | Penuh — konfigurasi sistem, laporan, manajemen pengguna |
-| **Weighing Operator** | Operasional penimbangan — scan ID, verifikasi timbangan, input berat, create pallet |
+| **Weighing Operator** | Operasional penimbangan — scan ID petani, pure intake timbang hasil panen (tanggal setor otomatis), verifikasi/approve berat, cetak label palet |
 | **Sorting Operator** | Operasional penyortiran — grading, buat pouch, cetak label |
 | **Warehouse Operator** | Operasional gudang — warehouse in/out, stok management |
 | **Delivery Operator** | Operasional pengiriman — packaging, delivery, cetak dokumen |
@@ -730,7 +726,7 @@ Semua identifier yang discan di lapangan mengikuti format standar berikut:
 - `{YYYYMMDD}`: tanggal dibuat, contoh `20260914`
 - `{SEQ}`: nomor urut 4 digit per hari, contoh `0001`
 - Contoh: `PLT-20260914-0001`
-- Generate: Sistem auto-generate saat pallet dibuat
+- Generate: Sistem auto-generate saat weighing operator melakukan approve timbangan (tidak ada pembuatan palet manual)
 - Used in: QR Code pada label palet yang ditempel di box/palet (setelah approve)
 
 **Grade Label** — Format: `GRD-{PALLET_CODE}-{GRADE}`

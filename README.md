@@ -166,7 +166,7 @@ Menambah commodity baru di masa depan (Tomat, Cabai, dll.) hanya memerlukan data
 | Role | Access |
 |------|--------|
 | `ADMIN` | Full system configuration + user management |
-| `WEIGHING_OPERATOR` | Scan IDs, verify scales, create pallets, input weights |
+| `WEIGHING_OPERATOR` | Scan farmer IDs, pure intake weighing, approve weights, print pallet labels |
 | `SORTING_OPERATOR` | Grade produce, create pouches, print labels |
 | `WAREHOUSE_OPERATOR` | Stock in/out, capacity monitoring, inventory |
 | `DELIVERY_OPERATOR` | Package cartons, verify shipments, dispatch trucks |

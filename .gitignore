@@ -29,16 +29,13 @@ Thumbs.db
 docker-data/
 
 # Firmware build artifacts
-firmware/weight\ transmitter/.pio/
-firmware/weight\ transmitter/.pio
-firmware/transmitter-multi-core/.pio/
-firmware/transmitter-multi-core/.pio
-firmware/button-matrix/.pio/
-firmware/button-matrix/.pio
-firmware/display-6932-test/.pio/
-firmware/display-6932-test/.pio
-firmware/esp32s3-ethernet/.pio/
-firmware/esp32s3-ethernet/.pio
+**/.pio/
+**/.pio
+
+# LaTeX build artifacts
+*.aux
+*.out
+*.toc
 
 # Uploads
 backend/uploads/*
