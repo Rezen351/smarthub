@@ -1,4 +1,13 @@
 import type { ReactNode } from 'react'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 import EmptyState from './EmptyState'
 
 export interface Column<T> {
@@ -39,7 +48,7 @@ export default function DataTable<T>({
 }: DataTableProps<T>) {
   if (data.length === 0) {
     return (
-      <div className="table-container">
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
         <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
       </div>
     )
@@ -48,42 +57,46 @@ export default function DataTable<T>({
   const mobileColumns = columns.filter((c) => c.priority)
 
   return (
-    <div className="table-container">
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
       {/* Desktop / tablet */}
-      <div className="table-scroll hide-mobile">
-        <table>
-          <thead>
-            <tr>
+      <div className="overflow-x-auto hidden md:block">
+        <Table>
+          <TableHeader className="bg-muted/40">
+            <TableRow>
               {columns.map((col) => (
-                <th key={col.key} style={{ width: col.width, textAlign: col.align === 'right' ? 'right' : 'left' }}>
+                <TableHead
+                  key={col.key}
+                  style={{ width: col.width }}
+                  className={cn(col.align === 'right' && 'text-right')}
+                >
                   {col.label}
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {data.map((row, index) => (
-              <tr key={rowKey(row, index)}>
+              <TableRow key={rowKey(row, index)}>
                 {columns.map((col) => (
-                  <td
+                  <TableCell
                     key={col.key}
-                    className={col.align === 'right' ? 'cell-num' : undefined}
+                    className={cn(col.align === 'right' && 'tabular-nums text-right')}
                   >
                     {col.render ? col.render(row, index) : String((row as Record<string, unknown>)[col.key] ?? '')}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
-      {/* Mobile: rows become cards (§9.5) */}
-      <div className="mobile-list md:hidden">
+      {/* Mobile: rows become cards */}
+      <div className="flex flex-col md:hidden divide-y divide-border">
         {data.map((row, index) => (
-          <div className="mobile-row" key={rowKey(row, index)}>
-            <div className="mobile-row-head">
-              <span className="mobile-row-title">
+          <div className="p-3.5 flex flex-col gap-2" key={rowKey(row, index)}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold">
                 {mobileTitle
                   ? mobileTitle(row, index)
                   : mobileColumns.length > 0 && mobileColumns[0].render
@@ -94,22 +107,24 @@ export default function DataTable<T>({
                 <span className="flex items-center gap-2">{mobileColumns[1].render(row, index)}</span>
               )}
             </div>
-            <div className="mobile-row-grid">
+            <div className="grid grid-cols-2 gap-2 text-xs">
               {mobileColumns.slice(mobileTitle ? 0 : 1).map((col) => (
-                <div className="mobile-row-item" key={col.key}>
-                  <span className="mobile-row-key">{col.label}</span>
-                  <span className="mobile-row-val">
+                <div className="flex flex-col" key={col.key}>
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    {col.label}
+                  </span>
+                  <span className="text-sm font-medium tabular-nums text-foreground mt-0.5">
                     {col.render ? col.render(row, index) : String((row as Record<string, unknown>)[col.key] ?? '')}
                   </span>
                 </div>
               ))}
             </div>
-            {mobileActions && <div className="mobile-row-actions">{mobileActions(row, index)}</div>}
+            {mobileActions && <div className="flex items-center gap-2 flex-wrap mt-1">{mobileActions(row, index)}</div>}
           </div>
         ))}
       </div>
 
-      {caption && <p className="t-caption px-4 py-3 border-t border-border">{caption}</p>}
+      {caption && <p className="text-xs text-muted-foreground px-4 py-3 border-t border-border">{caption}</p>}
     </div>
   )
 }

@@ -5,6 +5,10 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react'
+import { Input as UIInput } from '@/components/ui/input'
+import { Textarea as UITextarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 
 /* ── Field wrapper: label + control + hint/error ── */
 
@@ -20,25 +24,28 @@ interface FieldProps {
 
 export function Field({ label, hint, error, required, htmlFor, children, className = '' }: FieldProps) {
   return (
-    <div className={`field ${className}`}>
+    <div className={cn('flex flex-col gap-1.5', className)}>
       {label && (
-        <label className="field-label" htmlFor={htmlFor}>
+        <Label htmlFor={htmlFor} className="text-sm font-medium text-foreground">
           {label}
           {required && (
-            <span className="req" aria-hidden="true">
+            <span className="text-destructive ml-0.5" aria-hidden="true">
               *
             </span>
           )}
-        </label>
+        </Label>
       )}
       {children}
-      {error ? <p className="field-error">{error}</p> : hint ? <p className="field-hint">{hint}</p> : null}
+      {error ? (
+        <p className="text-xs text-destructive font-medium">{error}</p>
+      ) : hint ? (
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      ) : null}
     </div>
   )
 }
 
-/* ── Input ──
-   font-size stays at 16px (see .input) to avoid iOS auto-zoom (§9.5). */
+/* ── Input ── */
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   invalid?: boolean
@@ -50,14 +57,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   ref,
 ) {
   return (
-    <input
+    <UIInput
       ref={ref}
-      className={`input ${mono ? 'input-mono' : ''} ${className}`}
-      aria-invalid={invalid || undefined}
+      invalid={invalid}
+      className={cn(mono && 'font-mono text-sm tracking-tight', className)}
       {...rest}
     />
   )
 })
+
+/* ── Select ── */
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   invalid?: boolean
@@ -66,16 +75,28 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 
 export function Select({ invalid, mono, className = '', children, ...rest }: SelectProps) {
   return (
-    <select className={`select ${mono ? 'input-mono' : ''} ${className}`} aria-invalid={invalid || undefined} {...rest}>
+    <select
+      className={cn(
+        'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm appearance-none',
+        "bg-[url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")] bg-no-repeat bg-[right_12px_center] pr-9",
+        invalid && 'border-destructive focus-visible:ring-destructive',
+        mono && 'font-mono text-sm tracking-tight',
+        className,
+      )}
+      aria-invalid={invalid || undefined}
+      {...rest}
+    >
       {children}
     </select>
   )
 }
+
+/* ── Textarea ── */
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   invalid?: boolean
 }
 
 export function Textarea({ invalid, className = '', ...rest }: TextareaProps) {
-  return <textarea className={`textarea ${className}`} aria-invalid={invalid || undefined} {...rest} />
+  return <UITextarea invalid={invalid} className={className} {...rest} />
 }

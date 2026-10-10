@@ -184,16 +184,16 @@ export default function DashboardLayout() {
       <div className="app-main-column">
         {/* ── Navbar ── */}
         <header className="navbar">
-          <button
-            type="button"
-            className="btn btn-ghost hide-desktop"
-            style={{ padding: 8, minHeight: 40 }}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="hide-desktop p-2 min-h-[40px] text-foreground"
             onClick={() => setMenuOpen((open) => !open)}
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={menuOpen}
           >
             <Icon name={menuOpen ? 'close' : 'menu'} size={20} />
-          </button>
+          </Button>
 
           {/* On mobile: show product brand in navbar because sidebar is off-canvas */}
           <Link
@@ -219,10 +219,10 @@ export default function DashboardLayout() {
           <ConnectionBadge state={navigator.onLine ? 'connected' : 'disconnected'} label="Scale" />
 
           <div className="relative" ref={userMenuRef}>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              style={{ padding: 6, minHeight: 40, gap: 6 }}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-1.5 min-h-[40px] gap-1.5"
               onClick={() => setUserMenuOpen((open) => !open)}
               aria-haspopup="menu"
               aria-expanded={userMenuOpen}
@@ -230,19 +230,17 @@ export default function DashboardLayout() {
             >
               <span className="avatar avatar-sm">{user?.name?.charAt(0)?.toUpperCase() ?? 'U'}</span>
               <Icon name="chevron-down" size={14} />
-            </button>
+            </Button>
             {userMenuOpen && (
               <div
-                className="card"
+                className="rounded-lg border border-border bg-card p-3 shadow-lg"
                 role="menu"
                 style={{
                   position: 'absolute',
                   right: 0,
                   top: 'calc(100% + 6px)',
                   width: 220,
-                  padding: 12,
                   zIndex: 80,
-                  boxShadow: 'var(--shadow-lg)',
                 }}
               >
                 <div className="stack stack-xs" style={{ marginBottom: 10 }}>

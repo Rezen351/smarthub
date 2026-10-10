@@ -1,7 +1,16 @@
 import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import Button from '../shared/Button'
 import Icon from '../shared/Icon'
+import { cn } from '@/lib/utils'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -15,7 +24,7 @@ interface ConfirmDialogProps {
 }
 
 /**
- * Two-step confirmation for destructive actions (laporan §9.11).
+ * Two-step confirmation for destructive actions.
  * The destructive button is never the default action and the dialog
  * cannot be dismissed by clicking the overlay, so touch-screen
  * operators cannot confirm by accident.
@@ -33,47 +42,46 @@ export default function ConfirmDialog({
   const confirmRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    if (!open) return
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCancel()
+    if (open) {
+      // Focus the confirmation button when dialog opens
+      setTimeout(() => confirmRef.current?.focus(), 50)
     }
-    document.addEventListener('keydown', onKeyDown)
-    confirmRef.current?.focus()
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [open, onCancel])
-
-  if (!open) return null
+  }, [open])
 
   return (
-    <div
-      className="dialog-overlay"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) return
-      }}
-    >
-      <div className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dialog-title" aria-describedby="dialog-desc">
-        <div className={`dialog-icon ${tone === 'danger' ? 'dialog-icon-danger' : 'dialog-icon-accent'}`}>
-          <Icon name={tone === 'danger' ? 'alert' : 'info'} size={18} />
-        </div>
-        <h2 className="dialog-title" id="dialog-title">
-          {title}
-        </h2>
-        <div className="dialog-desc" id="dialog-desc">
-          {description}
-        </div>
-        <div className="dialog-actions">
-          <Button variant="outline" onClick={onCancel}>
-            {cancelLabel}
-          </Button>
-          <Button
-            ref={confirmRef}
-            variant={tone === 'danger' ? 'danger' : 'primary'}
-            onClick={onConfirm}
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
+      <DialogContent className="max-w-md p-6">
+        <div className="flex flex-col gap-4">
+          <div
+            className={cn(
+              'size-10 rounded-md flex items-center justify-center shrink-0',
+              tone === 'danger' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600',
+            )}
           >
-            {confirmLabel}
-          </Button>
+            <Icon name={tone === 'danger' ? 'alert' : 'info'} size={20} />
+          </div>
+
+          <DialogHeader className="text-left space-y-2">
+            <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              {description}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex flex-row justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={onCancel}>
+              {cancelLabel}
+            </Button>
+            <Button
+              ref={confirmRef}
+              variant={tone === 'danger' ? 'danger' : 'primary'}
+              onClick={onConfirm}
+            >
+              {confirmLabel}
+            </Button>
+          </DialogFooter>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -1,4 +1,13 @@
 import type { HTMLAttributes, ReactNode } from 'react'
+import {
+  Card as UICard,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   title?: string
@@ -9,7 +18,12 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
 }
 
-const padClass = { sm: 'card-pad-sm', md: '', lg: 'card-pad-lg', none: '!p-0' } as const
+const padClasses = {
+  sm: 'p-4',
+  md: 'p-5',
+  lg: 'p-7',
+  none: 'p-0',
+} as const
 
 export default function Card({
   title,
@@ -21,19 +35,27 @@ export default function Card({
   className = '',
   ...rest
 }: CardProps) {
+  const hasHeader = Boolean(title || action)
+
   return (
-    <div className={`card ${padClass[padding]} ${className}`} {...rest}>
-      {(title || action) && (
-        <div className="card-header">
+    <UICard className={cn('overflow-hidden', className)} {...rest}>
+      {hasHeader && (
+        <CardHeader className="flex flex-row items-start justify-between gap-3 p-5 pb-3 space-y-0">
           <div className="min-w-0">
-            {title && <h3 className="card-title">{title}</h3>}
-            {subtitle && <p className="card-subtitle">{subtitle}</p>}
+            {title && <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>}
+            {subtitle && <CardDescription className="text-sm mt-1">{subtitle}</CardDescription>}
           </div>
-          {action && <div className="flex-shrink-0 flex items-center gap-2">{action}</div>}
-        </div>
+          {action && <div className="shrink-0 flex items-center gap-2">{action}</div>}
+        </CardHeader>
       )}
-      {children}
-      {footer && <div className="card-footer">{footer}</div>}
-    </div>
+      <CardContent className={cn(padClasses[padding], hasHeader && 'pt-0')}>
+        {children}
+      </CardContent>
+      {footer && (
+        <CardFooter className="border-t border-border bg-muted/40 px-5 py-3 text-xs text-muted-foreground">
+          {footer}
+        </CardFooter>
+      )}
+    </UICard>
   )
 }

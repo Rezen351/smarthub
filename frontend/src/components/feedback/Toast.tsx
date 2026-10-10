@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import Icon from '../shared/Icon'
+import { cn } from '@/lib/utils'
+import Icon, { type IconName } from '../shared/Icon'
 
 export type ToastTone = 'success' | 'error' | 'info' | 'warning'
 
@@ -20,11 +21,18 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined)
 
-const toneIcon: Record<ToastTone, string> = {
+const toneIcon: Record<ToastTone, IconName> = {
   success: 'check-circle',
   error: 'alert',
   info: 'info',
   warning: 'warning',
+}
+
+const toneClasses: Record<ToastTone, string> = {
+  success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+  error: 'border-red-200 bg-red-50 text-red-900',
+  info: 'border-blue-200 bg-blue-50 text-blue-900',
+  warning: 'border-amber-200 bg-amber-50 text-amber-900',
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -62,14 +70,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="toast-region" role="status" aria-live="polite">
+      <div
+        className="fixed left-1/2 bottom-6 -translate-x-1/2 flex flex-col gap-2 z-50 w-[min(420px,calc(100vw-32px))] pointer-events-none"
+        role="status"
+        aria-live="polite"
+      >
         {toasts.map((toast) => (
-          <div key={toast.id} className={`toast toast-${toast.tone}`}>
+          <div
+            key={toast.id}
+            className={cn(
+              'pointer-events-auto flex items-center gap-2.5 p-3.5 rounded-lg border shadow-lg text-sm font-medium transition-all duration-200',
+              toneClasses[toast.tone],
+            )}
+          >
             <Icon name={toneIcon[toast.tone]} size={16} />
-            <span>{toast.message}</span>
+            <span className="flex-1">{toast.message}</span>
             <button
               type="button"
-              className="toast-close"
+              className="ml-auto p-1 opacity-60 hover:opacity-100 transition-opacity"
               onClick={() => dismiss(toast.id)}
               aria-label="Dismiss notification"
             >

@@ -1,18 +1,20 @@
 import type { HTMLAttributes, ReactNode } from 'react'
+import { Badge as UIBadge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import Icon, { type IconName } from './Icon'
 
 type Tone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'solid'
 
-const toneClass: Record<Tone, string> = {
-  neutral: 'badge-neutral',
-  accent: 'badge-accent',
-  success: 'badge-success',
-  warning: 'badge-warning',
-  danger: 'badge-danger',
-  solid: 'badge-solid',
+const toneVariantMap: Record<Tone, 'secondary' | 'accent' | 'success' | 'warning' | 'destructive' | 'default'> = {
+  neutral: 'secondary',
+  accent: 'accent',
+  success: 'success',
+  warning: 'warning',
+  danger: 'destructive',
+  solid: 'default',
 }
 
-interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
+interface BadgeProps extends HTMLAttributes<HTMLDivElement> {
   tone?: Tone
   icon?: IconName
   dot?: boolean
@@ -30,10 +32,22 @@ export default function Badge({
   ...rest
 }: BadgeProps) {
   return (
-    <span className={`badge ${toneClass[tone]} ${className}`} {...rest}>
-      {dot && <span className={`badge-dot ${live ? 'badge-dot-live' : ''}`} aria-hidden="true" />}
+    <UIBadge
+      variant={toneVariantMap[tone]}
+      className={cn('inline-flex items-center gap-1.5 font-medium', className)}
+      {...rest}
+    >
+      {dot && (
+        <span
+          className={cn(
+            'size-1.5 rounded-full bg-current shrink-0',
+            live && 'animate-pulse',
+          )}
+          aria-hidden="true"
+        />
+      )}
       {icon && <Icon name={icon} size={12} />}
       {children}
-    </span>
+    </UIBadge>
   )
 }
