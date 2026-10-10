@@ -1,5 +1,5 @@
 /**
- * Weighing — Area Penerimaan (Receiving Intake Station).
+ * Weighing — Receiving Intake Station.
  *
  * Implements the revised pure intake weighing workflow with Focus Mode (Full Screen):
  *   Sequential 3-step workflow:
@@ -168,7 +168,6 @@ export default function WeighingPage() {
     startScan({ id: targetFarmer.id, name: targetFarmer.name })
     setScanFarmerId(targetFarmer.id)
     toast.success(`Farmer verified: ${targetFarmer.name}`)
-    // Advance directly to Step 2
     setActiveStep(2)
   }
 
@@ -241,8 +240,8 @@ export default function WeighingPage() {
   }
 
   /* ── Step 3: Handle Approval & Print ── */
-  const handleApproveCommit = () => {
-    if (!confirmApprove) return
+  const handleApproveCommit = (): WeighingRecord | null => {
+    if (!confirmApprove) return null
     const assignedCode = confirmApprove.palletCode || nextPalletCode(palletCounter)
     if (!confirmApprove.palletCode) {
       setPalletCounter((value) => value + 1)
@@ -258,10 +257,11 @@ export default function WeighingPage() {
       current.map((item) => (item.id === confirmApprove.id ? updatedRecord : item)),
     )
 
-    toast.success(`Weight approved! Pallet ${assignedCode} created.`)
-    setConfirmApprove(null)
+    toast.success(`Weight approved. Pallet ${assignedCode} created.`)
+    setConfirmApprove(updatedRecord)
     setApprovedSuccessRecord(updatedRecord)
     setPrintModalRecord(updatedRecord)
+    return updatedRecord
   }
 
   /* Reset for next farmer weighing */
@@ -275,10 +275,10 @@ export default function WeighingPage() {
     setApprovedSuccessRecord(null)
     setPrintModalRecord(null)
     setActiveStep(1)
-    toast.info('Ready for next farmer intake.')
+    toast.info('Ready for the next farmer.')
   }
 
-  /* Koreksi: return to Step 2 */
+  /* Correction: return to Step 2 with the recorded weight */
   const handleKoreksi = (record: WeighingRecord) => {
     setEditingId(record.id)
     setWeightKg(String(record.weightKg))
@@ -290,31 +290,27 @@ export default function WeighingPage() {
   }
 
   /* ── Print Actions ── */
+  const simulatePrint = (message: string, durationMs: number) => {
+    setIsPrinting(true)
+    window.setTimeout(() => {
+      setIsPrinting(false)
+      toast.success(message)
+    }, durationMs)
+  }
+
   const triggerPrintReceipt = () => {
     if (!printModalRecord) return
-    setIsPrinting(true)
-    setTimeout(() => {
-      setIsPrinting(false)
-      toast.success(`Receipt printed for ${printModalRecord.farmerName}`)
-    }, 800)
+    simulatePrint(`Receipt printed for ${printModalRecord.farmerName}`, 800)
   }
 
   const triggerPrintPalletLabel = () => {
     if (!printModalRecord) return
-    setIsPrinting(true)
-    setTimeout(() => {
-      setIsPrinting(false)
-      toast.success(`Pallet QR Label printed: ${printModalRecord.palletCode}`)
-    }, 800)
+    simulatePrint(`Pallet label printed: ${printModalRecord.palletCode}`, 800)
   }
 
-  const triggerPrintBoth = () => {
-    if (!printModalRecord) return
-    setIsPrinting(true)
-    setTimeout(() => {
-      setIsPrinting(false)
-      toast.success(`Both printed: Receipt & Pallet Label ${printModalRecord.palletCode}`)
-    }, 1100)
+  const triggerPrintBoth = (record: WeighingRecord | null = printModalRecord) => {
+    if (!record) return
+    simulatePrint(`Receipt and pallet label ${record.palletCode} printed`, 1100)
   }
 
   /* ── Columns for History Table ── */
@@ -324,8 +320,8 @@ export default function WeighingPage() {
       label: 'Farmer',
       render: (row) => (
         <div>
-          <span className="font-semibold block">{row.farmerName}</span>
-          <span className="mono t-caption text-text-secondary">{row.farmerId}</span>
+          <span className="font-semibold block text-foreground">{row.farmerName}</span>
+          <span className="font-mono text-xs text-muted-foreground">{row.farmerId}</span>
         </div>
       ),
     },
@@ -333,15 +329,19 @@ export default function WeighingPage() {
       key: 'weightKg',
       label: 'Weight (kg)',
       align: 'right',
-      render: (row) => <span className="mono font-bold text-base">{row.weightKg.toFixed(3)} kg</span>,
+      render: (row) => (
+        <span className="font-mono font-bold text-base text-foreground">
+          {row.weightKg.toFixed(3)} kg
+        </span>
+      ),
     },
     {
       key: 'depositDate',
       label: 'Deposit Date',
       render: (row) => (
         <div>
-          <span className="mono t-small block">{row.depositDate}</span>
-          <span className="t-caption text-text-light">{row.time}</span>
+          <span className="font-mono text-xs block text-foreground">{row.depositDate}</span>
+          <span className="text-xs text-muted-foreground">{row.time}</span>
         </div>
       ),
     },
@@ -359,9 +359,9 @@ export default function WeighingPage() {
       label: 'Pallet Code',
       render: (row) =>
         row.palletCode ? (
-          <span className="mono cell-strong">{row.palletCode}</span>
+          <span className="font-mono font-medium tabular-nums text-foreground">{row.palletCode}</span>
         ) : (
-          <span className="t-caption text-text-light italic">Generated upon approval</span>
+          <span className="text-xs text-muted-foreground italic">Assigned on approval</span>
         ),
     },
     {
@@ -370,20 +370,22 @@ export default function WeighingPage() {
       align: 'right',
       render: (row) =>
         row.status === 'PENDING' ? (
-          <div className="row gap-xs justify-end">
+          <div className="flex items-center gap-1.5 justify-end">
             <Button
               size="sm"
               variant="primary"
               icon="check"
               onClick={() => {
                 setConfirmApprove(row)
+                setApprovedSuccessRecord(null)
                 setActiveStep(3)
+                document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
               }}
             >
               Approve
             </Button>
             <Button size="sm" variant="outline" icon="refresh" onClick={() => handleKoreksi(row)}>
-              Koreksi
+              Correct
             </Button>
           </div>
         ) : (
@@ -392,11 +394,14 @@ export default function WeighingPage() {
             variant="outline"
             icon="print"
             onClick={() => {
+              setConfirmApprove(row)
               setPrintModalRecord(row)
               setApprovedSuccessRecord(row)
+              setActiveStep(3)
+              document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
             }}
           >
-            Print Label
+            Reprint
           </Button>
         ),
     },
@@ -406,30 +411,32 @@ export default function WeighingPage() {
   const approvedToday = records.filter((item) => item.status === 'APPROVED').length
 
   /* ═══════════════════════════════════════════════════════════════════
-     RENDER: Focus Mode (Full Screen Sequential Workflow)
+     RENDER: Focus Mode & Sequential Stepper Content
      ═══════════════════════════════════════════════════════════════════ */
   const renderFocusContent = () => (
-    <div className="focus-content">
+    <div className="space-y-6">
       {/* ── STEP 1: Farmer Identification ── */}
       {activeStep === 1 && (
-        <div className="focus-card animate-fade-in">
-          <div className="flex items-center justify-between border-b border-border pb-3">
+        <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-border pb-4">
             <div>
-              <span className="t-caption text-text-secondary uppercase font-mono font-semibold tracking-wider">
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
                 Step 1 of 3 · Intake Identification
               </span>
-              <h2 className="t-h2 mt-0.5">Scan Farmer Card or Select Farmer</h2>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
+                Scan Farmer Card or Select Farmer
+              </h2>
             </div>
             <Badge tone="accent" icon="scan">
               Awaiting Scan
             </Badge>
           </div>
 
-          <form onSubmit={handleScanSubmit} className="stack-md">
-            <div className="focus-scan-box is-focused">
-              <Icon name="scan" size={36} className="text-accent mx-auto mb-2" />
-              <p className="t-small font-semibold">Ready for Barcode Scanner</p>
-              <p className="t-caption text-text-secondary mb-3">
+          <form onSubmit={handleScanSubmit} className="space-y-4">
+            <div className="p-8 border-2 border-dashed border-primary/30 rounded-xl bg-primary/5 text-center space-y-3">
+              <Icon name="scan" size={36} className="text-primary mx-auto" />
+              <p className="text-sm font-semibold text-foreground">Ready for Barcode Scanner</p>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto">
                 Scan barcode on the farmer ID card, or enter ID / name manually.
               </p>
               <div className="max-w-md mx-auto">
@@ -441,46 +448,50 @@ export default function WeighingPage() {
                     setScanError('')
                   }}
                   placeholder="Scan barcode or type name (e.g. farmer-1, Ahmad)..."
-                  className="input-lg text-center font-mono"
+                  className="text-center font-mono text-base py-3"
                   autoFocus
                 />
               </div>
               {scanError && (
-                <p className="t-caption text-danger mt-2 font-medium">
+                <p className="text-xs text-destructive font-medium mt-2">
                   {scanError}
                 </p>
               )}
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end">
               <Button type="submit" variant="primary" icon="search" touch>
                 Find & Verify Farmer
               </Button>
             </div>
           </form>
 
-          <div className="pt-2">
-            <p className="t-caption text-text-secondary font-semibold uppercase mb-2">
+          <div className="pt-2 border-t border-border">
+            <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-3">
               Or Select Registered Farmer
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {FARMERS.map((f) => {
                 const isSelected = active && farmer?.id === f.id
                 return (
                   <button
                     key={f.id}
                     type="button"
-                    className={`card p-3 text-left transition-all cursor-pointer hover:border-accent ${
-                      isSelected ? 'border-accent bg-accent-soft' : ''
+                    className={`bg-card border rounded-lg p-3 text-left transition-all cursor-pointer hover:border-primary hover:shadow-sm ${
+                      isSelected
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                        : 'border-border'
                     }`}
                     onClick={() => selectFarmer(f)}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="avatar avatar-sm">{f.name.charAt(0)}</span>
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center shrink-0">
+                        {f.name.charAt(0)}
+                      </div>
                       <div className="min-w-0">
-                        <p className="t-small font-semibold text-truncate">{f.name}</p>
-                        <p className="t-caption text-text-secondary text-truncate">{f.village}</p>
-                        <span className="t-caption mono text-text-light">{f.id}</span>
+                        <p className="text-sm font-semibold text-foreground truncate">{f.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{f.village}</p>
+                        <span className="text-[11px] font-mono text-muted-foreground">{f.id}</span>
                       </div>
                     </div>
                   </button>
@@ -493,13 +504,15 @@ export default function WeighingPage() {
 
       {/* ── STEP 2: Harvest Weighing ── */}
       {activeStep === 2 && (
-        <div className="focus-card animate-fade-in">
-          <div className="flex items-center justify-between border-b border-border pb-3 flex-wrap gap-2">
+        <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
-              <span className="t-caption text-text-secondary uppercase font-mono font-semibold tracking-wider">
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
                 Step 2 of 3 · Live Harvest Intake
               </span>
-              <h2 className="t-h2 mt-0.5">Weigh Crop Platform</h2>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
+                Weigh Crop Platform
+              </h2>
             </div>
             <div className="flex items-center gap-2">
               <Badge tone="success" dot>
@@ -511,8 +524,8 @@ export default function WeighingPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-md items-start">
-            <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <div className="lg:col-span-2 space-y-4">
               <ScaleWeightInput
                 id="focus-weighing-weight"
                 label="Incoming Harvest Net Weight (kg)"
@@ -525,38 +538,40 @@ export default function WeighingPage() {
                 capacityKg={SCALE_CAPACITY_KG}
               />
               {formError && (
-                <div className="alert alert-danger mt-3" role="alert">
+                <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-lg flex items-center gap-2 font-medium">
                   <Icon name="alert" size={16} />
                   <span>{formError}</span>
                 </div>
               )}
             </div>
 
-            <div className="p-4 bg-surface-2 border border-border rounded-lg stack-sm">
-              <span className="t-caption text-text-secondary font-semibold uppercase flex items-center gap-1">
+            <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
+              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-1.5">
                 <Icon name="info" size={14} /> Intake Metadata
               </span>
-              <div className="stack-xs text-sm pt-1">
+              <div className="space-y-2 text-sm pt-1">
                 <div className="flex justify-between">
-                  <span className="text-text-secondary">Farmer:</span>
-                  <span className="font-semibold">{farmer?.name}</span>
+                  <span className="text-muted-foreground">Farmer:</span>
+                  <span className="font-semibold text-foreground">{farmer?.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-text-secondary">Commodity:</span>
-                  <span className="font-semibold">Kentang (Potatoes)</span>
+                  <span className="text-muted-foreground">Commodity:</span>
+                  <span className="font-semibold text-foreground">Kentang (Potatoes)</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-text-secondary">Deposit Date:</span>
-                  <span className="font-mono font-semibold">
+                  <span className="text-muted-foreground">Deposit Date:</span>
+                  <span className="font-mono font-semibold text-foreground flex items-center gap-1">
                     {today()} <Badge tone="accent">Auto</Badge>
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-text-secondary">Next Pallet:</span>
-                  <span className="mono text-xs">{nextPalletCode(palletCounter)}</span>
+                  <span className="text-muted-foreground">Next Pallet:</span>
+                  <span className="font-mono text-xs font-semibold text-foreground">
+                    {nextPalletCode(palletCounter)}
+                  </span>
                 </div>
               </div>
-              <p className="t-caption text-text-light pt-2 border-t border-border mt-2">
+              <p className="text-xs text-muted-foreground pt-3 border-t border-border leading-relaxed">
                 Deposit date is assigned automatically by the system. Pallet ID is officially bound upon approval.
               </p>
             </div>
@@ -581,13 +596,15 @@ export default function WeighingPage() {
 
       {/* ── STEP 3: Approve & Print Label ── */}
       {activeStep === 3 && (
-        <div className="focus-card animate-fade-in">
-          <div className="flex items-center justify-between border-b border-border pb-3 flex-wrap gap-2">
+        <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
-              <span className="t-caption text-text-secondary uppercase font-mono font-semibold tracking-wider">
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
                 Step 3 of 3 · Final Verification & Print
               </span>
-              <h2 className="t-h2 mt-0.5">Approve & Print Intake Label</h2>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
+                Approve & Print Intake Label
+              </h2>
             </div>
             {approvedSuccessRecord ? (
               <Badge tone="success" dot>
@@ -601,91 +618,98 @@ export default function WeighingPage() {
           </div>
 
           {/* Intake Verification Box */}
-          <div className="p-4 bg-surface-2 border border-border rounded-lg grid grid-cols-1 sm:grid-cols-4 gap-md">
+          <div className="p-4 bg-muted/30 border border-border rounded-xl grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div>
-              <span className="t-caption text-text-secondary block">Farmer</span>
-              <span className="cell-strong text-base">{confirmApprove?.farmerName ?? farmer?.name}</span>
-              <span className="t-caption mono text-text-light block">{confirmApprove?.farmerId ?? farmer?.id}</span>
-            </div>
-            <div>
-              <span className="t-caption text-text-secondary block">Harvest Net Weight</span>
-              <span className="focus-big-number block text-3xl font-black text-green-700">
-                {confirmApprove?.weightKg.toFixed(3) ?? Number(weightKg).toFixed(3)}
-                <span className="text-sm font-normal text-text-secondary ml-1">kg</span>
+              <span className="text-xs text-muted-foreground block font-medium">Farmer</span>
+              <span className="font-semibold text-base text-foreground block">
+                {confirmApprove?.farmerName ?? farmer?.name}
+              </span>
+              <span className="font-mono text-xs text-muted-foreground block">
+                {confirmApprove?.farmerId ?? farmer?.id}
               </span>
             </div>
             <div>
-              <span className="t-caption text-text-secondary block">Deposit Date</span>
-              <span className="mono font-semibold">{today()}</span>
-              <span className="t-caption text-text-light block">System timestamped</span>
+              <span className="text-xs text-muted-foreground block font-medium">Harvest Net Weight</span>
+              <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400 block tracking-tight">
+                {confirmApprove?.weightKg.toFixed(3) ?? Number(weightKg).toFixed(3)}
+                <span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
+              </span>
             </div>
             <div>
-              <span className="t-caption text-text-secondary block">Assigned Pallet ID</span>
-              <span className="mono font-bold text-base text-accent">
+              <span className="text-xs text-muted-foreground block font-medium">Deposit Date</span>
+              <span className="font-mono font-semibold text-foreground block">{today()}</span>
+              <span className="text-xs text-muted-foreground block">System timestamped</span>
+            </div>
+            <div>
+              <span className="text-xs text-muted-foreground block font-medium">Assigned Pallet ID</span>
+              <span className="font-mono font-bold text-base text-primary block">
                 {approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}
               </span>
-              <span className="t-caption text-text-light block">QR Pallet Label</span>
+              <span className="text-xs text-muted-foreground block">QR Pallet Label</span>
             </div>
           </div>
 
           {/* Print Previews */}
-          <div className="stack-sm">
-            <div className="radio-row" role="group" aria-label="Print view mode">
-              <label className={`radio-card ${printTab === 'both' ? 'is-active' : ''}`}>
-                <input
-                  type="radio"
-                  name="focusPrintTab"
-                  value="both"
-                  checked={printTab === 'both'}
-                  onChange={() => setPrintTab('both')}
-                />
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Print view mode">
+              <button
+                type="button"
+                onClick={() => setPrintTab('both')}
+                className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+                  printTab === 'both'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                }`}
+              >
                 Both (Receipt + Label)
-              </label>
-              <label className={`radio-card ${printTab === 'receipt' ? 'is-active' : ''}`}>
-                <input
-                  type="radio"
-                  name="focusPrintTab"
-                  value="receipt"
-                  checked={printTab === 'receipt'}
-                  onChange={() => setPrintTab('receipt')}
-                />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintTab('receipt')}
+                className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+                  printTab === 'receipt'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                }`}
+              >
                 Farmer Receipt Slip
-              </label>
-              <label className={`radio-card ${printTab === 'label' ? 'is-active' : ''}`}>
-                <input
-                  type="radio"
-                  name="focusPrintTab"
-                  value="label"
-                  checked={printTab === 'label'}
-                  onChange={() => setPrintTab('label')}
-                />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintTab('label')}
+                className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+                  printTab === 'label'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                }`}
+              >
                 QR Pallet Box Label
-              </label>
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-md pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
               {/* Receipt Preview */}
               {(printTab === 'both' || printTab === 'receipt') && (
-                <div className="p-4 rounded-lg bg-white text-black border border-gray-300 font-mono shadow-sm">
+                <div className="p-4 rounded-xl bg-white text-black border border-gray-300 font-mono shadow-sm space-y-3">
                   <div className="text-center pb-2 border-b border-dashed border-gray-400">
                     <span className="text-[11px] font-bold tracking-wider uppercase block text-gray-800">
                       ENYX-SMART HUB · RECEIVING INTAKE SLIP
                     </span>
                     <span className="text-[10px] text-gray-500 block">
-                      OFFICIAL WEIGHING RECEIPT (BUKTI TIMBANG RESMI)
+                      OFFICIAL WEIGHING RECEIPT
                     </span>
                     <span className="text-xs font-semibold text-gray-700 block mt-1">
                       {today()} · {confirmApprove?.time ?? 'Live'}
                     </span>
                   </div>
-                  <div className="py-2 border-b border-dashed border-gray-300 text-xs stack-xs">
+                  <div className="py-2 border-b border-dashed border-gray-300 text-xs space-y-1">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Farmer:</span>
                       <span className="font-bold">{confirmApprove?.farmerName ?? farmer?.name}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Pallet Code:</span>
-                      <span className="mono font-semibold">
+                      <span className="font-mono font-semibold">
                         {approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}
                       </span>
                     </div>
@@ -703,15 +727,15 @@ export default function WeighingPage() {
                       {approvedSuccessRecord ? 'Status: APPROVED (VERIFIED)' : 'Ready for Approval'}
                     </span>
                   </div>
-                  <div className="pt-2 text-[10px] text-gray-500 text-center italic">
-                    * Simpan tanda terima ini sebagai bukti timbang resmi petani. *
+                  <div className="pt-1 text-[10px] text-gray-500 text-center italic">
+                    * Please retain this receipt for official intake records. *
                   </div>
                 </div>
               )}
 
               {/* Pallet Label Preview */}
               {(printTab === 'both' || printTab === 'label') && (
-                <div className="p-4 rounded-lg bg-white text-black border-2 border-dashed border-gray-400 font-mono shadow-sm">
+                <div className="p-4 rounded-xl bg-white text-black border-2 border-dashed border-gray-400 font-mono shadow-sm space-y-3">
                   <div className="text-center pb-2 border-b border-gray-300">
                     <span className="text-xs uppercase tracking-wider font-bold block text-gray-700">
                       E-Tani Smart Hub · Receiving Pallet
@@ -720,7 +744,7 @@ export default function WeighingPage() {
                       {approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-center py-3 border-b border-gray-200">
+                  <div className="flex items-center justify-center py-2 border-b border-gray-200">
                     <div className="flex flex-col items-center gap-1">
                       <div className="flex gap-1 h-9 items-center justify-center px-4 bg-gray-100 rounded">
                         {[3, 1, 4, 2, 1, 3, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 2].map((w, idx) => (
@@ -732,7 +756,7 @@ export default function WeighingPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs pt-2">
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1">
                     <div>
                       <span className="text-gray-500 block text-[10px]">Farmer</span>
                       <span className="font-semibold">{confirmApprove?.farmerName ?? farmer?.name}</span>
@@ -744,8 +768,8 @@ export default function WeighingPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="pt-2 text-[10px] text-gray-500 text-center border-t border-gray-200 mt-2">
-                    Tempel label ini pada box/palet fisik intake sebelum sortir.
+                  <div className="pt-1 text-[10px] text-gray-500 text-center border-t border-gray-200">
+                    Attach label to physical box or pallet prior to sorting.
                   </div>
                 </div>
               )}
@@ -761,7 +785,7 @@ export default function WeighingPage() {
                   icon="refresh"
                   onClick={() => confirmApprove && handleKoreksi(confirmApprove)}
                 >
-                  ← Koreksi Weight
+                  ← Correct Weight
                 </Button>
                 <div className="flex items-center gap-2">
                   <Button
@@ -789,7 +813,7 @@ export default function WeighingPage() {
                   </Button>
                 </div>
                 <Button variant="primary" icon="check" touch onClick={handleNextWeighing}>
-                  Next Weighing / Timbang Berikutnya ⏎
+                  Next Weighing ⏎
                 </Button>
               </>
             )}
@@ -805,30 +829,46 @@ export default function WeighingPage() {
          FULLSCREEN FOCUS MODE OVERLAY
          ═══════════════════════════════════════════════════════════════════ */}
       {focusMode && (
-        <div className="focus-overlay" role="dialog" aria-modal="true" aria-label="Weighing Focus Mode">
-          <header className="focus-header">
+        <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto" role="dialog" aria-modal="true" aria-label="Weighing Focus Mode">
+          <header className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
             <div className="flex items-center gap-3">
               <Logo className="h-6 w-auto" markOnly />
               <div>
-                <span className="font-semibold text-sm block leading-none">Receiving Intake Station</span>
-                <span className="text-[10px] text-text-light font-mono">Focus Mode · Distraction Free</span>
+                <span className="font-semibold text-sm block leading-none text-foreground">Receiving Intake Station</span>
+                <span className="text-[10px] text-muted-foreground font-mono">Focus Mode · Distraction Free</span>
               </div>
             </div>
 
             {/* Stepper Progress */}
-            <nav className="focus-stepper" aria-label="Weighing steps">
-              <div className={`focus-step ${activeStep === 1 ? 'is-active' : activeStep > 1 ? 'is-done' : ''}`}>
-                <span className="focus-step-num">{activeStep > 1 ? '✓' : '1'}</span>
+            <nav className="hidden md:flex items-center gap-3 bg-muted/50 px-4 py-2 rounded-full border border-border" aria-label="Weighing steps">
+              <div className={`flex items-center gap-2 text-xs font-semibold ${
+                activeStep === 1 ? 'text-primary' : activeStep > 1 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
+              }`}>
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-mono font-bold ${
+                  activeStep === 1 ? 'bg-primary text-primary-foreground' : activeStep > 1 ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'
+                }`}>{activeStep > 1 ? '✓' : '1'}</span>
                 <span>Farmer ID</span>
               </div>
-              <div className="focus-stepper-sep" />
-              <div className={`focus-step ${activeStep === 2 ? 'is-active' : activeStep > 2 ? 'is-done' : ''}`}>
-                <span className="focus-step-num">{activeStep > 2 ? '✓' : '2'}</span>
+
+              <span className="text-muted-foreground/40 text-xs">/</span>
+
+              <div className={`flex items-center gap-2 text-xs font-semibold ${
+                activeStep === 2 ? 'text-primary' : activeStep > 2 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
+              }`}>
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-mono font-bold ${
+                  activeStep === 2 ? 'bg-primary text-primary-foreground' : activeStep > 2 ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'
+                }`}>{activeStep > 2 ? '✓' : '2'}</span>
                 <span>Weigh Harvest</span>
               </div>
-              <div className="focus-stepper-sep" />
-              <div className={`focus-step ${activeStep === 3 ? 'is-active' : approvedSuccessRecord ? 'is-done' : ''}`}>
-                <span className="focus-step-num">{approvedSuccessRecord ? '✓' : '3'}</span>
+
+              <span className="text-muted-foreground/40 text-xs">/</span>
+
+              <div className={`flex items-center gap-2 text-xs font-semibold ${
+                activeStep === 3 ? 'text-primary' : approvedSuccessRecord ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
+              }`}>
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-mono font-bold ${
+                  activeStep === 3 && !approvedSuccessRecord ? 'bg-primary text-primary-foreground' : approvedSuccessRecord ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'
+                }`}>{approvedSuccessRecord ? '✓' : '3'}</span>
                 <span>Approve & Label</span>
               </div>
             </nav>
@@ -850,14 +890,16 @@ export default function WeighingPage() {
             </div>
           </header>
 
-          {renderFocusContent()}
+          <main className="flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto">
+            {renderFocusContent()}
+          </main>
         </div>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
          STANDARD DASHBOARD VIEW (Non-focus mode)
          ═══════════════════════════════════════════════════════════════════ */}
-      <div className="stack stack-lg">
+      <div className="space-y-6">
         <PageHeader
           title="Weighing Station"
           subtitle="Receiving area — identify farmer, weigh harvest intake (pure weighing), approve to generate pallet and print label."
@@ -879,38 +921,36 @@ export default function WeighingPage() {
         />
 
         {/* Quick Stats Grid */}
-        <div className="grid-stats">
-          <div className="stat-card">
-            <p className="stat-label">Pending approval</p>
-            <p className="stat-value">{pendingCount}</p>
-            <p className="stat-sub">Waiting for verification</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-1">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pending approval</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">{pendingCount}</p>
+            <p className="text-xs text-muted-foreground">Waiting for verification</p>
           </div>
-          <div className="stat-card">
-            <p className="stat-label">Approved today</p>
-            <p className="stat-value">{approvedToday}</p>
-            <p className="stat-sub stat-trend-up">
+          <div className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-1">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Approved today</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">{approvedToday}</p>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
               <Icon name="arrow-up" size={12} /> Pallets ready for sorting
             </p>
           </div>
-          <div className="stat-card">
-            <p className="stat-label">Scale Capacity</p>
-            <p className="stat-value">{SCALE_CAPACITY_KG}</p>
-            <p className="stat-sub">kg maximum load</p>
+          <div className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-1">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale Capacity</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">{SCALE_CAPACITY_KG}</p>
+            <p className="text-xs text-muted-foreground">kg maximum load</p>
           </div>
-          <div className="stat-card">
-            <p className="stat-label">Workflow Mode</p>
-            <p className="stat-value" style={{ fontSize: 20 }}>
-              Sequential
-            </p>
-            <p className="stat-sub">Step 1 → Step 2 → Step 3</p>
+          <div className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-1">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Workflow Mode</p>
+            <p className="text-lg font-bold tracking-tight text-foreground">Sequential</p>
+            <p className="text-xs text-muted-foreground">Step 1 → Step 2 → Step 3</p>
           </div>
         </div>
 
         {/* Sequential Stepper in Standard View */}
-        <div className="card p-4 border border-border stack-md">
-          <div className="flex items-center justify-between border-b border-border pb-3 flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-base">Sequential Intake Stepper</span>
+        <div id="weighing-stepper" className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <span className="font-semibold text-base text-foreground">Sequential Intake Stepper</span>
               <Badge tone="accent">Step {activeStep} of 3</Badge>
             </div>
             <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
@@ -923,10 +963,10 @@ export default function WeighingPage() {
         </div>
 
         {/* ── Today's Harvest Weighing Records Ledger ── */}
-        <div id="weighing-records" className="stack-sm">
-          <div className="section-header">
-            <h2 className="section-title">Today's Harvest Weighing Records</h2>
-            <span className="t-caption text-text-secondary">
+        <div id="weighing-records" className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Today's Harvest Weighing Records</h2>
+            <span className="text-xs text-muted-foreground font-mono">
               {pendingCount} pending · {approvedToday} approved
             </span>
           </div>
@@ -936,7 +976,7 @@ export default function WeighingPage() {
             rowKey={(row) => row.id}
             emptyTitle="No harvest weighing records today."
             emptyDescription="Select a farmer and record the first harvest weighing."
-            caption="Approve commits the weight and generates a Pallet ID for label printing; Koreksi reloads the weight into the scale form."
+            caption="Approve commits the weight and generates a Pallet ID for label printing; Correct reloads the weight into the scale form."
           />
         </div>
       </div>
