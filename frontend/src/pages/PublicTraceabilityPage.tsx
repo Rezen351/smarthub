@@ -111,8 +111,12 @@ export default function PublicTraceabilityPage() {
     <div className="min-h-screen bg-background">
       <nav className="public-nav">
         <div className="public-container flex items-center justify-between">
-          <Link to="/" aria-label="ENYX-Smart Hub home">
-            <Logo className="h-7 w-auto" />
+          <Link to="/" className="flex items-center gap-2.5" aria-label="ENYX Traceability System home">
+            <Logo className="h-7 w-auto" markOnly />
+            <div className="flex flex-col">
+              <span className="font-semibold text-base tracking-tight leading-tight text-text">Traceability System</span>
+              <span className="text-[11px] text-text-light leading-none font-mono">ENYX Enterprise</span>
+            </div>
           </Link>
           <div className="flex items-center gap-sm">
             <Link to="/">
@@ -244,6 +248,16 @@ export default function PublicTraceabilityPage() {
           format printed on the pouch label.
         </p>
       </main>
+
+      <footer className="public-footer border-t border-border mt-12 py-6">
+        <div className="public-container flex items-center justify-between gap-md flex-wrap text-sm text-text-secondary">
+          <p>© {new Date().getFullYear()} ENYX Enterprise. All rights reserved.</p>
+          <div className="flex items-center gap-3">
+            <span className="text-xs bg-bg-alt px-2 py-0.5 rounded font-mono">Type: enyx-enterprise</span>
+            <span className="text-xs">Traceability System v1.0.0</span>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

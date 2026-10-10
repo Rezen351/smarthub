@@ -106,13 +106,13 @@ Satu komoditas: Kentang & Fokus MVP, operasional tunggal; multi-commodity belum 
 \hline
 Petani hanya menunjukkan ID; \textbf{operator yang approve} berat & Menghindari sengketa di timbangan sekaligus menjaga interaksi petani tetap minimal & Status \texttt{APPROVED} dicatat operator; tidak ada aksi approval dari petani \\
 \hline
-Penimbangan hanya di Area Penerimaan (karung/palet) dan Area Pengepakan (pouch 1 kg) & Area Sortir tidak perlu timbangan; berat per grade diperoleh dari jumlah pouch & Timbangan dipindah/terbatas di 2 area; Area Sortir hanya cetak label grade \\
+Penimbangan hanya di Area Penerimaan (karung/palet) dan Area Pengepakan (pouch 1 kg) & Area Sortir tidak perlu timbangan; berat per grade diperoleh dari akumulasi pouch & Timbangan hanya di 2 area; Area Sortir murni scan palet \& cetak label grade \\
 \hline
-Pengepakan hanya melabeli, tanpa scan & Grade sudah terpisah dan berlabel pada palet & Scan manual di pengepakan dihilangkan; commodity/grade/pallet otomatis dari context \\
+Cetak ganda di penerimaan: Struk Petani \& Label Palet & Petani butuh bukti setoran resmi; wadah fisik palet butuh identitas QR traceability & Sistem mencetak Struk Bukti Timbang Petani (nota thermal) dan Label Stiker Palet (PLT-...) \\
 \hline
-Palet dibuat saat scan pertama & Palet adalah unit fisik ber-ID dasar seluruh traceability & Entity \texttt{Pallet} dibuat saat penerimaan; kode \texttt{PLT-YYYYMMDD-SEQ} \\
+Palet dibuat otomatis pasca-approve berat & Palet adalah unit fisik ber-ID dasar seluruh traceability & Entity \texttt{Pallet} diterbitkan saat operator approve; kode \texttt{PLT-YYYYMMDD-SEQ} \\
 \hline
-Tanggal panen diinput operator saat penerimaan & Atribut wajib untuk traceability yang sebelumnya belum tertangkap & Field \texttt{harvestDate} pada entity \texttt{Pallet} \\
+Pengepakan tanpa scan palet, timbang 1 kg \& cetak label & Grade dan palet sudah berlabel pada kelompok sortir; akumulasi berat per grade dihitung dari pouch 1 kg & Scan manual di pengepakan dihilangkan; timbangan meja target 1 kg $\pm$5 g mentrigger cetak label pouch \\
 \hline
 Label pouch memakai QR \textbf{GS1 Digital Link} & Satu simbol untuk dua pembaca: scanner internal dan smartphone konsumen; searah dengan arah industri (Sunrise 2027) & QR pouch berisi URL; server menyediakan resolver + halaman traceability publik; EAN-13 tetap dicetak paralel \\
 \hline
@@ -131,7 +131,7 @@ Sistem disusun dalam lima layer, dari perangkat lapangan hingga akses pengguna:
 \textbf{Layer} & \textbf{Komponen} & \textbf{Fungsi} \\
 \midrule
 \endhead
-Field Level & Timbangan RS485 (Area Penerimaan \& Pengemasan), scanner QR, printer label (palet, grade, pouch), scanner warehouse, scanner pengiriman, smartphone petani & Input data timbang, scan, dan cetak label di lapangan \\
+Field Level & Timbangan RS485 (Area Penerimaan \& Pengemasan), scanner QR, printer struk thermal (tanda terima petani), printer label (palet, grade, pouch), scanner warehouse, scanner pengiriman, smartphone petani & Input data timbang, scan, cetak struk tanda terima petani, dan cetak label wadah/pouch di lapangan \\
 \hline
 Edge / Gateway & 2$\times$ ESP32 (Area Penerimaan, Area Pengemasan), router/switch & Akuisisi data timbangan via RS485; publish ke broker via MQTT/Wi-Fi LAN \\
 \hline
@@ -183,8 +183,8 @@ Context: farmerId, farmerName, commodityId (auto: Kentang),
          depositDate (auto), palletCode (setelah approve)
 \end{verbatim}
 
-Alur kerja: \textbf{Scan ID Petani $\rightarrow$ Murni Timbang Hasil Panen $\rightarrow$ Approve $\rightarrow$ Cetak Label Palet (PLT-\ldots)}.
-Tidak ada proses atau halaman manual ``Buat Palet''; nomor dan entitas Pallet ID diterbitkan secara otomatis oleh sistem saat operator menekan Approve pada penimbangan yang valid, dilanjutkan dengan pencetakan label QR palet untuk ditempelkan pada fisik wadah. Dashboard menampilkan context aktif secara ringkas agar operator selalu sadar petani yang sedang diproses.
+Alur kerja: \textbf{Scan ID Petani $\rightarrow$ Murni Timbang Hasil Panen (Auto/Manual) $\rightarrow$ Approve $\rightarrow$ Cetak Struk Petani \& Label Palet (PLT-\ldots)}.
+Tidak ada proses atau halaman manual ``Buat Palet''; nomor dan entitas Pallet ID diterbitkan secara otomatis oleh sistem saat operator menekan Approve pada penimbangan yang valid. Setelah approval, sistem mengaktifkan langkah cetak ganda: Struk Bukti Timbang Petani (nota tanda terima resmi yang sah untuk dibawa pulang) serta pencetakan label QR palet untuk ditempelkan pada fisik wadah/palet intake. Dashboard menampilkan context aktif secara ringkas agar operator selalu sadar petani yang sedang diproses.
 
 \subsection{Modul dan Shared Components}
 \begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{11.8cm}@{}}
@@ -238,13 +238,13 @@ timbangan}; berat per grade diperoleh dari akumulasi pouch 1 kg.
 \textbf{Tahap} & \textbf{Fungsi} & \textbf{Tujuan} \\
 \midrule
 \endhead
-1. Penerimaan & Operator scan/pilih ID petani. Halaman penimbangan murni hanya menimbang hasil panen saja tanpa input grade, pallet ID, dan note; tanggal setor otomatis oleh sistem. Operator verifikasi \& approve berat resmi (koreksi bila perlu). Setelah approve, sistem otomatis generate Pallet ID dan membuka step cetak QR label palet (\texttt{PLT-\ldots}) untuk ditempel pada box/palet & Menetapkan berat setoran resmi secara murni, mencatat tanggal setor otomatis, dan menerbitkan identitas fisik palet ber-QR untuk tahap berikutnya \\
+1. Penerimaan & Operator scan/pilih ID petani. Halaman penimbangan murni hanya menimbang hasil panen saja (Auto via Modbus TCP atau Manual) tanpa input grade, pallet ID, dan note; tanggal setor otomatis oleh sistem. Operator verifikasi \& approve berat resmi (koreksi bila perlu). Setelah approve, sistem otomatis menerbitkan Pallet ID dan membuka langkah cetak ganda: Struk Bukti Timbang Petani (nota thermal tanda terima sah) dan QR label palet (\texttt{PLT-\ldots}) untuk ditempel pada box/palet & Menetapkan berat setoran resmi secara murni, memberikan bukti fisik sah kepada petani, mencatat tanggal setor otomatis, dan menerbitkan identitas fisik palet ber-QR untuk tahap berikutnya \\
 \hline
 2. Pencucian \newline (opsional) & Mencuci dan mengeringkan kentang bila kondisinya memerlukan; dilewati jika sudah bersih & Membersihkan komoditas sebelum sortir agar mutu tidak tercemar kotoran \\
 \hline
-3. Sortir & Memisahkan kentang ke grade A/B/C, mencetak label grade untuk setiap kelompok, dan menempelkannya pada kelompok yang bersangkutan di palet & Mengelompokkan mutu untuk pengepakan; berat diperoleh dari penimbangan pouch \\
+3. Sortir & Operator scan QR palet intake (\texttt{PLT-\ldots}), memisahkan kentang ke grade A/B/C secara fisik, memilih grade, mencetak label grade (\texttt{GRD-\ldots}), dan menempelkannya pada palet/keranjang sortir per kelompok. Murni klasifikasi mutu tanpa penimbangan & Mengelompokkan mutu dan memberi identitas fisik palet per grade untuk pengepakan; berat per grade diperoleh dari akumulasi pouch 1 kg \\
 \hline
-4. Pengepakan & Menimbang \& mengisi pouch 1 kg per grade, lalu mencetak label pouch (QR GS1 Digital Link + EAN-13) tanpa scan karena grade dan palet sudah berlabel & Menghasilkan unit retail 1 kg dengan berat akurat dan identitas GS1; satu QR melayani scanner internal dan konsumen \\
+4. Pengepakan & Menimbang \& mengisi pouch 1 kg per grade (timbangan meja target 1 kg $\pm$5 g), lalu mencetak label pouch (QR GS1 Digital Link + EAN-13) tanpa scan karena grade dan palet sudah berlabel pada kelompok sortir & Menghasilkan unit retail 1 kg dengan berat akurat dan identitas GS1; berat riil per grade dihitung dari akumulasi jumlah pouch \\
 \hline
 5. Penyimpanan \newline Warehouse & Operator scan pouch/pallet saat warehouse in; sistem mencatat stok masuk (jumlah, grade, total berat) dan memperbarui kapasitas serta sisa ruang & Menyimpan stok dalam status terdata dan real-time per grade \\
 \hline
@@ -267,7 +267,7 @@ timbangan}; berat per grade diperoleh dari akumulasi pouch 1 kg.
 \midrule
 \endhead
 Petani & Membawa panen, menunjukkan ID petani, menyerahkan hasil panen \\
-Operator & Scan ID, siapkan palet, timbang karung, verifikasi \& approve, cetak label palet; saat sortir: cetak label grade (A/B/C) \\
+Operator & Scan ID, timbang panen (Auto/Manual), verifikasi \& approve, cetak struk petani \& label palet; saat sortir: scan palet intake \& cetak label grade (A/B/C) \\
 Sistem & Auto-fetch context, pencatatan otomatis (status \texttt{APPROVED}), update stok \& kapasitas, resolve GS1 Digital Link ke halaman traceability publik \\
 Proses & Pencucian (opsional), sortir \& pengelompokan grade \\
 Pengemasan & Timbang \& isi pouch 1 kg per grade, cetak label (QR GS1 Digital Link + EAN-13) --- tanpa scan, grade sudah terpisah di palet \\
@@ -465,9 +465,9 @@ Tipografi: \textbf{Inter} (weight 400--700, di-load dari Google Fonts), base
 \midrule
 \endhead
 Admin & Manajemen pengguna dan komoditas, laporan, konfigurasi sistem \\
-Weighing Operator & Input cepat: scan ID petani, pure timbang hasil panen, approve, cetak label palet terbit otomatis \\
-Sorting Operator & Sortir grade, cetak label grade, konfirmasi hasil sortir (tanpa timbang) \\
-Packing Operator & Timbang \& isi pouch, preview \& cetak label (QR + EAN-13) \\
+Weighing Operator & Input cepat: scan ID petani, pure timbang hasil panen (Auto/Manual), approve, cetak struk tanda terima petani dan label QR palet \\
+Sorting Operator & Scan palet intake, kelompokkan grade A/B/C, cetak label grade palet (murni tanpa timbang) \\
+Packing Operator & Timbang \& isi pouch target 1 kg per grade (tanpa scan palet), preview \& cetak label (QR + EAN-13) \\
 Warehouse Operator & Scan warehouse in/out, ringkasan stok per grade, alert kapasitas \\
 Delivery Operator & Loading truck, scan ITF-14 verifikasi muatan, catat keberangkatan \\
 Farmer & Riwayat setoran dan traceability gaya mobile-banking: total pengiriman, aktivitas terbaru, pencarian barcode \\
@@ -495,16 +495,16 @@ ENYX-Smart Hub
 |   +-- Pengaturan Sistem            — komoditas aktif (Kentang), parameter timbangan, konfigurasi label
 +-- Weighing Operator (Area Penerimaan)
 |   +-- Identifikasi Petani          — scan/pilih ID petani; tanggal setor otomatis
-|   +-- Penimbangan Hasil Panen      — pure timbang hasil panen (tanpa grade/pallet/note), approve/koreksi
-|   +-- Step Cetak Label Palet       — preview & cetak QR label PLT-... setelah approve
+|   +-- Penimbangan Hasil Panen      — pure timbang hasil panen (Auto Modbus/Manual), approve/koreksi
+|   +-- Step Cetak Struk & Label     — cetak struk tanda terima petani & cetak QR label palet PLT-...
 |   +-- Riwayat Timbang              — daftar setoran hasil panen (pending & approved)
 +-- Sorting Operator (Area Sortir)
-|   +-- Sortir Grade                 — kelompokkan hasil panen ke grade A/B/C
-|   +-- Cetak Label Grade            — cetak & tempel label GRD-... per kelompok
-|   +-- Riwayat Sortir               — rekap hasil sortir per palet
+|   +-- Scan Palet Intake            — scan QR label palet PLT-... untuk memuat palet sumber
+|   +-- Klasifikasi Grade & Cetak    — pilih grade (A/B/C) & cetak label GRD-... untuk palet sortir (tanpa timbang)
+|   +-- Riwayat Sortir               — rekap hasil sortir dan label yang diterbitkan
 +-- Packing Operator (Area Pengepakan)
-|   +-- Timbang & Isi Pouch 1 kg     — timbang pouch per grade (tanpa scan)
-|   +-- Cetak Label Pouch            — preview & cetak QR GS1 Digital Link + EAN-13
+|   +-- Timbang & Isi Pouch 1 kg     — timbang target 1 kg ± 5 g per grade (tanpa scan palet)
+|   +-- Cetak Label Pouch            — preview & cetak QR GS1 Digital Link + EAN-13 per pouch 1 kg
 |   +-- Riwayat Pengemasan           — daftar pouch yang sudah berlabel
 +-- Warehouse Operator
 |   +-- Warehouse In                 — scan pouch/pallet, catat stok masuk
@@ -533,15 +533,15 @@ Publik & Traceability Konsumen & Menampilkan data asal-usul produk (petani, kebu
 \hline
 Weighing Operator & Identifikasi Petani & Scan ID petani, aktivasi context petani, dan tanggal setor otomatis oleh sistem & Mengikat setoran intake ke petani yang tepat dengan tanggal otomatis \\
 \hline
-Weighing Operator & Penimbangan Hasil Panen & Murni menimbang hasil panen tanpa input grade, pallet ID, dan note; tombol Approve dan Koreksi/Timbang Ulang & Menetapkan berat setoran panen resmi secara akurat dan objektif \\
+Weighing Operator & Penimbangan Hasil Panen & Murni menimbang hasil panen (Auto Modbus TCP atau Manual) tanpa input grade, pallet ID, dan note; tombol Approve dan Koreksi/Timbang Ulang & Menetapkan berat setoran panen resmi secara akurat dan objektif \\
 \hline
-Weighing Operator & Step Cetak Label Palet & Muncul setelah approve; generate kode \texttt{PLT-...}, preview dan cetak label QR palet & Memberi identitas fisik palet untuk tahap sortir dan packing berikutnya \\
+Weighing Operator & Step Cetak Struk \& Label & Muncul setelah approve; terbitkan kode \texttt{PLT-...}, cetak Struk Bukti Timbang Petani dan QR Label Palet & Memberikan bukti fisik tanda terima kepada petani dan identitas QR palet untuk alur operasional \\
 \hline
-Sorting Operator & Sortir \& Label Grade & Kelompokkan grade A/B/C, cetak \& tempel label grade per kelompok & Memisahkan mutu dan memberi penanda grade pada palet \\
+Sorting Operator & Sortir \& Label Grade & Scan QR palet intake, kelompokkan grade A/B/C, pilih grade dan cetak label tanpa timbang & Memisahkan mutu dan memberi penanda fisik grade pada palet sortir \\
 \hline
-Packing Operator & Timbang \& Isi Pouch & Timbang dan isi pouch 1 kg per grade tanpa scan & Menghasilkan unit retail dengan berat akurat \\
+Packing Operator & Timbang \& Isi Pouch & Timbang dan isi pouch target 1 kg $\pm$5 g per grade tanpa scan palet & Menghasilkan unit retail dengan berat akurat dan menghitung akumulasi bobot per grade \\
 \hline
-Packing Operator & Cetak Label Pouch & Preview dan cetak label QR GS1 Digital Link + EAN-13 & Memberi identitas GS1 dan kanal traceability pada tiap pouch \\
+Packing Operator & Cetak Label Pouch & Preview dan cetak label QR GS1 Digital Link + EAN-13 per pouch 1 kg & Memberi identitas GS1 dan kanal traceability pada tiap pouch unit \\
 \hline
 Warehouse Operator & Warehouse In/Out & Scan pouch/pallet untuk stok masuk; scan packaging untuk stok keluar & Menjaga stok terdata dan kapasitas terkendali \\
 \hline
@@ -801,8 +801,8 @@ Reset Context & \emph{``Reset session context? Farmer \textbf{[Nama]} and
   & Context bar hilang; halaman kembali ke layar Scan \& Context; event
   \texttt{context:updated} dipancarkan ke semua tab \\
 \hline
-Approve Berat & \emph{``Approve official weight \textbf{[X]} kg for \textbf{[Nama Petani]}? Upon approval, a Pallet ID will be generated and you will be prompted to print the pallet label.''}
-  & Status record menjadi \texttt{APPROVED}; Pallet ID diterbitkan otomatis; dialog/modal Step Cetak Label Palet langsung aktif untuk mencetak label QR palet \\
+Approve Berat & \emph{``Approve official weight \textbf{[X]} kg for \textbf{[Nama Petani]}? Upon approval, a Pallet ID will be generated and you will be prompted to print the farmer receipt and pallet label.''}
+  & Status record menjadi \texttt{APPROVED}; Pallet ID diterbitkan otomatis; dialog/modal cetak langsung aktif untuk mencetak Struk Bukti Timbang Petani dan Label QR Palet \\
 \hline
 Catat Keberangkatan & \emph{``Confirm departure of truck \textbf{[Plat]} with
   \textbf{[N]} packaging units to \textbf{[Tujuan]}? Stock will be deducted.''}

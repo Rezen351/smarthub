@@ -1,33 +1,33 @@
 /**
- * Weighing — Area Penerimaan (Receiving).
+ * Weighing — Area Penerimaan (Receiving Intake Station).
  *
- * Implements the revised receiving intake workflow:
- *   1. Scan / select Farmer ID (session context).
- *   2. Pure harvest intake weighing — deposit date is automatic by the system.
- *      No grade, no pallet ID prior to weighing, and no note.
- *   3. Approve official weight → automatically generates Pallet ID.
- *   4. Step: Print & affix Pallet Label (PLT-...).
+ * Implements the revised pure intake weighing workflow with Focus Mode (Full Screen):
+ *   Sequential 3-step workflow:
+ *     1. Step 1: Farmer Identification (Scan barcode or select from directory)
+ *     2. Step 2: Harvest Weighing (Live scale reading via Modbus TCP/MQTT or manual)
+ *     3. Step 3: Approve & Print Label (Pallet ID generation, farmer receipt & pallet QR label)
+ *
+ * Weight transmitter network configuration is managed in Configuration (Settings).
  */
-import { useState, useEffect } from 'react'
-import Card from '../components/shared/Card'
+import { useState, useEffect, useRef } from 'react'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import Icon from '../components/shared/Icon'
-import { Field, Select } from '../components/shared/Form'
+import Logo from '../components/shared/Logo'
+import { Input } from '../components/shared/Form'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
-import ConfirmDialog from '../components/feedback/ConfirmDialog'
 import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import { useSessionContext } from '../hooks/useSessionContext'
 
-type TransportMode = 'wifi' | 'ethernet'
 type WeighingStatus = 'PENDING' | 'APPROVED'
 
 type WeighingRecord = {
   id: string
   farmerId: string
   farmerName: string
+  farmerVillage?: string
   weightKg: number
   depositDate: string
   time: string
@@ -59,26 +59,36 @@ export default function WeighingPage() {
   const toast = useToast()
   const { farmer, active, startScan } = useSessionContext()
 
-  /* ── Scan & context ── */
-  const [scanFarmerId, setScanFarmerId] = useState('')
-  const [scanning, setScanning] = useState(false)
-  const [scanError, setScanError] = useState('')
+  /* ── Mode State ── */
+  const [focusMode, setFocusMode] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [activeStep, setActiveStep] = useState<1 | 2 | 3>(1)
 
-  /* ── Weighing form (purely weight) ── */
+  /* ── Step 1: Scan & Farmer Identification ── */
+  const [scanFarmerId, setScanFarmerId] = useState('')
+  const [manualSearch, setManualSearch] = useState('')
+  const [scanError, setScanError] = useState('')
+  const scanInputRef = useRef<HTMLInputElement>(null)
+
+  /* ── Step 2: Weighing Form ── */
   const [weightKg, setWeightKg] = useState('')
   const [formError, setFormError] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
+
+  /* ── Step 3: Approval & Print State ── */
   const [confirmApprove, setConfirmApprove] = useState<WeighingRecord | null>(null)
-
-  /* ── Step: Print Pallet Label Modal ── */
   const [printModalRecord, setPrintModalRecord] = useState<WeighingRecord | null>(null)
+  const [approvedSuccessRecord, setApprovedSuccessRecord] = useState<WeighingRecord | null>(null)
   const [isPrinting, setIsPrinting] = useState(false)
+  const [printTab, setPrintTab] = useState<'both' | 'receipt' | 'label'>('both')
 
+  /* ── Records Ledger ── */
   const [records, setRecords] = useState<WeighingRecord[]>([
     {
       id: '1',
       farmerId: 'farmer-1',
       farmerName: 'Ahmad Santoso',
+      farmerVillage: 'Dieng, Wonosobo',
       weightKg: 45.5,
       depositDate: today(),
       time: '10:15',
@@ -89,6 +99,7 @@ export default function WeighingPage() {
       id: '2',
       farmerId: 'farmer-2',
       farmerName: 'Budi Prasetyo',
+      farmerVillage: 'Berastagi, Karo',
       weightKg: 38.2,
       depositDate: today(),
       time: '09:45',
@@ -97,97 +108,123 @@ export default function WeighingPage() {
   ])
   const [palletCounter, setPalletCounter] = useState(2)
 
-  /* ── Transmitter configuration (firmware transport) ── */
-  const [transportMode, setTransportMode] = useState<TransportMode>('wifi')
-  const [transportStatus, setTransportStatus] = useState({
-    staConnected: false,
-    ethernetActive: false,
-    ethernetIp: '',
-    apSsid: 'ENYX-SMARTHUB-AP',
-    apIp: '192.168.4.1',
-  })
-  const [transportSaving, setTransportSaving] = useState(false)
-
+  /* Auto-focus scanner input in Step 1 */
   useEffect(() => {
-    fetchTransportStatus()
-  }, [])
+    if (activeStep === 1) {
+      const timer = window.setTimeout(() => {
+        scanInputRef.current?.focus()
+      }, 100)
+      return () => window.clearTimeout(timer)
+    }
+  }, [activeStep, focusMode])
 
-  const fetchTransportStatus = async () => {
-    try {
-      const res = await fetch('/api/weighing/transport')
-      const json = await res.json()
-      if (json.success) {
-        setTransportMode(json.data.transportMode || 'wifi')
-        setTransportStatus(json.data)
+  /* Fullscreen & Esc handler */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && focusMode) {
+        setFocusMode(false)
+        if (document.fullscreenElement) {
+          document.exitFullscreen?.().catch(() => {})
+        }
       }
-    } catch (e) {
-      console.error('Failed to fetch transport status', e)
+    }
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement))
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }
+  }, [focusMode])
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {})
+    } else {
+      document.exitFullscreen?.().catch(() => {})
     }
   }
 
-  const handleTransportSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setTransportSaving(true)
-    try {
-      const res = await fetch('/api/weighing/transport', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: transportMode }),
-      })
-      const json = await res.json()
-      if (json.success) {
-        toast.success(json.message)
-        await fetchTransportStatus()
-      } else {
-        toast.error(json.error?.message || 'Failed to save transport mode')
-      }
-    } catch {
-      toast.error('Error saving transport configuration')
-    } finally {
-      setTransportSaving(false)
+  const enterFocusMode = () => {
+    setFocusMode(true)
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {})
     }
   }
 
-  /* ── Scan farmer ID: binds farmer context ── */
-  const handleScan = async () => {
+  const exitFocusMode = () => {
+    setFocusMode(false)
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {})
+    }
+  }
+
+  /* ── Step 1: Handle Farmer Identification ── */
+  const selectFarmer = (targetFarmer: (typeof FARMERS)[number]) => {
     setScanError('')
-    const selected = FARMERS.find((item) => item.id === scanFarmerId)
-    if (!selected) {
-      setScanError('Farmer barcode not recognized — select a farmer from the list.')
+    startScan({ id: targetFarmer.id, name: targetFarmer.name })
+    setScanFarmerId(targetFarmer.id)
+    toast.success(`Farmer verified: ${targetFarmer.name}`)
+    // Advance directly to Step 2
+    setActiveStep(2)
+  }
+
+  const handleScanSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    setScanError('')
+    const query = (manualSearch || scanFarmerId).trim().toLowerCase()
+    if (!query) {
+      setScanError('Please scan or type a Farmer ID / Barcode.')
       return
     }
 
-    setScanning(true)
-    await new Promise((resolve) => window.setTimeout(resolve, 350))
-    startScan({ id: selected.id, name: selected.name })
-    setScanning(false)
-    toast.success(`Context set: ${selected.name}`)
+    const matched = FARMERS.find(
+      (f) =>
+        f.id.toLowerCase() === query ||
+        f.name.toLowerCase().includes(query) ||
+        f.village.toLowerCase().includes(query),
+    )
+
+    if (matched) {
+      selectFarmer(matched)
+      setManualSearch('')
+    } else {
+      setScanError(`No farmer found matching "${query}". Select from the list below.`)
+    }
   }
 
-  /* ── Record pure harvest weighing ── */
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  /* ── Step 2: Handle Weight Commitment ── */
+  const handleProceedToApproval = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     setFormError('')
 
     if (!active || !farmer) {
-      setFormError('Select or scan a farmer first to set the session context.')
+      setFormError('Farmer context is required. Please go back to Step 1.')
+      setActiveStep(1)
       return
     }
-    if (!(Number(weightKg) > 0)) {
+
+    const numericWeight = Number(weightKg)
+    if (!(numericWeight > 0)) {
       setFormError('Weight must be greater than 0 kg.')
       return
     }
-    if (Number(weightKg) > SCALE_CAPACITY_KG) {
+    if (numericWeight > SCALE_CAPACITY_KG) {
       setFormError(`Weight exceeds scale capacity of ${SCALE_CAPACITY_KG} kg.`)
       return
     }
 
+    const activeFarmerObj = FARMERS.find((f) => f.id === farmer.id)
     const payload: WeighingRecord = {
       id: editingId ?? String(Date.now()),
       farmerId: farmer.id,
       farmerName: farmer.name,
-      weightKg: Number(Number(weightKg).toFixed(3)),
-      depositDate: today(), // Automatic by system
+      farmerVillage: activeFarmerObj?.village ?? 'Dieng, Wonosobo',
+      weightKg: Number(numericWeight.toFixed(3)),
+      depositDate: today(),
       time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
       status: 'PENDING',
     }
@@ -195,17 +232,16 @@ export default function WeighingPage() {
     if (editingId) {
       setRecords((current) => current.map((item) => (item.id === editingId ? payload : item)))
       setEditingId(null)
-      toast.info('Weighing updated — awaiting approval.')
     } else {
       setRecords((current) => [payload, ...current])
-      toast.success('Harvest weighing recorded — pending approval.')
     }
 
-    setWeightKg('')
+    setConfirmApprove(payload)
+    setActiveStep(3)
   }
 
-  /* ── Approval: generates Pallet ID and triggers Print Pallet Label step ── */
-  const handleApprove = () => {
+  /* ── Step 3: Handle Approval & Print ── */
+  const handleApproveCommit = () => {
     if (!confirmApprove) return
     const assignedCode = confirmApprove.palletCode || nextPalletCode(palletCounter)
     if (!confirmApprove.palletCode) {
@@ -221,79 +257,106 @@ export default function WeighingPage() {
     setRecords((current) =>
       current.map((item) => (item.id === confirmApprove.id ? updatedRecord : item)),
     )
+
     toast.success(`Weight approved! Pallet ${assignedCode} created.`)
     setConfirmApprove(null)
-
-    // Trigger step print pallet label immediately
+    setApprovedSuccessRecord(updatedRecord)
     setPrintModalRecord(updatedRecord)
   }
 
-  /* Koreksi: reload weight back to form for re-weighing */
+  /* Reset for next farmer weighing */
+  const handleNextWeighing = () => {
+    setWeightKg('')
+    setFormError('')
+    setScanError('')
+    setManualSearch('')
+    setScanFarmerId('')
+    setConfirmApprove(null)
+    setApprovedSuccessRecord(null)
+    setPrintModalRecord(null)
+    setActiveStep(1)
+    toast.info('Ready for next farmer intake.')
+  }
+
+  /* Koreksi: return to Step 2 */
   const handleKoreksi = (record: WeighingRecord) => {
     setEditingId(record.id)
     setWeightKg(String(record.weightKg))
-    setRecords((current) => current.filter((item) => item.id !== record.id))
+    setConfirmApprove(null)
+    setApprovedSuccessRecord(null)
+    setPrintModalRecord(null)
+    setActiveStep(2)
     toast.warning('Record loaded back for re-weighing.')
   }
 
-  const handlePrintPalletLabel = (record: WeighingRecord) => {
-    if (record.status !== 'APPROVED') {
-      toast.error('Only approved records can print a pallet label.')
-      return
-    }
-    setPrintModalRecord(record)
-  }
-
-  const triggerPhysicalPrint = () => {
+  /* ── Print Actions ── */
+  const triggerPrintReceipt = () => {
     if (!printModalRecord) return
     setIsPrinting(true)
-    toast.warning('Sending pallet label to thermal printer…')
-    window.setTimeout(() => {
+    setTimeout(() => {
       setIsPrinting(false)
-      toast.success(`Label ${printModalRecord.palletCode} successfully sent to printer.`)
-    }, 900)
+      toast.success(`Receipt printed for ${printModalRecord.farmerName}`)
+    }, 800)
   }
 
+  const triggerPrintPalletLabel = () => {
+    if (!printModalRecord) return
+    setIsPrinting(true)
+    setTimeout(() => {
+      setIsPrinting(false)
+      toast.success(`Pallet QR Label printed: ${printModalRecord.palletCode}`)
+    }, 800)
+  }
+
+  const triggerPrintBoth = () => {
+    if (!printModalRecord) return
+    setIsPrinting(true)
+    setTimeout(() => {
+      setIsPrinting(false)
+      toast.success(`Both printed: Receipt & Pallet Label ${printModalRecord.palletCode}`)
+    }, 1100)
+  }
+
+  /* ── Columns for History Table ── */
   const columns: Column<WeighingRecord>[] = [
-    {
-      key: 'time',
-      label: 'Time',
-      render: (row) => <span className="mono t-small">{row.time}</span>,
-    },
     {
       key: 'farmerName',
       label: 'Farmer',
-      priority: true,
-      render: (row) => <span className="cell-strong">{row.farmerName}</span>,
+      render: (row) => (
+        <div>
+          <span className="font-semibold block">{row.farmerName}</span>
+          <span className="mono t-caption text-text-secondary">{row.farmerId}</span>
+        </div>
+      ),
     },
     {
       key: 'weightKg',
       label: 'Weight (kg)',
-      priority: true,
       align: 'right',
-      render: (row) => <span className="cell-strong">{row.weightKg.toFixed(3)}</span>,
+      render: (row) => <span className="mono font-bold text-base">{row.weightKg.toFixed(3)} kg</span>,
     },
     {
       key: 'depositDate',
       label: 'Deposit Date',
       render: (row) => (
-        <span className="mono t-small cell-secondary">
-          {row.depositDate} <span className="t-caption text-text-light">(Auto)</span>
-        </span>
+        <div>
+          <span className="mono t-small block">{row.depositDate}</span>
+          <span className="t-caption text-text-light">{row.time}</span>
+        </div>
       ),
     },
     {
       key: 'status',
       label: 'Status',
       render: (row) => (
-        <Badge tone={statusTone[row.status]} dot={row.status === 'APPROVED'}>
+        <Badge tone={statusTone[row.status]} dot>
           {row.status}
         </Badge>
       ),
     },
     {
       key: 'palletCode',
-      label: 'Pallet ID',
+      label: 'Pallet Code',
       render: (row) =>
         row.palletCode ? (
           <span className="mono cell-strong">{row.palletCode}</span>
@@ -308,7 +371,15 @@ export default function WeighingPage() {
       render: (row) =>
         row.status === 'PENDING' ? (
           <div className="row gap-xs justify-end">
-            <Button size="sm" variant="primary" icon="check" onClick={() => setConfirmApprove(row)}>
+            <Button
+              size="sm"
+              variant="primary"
+              icon="check"
+              onClick={() => {
+                setConfirmApprove(row)
+                setActiveStep(3)
+              }}
+            >
               Approve
             </Button>
             <Button size="sm" variant="outline" icon="refresh" onClick={() => handleKoreksi(row)}>
@@ -316,7 +387,15 @@ export default function WeighingPage() {
             </Button>
           </div>
         ) : (
-          <Button size="sm" variant="outline" icon="print" onClick={() => handlePrintPalletLabel(row)}>
+          <Button
+            size="sm"
+            variant="outline"
+            icon="print"
+            onClick={() => {
+              setPrintModalRecord(row)
+              setApprovedSuccessRecord(row)
+            }}
+          >
             Print Label
           </Button>
         ),
@@ -326,396 +405,541 @@ export default function WeighingPage() {
   const pendingCount = records.filter((item) => item.status === 'PENDING').length
   const approvedToday = records.filter((item) => item.status === 'APPROVED').length
 
-  return (
-    <div className="stack stack-lg">
-      <PageHeader
-        title="Weighing"
-        subtitle="Receiving area — identify farmer, weigh harvest intake (pure weighing), approve to generate pallet and print label."
-        actions={
-          <Button
-            variant="outline"
-            size="sm"
-            icon="history"
-            onClick={() => document.getElementById('weighing-records')?.scrollIntoView({ behavior: 'smooth' })}
-          >
-            Today's records ({records.length})
-          </Button>
-        }
-      />
-
-      <div className="grid-stats">
-        <div className="stat-card">
-          <p className="stat-label">Pending approval</p>
-          <p className="stat-value">{pendingCount}</p>
-          <p className="stat-sub">Waiting for verification</p>
-        </div>
-        <div className="stat-card">
-          <p className="stat-label">Approved today</p>
-          <p className="stat-value">{approvedToday}</p>
-          <p className="stat-sub stat-trend-up">
-            <Icon name="arrow-up" size={12} /> Pallets ready for sorting
-          </p>
-        </div>
-        <div className="stat-card">
-          <p className="stat-label">Scale Connection</p>
-          <p className="stat-value" style={{ fontSize: 20 }}>
-            {transportStatus.ethernetActive ? 'Ethernet' : transportMode === 'wifi' ? 'WiFi' : 'WiFi'}
-          </p>
-          <p className="stat-sub">
-            {transportStatus.staConnected ? 'Transmitter online' : 'Transmitter ready'}
-          </p>
-        </div>
-        <div className="stat-card">
-          <p className="stat-label">Capacity</p>
-          <p className="stat-value">{SCALE_CAPACITY_KG}</p>
-          <p className="stat-sub">kg per weighing</p>
-        </div>
-      </div>
-
-      {/* ── Farmer Identification & Deposit Date ── */}
-      <Card
-        title="Farmer Intake Identification"
-        subtitle="Select or scan the farmer barcode to associate the incoming harvest deposit."
-        action={
-          active && farmer ? (
-            <Badge tone="success" dot>
-              Context: {farmer.name}
+  /* ═══════════════════════════════════════════════════════════════════
+     RENDER: Focus Mode (Full Screen Sequential Workflow)
+     ═══════════════════════════════════════════════════════════════════ */
+  const renderFocusContent = () => (
+    <div className="focus-content">
+      {/* ── STEP 1: Farmer Identification ── */}
+      {activeStep === 1 && (
+        <div className="focus-card animate-fade-in">
+          <div className="flex items-center justify-between border-b border-border pb-3">
+            <div>
+              <span className="t-caption text-text-secondary uppercase font-mono font-semibold tracking-wider">
+                Step 1 of 3 · Intake Identification
+              </span>
+              <h2 className="t-h2 mt-0.5">Scan Farmer Card or Select Farmer</h2>
+            </div>
+            <Badge tone="accent" icon="scan">
+              Awaiting Scan
             </Badge>
-          ) : (
-            <Badge tone="neutral" dot>
-              No context
-            </Badge>
-          )
-        }
-      >
-        <form
-          className="stack-md"
-          onSubmit={(e) => {
-            e.preventDefault()
-            handleScan()
-          }}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-md items-end">
-            <div className="sm:col-span-2">
-              <Field
-                label="Farmer ID / Barcode"
-                htmlFor="scan-farmer"
-                required
-                hint="Scan the barcode on the farmer's membership card or select from the directory."
-                error={scanError || undefined}
-              >
-                <Select
-                  id="scan-farmer"
-                  value={scanFarmerId}
-                  onChange={(e) => setScanFarmerId(e.target.value)}
-                  invalid={Boolean(scanError)}
-                >
-                  <option value="">Scan or select farmer</option>
-                  {FARMERS.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} ({item.id}) — {item.village}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+          </div>
+
+          <form onSubmit={handleScanSubmit} className="stack-md">
+            <div className="focus-scan-box is-focused">
+              <Icon name="scan" size={36} className="text-accent mx-auto mb-2" />
+              <p className="t-small font-semibold">Ready for Barcode Scanner</p>
+              <p className="t-caption text-text-secondary mb-3">
+                Scan barcode on the farmer ID card, or enter ID / name manually.
+              </p>
+              <div className="max-w-md mx-auto">
+                <Input
+                  ref={scanInputRef}
+                  value={manualSearch}
+                  onChange={(e) => {
+                    setManualSearch(e.target.value)
+                    setScanError('')
+                  }}
+                  placeholder="Scan barcode or type name (e.g. farmer-1, Ahmad)..."
+                  className="input-lg text-center font-mono"
+                  autoFocus
+                />
+              </div>
+              {scanError && (
+                <p className="t-caption text-danger mt-2 font-medium">
+                  {scanError}
+                </p>
+              )}
             </div>
 
+            <div className="flex justify-end gap-2">
+              <Button type="submit" variant="primary" icon="search" touch>
+                Find & Verify Farmer
+              </Button>
+            </div>
+          </form>
+
+          <div className="pt-2">
+            <p className="t-caption text-text-secondary font-semibold uppercase mb-2">
+              Or Select Registered Farmer
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-sm">
+              {FARMERS.map((f) => {
+                const isSelected = active && farmer?.id === f.id
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    className={`card p-3 text-left transition-all cursor-pointer hover:border-accent ${
+                      isSelected ? 'border-accent bg-accent-soft' : ''
+                    }`}
+                    onClick={() => selectFarmer(f)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="avatar avatar-sm">{f.name.charAt(0)}</span>
+                      <div className="min-w-0">
+                        <p className="t-small font-semibold text-truncate">{f.name}</p>
+                        <p className="t-caption text-text-secondary text-truncate">{f.village}</p>
+                        <span className="t-caption mono text-text-light">{f.id}</span>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 2: Harvest Weighing ── */}
+      {activeStep === 2 && (
+        <div className="focus-card animate-fade-in">
+          <div className="flex items-center justify-between border-b border-border pb-3 flex-wrap gap-2">
             <div>
-              <Button type="submit" variant="primary" icon="scan" block touch loading={scanning}>
-                {scanning ? 'Scanning…' : 'Scan / Select Farmer'}
+              <span className="t-caption text-text-secondary uppercase font-mono font-semibold tracking-wider">
+                Step 2 of 3 · Live Harvest Intake
+              </span>
+              <h2 className="t-h2 mt-0.5">Weigh Crop Platform</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge tone="success" dot>
+                Farmer: {farmer?.name}
+              </Badge>
+              <Button size="sm" variant="ghost" icon="edit" onClick={() => setActiveStep(1)}>
+                Change Farmer
               </Button>
             </div>
           </div>
 
-          <div
-            className={`scan-frame ${scanning ? 'is-scanning' : active && farmer ? 'is-success' : ''}`}
-            aria-live="polite"
-          >
-            <Icon name={active && farmer ? 'check-circle' : 'scan'} size={22} />
-            <p className="t-small font-semibold">
-              {active && farmer ? `Active Intake: ${farmer.name}` : 'Waiting for farmer identification'}
-            </p>
-            <p className="t-caption text-text-secondary">
-              Deposit date is automatic ({today()}). No grade or pallet ID is required prior to weighing.
-            </p>
-          </div>
-        </form>
-      </Card>
-
-      {/* ── Weighing form (Purely Weighing) ── */}
-      <Card
-        title={editingId ? 'Re-weigh Harvest' : 'Weigh Harvest Intake'}
-        subtitle="Pure harvest weighing. Deposit date is automatic; pallet ID is generated upon approval."
-      >
-        <form className="stack-md" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-lg items-start">
-            <div className="stack-md">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-md items-start">
+            <div className="lg:col-span-2">
               <ScaleWeightInput
-                id="weighing-weight"
-                label="Harvest Weight (kg)"
-                hint="Auto-locks from live scale reading (Modbus TCP/MQTT) or enter manually."
+                id="focus-weighing-weight"
+                label="Incoming Harvest Net Weight (kg)"
+                hint="Auto-locks from live scale indicator or type manually."
                 value={weightKg}
-                onChange={setWeightKg}
+                onChange={(val) => {
+                  setWeightKg(val)
+                  setFormError('')
+                }}
                 capacityKg={SCALE_CAPACITY_KG}
               />
-
               {formError && (
-                <div className="alert alert-danger" role="alert">
+                <div className="alert alert-danger mt-3" role="alert">
                   <Icon name="alert" size={16} />
                   <span>{formError}</span>
                 </div>
               )}
             </div>
 
-            {/* Context & metadata summary */}
-            <div className="stack-sm p-4 bg-surface-2 border border-border rounded-lg">
-              <div className="row gap-xs items-center text-text-secondary t-caption uppercase font-semibold">
-                <Icon name="info" size={14} /> Intake Metadata (System Generated)
-              </div>
-
-              <div className="grid grid-cols-2 gap-sm pt-2">
-                <div>
-                  <span className="t-caption text-text-secondary block">Active Farmer</span>
-                  <span className="cell-strong text-sm">{farmer ? farmer.name : '—'}</span>
+            <div className="p-4 bg-surface-2 border border-border rounded-lg stack-sm">
+              <span className="t-caption text-text-secondary font-semibold uppercase flex items-center gap-1">
+                <Icon name="info" size={14} /> Intake Metadata
+              </span>
+              <div className="stack-xs text-sm pt-1">
+                <div className="flex justify-between">
+                  <span className="text-text-secondary">Farmer:</span>
+                  <span className="font-semibold">{farmer?.name}</span>
                 </div>
-                <div>
-                  <span className="t-caption text-text-secondary block">Commodity</span>
-                  <span className="cell-strong text-sm">Kentang (Potatoes)</span>
+                <div className="flex justify-between">
+                  <span className="text-text-secondary">Commodity:</span>
+                  <span className="font-semibold">Kentang (Potatoes)</span>
                 </div>
-                <div>
-                  <span className="t-caption text-text-secondary block">Deposit Date (Tanggal Setor)</span>
-                  <span className="mono text-sm cell-strong">
+                <div className="flex justify-between">
+                  <span className="text-text-secondary">Deposit Date:</span>
+                  <span className="font-mono font-semibold">
                     {today()} <Badge tone="accent">Auto</Badge>
                   </span>
                 </div>
-                <div>
-                  <span className="t-caption text-text-secondary block">Pallet & Grading</span>
-                  <span className="t-small text-text-secondary">Assigned at Approval & Sortir</span>
+                <div className="flex justify-between">
+                  <span className="text-text-secondary">Next Pallet:</span>
+                  <span className="mono text-xs">{nextPalletCode(palletCounter)}</span>
                 </div>
               </div>
-
               <p className="t-caption text-text-light pt-2 border-t border-border mt-2">
-                This intake step records pure harvest weight. Pallet ID will be created and printed upon approval.
+                Deposit date is assigned automatically by the system. Pallet ID is officially bound upon approval.
               </p>
             </div>
           </div>
 
-          <div className="row gap-sm flex-wrap items-center pt-2">
-            <Button type="submit" variant="primary" icon="check" touch>
-              {editingId ? 'Update Weighing' : 'Record Weighing'}
+          <div className="flex items-center justify-between border-t border-border pt-4">
+            <Button variant="outline" icon="arrow-up" onClick={() => setActiveStep(1)}>
+              ← Back to Farmer
             </Button>
-            {editingId && (
-              <Button
-                variant="ghost"
-                icon="close"
-                onClick={() => {
-                  setEditingId(null)
-                  setWeightKg('')
-                }}
-              >
-                Cancel edit
-              </Button>
-            )}
-            <span className="t-caption text-text-light">
-              Record is saved as PENDING until verified by the weighing operator.
-            </span>
-          </div>
-        </form>
-      </Card>
-
-      {/* ── Records Table ── */}
-      <div id="weighing-records" className="stack-sm">
-        <div className="section-header">
-          <h2 className="section-title">Today's Harvest Weighing Records</h2>
-          <span className="t-caption text-text-secondary">
-            {pendingCount} pending · {approvedToday} approved
-          </span>
-        </div>
-        <DataTable
-          columns={columns}
-          data={records}
-          rowKey={(row) => row.id}
-          emptyTitle="No harvest weighing records today."
-          emptyDescription="Select a farmer and record the first harvest weighing."
-          caption="Approve commits the weight and generates a Pallet ID for label printing; Koreksi reloads the weight into the scale form."
-        />
-      </div>
-
-      {/* ── Transmitter configuration ── */}
-      <Card
-        title="Transmitter Configuration"
-        subtitle="Network transport used by the weighing indicator transmitter."
-      >
-        <form className="stack-md" onSubmit={handleTransportSave}>
-          <div className="radio-row" role="group" aria-label="Transport mode">
-            <label className={`radio-card ${transportMode === 'wifi' ? 'is-active' : ''}`}>
-              <input
-                type="radio"
-                name="transportMode"
-                value="wifi"
-                checked={transportMode === 'wifi'}
-                onChange={(e) => setTransportMode(e.target.value as TransportMode)}
-              />
-              <Icon name="wifi" size={15} />
-              WiFi
-            </label>
-            <label className={`radio-card ${transportMode === 'ethernet' ? 'is-active' : ''}`}>
-              <input
-                type="radio"
-                name="transportMode"
-                value="ethernet"
-                checked={transportMode === 'ethernet'}
-                onChange={(e) => setTransportMode(e.target.value as TransportMode)}
-              />
-              <Icon name="flash" size={15} />
-              Ethernet (W5500)
-            </label>
-          </div>
-
-          <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md">
-            {[
-              ['AP SSID', transportStatus.apSsid],
-              ['AP IP', transportStatus.apIp],
-              ['WiFi status', transportStatus.staConnected ? 'Connected' : 'Disconnected'],
-              [
-                'Ethernet status',
-                transportStatus.ethernetActive ? `Active (${transportStatus.ethernetIp})` : 'Inactive',
-              ],
-            ].map(([label, value]) => (
-              <div key={label} className="stack-xs">
-                <dt className="t-caption text-text-secondary uppercase">{label}</dt>
-                <dd className="mono t-small">{value}</dd>
-              </div>
-            ))}
-          </dl>
-
-          <div>
-            <Button type="submit" variant="outline" icon="check" loading={transportSaving}>
-              {transportSaving ? 'Saving…' : 'Save Transport Configuration'}
-            </Button>
-          </div>
-        </form>
-      </Card>
-
-      {/* ── Approval confirmation dialog ── */}
-      <ConfirmDialog
-        open={Boolean(confirmApprove)}
-        tone="accent"
-        title="Approve harvest weight?"
-        description={
-          confirmApprove ? (
-            <>
-              Approve official weight <strong>{confirmApprove.weightKg.toFixed(3)} kg</strong> for{' '}
-              <strong>{confirmApprove.farmerName}</strong>? Upon approval, a Pallet ID will be generated
-              and you will be prompted to print the pallet label.
-            </>
-          ) : null
-        }
-        confirmLabel="Yes, Approve Weight"
-        onConfirm={handleApprove}
-        onCancel={() => setConfirmApprove(null)}
-      />
-
-      {/* ── Step: Print Pallet Label Modal ── */}
-      {printModalRecord && (
-        <div
-          className="dialog-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="print-dialog-title"
-        >
-          <div className="dialog" style={{ width: 'min(500px, 100%)' }}>
-            <div className="row gap-xs items-center mb-2">
-              <Badge tone="success" dot>
-                Step: Print Pallet Label
-              </Badge>
-              <span className="t-caption text-text-secondary ml-auto">Approved</span>
-            </div>
-
-            <h2 className="dialog-title" id="print-dialog-title">
-              Pallet Label Ready
-            </h2>
-            <p className="dialog-desc">
-              Weight has been verified. Print the label below and affix it directly to the pallet box.
-            </p>
-
-            {/* Label Mockup Preview */}
-            <div
-              className="p-4 rounded-lg my-4 bg-white text-black border-2 border-dashed border-gray-400 font-mono shadow-sm"
-              style={{ backgroundColor: '#ffffff', color: '#111827' }}
+            <Button
+              variant="primary"
+              icon="arrow-down"
+              touch
+              disabled={!(Number(weightKg) > 0)}
+              onClick={handleProceedToApproval}
             >
-              <div className="text-center pb-2 border-b border-gray-300">
-                <span className="text-xs uppercase tracking-wider font-bold block text-gray-700">
-                  E-Tani Smart Hub · Receiving Pallet
-                </span>
-                <span className="text-xl font-bold tracking-tight block text-gray-900 mt-1">
-                  {printModalRecord.palletCode}
-                </span>
-              </div>
+              Proceed to Approval & Print →
+            </Button>
+          </div>
+        </div>
+      )}
 
-              {/* Barcode/QR simulation visualization */}
-              <div className="flex items-center justify-center py-3 border-b border-gray-200">
-                <div className="flex flex-col items-center gap-1">
-                  <div
-                    className="flex gap-1 h-10 items-center justify-center px-4 bg-gray-100 rounded"
-                    aria-label="Barcode simulation"
-                  >
-                    {[3, 1, 4, 2, 1, 3, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 2].map((w, idx) => (
-                      <span
-                        key={idx}
-                        className="bg-black inline-block h-8"
-                        style={{ width: `${w * 2}px` }}
-                      />
-                    ))}
+      {/* ── STEP 3: Approve & Print Label ── */}
+      {activeStep === 3 && (
+        <div className="focus-card animate-fade-in">
+          <div className="flex items-center justify-between border-b border-border pb-3 flex-wrap gap-2">
+            <div>
+              <span className="t-caption text-text-secondary uppercase font-mono font-semibold tracking-wider">
+                Step 3 of 3 · Final Verification & Print
+              </span>
+              <h2 className="t-h2 mt-0.5">Approve & Print Intake Label</h2>
+            </div>
+            {approvedSuccessRecord ? (
+              <Badge tone="success" dot>
+                Status: APPROVED & LABELED
+              </Badge>
+            ) : (
+              <Badge tone="warning" dot>
+                Status: PENDING OPERATOR APPROVAL
+              </Badge>
+            )}
+          </div>
+
+          {/* Intake Verification Box */}
+          <div className="p-4 bg-surface-2 border border-border rounded-lg grid grid-cols-1 sm:grid-cols-4 gap-md">
+            <div>
+              <span className="t-caption text-text-secondary block">Farmer</span>
+              <span className="cell-strong text-base">{confirmApprove?.farmerName ?? farmer?.name}</span>
+              <span className="t-caption mono text-text-light block">{confirmApprove?.farmerId ?? farmer?.id}</span>
+            </div>
+            <div>
+              <span className="t-caption text-text-secondary block">Harvest Net Weight</span>
+              <span className="focus-big-number block text-3xl font-black text-green-700">
+                {confirmApprove?.weightKg.toFixed(3) ?? Number(weightKg).toFixed(3)}
+                <span className="text-sm font-normal text-text-secondary ml-1">kg</span>
+              </span>
+            </div>
+            <div>
+              <span className="t-caption text-text-secondary block">Deposit Date</span>
+              <span className="mono font-semibold">{today()}</span>
+              <span className="t-caption text-text-light block">System timestamped</span>
+            </div>
+            <div>
+              <span className="t-caption text-text-secondary block">Assigned Pallet ID</span>
+              <span className="mono font-bold text-base text-accent">
+                {approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}
+              </span>
+              <span className="t-caption text-text-light block">QR Pallet Label</span>
+            </div>
+          </div>
+
+          {/* Print Previews */}
+          <div className="stack-sm">
+            <div className="radio-row" role="group" aria-label="Print view mode">
+              <label className={`radio-card ${printTab === 'both' ? 'is-active' : ''}`}>
+                <input
+                  type="radio"
+                  name="focusPrintTab"
+                  value="both"
+                  checked={printTab === 'both'}
+                  onChange={() => setPrintTab('both')}
+                />
+                Both (Receipt + Label)
+              </label>
+              <label className={`radio-card ${printTab === 'receipt' ? 'is-active' : ''}`}>
+                <input
+                  type="radio"
+                  name="focusPrintTab"
+                  value="receipt"
+                  checked={printTab === 'receipt'}
+                  onChange={() => setPrintTab('receipt')}
+                />
+                Farmer Receipt Slip
+              </label>
+              <label className={`radio-card ${printTab === 'label' ? 'is-active' : ''}`}>
+                <input
+                  type="radio"
+                  name="focusPrintTab"
+                  value="label"
+                  checked={printTab === 'label'}
+                  onChange={() => setPrintTab('label')}
+                />
+                QR Pallet Box Label
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-md pt-2">
+              {/* Receipt Preview */}
+              {(printTab === 'both' || printTab === 'receipt') && (
+                <div className="p-4 rounded-lg bg-white text-black border border-gray-300 font-mono shadow-sm">
+                  <div className="text-center pb-2 border-b border-dashed border-gray-400">
+                    <span className="text-[11px] font-bold tracking-wider uppercase block text-gray-800">
+                      ENYX-SMART HUB · RECEIVING INTAKE SLIP
+                    </span>
+                    <span className="text-[10px] text-gray-500 block">
+                      OFFICIAL WEIGHING RECEIPT (BUKTI TIMBANG RESMI)
+                    </span>
+                    <span className="text-xs font-semibold text-gray-700 block mt-1">
+                      {today()} · {confirmApprove?.time ?? 'Live'}
+                    </span>
                   </div>
-                  <span className="text-[10px] tracking-widest text-gray-600">
-                    *{printModalRecord.palletCode}*
-                  </span>
+                  <div className="py-2 border-b border-dashed border-gray-300 text-xs stack-xs">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Farmer:</span>
+                      <span className="font-bold">{confirmApprove?.farmerName ?? farmer?.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Pallet Code:</span>
+                      <span className="mono font-semibold">
+                        {approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Commodity:</span>
+                      <span>Kentang (Potatoes)</span>
+                    </div>
+                  </div>
+                  <div className="py-3 border-b border-dashed border-gray-400 text-center">
+                    <span className="text-[10px] uppercase text-gray-500 block">OFFICIAL NET WEIGHT</span>
+                    <span className="text-2xl font-black text-green-800 block">
+                      {(confirmApprove?.weightKg ?? Number(weightKg)).toFixed(3)} kg
+                    </span>
+                    <span className="text-[10px] text-green-700 font-bold block uppercase">
+                      {approvedSuccessRecord ? 'Status: APPROVED (VERIFIED)' : 'Ready for Approval'}
+                    </span>
+                  </div>
+                  <div className="pt-2 text-[10px] text-gray-500 text-center italic">
+                    * Simpan tanda terima ini sebagai bukti timbang resmi petani. *
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="grid grid-cols-2 gap-2 text-xs pt-3">
-                <div>
-                  <span className="text-gray-500 block text-[10px] uppercase">Farmer</span>
-                  <span className="font-semibold">{printModalRecord.farmerName}</span>
+              {/* Pallet Label Preview */}
+              {(printTab === 'both' || printTab === 'label') && (
+                <div className="p-4 rounded-lg bg-white text-black border-2 border-dashed border-gray-400 font-mono shadow-sm">
+                  <div className="text-center pb-2 border-b border-gray-300">
+                    <span className="text-xs uppercase tracking-wider font-bold block text-gray-700">
+                      E-Tani Smart Hub · Receiving Pallet
+                    </span>
+                    <span className="text-xl font-bold tracking-tight block text-gray-900 mt-1">
+                      {approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-center py-3 border-b border-gray-200">
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex gap-1 h-9 items-center justify-center px-4 bg-gray-100 rounded">
+                        {[3, 1, 4, 2, 1, 3, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 2].map((w, idx) => (
+                          <span key={idx} className="bg-black inline-block h-7" style={{ width: `${w * 2}px` }} />
+                        ))}
+                      </div>
+                      <span className="text-[10px] tracking-widest text-gray-600">
+                        *{approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}*
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-2">
+                    <div>
+                      <span className="text-gray-500 block text-[10px]">Farmer</span>
+                      <span className="font-semibold">{confirmApprove?.farmerName ?? farmer?.name}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block text-[10px]">Weight</span>
+                      <span className="font-bold text-green-700">
+                        {(confirmApprove?.weightKg ?? Number(weightKg)).toFixed(3)} kg
+                      </span>
+                    </div>
+                  </div>
+                  <div className="pt-2 text-[10px] text-gray-500 text-center border-t border-gray-200 mt-2">
+                    Tempel label ini pada box/palet fisik intake sebelum sortir.
+                  </div>
                 </div>
-                <div>
-                  <span className="text-gray-500 block text-[10px] uppercase">Commodity</span>
-                  <span className="font-semibold">Kentang (Potatoes)</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 block text-[10px] uppercase">Official Net Weight</span>
-                  <span className="font-bold text-sm text-green-700">
-                    {printModalRecord.weightKg.toFixed(3)} kg
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-500 block text-[10px] uppercase">Deposit Date</span>
-                  <span className="font-semibold">{printModalRecord.depositDate} (Auto)</span>
-                </div>
-              </div>
+              )}
             </div>
+          </div>
 
-            <div className="dialog-actions">
-              <Button
-                variant="outline"
-                onClick={() => setPrintModalRecord(null)}
-                disabled={isPrinting}
-              >
-                Close
-              </Button>
-              <Button
-                variant="primary"
-                icon="print"
-                loading={isPrinting}
-                onClick={triggerPhysicalPrint}
-              >
-                {isPrinting ? 'Printing…' : 'Print Pallet Label'}
-              </Button>
-            </div>
+          {/* Action Bar */}
+          <div className="flex items-center justify-between border-t border-border pt-4 flex-wrap gap-2">
+            {!approvedSuccessRecord ? (
+              <>
+                <Button
+                  variant="outline"
+                  icon="refresh"
+                  onClick={() => confirmApprove && handleKoreksi(confirmApprove)}
+                >
+                  ← Koreksi Weight
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="primary"
+                    icon="check"
+                    touch
+                    loading={isPrinting}
+                    onClick={() => {
+                      handleApproveCommit()
+                      triggerPrintBoth()
+                    }}
+                  >
+                    Approve & Print All (Receipt + Label)
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" icon="print" loading={isPrinting} onClick={triggerPrintReceipt}>
+                    Re-print Receipt
+                  </Button>
+                  <Button variant="outline" icon="print" loading={isPrinting} onClick={triggerPrintPalletLabel}>
+                    Re-print Pallet Label
+                  </Button>
+                </div>
+                <Button variant="primary" icon="check" touch onClick={handleNextWeighing}>
+                  Next Weighing / Timbang Berikutnya ⏎
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
     </div>
+  )
+
+  return (
+    <>
+      {/* ═══════════════════════════════════════════════════════════════════
+         FULLSCREEN FOCUS MODE OVERLAY
+         ═══════════════════════════════════════════════════════════════════ */}
+      {focusMode && (
+        <div className="focus-overlay" role="dialog" aria-modal="true" aria-label="Weighing Focus Mode">
+          <header className="focus-header">
+            <div className="flex items-center gap-3">
+              <Logo className="h-6 w-auto" markOnly />
+              <div>
+                <span className="font-semibold text-sm block leading-none">Receiving Intake Station</span>
+                <span className="text-[10px] text-text-light font-mono">Focus Mode · Distraction Free</span>
+              </div>
+            </div>
+
+            {/* Stepper Progress */}
+            <nav className="focus-stepper" aria-label="Weighing steps">
+              <div className={`focus-step ${activeStep === 1 ? 'is-active' : activeStep > 1 ? 'is-done' : ''}`}>
+                <span className="focus-step-num">{activeStep > 1 ? '✓' : '1'}</span>
+                <span>Farmer ID</span>
+              </div>
+              <div className="focus-stepper-sep" />
+              <div className={`focus-step ${activeStep === 2 ? 'is-active' : activeStep > 2 ? 'is-done' : ''}`}>
+                <span className="focus-step-num">{activeStep > 2 ? '✓' : '2'}</span>
+                <span>Weigh Harvest</span>
+              </div>
+              <div className="focus-stepper-sep" />
+              <div className={`focus-step ${activeStep === 3 ? 'is-active' : approvedSuccessRecord ? 'is-done' : ''}`}>
+                <span className="focus-step-num">{approvedSuccessRecord ? '✓' : '3'}</span>
+                <span>Approve & Label</span>
+              </div>
+            </nav>
+
+            {/* Controls */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={isFullscreen ? 'compress' : 'expand'}
+                onClick={toggleFullscreen}
+                title="Toggle Fullscreen"
+              >
+                {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+              </Button>
+              <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode}>
+                Exit Focus (Esc)
+              </Button>
+            </div>
+          </header>
+
+          {renderFocusContent()}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+         STANDARD DASHBOARD VIEW (Non-focus mode)
+         ═══════════════════════════════════════════════════════════════════ */}
+      <div className="stack stack-lg">
+        <PageHeader
+          title="Weighing Station"
+          subtitle="Receiving area — identify farmer, weigh harvest intake (pure weighing), approve to generate pallet and print label."
+          actions={
+            <div className="flex items-center gap-2">
+              <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
+                Focus Mode (Full Screen)
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                icon="history"
+                onClick={() => document.getElementById('weighing-records')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                Today's records ({records.length})
+              </Button>
+            </div>
+          }
+        />
+
+        {/* Quick Stats Grid */}
+        <div className="grid-stats">
+          <div className="stat-card">
+            <p className="stat-label">Pending approval</p>
+            <p className="stat-value">{pendingCount}</p>
+            <p className="stat-sub">Waiting for verification</p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label">Approved today</p>
+            <p className="stat-value">{approvedToday}</p>
+            <p className="stat-sub stat-trend-up">
+              <Icon name="arrow-up" size={12} /> Pallets ready for sorting
+            </p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label">Scale Capacity</p>
+            <p className="stat-value">{SCALE_CAPACITY_KG}</p>
+            <p className="stat-sub">kg maximum load</p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label">Workflow Mode</p>
+            <p className="stat-value" style={{ fontSize: 20 }}>
+              Sequential
+            </p>
+            <p className="stat-sub">Step 1 → Step 2 → Step 3</p>
+          </div>
+        </div>
+
+        {/* Sequential Stepper in Standard View */}
+        <div className="card p-4 border border-border stack-md">
+          <div className="flex items-center justify-between border-b border-border pb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-base">Sequential Intake Stepper</span>
+              <Badge tone="accent">Step {activeStep} of 3</Badge>
+            </div>
+            <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
+              Open in Focus Mode (Full Screen)
+            </Button>
+          </div>
+
+          {/* Embed the same sequential step logic */}
+          {renderFocusContent()}
+        </div>
+
+        {/* ── Today's Harvest Weighing Records Ledger ── */}
+        <div id="weighing-records" className="stack-sm">
+          <div className="section-header">
+            <h2 className="section-title">Today's Harvest Weighing Records</h2>
+            <span className="t-caption text-text-secondary">
+              {pendingCount} pending · {approvedToday} approved
+            </span>
+          </div>
+          <DataTable
+            columns={columns}
+            data={records}
+            rowKey={(row) => row.id}
+            emptyTitle="No harvest weighing records today."
+            emptyDescription="Select a farmer and record the first harvest weighing."
+            caption="Approve commits the weight and generates a Pallet ID for label printing; Koreksi reloads the weight into the scale form."
+          />
+        </div>
+      </div>
+    </>
   )
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Card from '../components/shared/Card'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
@@ -20,6 +20,8 @@ interface Settings {
   printTimeout: string
 }
 
+type TransportMode = 'wifi' | 'ethernet'
+
 const INITIAL: Settings = {
   farmName: 'ENYX Farm',
   email: 'admin@enyx.local',
@@ -36,6 +38,57 @@ const INITIAL: Settings = {
 export default function SettingsPage() {
   const toast = useToast()
   const [form, setForm] = useState<Settings>(INITIAL)
+
+  /* ── Weight Transmitter configuration ── */
+  const [transportMode, setTransportMode] = useState<TransportMode>('wifi')
+  const [transportStatus, setTransportStatus] = useState({
+    staConnected: false,
+    ethernetActive: false,
+    ethernetIp: '',
+    apSsid: 'ENYX-SMARTHUB-AP',
+    apIp: '192.168.4.1',
+  })
+  const [transportSaving, setTransportSaving] = useState(false)
+
+  useEffect(() => {
+    fetchTransportStatus()
+  }, [])
+
+  const fetchTransportStatus = async () => {
+    try {
+      const res = await fetch('/api/weighing/transport')
+      const json = await res.json()
+      if (json.success) {
+        setTransportMode(json.data.transportMode || 'wifi')
+        setTransportStatus(json.data)
+      }
+    } catch (e) {
+      console.error('Failed to fetch transport status', e)
+    }
+  }
+
+  const handleTransportSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setTransportSaving(true)
+    try {
+      const res = await fetch('/api/weighing/transport', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: transportMode }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        toast.success(json.message || 'Transmitter transport configuration saved.')
+        await fetchTransportStatus()
+      } else {
+        toast.error(json.error?.message || 'Failed to save transport mode.')
+      }
+    } catch {
+      toast.error('Error saving transport configuration.')
+    } finally {
+      setTransportSaving(false)
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -142,6 +195,72 @@ export default function SettingsPage() {
           <p className="field-hint" style={{ marginTop: 12 }}>
             Backend performs the Modbus TCP polling, timeout handling and scaling to the scale resolution.
           </p>
+        </Card>
+
+        <Card
+          title="Weight Transmitter Configuration"
+          subtitle="Network transport and status for the weighing indicator transmitter (firmware gateway)."
+          action={
+            <Badge tone={transportStatus.staConnected || transportStatus.ethernetActive ? 'success' : 'neutral'} dot>
+              {transportStatus.ethernetActive ? 'Ethernet active' : transportStatus.staConnected ? 'WiFi active' : 'Ready'}
+            </Badge>
+          }
+        >
+          <div className="stack-md">
+            <div className="radio-row" role="group" aria-label="Transport mode">
+              <label className={`radio-card ${transportMode === 'wifi' ? 'is-active' : ''}`}>
+                <input
+                  type="radio"
+                  name="transportMode"
+                  value="wifi"
+                  checked={transportMode === 'wifi'}
+                  onChange={(e) => setTransportMode(e.target.value as TransportMode)}
+                />
+                <Icon name="wifi" size={15} />
+                WiFi
+              </label>
+              <label className={`radio-card ${transportMode === 'ethernet' ? 'is-active' : ''}`}>
+                <input
+                  type="radio"
+                  name="transportMode"
+                  value="ethernet"
+                  checked={transportMode === 'ethernet'}
+                  onChange={(e) => setTransportMode(e.target.value as TransportMode)}
+                />
+                <Icon name="flash" size={15} />
+                Ethernet (W5500)
+              </label>
+            </div>
+
+            <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md">
+              {[
+                ['AP SSID', transportStatus.apSsid],
+                ['AP IP', transportStatus.apIp],
+                ['WiFi status', transportStatus.staConnected ? 'Connected' : 'Disconnected'],
+                [
+                  'Ethernet status',
+                  transportStatus.ethernetActive ? `Active (${transportStatus.ethernetIp})` : 'Inactive',
+                ],
+              ].map(([label, value]) => (
+                <div key={label} className="stack-xs">
+                  <dt className="t-caption text-text-secondary uppercase">{label}</dt>
+                  <dd className="mono t-small">{value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                icon="check"
+                loading={transportSaving}
+                onClick={handleTransportSave}
+              >
+                {transportSaving ? 'Saving…' : 'Save Transmitter Transport'}
+              </Button>
+            </div>
+          </div>
         </Card>
 
         <Card title="Label format" subtitle="GS1 Digital Link and linear codes.">

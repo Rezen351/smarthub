@@ -27,6 +27,7 @@ const roleMenu: Record<string, MenuItem[]> = {
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
     { label: 'Weighing', path: '/dashboard/weighing', icon: 'scale' },
     { label: 'Pallet Register', path: '/dashboard/pallets', icon: 'pallet' },
+    { label: 'Configuration', path: '/dashboard/settings', icon: 'settings' },
   ],
   SORTING_OPERATOR: [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
@@ -146,126 +147,149 @@ export default function DashboardLayout() {
         <Icon name="search" size={12} />
         Public traceability
       </Link>
+      <div className="pt-2 border-t border-border flex flex-col gap-0.5 text-text-light font-mono text-[11px]">
+        <div className="flex items-center justify-between">
+          <span>ENYX Enterprise</span>
+          <span className="bg-bg-alt px-1.5 py-0.5 rounded text-[10px]">enyx-enterprise</span>
+        </div>
+        <span className="text-[10px]">Traceability System v1.0.0</span>
+      </div>
     </div>
   )
 
   return (
     <div className="app-shell">
-      {/* ── Navbar ── */}
-      <header className="navbar">
-        <button
-          type="button"
-          className="btn btn-ghost hide-desktop"
-          style={{ padding: 8, minHeight: 40 }}
-          onClick={() => setMenuOpen((open) => !open)}
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-          aria-expanded={menuOpen}
-        >
-          <Icon name={menuOpen ? 'close' : 'menu'} size={20} />
-        </button>
+      {/* ── Sidebar (Persistent on desktop, drawer on mobile) ── */}
+      <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`} aria-label="Sidebar">
+        <div className="sidebar-brand">
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-2.5 text-inherit"
+            style={{ textDecoration: 'none' }}
+            aria-label="ENYX Traceability System home"
+          >
+            <Logo className="h-7 w-auto" markOnly />
+            <div className="min-w-0">
+              <span className="font-semibold text-sm tracking-tight block leading-tight text-text">Traceability System</span>
+              <span className="text-[11px] text-text-light block leading-none mt-0.5 font-mono">ENYX Enterprise</span>
+            </div>
+          </Link>
+        </div>
+        {navLinks}
+        {userCard}
+      </aside>
+      {menuOpen && <div className="sidebar-overlay hide-desktop" onClick={() => setMenuOpen(false)} />}
 
-        <Link to="/dashboard" className="flex items-center hide-mobile" aria-label="ENYX-Smart Hub home">
-          <Logo className="h-7 w-auto" markOnly />
-        </Link>
-        <span className="navbar-title hide-mobile" style={{ borderLeft: '1px solid var(--color-border)', paddingLeft: 12 }}>
-          {currentPage?.label ?? 'Dashboard'}
-        </span>
-
-        <Link to="/dashboard" className="hide-desktop flex items-center" aria-label="ENYX-Smart Hub home">
-          <Logo className="h-6 w-auto" markOnly />
-        </Link>
-        <span className="navbar-title hide-desktop">{currentPage?.label ?? 'Dashboard'}</span>
-
-        <div className="navbar-spacer" />
-
-        <ConnectionBadge state={navigator.onLine ? 'connected' : 'disconnected'} label="Scale" />
-
-        <div className="relative" ref={userMenuRef}>
+      {/* ── Main content column ── */}
+      <div className="app-main-column">
+        {/* ── Navbar ── */}
+        <header className="navbar">
           <button
             type="button"
-            className="btn btn-ghost"
-            style={{ padding: 6, minHeight: 40, gap: 6 }}
-            onClick={() => setUserMenuOpen((open) => !open)}
-            aria-haspopup="menu"
-            aria-expanded={userMenuOpen}
-            aria-label="Account menu"
+            className="btn btn-ghost hide-desktop"
+            style={{ padding: 8, minHeight: 40 }}
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
           >
-            <span className="avatar avatar-sm">{user?.name?.charAt(0)?.toUpperCase() ?? 'U'}</span>
-            <Icon name="chevron-down" size={14} />
+            <Icon name={menuOpen ? 'close' : 'menu'} size={20} />
           </button>
-          {userMenuOpen && (
-            <div
-              className="card"
-              role="menu"
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: 'calc(100% + 6px)',
-                width: 220,
-                padding: 12,
-                zIndex: 80,
-                boxShadow: 'var(--shadow-lg)',
-              }}
-            >
-              <div className="stack stack-xs" style={{ marginBottom: 10 }}>
-                <p className="t-small font-semibold">{user?.name}</p>
-                <p className="t-caption text-text-secondary">{user?.email}</p>
-              </div>
-              <div className="divider" style={{ margin: '8px 0' }} />
-              <div className="stack-xs">
-                {user?.role === 'FARMER' && (
-                  <Link to="/dashboard/profile" className="sidebar-link" role="menuitem">
-                    <span className="sidebar-link-icon">
-                      <Icon name="user" size={16} />
-                    </span>
-                    Profile
-                  </Link>
-                )}
-                <Link to="/traceability" className="sidebar-link" role="menuitem">
-                  <span className="sidebar-link-icon">
-                    <Icon name="search" size={16} />
-                  </span>
-                  Public traceability
-                </Link>
-                <button
-                  type="button"
-                  className="sidebar-link"
-                  role="menuitem"
-                  style={{ color: 'var(--color-danger)', width: '100%', background: 'none', border: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
-                  onClick={() => {
-                    setUserMenuOpen(false)
-                    setLogoutOpen(true)
-                  }}
-                >
-                  <span className="sidebar-link-icon">
-                    <Icon name="logout" size={16} />
-                  </span>
-                  Log Out
-                </button>
-              </div>
+
+          {/* On mobile: show product brand in navbar because sidebar is off-canvas */}
+          <Link
+            to="/dashboard"
+            className="hide-desktop flex items-center gap-2 text-inherit"
+            style={{ textDecoration: 'none' }}
+            aria-label="ENYX Traceability System home"
+          >
+            <Logo className="h-6 w-auto" markOnly />
+            <div className="flex flex-col">
+              <span className="font-semibold text-xs tracking-tight leading-tight text-text">Traceability System</span>
+              <span className="text-[9px] text-text-light leading-none font-mono">ENYX Enterprise</span>
             </div>
-          )}
-        </div>
-      </header>
+          </Link>
 
-      <div className="app-body">
-        {/* ── Sidebar ── */}
-        <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`} aria-label="Sidebar">
-          <div className="sidebar-brand">
-            <Logo className="h-7 w-auto" />
+          {/* On desktop: show only current page title (brand is in sidebar) */}
+          <span className="navbar-title hide-mobile font-semibold text-base text-text">
+            {currentPage?.label ?? 'Dashboard'}
+          </span>
+
+          <div className="navbar-spacer" />
+
+          <ConnectionBadge state={navigator.onLine ? 'connected' : 'disconnected'} label="Scale" />
+
+          <div className="relative" ref={userMenuRef}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ padding: 6, minHeight: 40, gap: 6 }}
+              onClick={() => setUserMenuOpen((open) => !open)}
+              aria-haspopup="menu"
+              aria-expanded={userMenuOpen}
+              aria-label="Account menu"
+            >
+              <span className="avatar avatar-sm">{user?.name?.charAt(0)?.toUpperCase() ?? 'U'}</span>
+              <Icon name="chevron-down" size={14} />
+            </button>
+            {userMenuOpen && (
+              <div
+                className="card"
+                role="menu"
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 'calc(100% + 6px)',
+                  width: 220,
+                  padding: 12,
+                  zIndex: 80,
+                  boxShadow: 'var(--shadow-lg)',
+                }}
+              >
+                <div className="stack stack-xs" style={{ marginBottom: 10 }}>
+                  <p className="t-small font-semibold">{user?.name}</p>
+                  <p className="t-caption text-text-secondary">{user?.email}</p>
+                </div>
+                <div className="divider" style={{ margin: '8px 0' }} />
+                <div className="stack-xs">
+                  {user?.role === 'FARMER' && (
+                    <Link to="/dashboard/profile" className="sidebar-link" role="menuitem">
+                      <span className="sidebar-link-icon">
+                        <Icon name="user" size={16} />
+                      </span>
+                      Profile
+                    </Link>
+                  )}
+                  <Link to="/traceability" className="sidebar-link" role="menuitem">
+                    <span className="sidebar-link-icon">
+                      <Icon name="search" size={16} />
+                    </span>
+                    Public traceability
+                  </Link>
+                  <button
+                    type="button"
+                    className="sidebar-link"
+                    role="menuitem"
+                    style={{ color: 'var(--color-danger)', width: '100%', background: 'none', border: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
+                    onClick={() => {
+                      setUserMenuOpen(false)
+                      setLogoutOpen(true)
+                    }}
+                  >
+                    <span className="sidebar-link-icon">
+                      <Icon name="logout" size={16} />
+                    </span>
+                    Log Out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          {navLinks}
-          {userCard}
-        </aside>
-        {menuOpen && <div className="sidebar-overlay hide-desktop" onClick={() => setMenuOpen(false)} />}
+        </header>
 
-        {/* ── Content ── */}
-        <div className="min-w-0 flex-1 flex flex-col">
-          <ContextBar />
-          <main className="app-main">
-            <Outlet />
-          </main>
-        </div>
+        <ContextBar />
+        <main className="app-main">
+          <Outlet />
+        </main>
       </div>
 
       <ConfirmDialog

@@ -12,6 +12,7 @@ export type IconName =
   | 'chevron-right' | 'chevron-left' | 'chevron-down' | 'filter' | 'download'
   | 'lock' | 'bell' | 'history' | 'sortir' | 'flash' | 'target' | 'stack'
   | 'inbox' | 'send' | 'phone' | 'map' | 'weight' | 'clipboard' | 'shield'
+  | 'expand' | 'compress'
 
 const paths: Record<IconName, ReactElement> = {
   dashboard: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
@@ -73,6 +74,8 @@ const paths: Record<IconName, ReactElement> = {
   weight: <><circle cx="12" cy="5" r="3" /><path d="M6.5 8h11l2.5 12a1 1 0 0 1-1 1.5h-14a1 1 0 0 1-1-1.5z" /></>,
   clipboard: <><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /></>,
   shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>,
+  expand: <><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></>,
+  compress: <><polyline points="4 14 10 14 10 20" /><polyline points="20 10 14 10 14 4" /><line x1="14" y1="10" x2="21" y2="3" /><line x1="3" y1="21" x2="10" y2="14" /></>,
 }
 
 interface IconProps {

@@ -1,8 +1,9 @@
-import type {
-  InputHTMLAttributes,
-  ReactNode,
-  SelectHTMLAttributes,
-  TextareaHTMLAttributes,
+import {
+  forwardRef,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
 } from 'react'
 
 /* ── Field wrapper: label + control + hint/error ── */
@@ -44,15 +45,19 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   mono?: boolean
 }
 
-export function Input({ invalid, mono, className = '', ...rest }: InputProps) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  { invalid, mono, className = '', ...rest },
+  ref,
+) {
   return (
     <input
+      ref={ref}
       className={`input ${mono ? 'input-mono' : ''} ${className}`}
       aria-invalid={invalid || undefined}
       {...rest}
     />
   )
-}
+})
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   invalid?: boolean

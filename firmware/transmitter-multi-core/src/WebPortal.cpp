@@ -220,15 +220,16 @@ bool WebPortal::serveFromSPIFFS(String path) {
 void WebPortal::handleRoot() {
   if (!serveFromSPIFFS("/index.html")) {
     LOG_INFO("portal", "fallback: serving inline HTML (SPIFFS image missing or corrupt)");
-    String fallback = "<!DOCTYPE html><html><head><meta charset='utf-8'><title>E-Tani Weight Transmitter</title>"
+    String fallback = "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Weight Transmitter</title>"
                       "<style>body{background:#0a150f;color:#e2e8f0;font-family:sans-serif;padding:24px;line-height:1.6;}"
-                      "h1{color:#10b981;}.box{background:#162e20;border:1px solid #1e3f2c;padding:16px;border-radius:8px;}</style></head>"
-                      "<body><h1>E-Tani Weight Transmitter</h1><div class='box'>"
+                      "h1{color:#10b981;}.box{background:#162e20;border:1px solid #1e3f2c;padding:16px;border-radius:8px;}"
+                      ".footer{margin-top:24px;font-size:12px;color:#94a3b8;text-align:center;}</style></head>"
+                      "<body><h1>Weight Transmitter</h1><div class='box'>"
                       "<p><strong>SPIFFS partition:</strong> " + fsInfo() + "</p>"
                       "<p>Filesystem image (<code>index.html</code>) not found in SPIFFS.</p>"
                       "<p>Please build and upload the filesystem using: <code>pio run -t uploadfs</code></p>"
                       "<p><a href='/api/status' style='color:#34d399;'>Inspect /api/status JSON &rarr;</a></p>"
-                      "</div></body></html>";
+                      "</div><footer class='footer'>ENYX SmartHub &bull; Weight Transmitter &bull; by Almuzky v1</footer></body></html>";
     _http.send(200, "text/html", fallback);
   }
 }

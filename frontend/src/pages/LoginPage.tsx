@@ -46,8 +46,12 @@ export default function LoginPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full" style={{ maxWidth: 400 }}>
         <div className="text-center stack-sm" style={{ marginBottom: 20 }}>
-          <Link to="/" className="inline-flex" aria-label="ENYX-Smart Hub home">
-            <Logo className="h-9 w-auto" />
+          <Link to="/" className="inline-flex items-center justify-center gap-2.5" aria-label="ENYX Traceability System home">
+            <Logo className="h-9 w-auto" markOnly />
+            <div className="text-left flex flex-col">
+              <span className="font-bold text-lg tracking-tight leading-tight text-text">Traceability System</span>
+              <span className="text-xs text-text-light font-mono">ENYX Enterprise</span>
+            </div>
           </Link>
           <div>
             <h1 className="t-h2">Sign In</h1>
@@ -126,6 +130,11 @@ export default function LoginPage() {
             Trace a product without an account
           </Link>
         </p>
+
+        <footer className="text-center" style={{ marginTop: 24, fontSize: '0.75rem', color: 'var(--text-secondary, #64748b)' }}>
+          <p style={{ margin: 0 }}>ENYX Enterprise • Traceability System • v1.0.0</p>
+          <p style={{ margin: '4px 0 0', opacity: 0.8, fontSize: '0.7rem' }}>Type: enyx-enterprise</p>
+        </footer>
       </div>
     </div>
   )

@@ -13,6 +13,7 @@ Dokumen di folder `docs/` adalah **single source of truth** untuk arsitektur, ke
 | [output_diagram.md](file:///home/almuzky/E-Tani-Smart-Hub/docs/output_diagram.md) | Arsitektur sistem, workflow IoT, dan diagram alur pengemasan kentang. | Sebelum perubahan arsitektur atau sistem IoT. |
 | [logs.md](file:///home/almuzky/E-Tani-Smart-Hub/logs.md) | Log harian aktivitas & keputusan teknis (wajib diupdate tiap tugas). | Update setelah setiap tugas selesai. |
 | `Standards/LaTeX Documentation.md` (Obsidian vault) | Standar wajib dokumentasi formal (laporan & presentasi) dalam format LaTeX untuk konsistensi lintas project. | Sebelum membuat laporan, proposal, makalah, atau presentasi. |
+| `Standards/Product Identity and Ecosystem Naming.md` (Obsidian vault) | Standar wajib penamaan produk ekosistem (SmartHub vs Enterprise), logo terpadu di navbar, judul produk langsung di navbar, dan tipe di footer. | Sebelum mendesain atau memodifikasi UI/UX, header, footer, atau branding. |
 
 ---
 
