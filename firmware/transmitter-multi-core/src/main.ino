@@ -50,126 +50,88 @@ EventBus     gEventBus;
 AppSettings  gAppSettings;
 
 #if DISPLAY_USE_6932
-static bool gDisplayManualTest = false;
+static bool     gDisplayManualTest      = false;
+static bool     gKeypadTestMode         = false;
+static bool     gDisplayTestRunning     = false;
+static uint8_t  gDisplayTestStep        = 0;   // 0=clear,1=S1,2=S2,3=S3,4=done
+static uint32_t gDisplayTestStepMs      = 0;
+static constexpr uint32_t DISPLAY_TEST_STEP_HOLD_MS = 800;
+
 static char gDisplaySerialLine[96];
 static uint8_t gDisplaySerialLineLength = 0;
-
-static bool parseUnsigned(const char* value, uint32_t* result, int base) {
-  if (value == nullptr || result == nullptr || value[0] == '\0') return false;
-  char* end = nullptr;
-  unsigned long parsed = strtoul(value, &end, base);
-  if (*end != '\0' || parsed > UINT32_MAX) return false;
-  *result = static_cast<uint32_t>(parsed);
-  return true;
-}
-
-static void printDisplayTestHelp() {
-  Serial.println(F("Display test commands:"));
-  Serial.println(F("  help                          Show this help"));
-  Serial.println(F("  grid <1-16> <hex>             Raw mask, e.g. grid 1 0xFF"));
-  Serial.println(F("  all <hex>                     Same mask on all grids"));
-  Serial.println(F("  char <1-16> <symbol>          Calibrated digit/letter"));
-  Serial.println(F("  section <1-3> <text>          Render section text with DP"));
-  Serial.println(F("  clear                         Turn all grids off"));
-  Serial.println(F("  brightness <0-7>              Set display brightness"));
-  Serial.println(F("  auto                          Resume live weight/price display"));
-  Serial.println(F("Use CRLF or press Enter after each command."));
-}
 
 static void handleDisplaySerialCommand(char* line) {
   char* command = strtok(line, " \t");
   if (command == nullptr) return;
 
-  if (strcmp(command, "help") == 0) {
-    printDisplayTestHelp();
-    return;
-  }
-  if (strcmp(command, "auto") == 0) {
-    gDisplayManualTest = false;
-    Serial.println(F("Display test mode OFF; live display resumed."));
-    return;
-  }
-  if (strcmp(command, "clear") == 0) {
-    gDisplayManualTest = true;
-    g6932.clear();
-    Serial.println(F("Display cleared. Test mode ON."));
-    return;
-  }
-  if (strcmp(command, "all") == 0) {
-    uint32_t mask = 0;
-    if (!parseUnsigned(strtok(nullptr, " \t"), &mask, 0) || mask > 0xFF) {
-      Serial.println(F("ERROR: use all <hex 0x00-0xFF>"));
+  if (strcmp(command, "test") == 0) {
+    char* sub = strtok(nullptr, " \t");
+    if (sub == nullptr) {
+      Serial.println(F("UNKNOWN command. Use: test display | test keypad | exit"));
       return;
     }
-    gDisplayManualTest = true;
-    g6932.showAllMask(static_cast<uint8_t>(mask));
-    Serial.printf("OK: all grids mask=0x%02lX; test mode ON\n",
-                  static_cast<unsigned long>(mask));
-    return;
-  }
-  if (strcmp(command, "grid") == 0) {
-    uint32_t grid = 0;
-    uint32_t mask = 0;
-    if (!parseUnsigned(strtok(nullptr, " \t"), &grid, 10) ||
-        !parseUnsigned(strtok(nullptr, " \t"), &mask, 0) ||
-        grid < 1 || grid > GN6932::GRID_COUNT || mask > 0xFF) {
-      Serial.println(F("ERROR: use grid <1-16> <hex 0x00-0xFF>"));
+    if (strcmp(sub, "display") == 0) {
+      gDisplayManualTest  = true;
+      gDisplayTestRunning = true;
+      gDisplayTestStep    = 0;
+      gDisplayTestStepMs  = millis();
+      Serial.println(F("OK: display test started (section 1 -> 2 -> 3)"));
       return;
     }
-    gDisplayManualTest = true;
-    g6932.showGridMask(static_cast<uint8_t>(grid - 1), static_cast<uint8_t>(mask));
-    Serial.printf("OK: grid %lu mask=0x%02lX; test mode ON\n",
-                  static_cast<unsigned long>(grid),
-                  static_cast<unsigned long>(mask));
-    return;
-  }
-  if (strcmp(command, "char") == 0) {
-    uint32_t grid = 0;
-    char* symbol = strtok(nullptr, " \t");
-    if (!parseUnsigned(strtok(nullptr, " \t"), &grid, 10) ||
-        symbol == nullptr || symbol[0] == '\0' ||
-        grid < 1 || grid > GN6932::GRID_COUNT) {
-      Serial.println(F("ERROR: use char <1-16> <symbol>"));
+    if (strcmp(sub, "keypad") == 0) {
+#if KEYPAD_ENABLED
+      gKeypadTestMode = !gKeypadTestMode;
+      gButtons.setTestMode(gKeypadTestMode);
+      if (gKeypadTestMode) {
+        Serial.println(F("OK: keypad test mode ON"));
+      } else {
+        Serial.println(F("OK: keypad test mode OFF"));
+      }
+#else
+      Serial.println(F("ERROR: keypad not available in this build"));
+#endif
       return;
     }
-    gDisplayManualTest = true;
-    char value = static_cast<char>(toupper(static_cast<unsigned char>(symbol[0])));
-    g6932.showCharacter(static_cast<uint8_t>(grid - 1), value);
-    Serial.printf("OK: grid %lu char=%c; test mode ON\n",
-                  static_cast<unsigned long>(grid), value);
-    return;
-  }
-  if (strcmp(command, "section") == 0) {
-    uint32_t section = 0;
-    char* sectionToken = strtok(nullptr, " \t");
-    char* text = strtok(nullptr, "");
-    if (!parseUnsigned(sectionToken, &section, 10) ||
-        text == nullptr || section < 1 || section > 3) {
-      Serial.println(F("ERROR: use section <1-3> <text>"));
-      return;
-    }
-    while (*text == ' ' || *text == '\t') ++text;
-    if (!g6932.showSection(static_cast<uint8_t>(section), text)) {
-      Serial.println(F("ERROR: invalid section text"));
-      return;
-    }
-    gDisplayManualTest = true;
-    Serial.printf("OK: section %lu text=%s; test mode ON\n",
-                  static_cast<unsigned long>(section), text);
-    return;
-  }
-  if (strcmp(command, "brightness") == 0) {
-    uint32_t brightness = 0;
-    if (!parseUnsigned(strtok(nullptr, " \t"), &brightness, 10) || brightness > 7) {
-      Serial.println(F("ERROR: use brightness <0-7>"));
-      return;
-    }
-    g6932.setBrightness(static_cast<uint8_t>(brightness));
-    Serial.printf("OK: brightness=%lu\n", static_cast<unsigned long>(brightness));
+    Serial.println(F("UNKNOWN command. Use: test display | test keypad | exit"));
     return;
   }
 
-  Serial.println(F("ERROR: unknown command; type help"));
+  if (strcmp(command, "exit") == 0) {
+    bool wasDisplay = gDisplayTestRunning;
+    bool wasKeypad  = gKeypadTestMode;
+    gDisplayTestRunning = false;
+    gDisplayManualTest  = false;      // live display resumed on next 500 ms tick
+    gKeypadTestMode     = false;
+#if KEYPAD_ENABLED
+    gButtons.setTestMode(false);
+#endif
+    if (wasDisplay && wasKeypad)      Serial.println(F("OK: all tests exited; normal operation resumed"));
+    else if (wasDisplay)              Serial.println(F("OK: display test exited; live display resumed"));
+    else if (wasKeypad)               Serial.println(F("OK: keypad test mode OFF"));
+    else                              Serial.println(F("No active test to exit"));
+    return;
+  }
+
+  Serial.println(F("UNKNOWN command. Use: test display | test keypad | exit"));
+}
+
+static void runDisplayTestTick() {
+  if (!gDisplayTestRunning) return;
+  uint32_t now = millis();
+  if ((now - gDisplayTestStepMs) < DISPLAY_TEST_STEP_HOLD_MS) return;
+  gDisplayTestStepMs = now;
+  switch (gDisplayTestStep) {
+    case 0:  g6932.clear(); break;
+    case 1:  g6932.showSection(1, "88888");  break;
+    case 2:  g6932.showSection(2, "88888");  break;
+    case 3:  g6932.showSection(3, "888888"); break;
+    default:
+      gDisplayTestRunning = false;
+      gDisplayManualTest  = false;   // live display resumed
+      Serial.println(F("OK: display test complete; live display resumed"));
+      return;
+  }
+  ++gDisplayTestStep;
 }
 
 static void readDisplaySerialCommands() {
@@ -294,6 +256,7 @@ static void networkTask(void* pvParameters) {
     TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
 #if DISPLAY_USE_6932
     readDisplaySerialCommands();
+    runDisplayTestTick();
 #endif
     gEventBus.process();
     gPortal.handleClient();
@@ -429,7 +392,7 @@ void setup() {
 #if KEYPAD_ENABLED
   gButtons.begin();
 #endif
-  Serial.println(F("GN6932 display test ready; type help for commands."));
+  Serial.println(F("Serial test ready: 'test display', 'test keypad', 'exit'"));
 #else
   gDisplay.begin();
 #endif

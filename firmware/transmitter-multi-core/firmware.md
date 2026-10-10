@@ -979,28 +979,49 @@ Leading positions are blank. For example, centi-value `123` is rendered as
 `001.23` in a five-grid section. Decimal-point positions are explicit rather
 than enabling DP on every grid, which keeps numeric output readable.
 
-### 8.2 Serial Monitor display test
+### 8.2 Serial Monitor test commands
 
 With the default `esp32s3` firmware running at 115200 baud, send one command
-per line. `CRLF` or `LF` line endings are accepted. A manual test command
-holds the display in test mode so the live weight refresh does not overwrite
-the test pattern. Send `auto` to resume live display updates.
+per line. `CRLF` or `LF` line endings are accepted.
 
 | Command | Example | Function |
 |---------|---------|----------|
-| `help` | `help` | Print all test commands |
-| `grid` | `grid 1 0xFF` | Write a raw mask to grid 1 |
-| `all` | `all 0x00` | Write the same raw mask to all grids |
-| `char` | `char 1 A` | Render calibrated symbol `A` on grid 1 |
-| `section` | `section 1 12345` | Render section text and its configured DP |
-| `clear` | `clear` | Turn all grids off and stay in test mode |
-| `brightness` | `brightness 1` | Set brightness from 0 to 7 |
-| `auto` | `auto` | Return to live weight/price display |
+| `test display` | `test display` | Runs a single quick loop: `8` on section 1, then 2, then 3 (~800 ms each), then automatically returns to live display |
+| `test keypad` | `test keypad` | Toggles keypad test mode; every press/release is printed with its button id and label, normal keypad actions are suspended while active |
+| `exit` | `exit` | Leaves any active test mode immediately (display test and/or keypad test) and resumes normal operation |
 
-Grid numbers in commands are **1–16**. Raw masks are hexadecimal values
-`0x00`–`0xFF`. The calibrated segment mapping is the same as the display test
-firmware: `A=0x20`, `B=0x80`, `C=0x01`, `D=0x02`, `E=0x08`, `F=0x10`,
-`G=0x40`, and `DP=0x04`.
+`test display` lights all grids of section 1 (`88888`), then section 2
+(`88888`), then section 3 (`888888`), holding each section for roughly 800 ms
+with a brief clear frame in between. The sequence runs in the background
+(non-blocking, `millis()`-driven) while Modbus polling, the web portal, and the
+periodic state log keep running. After the last section the firmware clears the
+test overlay automatically and the live weight/price display resumes on its
+next 500 ms refresh tick, so no manual resume command is needed.
+
+While keypad test mode is active, every press and release is reported as
+`KEYPAD TEST: pressed id=<id> [<label>]` or `KEYPAD TEST: released id=<id>
+[<label>]`, and the normal keypad actions (price entry, TARE, ADD, preset
+recall, STORE, ZERO) are suspended so testing cannot change live pricing data.
+The mode can be left by sending `test keypad` again (toggle) or `exit`.
+
+Keypad test output uses the verified button id mapping:
+
+| Id | Label | Id | Label |
+|----|-------|----|-------|
+| 0 | C | 10 | 8 |
+| 1 | ADD | 11 | 5 |
+| 2 | TARE | 12 | 2 |
+| 3 | ZERO | 13 | DP |
+| 4 | M4 | 14 | M2 |
+| 5 | 9 | 15 | 7 |
+| 6 | 6 | 16 | 4 |
+| 7 | 3 | 17 | 1 |
+| 8 | STORE | 18 | 0 |
+| 9 | M3 | 19 | M1 |
+
+`exit` while no test is active prints `No active test to exit`. On builds
+without the keypad (for example `esp32dev`), `test keypad` reports that the
+keypad is not available in this build.
 
 ### 8.1 Compile-time feature rules
 
