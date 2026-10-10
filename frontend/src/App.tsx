@@ -14,18 +14,21 @@ import DeliveriesPage from './pages/DeliveriesPage'
 import MyDeliveriesPage from './pages/MyDeliveriesPage'
 import FarmerProfilePage from './pages/FarmerProfilePage'
 import TraceabilityPage from './pages/TraceabilityPage'
+import PublicTraceabilityPage from './pages/PublicTraceabilityPage'
 import UsersPage from './pages/UsersPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
 import { useAuth } from './hooks/useAuth'
+import Icon from './components/shared/Icon'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-primary text-lg">Loading...</div>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-background">
+        <Icon name="leaf" size={28} className="text-accent" />
+        <p className="t-small text-text-secondary">Loading workspace…</p>
       </div>
     )
   }
@@ -42,6 +45,7 @@ function App() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/traceability" element={<PublicTraceabilityPage />} />
       <Route
         path="/dashboard"
         element={

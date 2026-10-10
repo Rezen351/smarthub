@@ -1,82 +1,136 @@
+import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import Badge from '../components/shared/Badge'
+import Button from '../components/shared/Button'
 import Card from '../components/shared/Card'
+import Icon, { type IconName } from '../components/shared/Icon'
+import PageHeader from '../components/shared/PageHeader'
+import StatCard from '../components/shared/StatCard'
+
+interface Stat {
+  label: string
+  value: string
+  sub: string
+  trend: 'up' | 'down' | 'neutral'
+  icon: IconName
+}
+
+interface QuickAction {
+  label: string
+  path: string
+  icon: IconName
+  desc: string
+  primary?: boolean
+}
+
+interface Activity {
+  time: string
+  action: string
+  icon: IconName
+  badge: string
+  tone: 'neutral' | 'accent' | 'success' | 'warning'
+}
+
+const stats: Stat[] = [
+  { label: 'Total Users', value: '24', sub: '6 roles configured', trend: 'up', icon: 'users' },
+  { label: 'Active Today', value: '18', sub: '75% of accounts', trend: 'up', icon: 'check-circle' },
+  { label: 'Pending Approvals', value: '5', sub: 'Weighing records', trend: 'down', icon: 'clock' },
+  { label: 'System Status', value: 'Online', sub: 'All services healthy', trend: 'neutral', icon: 'shield' },
+]
+
+const quickActions: QuickAction[] = [
+  { label: 'Manage Users', path: '/dashboard/users', icon: 'users', desc: 'Accounts & roles' },
+  { label: 'View Reports', path: '/dashboard/reports', icon: 'reports', desc: 'Setoran & stock' },
+  { label: 'Settings', path: '/dashboard/settings', icon: 'settings', desc: 'Commodity & labels' },
+]
+
+const activities: Activity[] = [
+  { time: '10:30', action: 'New user registered: operator@enyx.local', icon: 'user', badge: 'User', tone: 'accent' },
+  { time: '09:15', action: 'System backup completed', icon: 'shield', badge: 'System', tone: 'success' },
+  { time: '08:00', action: 'Daily report generated', icon: 'reports', badge: 'Report', tone: 'neutral' },
+]
 
 export default function AdminDashboardHome() {
   const { user } = useAuth()
 
-  const stats = [
-    { label: 'Total Users', value: '24' },
-    { label: 'Active Today', value: '18' },
-    { label: 'System Status', value: 'Online' },
-  ]
-
-  const quickActions = [
-    { label: 'Manage Users', path: '/dashboard/users', icon: '👥' },
-    { label: 'View Reports', path: '/dashboard/reports', icon: '📊' },
-    { label: 'Settings', path: '/dashboard/settings', icon: '⚙️' },
-  ]
-
-  const activities = [
-    { time: '10:30', action: 'New user registered: operator@enyx.local', type: 'user' },
-    { time: '09:15', action: 'System backup completed', type: 'system' },
-    { time: '08:00', action: 'Daily report generated', type: 'report' },
-  ]
-
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <p className="text-sm text-text-secondary mb-1">Welcome back,</p>
-        <h1 className="text-2xl font-bold text-text">{user?.name}</h1>
+    <div className="stack stack-lg">
+      <PageHeader
+        title={`Welcome back, ${user?.name ?? 'Admin'}`}
+        subtitle="System overview — users, master data and reports."
+      />
+
+      <div className="grid-stats">
+        {stats.map((stat) => (
+          <StatCard
+            key={stat.label}
+            label={stat.label}
+            value={stat.value}
+            sub={stat.sub}
+            trend={stat.trend}
+            icon={<Icon name={stat.icon} size={16} />}
+          />
+        ))}
       </div>
 
-      <Card>
-        <h3 className="card-title mb-4">System Overview</h3>
-        <div className="grid grid-cols-3 gap-4">
-          {stats.map((item) => (
-            <div key={item.label} className="bg-background border border-border p-4 rounded-sm">
-              <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">{item.label}</div>
-              <div className="text-xl font-bold text-text">{item.value}</div>
+      <section className="stack-sm">
+        <div className="section-header">
+          <h2 className="section-title">Quick actions</h2>
+        </div>
+        <div className="grid-quick">
+          {quickActions.map((action) => (
+            <Link key={action.label} to={action.path} className="quick-action">
+              <span className={`icon-tile ${action.primary ? 'icon-tile-solid' : 'icon-tile-accent'}`}>
+                <Icon name={action.icon} size={18} />
+              </span>
+              <span className="quick-action-label">{action.label}</span>
+              <span className="quick-action-desc">{action.desc}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <Card title="Recent Activity" subtitle="Latest system events">
+        <div className="stack">
+          {activities.map((activity, index) => (
+            <div key={index} className="row gap-md between py-3 border-b border-border last:border-0">
+              <div className="row gap-md min-w-0">
+                <span className="icon-tile flex-shrink-0">
+                  <Icon name={activity.icon} size={18} />
+                </span>
+                <div className="min-w-0">
+                  <p className="t-small text-truncate">{activity.action}</p>
+                  <p className="t-caption text-text-secondary mono">{activity.time}</p>
+                </div>
+              </div>
+              <Badge tone={activity.tone}>{activity.badge}</Badge>
             </div>
           ))}
         </div>
       </Card>
 
-      <div>
-        <h2 className="text-lg font-semibold text-text mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-3 gap-4">
-          {quickActions.map((action) => (
-            <a
-              key={action.label}
-              href={action.path}
-              className="bg-surface border border-border rounded-sm p-4 text-center hover:border-primary transition-colors"
-            >
-              <div className="text-2xl mb-2">{action.icon}</div>
-              <div className="text-sm font-medium text-text">{action.label}</div>
-            </a>
-          ))}
+      <Card
+        title="Master data"
+        subtitle="Single active commodity: Kentang (grade A/B/C)."
+        action={
+          <Link to="/dashboard/settings">
+            <Button variant="outline" size="sm" icon="settings">
+              Configure
+            </Button>
+          </Link>
+        }
+      >
+        <div className="row gap-sm flex-wrap">
+          <Badge tone="accent" icon="leaf">
+            Kentang · active
+          </Badge>
+          <Badge tone="neutral">Tomat · disabled</Badge>
+          <Badge tone="neutral">Cabai · disabled</Badge>
+          <span className="t-caption text-text-secondary">
+            Multi-commodity schema is ready; only Kentang is enabled in this scope.
+          </span>
         </div>
-      </div>
-
-      <div>
-        <h2 className="text-lg font-semibold text-text mb-3">Recent Activity</h2>
-        <Card>
-          <div className="space-y-4">
-            {activities.map((activity, i) => (
-              <div key={i} className="flex items-center justify-between pb-4 border-b border-border last:border-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-background rounded-sm flex items-center justify-center text-lg">
-                    {activity.type === 'user' ? '👤' : activity.type === 'system' ? '⚙️' : '📊'}
-                  </div>
-                  <div>
-                    <div className="font-medium text-text text-sm">{activity.action}</div>
-                    <div className="text-xs text-text-secondary">{activity.time}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+      </Card>
     </div>
   )
 }

@@ -1,85 +1,115 @@
+import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import Badge from '../components/shared/Badge'
 import Card from '../components/shared/Card'
+import Icon, { type IconName } from '../components/shared/Icon'
+import PageHeader from '../components/shared/PageHeader'
+import StatCard from '../components/shared/StatCard'
+
+interface Stat {
+  label: string
+  value: string
+  sub: string
+  trend: 'up' | 'down' | 'neutral'
+  icon: IconName
+}
+
+interface QuickAction {
+  label: string
+  path: string
+  icon: IconName
+  desc: string
+  primary?: boolean
+}
+
+interface Activity {
+  time: string
+  action: string
+  icon: IconName
+  status: string
+  tone: 'success' | 'warning' | 'accent'
+}
+
+const stats: Stat[] = [
+  { label: 'Pending Grading', value: '12', sub: 'Pallets to sort', trend: 'down', icon: 'sortir' },
+  { label: 'Grades Recorded', value: '156', sub: 'kg allocated today', trend: 'up', icon: 'grade' },
+  { label: 'Labels Printed', value: '142', sub: 'Grade labels', trend: 'up', icon: 'label' },
+  { label: 'Grade Labels Queued', value: '3', sub: 'Waiting for printer', trend: 'neutral', icon: 'print' },
+]
+
+const quickActions: QuickAction[] = [
+  { label: 'Sorting', path: '/dashboard/grading', icon: 'sortir', desc: 'Grade A/B/C per pallet', primary: true },
+  { label: 'Label Queue', path: '/dashboard/labels', icon: 'label', desc: 'Print grade labels' },
+  { label: 'Sorting History', path: '/dashboard/grading', icon: 'history', desc: 'Records per pallet' },
+]
+
+const activities: Activity[] = [
+  { time: '10:15', action: 'Grade A: 45.5 kg recorded', icon: 'grade', status: 'Recorded', tone: 'success' },
+  { time: '09:45', action: 'Pouch PCH-PLT-20260914-0001-001 created', icon: 'package', status: 'Packed', tone: 'success' },
+  { time: '09:30', action: 'Label printed: PCH-PLT-20260914-0001-001', icon: 'label', status: 'Queued', tone: 'warning' },
+]
 
 export default function SortingDashboardHome() {
   const { user } = useAuth()
 
-  const stats = [
-    { label: 'Pending Grading', value: '12' },
-    { label: 'Pouches Created', value: '156' },
-    { label: 'Labels Printed', value: '142' },
-  ]
-
-  const quickActions = [
-    { label: 'Grading', path: '/dashboard/grading', icon: '📊' },
-    { label: 'Labels', path: '/dashboard/labels', icon: '🏷️' },
-    { label: 'History', path: '/dashboard/grading', icon: '📋' },
-  ]
-
-  const activities = [
-    { time: '10:15', action: 'Grade A: 45.5 kg recorded', status: 'Completed' },
-    { time: '09:45', action: 'Pouch PCH-PLT-20260914-0001-001 created', status: 'Completed' },
-    { time: '09:30', action: 'Label printed: PCH-PLT-20260914-0001-001', status: 'Pending' },
-  ]
-
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <p className="text-sm text-text-secondary mb-1">Welcome back,</p>
-        <h1 className="text-2xl font-bold text-text">{user?.name}</h1>
+    <div className="stack stack-lg">
+      <PageHeader
+        title={`Welcome back, ${user?.name ?? 'Operator'}`}
+        subtitle="Sorting area — split the harvest into grade A/B/C and print the grade labels."
+      />
+
+      <div className="grid-stats">
+        {stats.map((stat) => (
+          <StatCard
+            key={stat.label}
+            label={stat.label}
+            value={stat.value}
+            sub={stat.sub}
+            trend={stat.trend}
+            icon={<Icon name={stat.icon} size={16} />}
+          />
+        ))}
       </div>
 
-      <Card>
-        <h3 className="card-title mb-4">Today's Overview</h3>
-        <div className="grid grid-cols-3 gap-4">
-          {stats.map((item) => (
-            <div key={item.label} className="bg-background border border-border p-4 rounded-sm">
-              <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">{item.label}</div>
-              <div className="text-xl font-bold text-text">{item.value}</div>
+      <section className="stack-sm">
+        <div className="section-header">
+          <h2 className="section-title">Quick actions</h2>
+          <span className="t-caption text-text-secondary">Sorting needs no scale — weight comes from the pouches</span>
+        </div>
+        <div className="grid-quick">
+          {quickActions.map((action) => (
+            <Link key={action.label} to={action.path} className="quick-action">
+              <span className={`icon-tile ${action.primary ? 'icon-tile-solid' : 'icon-tile-accent'}`}>
+                <Icon name={action.icon} size={18} />
+              </span>
+              <span className="quick-action-label">{action.label}</span>
+              <span className="quick-action-desc">{action.desc}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <Card title="Recent Activity" subtitle="Latest sorting and label events">
+        <div className="stack">
+          {activities.map((activity, index) => (
+            <div key={index} className="row gap-md between py-3 border-b border-border last:border-0">
+              <div className="row gap-md min-w-0">
+                <span className="icon-tile flex-shrink-0">
+                  <Icon name={activity.icon} size={18} />
+                </span>
+                <div className="min-w-0">
+                  <p className="t-small text-truncate">{activity.action}</p>
+                  <p className="t-caption text-text-secondary mono">{activity.time}</p>
+                </div>
+              </div>
+              <Badge tone={activity.tone} dot={activity.tone === 'success'}>
+                {activity.status}
+              </Badge>
             </div>
           ))}
         </div>
       </Card>
-
-      <div>
-        <h2 className="text-lg font-semibold text-text mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-3 gap-4">
-          {quickActions.map((action) => (
-            <a
-              key={action.label}
-              href={action.path}
-              className="bg-surface border border-border rounded-sm p-4 text-center hover:border-primary transition-colors"
-            >
-              <div className="text-2xl mb-2">{action.icon}</div>
-              <div className="text-sm font-medium text-text">{action.label}</div>
-            </a>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h2 className="text-lg font-semibold text-text mb-3">Recent Activity</h2>
-        <Card>
-          <div className="space-y-4">
-            {activities.map((activity, i) => (
-              <div key={i} className="flex items-center justify-between pb-4 border-b border-border last:border-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-background rounded-sm flex items-center justify-center text-lg">
-                    {activity.action.includes('Grade') ? '📊' : activity.action.includes('Pouch') ? '📦' : '🏷️'}
-                  </div>
-                  <div>
-                    <div className="font-medium text-text text-sm">{activity.action}</div>
-                    <div className="text-xs text-text-secondary">{activity.time}</div>
-                  </div>
-                </div>
-                <div className={`px-2 py-1 text-xs rounded-sm ${activity.status === 'Completed' ? 'badge-success' : 'badge-warning'}`}>
-                  {activity.status}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
     </div>
   )
 }

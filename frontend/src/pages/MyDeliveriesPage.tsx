@@ -1,5 +1,9 @@
-import Card from '../components/shared/Card'
 import { useEffect, useState } from 'react'
+import Card from '../components/shared/Card'
+import Badge from '../components/shared/Badge'
+import Icon from '../components/shared/Icon'
+import DataTable, { type Column } from '../components/shared/DataTable'
+import PageHeader from '../components/shared/PageHeader'
 import { myDeliveries as mockDeliveries } from '../mock/deliveries'
 
 interface Delivery {
@@ -36,47 +40,77 @@ export default function MyDeliveriesPage() {
     fetchDeliveries()
   }, [])
 
+  const columns: Column<Delivery>[] = [
+    { key: 'date', label: 'Date', priority: true, render: (row) => <span className="mono t-small">{row.date}</span> },
+    { key: 'truckPlate', label: 'Truck plate', priority: true, render: (row) => <span className="mono cell-strong">{row.truckPlate}</span> },
+    { key: 'destination', label: 'Destination', priority: true, render: (row) => <span className="t-small">{row.destination}</span> },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (row) => (
+        <Badge tone={row.status === 'Delivered' ? 'success' : 'accent'} dot>
+          {row.status}
+        </Badge>
+      ),
+    },
+  ]
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-text">My Deliveries</h1>
-        <p className="text-text-secondary mt-1">Track your delivery history</p>
+    <div className="stack stack-lg">
+      <PageHeader
+        title="My Deposits"
+        subtitle="Trace every delivery made from your harvest deposits."
+        actions={<Badge tone="neutral">{deliveries.length} deliveries</Badge>}
+      />
+
+      <div className="grid-stats">
+        <div className="stat-card">
+          <p className="stat-label">Total deliveries</p>
+          <p className="stat-value">{loading ? '—' : deliveries.length}</p>
+          <p className="stat-sub">From your deposits</p>
+        </div>
+        <div className="stat-card">
+          <p className="stat-label">In transit</p>
+          <p className="stat-value">{loading ? '—' : deliveries.filter((item) => item.status === 'In Transit').length}</p>
+          <p className="stat-sub">On the road</p>
+        </div>
+        <div className="stat-card">
+          <p className="stat-label">Delivered</p>
+          <p className="stat-value">{loading ? '—' : deliveries.filter((item) => item.status === 'Delivered').length}</p>
+          <p className="stat-sub">Completed</p>
+        </div>
+        <div className="stat-card">
+          <p className="stat-label">Latest destination</p>
+          <p className="stat-value" style={{ fontSize: 20 }}>
+            {loading ? '—' : deliveries[0]?.destination ?? '—'}
+          </p>
+          <p className="stat-sub">{loading ? 'Loading' : deliveries[0]?.date ?? 'No records'}</p>
+        </div>
       </div>
 
-      <Card>
+      <Card title="Delivery history" subtitle="Each record links back to the weighing at the receiving area.">
         {loading ? (
-          <div className="text-center text-text-secondary py-4">Loading...</div>
-        ) : deliveries.length === 0 ? (
-          <div className="text-center text-text-secondary py-4">No deliveries yet</div>
-        ) : (
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Truck Plate</th>
-                  <th>Destination</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {deliveries.map((d) => (
-                  <tr key={d.id}>
-                    <td>{d.date}</td>
-                    <td>{d.truckPlate}</td>
-                    <td>{d.destination}</td>
-                    <td>
-                      <span className={`badge ${d.status === 'Delivered' ? 'badge-success' : 'badge-info'}`}>
-                        {d.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="stack-sm">
+            <div className="skeleton skeleton-block" />
+            <div className="skeleton skeleton-block" />
           </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={deliveries}
+            rowKey={(row) => row.id}
+            emptyTitle="No deliveries recorded."
+            emptyDescription="Your deliveries appear here once your deposit leaves the warehouse."
+          />
         )}
       </Card>
+
+      <div className="alert alert-info">
+        <Icon name="info" size={16} />
+        <span>
+          Consumers can trace the same journey publicly from the pouch QR — no account needed.
+        </span>
+      </div>
     </div>
   )
 }

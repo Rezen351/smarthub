@@ -1,7 +1,19 @@
 import { useState, FormEvent } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
+import { useNavigate, Navigate, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import Logo from '../components/shared/Logo'
+import Button from '../components/shared/Button'
+import Icon from '../components/shared/Icon'
+import { Field, Input } from '../components/shared/Form'
+
+const demoAccounts = [
+  { email: 'admin@enyx.local', role: 'Admin' },
+  { email: 'weighing@enyx.local', role: 'Weighing Operator' },
+  { email: 'sorting@enyx.local', role: 'Sorting Operator' },
+  { email: 'warehouse@enyx.local', role: 'Warehouse Operator' },
+  { email: 'delivery@enyx.local', role: 'Delivery Operator' },
+  { email: 'farmer@enyx.local', role: 'Farmer' },
+]
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -30,89 +42,90 @@ export default function LoginPage() {
     }
   }
 
-  const demoAccounts = [
-    { email: 'admin@enyx.local', role: 'Admin' },
-    { email: 'weighing@enyx.local', role: 'Weighing Operator' },
-    { email: 'sorting@enyx.local', role: 'Sorting Operator' },
-    { email: 'warehouse@enyx.local', role: 'Warehouse Operator' },
-    { email: 'delivery@enyx.local', role: 'Delivery Operator' },
-    { email: 'farmer@enyx.local', role: 'Farmer' },
-  ]
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-[320px]">
-        <div className="bg-surface border border-border rounded-sm shadow-lg p-8">
-          <div className="text-center mb-6">
-            <Logo className="h-10 w-auto mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-text">Sign In</h2>
-            <p className="text-sm text-text-secondary mt-1">Enter your credentials to continue</p>
+      <div className="w-full" style={{ maxWidth: 400 }}>
+        <div className="text-center stack-sm" style={{ marginBottom: 20 }}>
+          <Link to="/" className="inline-flex" aria-label="ENYX-Smart Hub home">
+            <Logo className="h-9 w-auto" />
+          </Link>
+          <div>
+            <h1 className="t-h2">Sign In</h1>
+            <p className="t-small text-text-secondary">Enter your credentials to continue</p>
           </div>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-sm text-sm">
-                {error}
-              </div>
-            )}
+        <div className="card card-pad-lg stack-md">
+          {error && (
+            <div className="alert alert-danger" role="alert">
+              <Icon name="alert" size={16} />
+              <span>{error}</span>
+            </div>
+          )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-1.5">
-                Email
-              </label>
-              <input
+          <form onSubmit={handleSubmit} className="stack-md">
+            <Field label="Email" htmlFor="email" required>
+              <Input
                 id="email"
                 type="email"
+                inputMode="email"
+                autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-border rounded-sm text-sm text-text bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                 placeholder="admin@enyx.local"
+                required
               />
-            </div>
+            </Field>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-1.5">
-                Password
-              </label>
-              <input
+            <Field label="Password" htmlFor="password" required>
+              <Input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-border rounded-sm text-sm text-text bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                 placeholder="password"
+                required
               />
-            </div>
+            </Field>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary text-white py-2 rounded-sm text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
+            <Button type="submit" variant="primary" size="lg" block touch loading={loading}>
+              {loading ? 'Signing in…' : 'Sign In'}
+            </Button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-border">
-            <p className="text-xs font-medium text-text-secondary mb-3">Demo Accounts (password: password)</p>
-            <div className="space-y-2">
+          <div className="divider" />
+
+          <div className="stack-sm">
+            <p className="t-caption text-text-secondary">Demo accounts · password: password</p>
+            <div className="stack-xs">
               {demoAccounts.map((account) => (
                 <button
                   key={account.email}
+                  type="button"
+                  className="quick-action"
+                  style={{ padding: '10px 12px' }}
                   onClick={() => {
                     setEmail(account.email)
                     setPassword('password')
                   }}
-                  className="w-full text-left px-3 py-2 rounded-sm text-xs border border-border hover:border-primary hover:text-text transition-colors text-text-secondary"
                 >
-                  {account.email} — {account.role}
+                  <span className="flex items-center justify-between gap-sm w-full">
+                    <span className="mono t-small">{account.email}</span>
+                    <span className="t-caption text-text-secondary">{account.role}</span>
+                  </span>
                 </button>
               ))}
             </div>
           </div>
         </div>
+
+        <p className="t-caption text-text-secondary text-center" style={{ marginTop: 16 }}>
+          <Link to="/traceability" className="flex items-center gap-xs justify-center">
+            <Icon name="search" size={12} />
+            Trace a product without an account
+          </Link>
+        </p>
       </div>
     </div>
   )
