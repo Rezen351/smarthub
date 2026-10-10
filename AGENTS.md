@@ -12,6 +12,7 @@ Dokumen di folder `docs/` adalah **single source of truth** untuk arsitektur, ke
 |---------|------------------------|--------------------------|
 | [output_diagram.md](file:///home/almuzky/E-Tani-Smart-Hub/docs/output_diagram.md) | Arsitektur sistem, workflow IoT, dan diagram alur pengemasan kentang. | Sebelum perubahan arsitektur atau sistem IoT. |
 | [logs.md](file:///home/almuzky/E-Tani-Smart-Hub/logs.md) | Log harian aktivitas & keputusan teknis (wajib diupdate tiap tugas). | Update setelah setiap tugas selesai. |
+| `Standards/LaTeX Documentation.md` (Obsidian vault) | Standar wajib dokumentasi formal (laporan & presentasi) dalam format LaTeX untuk konsistensi lintas project. | Sebelum membuat laporan, proposal, makalah, atau presentasi. |
 
 ---
 
@@ -154,3 +155,21 @@ AI Agent dan kontributor wajib mengikuti standar commit berikut:
    - `chore`: Tugas pemeliharaan, update dependencies, dll.
    *Contoh:* `feat(auth): implement JWT token verification`
 2. **Atomic Commits**: Lakukan commit dalam ukuran kecil dan fokus pada satu perubahan spesifik. Jangan menggabungkan beberapa fitur tidak terkait dalam satu commit besar.
+
+---
+
+## 📐 9. Standar Dokumentasi Laporan & Presentasi (LaTeX)
+
+Seluruh dokumentasi formal — laporan, proposal, makalah/paper, dan presentasi (PPT/slide deck) — **wajib** ditulis dalam format **LaTeX** dan diarsipkan di **Obsidian vault** (via MCP) agar konsisten lintas project.
+
+1. **LaTeX Only**: Dilarang menggunakan `.docx`/`.pptx` sebagai sumber dokumen. File Word/PowerPoint hanya boleh menjadi hasil ekspor akhir (umumnya PDF); source of truth tetap berkas `.tex`.
+2. **Template Kanonik di Vault**: Setiap dokumen baru wajib dimulai dari template bersama di Obsidian vault:
+   - `Templates/LaTeX Report.md` — template laporan (class `article`, struktur & preamble identik).
+   - `Templates/LaTeX Presentation.md` — template presentasi (class `beamer`, `aspectratio=169`).
+   - `Standards/LaTeX Documentation.md` — standar lengkap (preamble, konvensi penamaan, workflow).
+   Dilarang memodifikasi inti preamble/template tanpa memperbarui seluruh note terkait di vault.
+3. **Struktur Folder Dokumen**: Dokumen aktif disimpan di repo project pada `docs/latex/reports/` dan `docs/latex/presentations/` dengan penamaan `<YYYY-MM-DD>_<Judul_Dokumen>.tex`.
+4. **Arsip Vault**: Setelah dokumen selesai, salinan `.tex` beserta hasil kompilasi PDF diarsipkan di vault pada `LaTeX/<Nama_Project>/Reports/` dan `LaTeX/<Nama_Project>/Presentations/`, lalu didaftarkan pada note `LaTeX/Index.md`.
+5. **Kompilasi & Verifikasi**: Kompilasi menggunakan XeLaTeX. PDF wajib terhasit tanpa error sebelum tugas dinyatakan selesai (lihat §2.3).
+6. **Metadata & Versioning**: Setiap dokumen wajib memuat metadata (judul, penulis, institusi, tanggal, versi semantik `vX.Y.Z`) dan tabel revision history.
+7. **Bahasa**: Konten dokumen menggunakan Bahasa Inggris secara default; Bahasa Indonesia diizinkan apabila audiens target memerlukannya, dan wajib konsisten dalam satu dokumen.

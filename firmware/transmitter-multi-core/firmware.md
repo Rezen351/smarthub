@@ -26,10 +26,8 @@ The design is intentionally **protocol-agnostic at the top level**: the `SharedS
 
 | Component | Part | Notes |
 |-----------|------|-------|
-| MCU | ESP32-WROOM-32 (DevKit V1) | Dual-core, built-in WiFi/BT |
-| MCU | ESP32-S3 DevKitC-1 (ESP32 v4) | Drop-in replacement, same GPIO map |
-| MCU | ESP32-C3-MINI (DevKitM-1) | Single-core RISC-V, WiFi only, compact |
-| MCU | ESP32-WROOM-32U | U.FL antenna variant, same as DevKit V1 |
+| MCU | ESP32-S3 DevKitC-1 | Dual-core Xtensa LX7, 240 MHz, native USB, WiFi/BT |
+| MCU | ESP32-WROOM-32 (DevKit V1) | Dual-core Xtensa LX6, 240 MHz, WiFi/BT, alternative variant |
 | Load cell ADC | HX711 module | 24-bit sigma-delta, 10/80 Hz |
 | Load cell | Any strain-gauge (1-200 kg range) | 4-wire Wheatstone bridge |
 | Power supply | 5 V / 1 A USB or regulated | HX711 may use 3.3 V or 5 V VCC |
@@ -39,6 +37,7 @@ The design is intentionally **protocol-agnostic at the top level**: the `SharedS
 | Component | Part | Notes |
 |-----------|------|-------|
 | MCU | ESP32-S3 DevKitC-1 | Dual-core Xtensa LX7, 240 MHz, native USB, WiFi/BT |
+| MCU | ESP32-WROOM-32 (DevKit V1) | Dual-core Xtensa LX6, 240 MHz, WiFi/BT, alternative variant |
 | Load cell ADC | HX711 module | 24-bit sigma-delta, 10/80 Hz |
 | Load cell | Any strain-gauge (1-200 kg range) | 4-wire Wheatstone bridge |
 | Ethernet | W5500 module (hardware SPI) | Modbus TCP over Ethernet |
@@ -240,14 +239,9 @@ Arduino loop() -------------------------------------------------------
   All work is inside the two pinned tasks above.
 ```
 
-**Single-core chips:** Both tasks are pinned to core 0. The scheduler time-slices them. This is acceptable because:
-- Scale task runs every 30 ms with minimal work
-- Network task is mostly idle (HTTP/DNS/Modbus are event-driven)
-- Mutex-protected SharedState prevents data races
-
 **Why two cores?** The HX711 requires precise clock timing (<= 1 us between pulses). Placing the HX711 driver on a core isolated from WiFi interrupt jitter prevents data corruption and missed samples.
 
-On ESP32-S3, true dual-core pinning is used: scale on core 0, network on core 1.
+On ESP32-S3, true dual-core pinning is used: scale on core 0, network on core 1. On ESP32, both tasks run on core 0 with time-slicing.
 
 ### 3.4 NVS access is serialised across cores
 
@@ -1289,11 +1283,12 @@ The `esp32s3` environment builds the local keypad and GN/TA/AiP6932
 environment keeps the legacy OLED path and compiles the S3-only matrix,
 display, and buzzer integration out.
 
-### Build (ESP32-C3-MINI)
+### Build
 
 ```bash
 cd "firmware/transmitter-multi-core"
-pio run -e esp32-c3-mini
+pio run -e esp32s3    # ESP32-S3 DevKitC-1 (primary)
+pio run -e esp32dev   # ESP32-WROOM-32 DevKit V1 (alternative)
 ```
 
 ### Flash & Monitor

@@ -27,7 +27,6 @@ The **Weight Transmitter Multi-Core** is an autonomous edge device that:
 |---------|-----|-------|-------|
 | WT-S3 | ESP32-S3 DevKitC-1 | 2 Xtensa LX7 | Primary variant, native USB, 240 MHz |
 | WT-32 | ESP32-WROOM-32 (DevKit V1) | 2 Xtensa LX6 | Compatible variant, same GPIO map |
-| WT-C3 | ESP32-C3-MINI (DevKitM-1) | 1 RISC-V | Compact single-core variant, WiFi only |
 
 ---
 
@@ -39,11 +38,10 @@ The **Weight Transmitter Multi-Core** is an autonomous edge device that:
 |----|-------------|-------------|------|-----|------------------|-------------------|-------------------|-------|
 | 1 | WT-S3-BOARD | ESP32-S3 DevKitC-1 | Dual-core Xtensa LX7, 240 MHz, 16MB Flash, 8MB PSRAM, native USB, WiFi/BT5 | 1 | Rp 350.000 | Rp 350.000 | Tokopedia | Primary variant |
 | 2 | WT-32-BOARD | ESP32-WROOM-32 DevKit V1 | Dual-core Xtensa LX6, 240 MHz, 4MB Flash, WiFi+BT, USB Type-C | 1 | Rp 85.000 | Rp 85.000 | Shopee / Tokopedia | Alternative variant |
-| 3 | WT-C3-BOARD | ESP32-C3-MINI DevKitM-1 | Single-core RISC-V, 160 MHz, 4MB Flash, WiFi only, compact | 1 | Rp 120.000 | Rp 120.000 | Tokopedia | Compact variant |
 | 4 | USB-CABLE-1M | USB Data Cable Type-C 1 meter | For programming & power | 1 | Rp 25.000 | Rp 25.000 | Lokal | Required for flash & debugging |
 | 5 | POWER-SUPPLY-5V-3A | Power Supply 5V 3A DC | For power ESP32 & HX711 & W5500 | 1 | Rp 45.000 | Rp 45.000 | Tokopedia | Stabilize power, prevent brown-out |
 
-**Subtotal MCU**: **Rp 505.000** (WT-S3), **Rp 240.000** (WT-32), **Rp 275.000** (WT-C3)
+**Subtotal MCU**: **Rp 435.000** (WT-S3), **Rp 240.000** (WT-32)
 
 ### 2.2 Load Cell & ADC
 
@@ -288,7 +286,6 @@ These are optional peripherals that integrate with the Weight Transmitter ecosys
 |----------|---------------------|--------|
 | New deployment, maximum performance | WT-S3 | Dual-core, native USB, more RAM/Flash |
 | Cost-sensitive deployment | WT-32 | Lower cost, same GPIO map, proven stability |
-| Compact/embedded deployment | WT-C3 | Smallest footprint, single-core sufficient for basic weighing |
 
 ### 12.2 Load Cell Selection
 

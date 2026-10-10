@@ -33,14 +33,10 @@ firmware/weight\ transmitter/.pio/
 firmware/weight\ transmitter/.pio
 firmware/transmitter-multi-core/.pio/
 firmware/transmitter-multi-core/.pio
-firmware/transmitter-single-core/.pio/
-firmware/transmitter-single-core/.pio
 firmware/button-matrix/.pio/
 firmware/button-matrix/.pio
 firmware/display-6932-test/.pio/
 firmware/display-6932-test/.pio
-
-firmware/transmitter-single-core/.pio
 firmware/esp32s3-ethernet/.pio/
 firmware/esp32s3-ethernet/.pio
 
