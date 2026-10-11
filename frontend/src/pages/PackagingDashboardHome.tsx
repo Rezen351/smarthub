@@ -55,7 +55,7 @@ const stats: Stat[] = [
     ),
     sub: (
       <div className="space-y-1 w-full pt-0.5">
-        <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-muted">
+        <div className="flex h-1.5 w-full rounded-none overflow-hidden bg-muted">
           <div style={{ width: '52.6%' }} className="bg-emerald-500" title="Grade A: 53%" />
           <div style={{ width: '35.1%' }} className="bg-sky-500" title="Grade B: 35%" />
           <div style={{ width: '12.3%' }} className="bg-amber-500" title="Grade C: 12%" />

@@ -9,6 +9,7 @@
 ## Recent Activities
 | Date | Activity | Status | Notes |
 |------|----------|--------|-------|
+| 2026-10-11 | Brutalist industrial styling & non-rounded card harmonization across all operational pages | ✅ | Aligned full operational suite (Weighing, Sorting, Packaging, Warehouse, Pallets, Traceability, Deliveries, Settings, Farmer, Driver) with Landing Page brutalist visual identity: enforced 0px radius (`rounded-none`), unified brand color harmony (#0E5030, #229856, #93C749), industrial typography, and clean borders without altering any workflows or business logic. Production build verified clean. |
 | 2026-09-14 | Architecture definition & documentation | ✅ | Defined modular monolith architecture, tech stack, and 8-module structure |
 | 2026-09-14 | Database schema design | ✅ | Designed Prisma schema with multi-commodity support |
 | 2026-09-14 | System workflow documentation | ✅ | Documented end-to-end IoT workflow from field to warehouse |

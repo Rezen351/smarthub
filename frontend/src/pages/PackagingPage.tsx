@@ -210,7 +210,7 @@ export default function PackagingPage() {
      RENDER: Packaging Station Form
      ═══════════════════════════════════════════════════════════════════ */
   const renderPackagingForm = () => (
-    <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
+    <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
       {/* Station Selector Bar */}
       <div className="space-y-2 border-b border-border pb-4">
         <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
@@ -224,14 +224,14 @@ export default function PackagingPage() {
                 key={st.id}
                 type="button"
                 onClick={() => setActiveStationId(st.id)}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                className={`p-3 rounded-none border text-left transition-all cursor-pointer ${
                   isSelected
-                    ? 'border-primary bg-primary/10 ring-2 ring-primary text-foreground font-bold shadow-sm'
-                    : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                    ? 'border-[#229856] bg-[#f0fdf4] ring-2 ring-[#229856] text-[#0E5030] font-bold shadow-xs'
+                    : 'border-border bg-card text-muted-foreground hover:bg-muted hover:border-[#229856]'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-sm">{st.name}</span>
+                  <span className="font-semibold text-sm font-heading">{st.name}</span>
                   <Badge tone={st.grade === 'A' ? 'success' : st.grade === 'B' ? 'accent' : 'warning'}>
                     Grade {st.grade}
                   </Badge>
@@ -259,7 +259,7 @@ export default function PackagingPage() {
             />
 
             {/* Target Status Indicator */}
-            <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+            <div className="flex items-center justify-between p-3 rounded-none border border-border bg-muted/30">
               <span className="text-xs text-muted-foreground font-medium">Target Compliance Status</span>
               {isWithinTolerance ? (
                 <Badge tone="success" icon="check">

@@ -131,25 +131,25 @@ export default function PalletsPage() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-1">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total Pallets</p>
-          <p className="text-2xl font-bold tracking-tight text-foreground">{pallets.length}</p>
+        <div className="bg-card border border-border rounded-none p-4 shadow-xs space-y-1 transition-all hover:border-[#229856]">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider font-mono">Total Pallets</p>
+          <p className="text-2xl font-bold tracking-tight text-foreground font-display">{pallets.length}</p>
           <p className="text-xs text-muted-foreground">Generated from approved weights</p>
         </div>
-        <div className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-1">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Awaiting Sorting</p>
-          <p className="text-2xl font-bold tracking-tight text-foreground">{weighedCount}</p>
+        <div className="bg-card border border-border rounded-none p-4 shadow-xs space-y-1 transition-all hover:border-[#229856]">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider font-mono">Awaiting Sorting</p>
+          <p className="text-2xl font-bold tracking-tight text-foreground font-display">{weighedCount}</p>
           <p className="text-xs text-muted-foreground">Labeled & ready in receiving</p>
         </div>
-        <div className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-1">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Sorted</p>
-          <p className="text-2xl font-bold tracking-tight text-foreground">{sortedCount}</p>
-          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Grading completed</p>
+        <div className="bg-card border border-border rounded-none p-4 shadow-xs space-y-1 transition-all hover:border-[#229856]">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider font-mono">Sorted</p>
+          <p className="text-2xl font-bold tracking-tight text-foreground font-display">{sortedCount}</p>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium font-mono">Grading completed</p>
         </div>
-        <div className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-1">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Commodity</p>
-          <p className="text-lg font-bold tracking-tight text-foreground">Kentang</p>
-          <p className="text-xs text-muted-foreground">Single active commodity</p>
+        <div className="bg-card border border-border rounded-none p-4 shadow-xs space-y-1 transition-all hover:border-[#229856]">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider font-mono">Commodity</p>
+          <p className="text-lg font-bold tracking-tight text-foreground font-heading">Kentang</p>
+          <p className="text-xs text-muted-foreground font-mono">Single active commodity</p>
         </div>
       </div>
 

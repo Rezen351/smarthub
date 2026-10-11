@@ -34,7 +34,7 @@ export default function StatCard({ label, value, sub, trend = 'neutral', icon, l
   )
 
   const cardClasses =
-    'rounded-lg border border-border bg-card p-4 flex flex-col gap-1.5 shadow-xs transition-colors'
+    'rounded-none border border-border bg-card p-4 flex flex-col gap-1.5 shadow-xs transition-all hover:border-[#229856]'
 
   if (onClick) {
     return (

@@ -499,7 +499,7 @@ export default function PublicTraceabilityPage() {
         </div>
 
         {/* Search & Code Resolver Box */}
-        <div className="bg-white border border-[#eaeaea] rounded-xl p-5 sm:p-7 shadow-xs space-y-5">
+        <div className="bg-white border border-[#eaeaea] rounded-none p-5 sm:p-7 shadow-xs space-y-5">
           <form onSubmit={handleFormSubmit} className="space-y-4">
             <label className="block text-xs font-mono font-semibold uppercase tracking-wider text-[#666666]">
               Enter Pouch / Pallet Code or GS1 URL
@@ -512,7 +512,7 @@ export default function PublicTraceabilityPage() {
                   value={queryCode}
                   onChange={(e) => setQueryCode(e.target.value)}
                   placeholder="e.g. PCH-PLT-20260914-0001-001 or PLT-20261011-0042"
-                  className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-lg px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#229856] focus:ring-2 focus:ring-[#229856]/20 transition-all"
+                  className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#229856] focus:ring-2 focus:ring-[#229856]/20 transition-all"
                 />
                 {queryCode && (
                   <button
@@ -556,21 +556,21 @@ export default function PublicTraceabilityPage() {
             <button
               type="button"
               onClick={() => handleSimulateScan('PCH-PLT-20260914-0001-001')}
-              className="text-xs font-mono bg-[#f0fdf4] text-[#15803d] hover:bg-[#dcfce7] border border-[#bbf7d0] px-2.5 py-1 rounded-md transition-colors"
+              className="text-xs font-mono bg-[#f0fdf4] text-[#15803d] hover:bg-[#dcfce7] border border-[#bbf7d0] px-2.5 py-1 rounded-none transition-colors"
             >
               Pouch 1 kg Grade A
             </button>
             <button
               type="button"
               onClick={() => handleSimulateScan('GRD-PLT-20261011-0042-A')}
-              className="text-xs font-mono bg-[#f0fdf4] text-[#15803d] hover:bg-[#dcfce7] border border-[#bbf7d0] px-2.5 py-1 rounded-md transition-colors"
+              className="text-xs font-mono bg-[#f0fdf4] text-[#15803d] hover:bg-[#dcfce7] border border-[#bbf7d0] px-2.5 py-1 rounded-none transition-colors"
             >
               Sorted Pallet Grade A
             </button>
             <button
               type="button"
               onClick={() => handleSimulateScan('PLT-20261011-0042')}
-              className="text-xs font-mono bg-[#fef2f2] text-[#b91c1c] hover:bg-[#fee2e2] border border-[#fecaca] px-2.5 py-1 rounded-md transition-colors"
+              className="text-xs font-mono bg-[#fef2f2] text-[#b91c1c] hover:bg-[#fee2e2] border border-[#fecaca] px-2.5 py-1 rounded-none transition-colors"
             >
               Intake Pallet (123 kg)
             </button>
@@ -580,7 +580,7 @@ export default function PublicTraceabilityPage() {
         {/* ── Camera Scanner Viewfinder Modal ── */}
         {scannerOpen && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-[#eaeaea]">
+            <div className="bg-white rounded-none max-w-md w-full overflow-hidden shadow-2xl border border-[#eaeaea]">
               <div className="p-4 border-b border-[#eaeaea] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Icon name="scan" size={18} className="text-[#229856]" />
@@ -600,7 +600,7 @@ export default function PublicTraceabilityPage() {
 
               <div className="p-6 space-y-4">
                 {cameraActive ? (
-                  <div className="relative rounded-xl overflow-hidden aspect-square bg-black flex items-center justify-center">
+                  <div className="relative rounded-none overflow-hidden aspect-square bg-black flex items-center justify-center">
                     <video
                       ref={videoRef}
                       className="w-full h-full object-cover"
@@ -609,13 +609,13 @@ export default function PublicTraceabilityPage() {
                       autoPlay
                     />
                     {/* Viewfinder Reticle & Laser */}
-                    <div className="absolute inset-8 border-2 border-[#229856] rounded-lg pointer-events-none">
+                    <div className="absolute inset-8 border-2 border-[#229856] rounded-none pointer-events-none">
                       <div className="w-full h-0.5 bg-[#229856] shadow-[0_0_8px_#229856] animate-bounce" />
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-[#fafafa] border border-dashed border-[#d1d5db] rounded-xl p-6 text-center space-y-3">
-                    <div className="w-12 h-12 rounded-full bg-[#f0fdf4] text-[#15803d] flex items-center justify-center mx-auto">
+                  <div className="bg-[#fafafa] border border-dashed border-[#d1d5db] rounded-none p-6 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-none bg-[#f0fdf4] text-[#15803d] flex items-center justify-center mx-auto">
                       <Icon name="scan" size={24} />
                     </div>
                     <div className="space-y-1">
@@ -675,8 +675,8 @@ export default function PublicTraceabilityPage() {
 
         {/* ── NOT FOUND STATE ── */}
         {searched && !result && (
-          <div className="bg-white border border-[#eaeaea] rounded-xl p-8 sm:p-12 text-center space-y-4 shadow-xs">
-            <div className="w-12 h-12 rounded-full bg-[#fef2f2] text-[#ef4444] flex items-center justify-center mx-auto">
+          <div className="bg-white border border-[#eaeaea] rounded-none p-8 sm:p-12 text-center space-y-4 shadow-xs">
+            <div className="w-12 h-12 rounded-none bg-[#fef2f2] text-[#ef4444] flex items-center justify-center mx-auto">
               <Icon name="alert" size={24} />
             </div>
             <div className="space-y-1">
@@ -701,7 +701,7 @@ export default function PublicTraceabilityPage() {
         {result && (
           <div className="space-y-8 animate-in fade-in duration-300">
             {/* Header Result Card */}
-            <div className="bg-white border border-[#eaeaea] rounded-xl p-6 sm:p-8 shadow-xs space-y-6">
+            <div className="bg-white border border-[#eaeaea] rounded-none p-6 sm:p-8 shadow-xs space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#eaeaea]">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -734,12 +734,12 @@ export default function PublicTraceabilityPage() {
 
               {/* Product Specifications Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="p-4 bg-[#fafafa] rounded-lg border border-[#f0f0f0]">
+                <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
                   <span className="text-[11px] font-mono uppercase text-[#666666] block">Commodity & Variety</span>
                   <span className="text-base font-bold text-[#171717] mt-1 block">{result.variety}</span>
                 </div>
 
-                <div className="p-4 bg-[#fafafa] rounded-lg border border-[#f0f0f0]">
+                <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
                   <span className="text-[11px] font-mono uppercase text-[#666666] block">Official Grade</span>
                   <div className="mt-1 flex items-center gap-1.5">
                     <Badge
@@ -751,14 +751,14 @@ export default function PublicTraceabilityPage() {
                   </div>
                 </div>
 
-                <div className="p-4 bg-[#fafafa] rounded-lg border border-[#f0f0f0]">
+                <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
                   <span className="text-[11px] font-mono uppercase text-[#666666] block">Verified Net Weight</span>
                   <span className="text-base font-bold font-mono text-emerald-600 mt-1 block">
                     {formatWeight(result.weightKg)} kg
                   </span>
                 </div>
 
-                <div className="p-4 bg-[#fafafa] rounded-lg border border-[#f0f0f0]">
+                <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
                   <span className="text-[11px] font-mono uppercase text-[#666666] block">Quality Score</span>
                   <span className="text-base font-bold text-[#171717] mt-1 block">{result.qualityScore}</span>
                 </div>
@@ -809,7 +809,7 @@ export default function PublicTraceabilityPage() {
             </div>
 
             {/* Complete Journey Timeline */}
-            <div className="bg-white border border-[#eaeaea] rounded-xl p-6 sm:p-8 shadow-xs space-y-6">
+            <div className="bg-white border border-[#eaeaea] rounded-none p-6 sm:p-8 shadow-xs space-y-6">
               <div className="space-y-1">
                 <h3 className="text-xl font-bold tracking-tight text-[#171717]">
                   Verified Harvest & Processing Journey
@@ -824,7 +824,7 @@ export default function PublicTraceabilityPage() {
                   <div key={index} className="relative group">
                     {/* Timeline Node Dot */}
                     <div
-                      className={`absolute -left-[31px] sm:-left-[39px] top-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                      className={`absolute -left-[31px] sm:-left-[39px] top-1 w-6 h-6 rounded-none flex items-center justify-center text-xs font-bold transition-all ${
                         step.completed
                           ? 'bg-[#15803d] text-white shadow-[0_0_0_4px_#f0fdf4]'
                           : 'bg-[#e5e7eb] text-[#9ca3af]'
@@ -836,7 +836,7 @@ export default function PublicTraceabilityPage() {
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="font-bold text-base text-[#171717]">{step.stage}</span>
-                        <span className="font-mono text-xs text-[#666666] bg-[#fafafa] border border-[#f0f0f0] px-2 py-0.5 rounded">
+                        <span className="font-mono text-xs text-[#666666] bg-[#fafafa] border border-[#f0f0f0] px-2 py-0.5 rounded-none">
                           {step.timestamp}
                         </span>
                       </div>
@@ -846,7 +846,7 @@ export default function PublicTraceabilityPage() {
                       </p>
 
                       {step.details && (
-                        <p className="text-xs text-[#525252] bg-[#f9fafb] p-2.5 rounded-md border border-[#f3f4f6] mt-1.5">
+                        <p className="text-xs text-[#525252] bg-[#f9fafb] p-2.5 rounded-none border border-[#f3f4f6] mt-1.5">
                           {step.details}
                         </p>
                       )}
@@ -857,7 +857,7 @@ export default function PublicTraceabilityPage() {
             </div>
 
             {/* GS1 Digital Link Label Visual Representation */}
-            <div className="bg-white border border-[#eaeaea] rounded-xl p-6 sm:p-8 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="bg-white border border-[#eaeaea] rounded-none p-6 sm:p-8 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="space-y-2 max-w-lg">
                 <Badge tone="accent" className="font-mono text-[10px]">
                   GS1 STANDARD DIGITAL LINK EMBED
@@ -870,7 +870,7 @@ export default function PublicTraceabilityPage() {
                 </p>
               </div>
 
-              <div className="p-4 bg-white border-2 border-[#171717] rounded-xl shadow-xs text-center flex flex-col items-center shrink-0">
+              <div className="p-4 bg-white border-2 border-[#171717] rounded-none shadow-xs text-center flex flex-col items-center shrink-0">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(
                     result.gs1Uri

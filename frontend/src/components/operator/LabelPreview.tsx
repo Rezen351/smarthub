@@ -86,7 +86,7 @@ export default function LabelPreview({
   if (type === 'receipt') {
     return (
       <div
-        className={`bg-white text-black border border-gray-300 font-mono rounded-xl p-4 shadow-sm space-y-3 ${className}`}
+        className={`bg-white text-black border border-gray-300 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
       >
         <div className="text-center pb-2 border-b border-dashed border-gray-400">
           <span className="text-[11px] font-bold tracking-wider uppercase block text-gray-800">
@@ -131,7 +131,7 @@ export default function LabelPreview({
   if (type === 'pallet') {
     return (
       <div
-        className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-xl p-4 shadow-sm space-y-3 ${className}`}
+        className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
       >
         <div className="flex items-center justify-between pb-2 border-b border-gray-300">
           <div>
@@ -175,7 +175,7 @@ export default function LabelPreview({
   if (type === 'grade') {
     return (
       <div
-        className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-xl p-4 shadow-sm space-y-3 ${className}`}
+        className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
       >
         <div className="flex items-center justify-between pb-2 border-b border-gray-300">
           <div>
@@ -186,7 +186,7 @@ export default function LabelPreview({
               {code}
             </span>
           </div>
-          <div className="px-3 py-1 bg-black text-white rounded font-black text-sm tracking-wide">
+          <div className="px-3 py-1 bg-black text-white rounded-none font-black text-sm tracking-wide">
             GRADE {grade}
           </div>
         </div>
@@ -221,7 +221,7 @@ export default function LabelPreview({
   /* ── 4. 1 KG POUCH RETAIL LABEL (GS1 Digital Link) ── */
   return (
     <div
-      className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-xl p-4 shadow-sm space-y-3 ${className}`}
+      className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
     >
       <div className="flex items-center justify-between pb-2 border-b border-gray-300">
         <div>
@@ -230,7 +230,7 @@ export default function LabelPreview({
           </span>
           <span className="text-xs font-bold text-gray-900 block mt-0.5">{commodity}</span>
         </div>
-        <div className="px-2.5 py-0.5 bg-emerald-700 text-white rounded font-bold text-xs tracking-wider">
+        <div className="px-2.5 py-0.5 bg-emerald-700 text-white rounded-none font-bold text-xs tracking-wider">
           GRADE {grade}
         </div>
       </div>

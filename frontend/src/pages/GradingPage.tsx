@@ -196,7 +196,7 @@ export default function GradingPage() {
      RENDER: Form Content
      ═══════════════════════════════════════════════════════════════════ */
   const renderGradingForm = () => (
-    <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
+    <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
       <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-foreground">Scan Pallet & Classify Grade</h2>
@@ -256,13 +256,13 @@ export default function GradingPage() {
                       key={g}
                       type="button"
                       onClick={() => setSelectedGrade(g)}
-                      className={`p-4 rounded-xl border text-center transition-all cursor-pointer ${
+                      className={`p-4 rounded-none border text-center transition-all cursor-pointer ${
                         isSelected
-                          ? 'border-primary bg-primary/10 ring-2 ring-primary text-foreground font-bold shadow-sm'
-                          : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                          ? 'border-[#229856] bg-[#f0fdf4] ring-2 ring-[#229856] text-[#0E5030] font-bold shadow-xs'
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted hover:border-[#229856]'
                       }`}
                     >
-                      <span className="text-2xl font-black block">Grade {g}</span>
+                      <span className="text-2xl font-black block font-heading">Grade {g}</span>
                       <span className="text-xs text-muted-foreground font-normal">
                         {g === 'A' ? 'Premium Large' : g === 'B' ? 'Medium Standard' : 'Small / Industrial'}
                       </span>
@@ -275,7 +275,7 @@ export default function GradingPage() {
 
           {/* Real-time Thermal Label Preview Card */}
           <div className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block font-mono">
               Live Label Preview
             </span>
             <LabelPreview
@@ -289,7 +289,7 @@ export default function GradingPage() {
         </div>
 
         {/* Action Bar */}
-        <div className="p-4 bg-muted/30 border border-border rounded-xl flex items-center justify-between flex-wrap gap-2">
+        <div className="p-4 bg-muted/30 border border-border rounded-none flex items-center justify-between flex-wrap gap-2">
           <div>
             <span className="text-xs text-muted-foreground block font-medium">Generated Sorted Pallet Code</span>
             <span className="font-mono font-bold text-lg text-primary block">

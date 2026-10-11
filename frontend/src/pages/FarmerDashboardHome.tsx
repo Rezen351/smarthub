@@ -87,17 +87,18 @@ export default function FarmerDashboardHome() {
       </header>
 
       {/* Hero: total deposits */}
-      <section className="rounded-xl bg-primary text-primary-foreground p-5 md:p-6 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+      <section className="notch-corner border border-[#eaeaea] bg-black text-white p-6 md:p-8 rounded-none flex flex-col gap-5 md:flex-row md:items-end md:justify-between shadow-xs">
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/60">
-            Total approved deposits
-          </span>
+          <div className="inline-flex items-center gap-2 font-mono-custom text-[11px] text-[#93c749] tracking-[0.2em] uppercase font-semibold">
+            <span className="w-2 h-2 rounded-none bg-[#229856]"></span>
+            <span>TOTAL APPROVED DEPOSITS · PACKHOUSE INTAKE</span>
+          </div>
           {loading ? (
             <Skeleton className="h-10 w-48 bg-white/15" />
           ) : (
-            <span className="text-4xl md:text-5xl font-bold tracking-tight tabular-nums">{formatKg(total)}</span>
+            <span className="text-4xl md:text-5xl font-bold tracking-tight tabular-nums font-display text-white">{formatKg(total)}</span>
           )}
-          <span className="text-sm text-white/70">
+          <span className="text-xs text-white/70 font-mono">
             {loading
               ? 'Loading your deposits…'
               : `Across ${commodities.length} ${commodities.length === 1 ? 'commodity' : 'commodities'}`}
@@ -105,7 +106,7 @@ export default function FarmerDashboardHome() {
         </div>
         <Link
           to="/dashboard/traceability"
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-white text-black font-medium text-sm px-4 min-h-[44px] hover:bg-white/90 transition-colors"
+          className="pulse-btn inline-flex items-center justify-center gap-2 rounded-none bg-[#15803d] text-white font-heading tracking-wider uppercase text-xs px-5 min-h-[44px] hover:bg-[#16a34a] transition-all font-semibold"
         >
           <Icon name="qr" size={16} />
           Show my QR
@@ -130,7 +131,7 @@ export default function FarmerDashboardHome() {
         ) : (
           <div className="flex flex-col gap-5">
             {/* Stacked share bar */}
-            <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
+            <div className="flex h-3 w-full overflow-hidden rounded-none bg-muted border border-border" aria-hidden="true">
               {commodities.map((c) => (
                 <div key={c.commodityId} className={c.color} style={{ width: `${c.share}%` }} />
               ))}
@@ -139,11 +140,11 @@ export default function FarmerDashboardHome() {
             <ul className="flex flex-col divide-y divide-border">
               {commodities.map((c) => (
                 <li key={c.commodityId} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                  <span className={`size-2.5 rounded-full shrink-0 ${c.color}`} aria-hidden="true" />
+                  <span className={`size-2.5 rounded-none shrink-0 ${c.color}`} aria-hidden="true" />
                   <span className="text-sm font-medium text-foreground flex-1 min-w-0 truncate">
                     {c.commodityName}
                   </span>
-                  <span className="text-xs text-muted-foreground tabular-nums w-12 text-right">
+                  <span className="text-xs text-muted-foreground tabular-nums w-12 text-right font-mono">
                     {c.share.toFixed(1)}%
                   </span>
                   <span className="text-sm font-semibold tabular-nums font-mono w-24 text-right">
@@ -158,23 +159,23 @@ export default function FarmerDashboardHome() {
 
       {/* Quick actions */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-base font-semibold tracking-tight text-foreground">Quick actions</h2>
+        <h2 className="text-base font-semibold tracking-tight text-foreground font-heading uppercase tracking-wider">Quick actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {quickActions.map((action) => (
             <Link
               key={action.label}
               to={action.path}
-              className="group flex flex-col gap-2 rounded-lg border border-border bg-card p-4 min-h-[112px] transition-colors hover:border-foreground/30 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="group flex flex-col gap-2 rounded-none border border-border bg-card p-4 min-h-[112px] transition-all hover:border-[#229856] hover:bg-[#f0fdf4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span className="icon-tile icon-tile-accent">
+              <span className="icon-tile icon-tile-accent rounded-none">
                 <Icon name={action.icon} size={18} />
               </span>
-              <span className="text-sm font-semibold text-foreground flex items-center gap-1">
+              <span className="text-sm font-semibold text-foreground flex items-center gap-1 font-heading uppercase tracking-wide">
                 {action.label}
                 <Icon
                   name="chevron-right"
                   size={14}
-                  className="text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                  className="text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-[#229856]"
                 />
               </span>
               <span className="text-xs text-muted-foreground">{action.desc}</span>

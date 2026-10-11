@@ -88,7 +88,7 @@ export default function SettingsPage() {
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         {/* Receiving Intake Modbus TCP Connection Settings Card */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
+        <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <h2 className="text-base font-bold text-foreground tracking-tight">
@@ -169,7 +169,7 @@ export default function SettingsPage() {
         </div>
 
         {/* 3 Packaging Area Scale Stations (Conflict-Free Channels) */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
+        <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <h2 className="text-base font-bold text-foreground tracking-tight">
@@ -184,7 +184,7 @@ export default function SettingsPage() {
 
           <div className="space-y-6">
             {/* Station 1 (Grade A) */}
-            <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
+            <div className="p-4 bg-muted/30 border border-border rounded-none space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-foreground uppercase tracking-wider">
                   Station 1 — Scale Channel (Grade A)
@@ -222,7 +222,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Station 2 (Grade B) */}
-            <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
+            <div className="p-4 bg-muted/30 border border-border rounded-none space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-foreground uppercase tracking-wider">
                   Station 2 — Scale Channel (Grade B)
@@ -260,7 +260,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Station 3 (Grade C) */}
-            <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
+            <div className="p-4 bg-muted/30 border border-border rounded-none space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-foreground uppercase tracking-wider">
                   Station 3 — Scale Channel (Grade C)
@@ -300,7 +300,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Scale Parameters Card */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
+        <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="border-b border-border pb-4">
             <h2 className="text-base font-bold text-foreground tracking-tight">Scale & Stability Parameters</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
