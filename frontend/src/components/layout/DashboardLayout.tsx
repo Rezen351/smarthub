@@ -19,6 +19,9 @@ interface MenuItem {
 const roleMenu: Record<string, MenuItem[]> = {
   ADMIN: [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
+    { label: 'Weighing', path: '/dashboard/weighing', icon: 'scale' },
+    { label: 'Sorting', path: '/dashboard/sorting', icon: 'sortir' },
+    { label: 'Packaging', path: '/dashboard/packaging', icon: 'package' },
     { label: 'Users', path: '/dashboard/users', icon: 'users' },
     { label: 'Reports', path: '/dashboard/reports', icon: 'reports' },
     { label: 'Settings', path: '/dashboard/settings', icon: 'settings' },

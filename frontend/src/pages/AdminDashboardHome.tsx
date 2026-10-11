@@ -39,9 +39,12 @@ const stats: Stat[] = [
 ]
 
 const quickActions: QuickAction[] = [
+  { label: 'Weighing Area', path: '/dashboard/weighing', icon: 'scale', desc: 'Intake weighing station' },
+  { label: 'Sorting Area', path: '/dashboard/sorting', icon: 'sortir', desc: 'Grade sorting & labels' },
+  { label: 'Packaging Area', path: '/dashboard/packaging', icon: 'package', desc: 'Live scale 1 kg pouch packaging', primary: true },
   { label: 'Manage Users', path: '/dashboard/users', icon: 'users', desc: 'Accounts & roles' },
   { label: 'View Reports', path: '/dashboard/reports', icon: 'reports', desc: 'Setoran & stock' },
-  { label: 'Settings', path: '/dashboard/settings', icon: 'settings', desc: 'Commodity & labels' },
+  { label: 'Settings', path: '/dashboard/settings', icon: 'settings', desc: 'Modbus TCP & hardware setup' },
 ]
 
 const activities: Activity[] = [

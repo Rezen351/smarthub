@@ -1,10 +1,10 @@
-import { Navigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import DashboardHome from './DashboardHome'
 import FarmerDashboardHome from './FarmerDashboardHome'
 import AdminDashboardHome from './AdminDashboardHome'
 import WeighingDashboardHome from './WeighingDashboardHome'
 import SortingDashboardHome from './SortingDashboardHome'
+import PackagingDashboardHome from './PackagingDashboardHome'
 import WarehouseDashboardHome from './WarehouseDashboardHome'
 import DeliveryDashboardHome from './DeliveryDashboardHome'
 
@@ -21,7 +21,7 @@ function DashboardHomeRouter() {
     case 'SORTING_OPERATOR':
       return <SortingDashboardHome />
     case 'PACKAGING_OPERATOR':
-      return <Navigate to="/dashboard/packaging" replace />
+      return <PackagingDashboardHome />
     case 'WAREHOUSE_OPERATOR':
       return <WarehouseDashboardHome />
     case 'DELIVERY_OPERATOR':
