@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
-import Icon from '../components/shared/Icon'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
-import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
 
 type Pallet = {
   id: string
@@ -153,14 +151,6 @@ export default function PalletsPage() {
           <p className="text-xs text-muted-foreground">Single active commodity</p>
         </div>
       </div>
-
-      <Alert variant="default" className="bg-primary/5 border-primary/20 text-foreground">
-        <Icon name="info" size={18} className="text-primary shrink-0" />
-        <AlertTitle className="text-primary font-semibold">Automated Lifecycle</AlertTitle>
-        <AlertDescription className="text-xs leading-relaxed text-muted-foreground">
-          There is no manual "Create Pallet" step. Pallet IDs are automatically issued and sent to the label printer upon official weight approval on the Weighing page.
-        </AlertDescription>
-      </Alert>
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
