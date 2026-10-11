@@ -1,289 +1,393 @@
-/**
- * Packaging — Area Pengepakan (Packing).
- * Pouches are filled to a 1 kg target with ±5 g tolerance and labelled without
- * scanning, because grade and pallet are already labelled (laporan.pdf §9.4/§9.6).
- */
-import { useState } from 'react'
-import Card from '../components/shared/Card'
+import { useState, useEffect } from 'react'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
-import Icon from '../components/shared/Icon'
-import { Field, Input, Select } from '../components/shared/Form'
+import Logo from '../components/shared/Logo'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
-import ConfirmDialog from '../components/feedback/ConfirmDialog'
 import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 
-type PackagingUnit = {
+type PouchRecord = {
   id: string
   code: string
-  size: '10kg' | '50kg'
-  commodity: string
-  pouches: number
-  status: 'ACTIVE' | 'PACKED'
-  created: string
+  stationId: string
+  grade: 'A' | 'B' | 'C'
+  weightKg: number
+  time: string
+  status: 'LABELLED'
 }
 
-const TARGET_KG = 1
+type StationConfig = {
+  id: string
+  name: string
+  grade: 'A' | 'B' | 'C'
+  ip: string
+  port: number
+}
+
+const STATIONS: StationConfig[] = [
+  { id: 'st-1', name: 'Station 1 (Scale A)', grade: 'A', ip: '192.168.1.101', port: 502 },
+  { id: 'st-2', name: 'Station 2 (Scale B)', grade: 'B', ip: '192.168.1.102', port: 502 },
+  { id: 'st-3', name: 'Station 3 (Scale C)', grade: 'C', ip: '192.168.1.103', port: 502 },
+]
+
+const TARGET_KG = 1.000
 const TOLERANCE_KG = 0.005
-const POUCH_SCALE_CAPACITY_KG = 5
 
 export default function PackagingPage() {
   const toast = useToast()
-  const [form, setForm] = useState({ palletCode: 'PLT-20260914-0001', grade: 'A', quantity: '10', size: '10kg' as PackagingUnit['size'] })
-  const [pouchWeight, setPouchWeight] = useState('')
-  const [confirmPack, setConfirmPack] = useState(false)
 
-  const [pouches, setPouches] = useState([
-    { id: '1', code: 'PCH-PLT-20260914-0001-001', grade: 'A', weightKg: 1.0, status: 'LABELLED' as const },
-    { id: '2', code: 'PCH-PLT-20260914-0001-002', grade: 'A', weightKg: 1.0, status: 'LABELLED' as const },
-  ])
+  /* ── Mode State ── */
+  const [focusMode, setFocusMode] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
-  const [units, setUnits] = useState<PackagingUnit[]>([
-    { id: '1', code: 'PKG-001', size: '10kg', commodity: 'Kentang', pouches: 10, status: 'PACKED', created: '07:30' },
-    { id: '2', code: 'PKG-002', size: '50kg', commodity: 'Kentang', pouches: 50, status: 'ACTIVE', created: '07:52' },
+  /* ── Active Scale Station State ── */
+  const [activeStationId, setActiveStationId] = useState<string>('st-1')
+  const activeStation = STATIONS.find((s) => s.id === activeStationId) ?? STATIONS[0]
+
+  /* ── Live Pouch Weight State ── */
+  const [pouchWeight, setPouchWeight] = useState('1.002')
+  const [isPrinting, setIsPrinting] = useState(false)
+
+  const [pouches, setPouches] = useState<PouchRecord[]>([
+    {
+      id: '1',
+      code: 'PCH-20261010-001',
+      stationId: 'st-1',
+      grade: 'A',
+      weightKg: 1.002,
+      time: '11:05',
+      status: 'LABELLED',
+    },
+    {
+      id: '2',
+      code: 'PCH-20261010-002',
+      stationId: 'st-2',
+      grade: 'B',
+      weightKg: 0.998,
+      time: '11:08',
+      status: 'LABELLED',
+    },
   ])
 
   const weightValue = Number(pouchWeight)
-  const withinTolerance = Math.abs(weightValue - TARGET_KG) <= TOLERANCE_KG
+  const isWithinTolerance = Math.abs(weightValue - TARGET_KG) <= TOLERANCE_KG
 
-  const handleFillPouch = (e: React.FormEvent) => {
-    e.preventDefault()
+  /* Fullscreen & Esc Listener */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && focusMode) {
+        setFocusMode(false)
+        if (document.fullscreenElement) {
+          document.exitFullscreen?.().catch(() => {})
+        }
+      }
+    }
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement))
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }
+  }, [focusMode])
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {})
+    } else {
+      document.exitFullscreen?.().catch(() => {})
+    }
+  }
+
+  const enterFocusMode = () => {
+    setFocusMode(true)
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {})
+    }
+  }
+
+  const exitFocusMode = () => {
+    setFocusMode(false)
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {})
+    }
+  }
+
+  const handleApprovePouch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     if (!(weightValue > 0)) {
       toast.error('Pouch weight must be greater than 0 kg.')
       return
     }
+
     const seq = String(pouches.length + 1).padStart(3, '0')
-    setPouches([
-      {
+    const code = `PCH-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${seq}`
+    setIsPrinting(true)
+
+    window.setTimeout(() => {
+      setIsPrinting(false)
+      const newPouch: PouchRecord = {
         id: String(Date.now()),
-        code: `PCH-${form.palletCode}-${seq}`,
-        grade: form.grade,
+        code,
+        stationId: activeStation.id,
+        grade: activeStation.grade,
         weightKg: Number(weightValue.toFixed(3)),
+        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
         status: 'LABELLED',
-      },
-      ...pouches,
-    ])
-    toast.success(`Pouch filled at ${weightValue.toFixed(3)} kg — label queued.`)
-    setPouchWeight('')
+      }
+      setPouches((current) => [newPouch, ...current])
+      toast.success(`Pouch ${code} (${weightValue.toFixed(3)} kg) approved & printed!`)
+    }, 600)
   }
 
-  const handleCreateUnit = () => {
-    setConfirmPack(true)
+  const rePrintPouchLabel = (pouch: PouchRecord) => {
+    toast.warning(`Re-printing barcode label for ${pouch.code}…`)
+    window.setTimeout(() => {
+      toast.success(`Pouch label ${pouch.code} printed successfully.`)
+    }, 600)
   }
 
-  const confirmCreateUnit = () => {
-    const quantity = Number(form.quantity)
-    if (!(quantity > 0)) {
-      toast.error('Pouch quantity must be greater than 0.')
-      setConfirmPack(false)
-      return
-    }
-    const seq = String(units.length + 1).padStart(3, '0')
-    setUnits([
-      {
-        id: String(Date.now()),
-        code: `PKG-${seq}`,
-        size: form.size,
-        commodity: 'Kentang',
-        pouches: quantity,
-        status: 'ACTIVE',
-        created: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-      },
-      ...units,
-    ])
-    setConfirmPack(false)
-    toast.success(`Packaging unit PKG-${seq} created with ${quantity} pouches.`)
-  }
-
-  const pouchColumns: Column<(typeof pouches)[number]>[] = [
-    { key: 'code', label: 'Pouch code', priority: true, render: (row) => <span className="mono cell-strong">{row.code}</span> },
-    { key: 'grade', label: 'Grade', priority: true, render: (row) => <Badge tone="accent">{row.grade}</Badge> },
+  const columns: Column<PouchRecord>[] = [
+    {
+      key: 'code',
+      label: 'Pouch Code',
+      priority: true,
+      render: (row) => <span className="font-mono font-bold text-foreground">{row.code}</span>,
+    },
+    {
+      key: 'grade',
+      label: 'Grade',
+      priority: true,
+      render: (row) => (
+        <Badge tone={row.grade === 'A' ? 'success' : row.grade === 'B' ? 'accent' : 'warning'}>
+          Grade {row.grade}
+        </Badge>
+      ),
+    },
     {
       key: 'weightKg',
-      label: 'Weight (kg)',
+      label: 'Pouch Net Weight (kg)',
       align: 'right',
-      priority: true,
-      render: (row) => <span className="cell-strong">{row.weightKg.toFixed(3)}</span>,
+      render: (row) => (
+        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+          {row.weightKg.toFixed(3)} kg
+        </span>
+      ),
+    },
+    {
+      key: 'time',
+      label: 'Time',
+      render: (row) => <span className="font-mono text-xs text-muted-foreground">{row.time}</span>,
     },
     {
       key: 'status',
-      label: 'Label',
+      label: 'Status',
       render: (row) => (
         <Badge tone="success" dot>
           {row.status}
         </Badge>
       ),
     },
-  ]
-
-  const unitColumns: Column<PackagingUnit>[] = [
-    { key: 'code', label: 'Code', priority: true, render: (row) => <span className="mono cell-strong">{row.code}</span> },
-    { key: 'size', label: 'Size', priority: true, render: (row) => <span className="t-small">{row.size}</span> },
-    { key: 'commodity', label: 'Commodity', render: (row) => <Badge tone="accent" icon="leaf">{row.commodity}</Badge> },
-    { key: 'pouches', label: 'Pouches', align: 'right', render: (row) => <span className="cell-strong">{row.pouches}</span> },
     {
-      key: 'status',
-      label: 'Status',
-      render: (row) => <Badge tone={row.status === 'PACKED' ? 'success' : 'warning'} dot>{row.status}</Badge>,
+      key: 'actions',
+      label: 'Action',
+      align: 'right',
+      render: (row) => (
+        <Button size="sm" variant="outline" icon="print" onClick={() => rePrintPouchLabel(row)}>
+          Re-print Label
+        </Button>
+      ),
     },
   ]
 
-  return (
-    <div className="stack stack-lg">
-      <PageHeader
-        title="Packaging"
-        subtitle="Packing area — fill 1 kg pouches per grade, then bundle them into export units."
-        actions={
-          <Badge tone={withinTolerance ? 'success' : 'neutral'} dot={withinTolerance}>
-            Target {TARGET_KG} kg ±{TOLERANCE_KG * 1000} g
-          </Badge>
-        }
-      />
-
-      <div className="grid-stats">
-        <div className="stat-card">
-          <p className="stat-label">Pouches labelled</p>
-          <p className="stat-value">{pouches.length}</p>
-          <p className="stat-sub">QR + EAN-13 printed</p>
-        </div>
-        <div className="stat-card">
-          <p className="stat-label">Active units</p>
-          <p className="stat-value">{units.filter((unit) => unit.status === 'ACTIVE').length}</p>
-          <p className="stat-sub">Being filled</p>
-        </div>
-        <div className="stat-card">
-          <p className="stat-label">Packed units</p>
-          <p className="stat-value">{units.filter((unit) => unit.status === 'PACKED').length}</p>
-          <p className="stat-sub">Ready for warehouse</p>
-        </div>
-        <div className="stat-card">
-          <p className="stat-label">Pouch weight</p>
-          <p className="stat-value">{pouchWeight ? Number(pouchWeight).toFixed(3) : '—'}</p>
-          <p className="stat-sub">{withinTolerance ? 'Within tolerance' : 'Weigh the pouch'}</p>
+  /* ═══════════════════════════════════════════════════════════════════
+     RENDER: Packaging Station Form
+     ═══════════════════════════════════════════════════════════════════ */
+  const renderPackagingForm = () => (
+    <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
+      {/* Station Selector Bar */}
+      <div className="space-y-2 border-b border-border pb-4">
+        <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
+          Select Active Packaging Scale Station
+        </span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {STATIONS.map((st) => {
+            const isSelected = activeStationId === st.id
+            return (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => setActiveStationId(st.id)}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  isSelected
+                    ? 'border-primary bg-primary/10 ring-2 ring-primary text-foreground font-bold shadow-sm'
+                    : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-sm">{st.name}</span>
+                  <Badge tone={st.grade === 'A' ? 'success' : st.grade === 'B' ? 'accent' : 'warning'}>
+                    Grade {st.grade}
+                  </Badge>
+                </div>
+                <span className="text-[11px] font-mono text-muted-foreground block mt-1">
+                  Modbus IP: {st.ip}:{st.port}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      <Card
-        title="Fill pouch"
-        subtitle="No scan needed — grade and pallet come from the sortir labels."
-        footer="A pouch label prints with the QR GS1 Digital Link and the parallel EAN-13 code."
-      >
-        <form className="stack-md" onSubmit={handleFillPouch}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-lg">
-            <div className="stack-md">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
-                <Field label="Pallet" htmlFor="packaging-pallet">
-                  <Input id="packaging-pallet" mono value={form.palletCode} readOnly />
-                </Field>
-                <Field label="Grade" htmlFor="packaging-grade" required>
-                  <Select value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value })}>
-                    <option value="A">Grade A</option>
-                    <option value="B">Grade B</option>
-                    <option value="C">Grade C</option>
-                  </Select>
-                </Field>
-              </div>
+      {/* Live Scale & Weighing Controls */}
+      <form onSubmit={handleApprovePouch} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className="lg:col-span-2 space-y-4">
+            <ScaleWeightInput
+              id="pouch-live-weight"
+              label={`1 kg Pouch Live Scale (${activeStation.name})`}
+              hint="Target: 1.000 kg (±5 g tolerance). Auto-locks or type weight."
+              value={pouchWeight}
+              onChange={setPouchWeight}
+              capacityKg={5}
+            />
 
-              <ScaleWeightInput
-                id="packaging-weight"
-                label="Pouch weight (kg)"
-                hint="Auto mode shows the 1 kg target with a ±5 g tolerance."
-                value={pouchWeight}
-                onChange={setPouchWeight}
-                targetKg={TARGET_KG}
-                toleranceKg={TOLERANCE_KG}
-                capacityKg={POUCH_SCALE_CAPACITY_KG}
-              />
-            </div>
-
-            <div className="stack-md">
-              <div className="label-preview">
-                <div className="label-qr">
-                  <Icon name="qr" size={44} className="text-text-light" />
-                </div>
-                <div className="label-body">
-                  <p className="t-caption text-text-secondary uppercase">Pouch label preview</p>
-                  <p className="mono t-medium text-truncate">PCH-{form.palletCode}-{String(pouches.length + 1).padStart(3, '0')}</p>
-                  <div className="divider" style={{ margin: '8px 0' }} />
-                  <dl className="stack-xs">
-                    <div className="label-row">
-                      <dt>Grade</dt>
-                      <dd>{form.grade}</dd>
-                    </div>
-                    <div className="label-row">
-                      <dt>Target</dt>
-                      <dd>{TARGET_KG} kg ±{TOLERANCE_KG * 1000} g</dd>
-                    </div>
-                    <div className="label-row">
-                      <dt>Weight</dt>
-                      <dd>{pouchWeight ? `${Number(pouchWeight).toFixed(3)} kg` : '—'}</dd>
-                    </div>
-                  </dl>
-                </div>
-              </div>
-
-              <div className="row gap-sm flex-wrap">
-                <Button type="submit" variant="primary" icon="check" touch disabled={!withinTolerance}>
-                  Fill & Label Pouch
-                </Button>
-                <Button type="button" variant="outline" icon="package" onClick={handleCreateUnit}>
-                  Create Packaging Unit
-                </Button>
-              </div>
-              {!withinTolerance && (
-                <p className="field-hint">
-                  The pouch weight must be within ±{TOLERANCE_KG * 1000} g of the {TARGET_KG} kg target.
-                </p>
+            {/* Target Status Indicator */}
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+              <span className="text-xs text-muted-foreground font-medium">Target Compliance Status</span>
+              {isWithinTolerance ? (
+                <Badge tone="success" icon="check">
+                  Target Match (1.000 kg ±5g)
+                </Badge>
+              ) : (
+                <Badge tone="warning" icon="alert">
+                  Outside Target Range
+                </Badge>
               )}
             </div>
           </div>
-        </form>
-      </Card>
 
-      <section className="stack-sm">
-        <div className="section-header">
-          <h2 className="section-title">Labelled pouches</h2>
-          <span className="t-caption text-text-secondary">{pouches.length} pouches</span>
+          <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
+            <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider block">
+              Pouch Label Specs
+            </span>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Commodity:</span>
+                <span className="font-semibold text-foreground">Kentang (Potatoes)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Assigned Grade:</span>
+                <span className="font-bold text-foreground">Grade {activeStation.grade}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Target Weight:</span>
+                <span className="font-mono font-semibold text-foreground">1.000 kg</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Barcode Format:</span>
+                <span className="font-mono text-muted-foreground">GS1 Digital Link (QR)</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <DataTable
-          columns={pouchColumns}
-          data={pouches}
-          rowKey={(row) => row.id}
-          emptyTitle="No pouches labelled yet."
-          emptyDescription="Fill the first 1 kg pouch to print its label."
-        />
-      </section>
 
-      <section className="stack-sm">
-        <div className="section-header">
-          <h2 className="section-title">Packaging units</h2>
-          <span className="t-caption text-text-secondary">Export units carry an ITF-14 label</span>
+        {/* Action Bar */}
+        <div className="flex items-center justify-between border-t border-border pt-4">
+          <span className="text-xs text-muted-foreground font-mono">
+            Active: {activeStation.name} · Grade {activeStation.grade}
+          </span>
+          <Button
+            type="submit"
+            variant="primary"
+            icon="print"
+            touch
+            loading={isPrinting}
+            disabled={!(weightValue > 0)}
+          >
+            Approve & Print Pouch Label
+          </Button>
         </div>
-        <DataTable
-          columns={unitColumns}
-          data={units}
-          rowKey={(row) => row.id}
-          emptyTitle="No packaging units created."
-          emptyDescription="Bundle labelled pouches into a 10 kg or 50 kg export unit."
-        />
-      </section>
-
-      <ConfirmDialog
-        open={confirmPack}
-        tone="accent"
-        title="Create packaging unit?"
-        description={
-          <>
-            Create a <strong>{form.size}</strong> export unit from the labelled pouches of pallet{' '}
-            <strong>{form.palletCode}</strong>? An ITF-14 label is generated for the unit.
-          </>
-        }
-        confirmLabel="Yes, Create"
-        onConfirm={confirmCreateUnit}
-        onCancel={() => setConfirmPack(false)}
-      />
+      </form>
     </div>
+  )
+
+  return (
+    <>
+      {/* ═══════════════════════════════════════════════════════════════════
+         FULLSCREEN FOCUS MODE OVERLAY
+         ═══════════════════════════════════════════════════════════════════ */}
+      {focusMode && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto" role="dialog" aria-modal="true" aria-label="Packaging Focus Mode">
+          <header className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
+            <div className="flex items-center gap-3">
+              <Logo className="h-6 w-auto" markOnly />
+              <div>
+                <span className="font-semibold text-sm block leading-none text-foreground">1 kg Pouch Packaging Station</span>
+                <span className="text-[10px] text-muted-foreground font-mono">Focus Mode</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={isFullscreen ? 'compress' : 'expand'}
+                onClick={toggleFullscreen}
+                title="Toggle Fullscreen"
+              >
+                {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+              </Button>
+              <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode}>
+                Exit Focus
+              </Button>
+            </div>
+          </header>
+
+          <main className="flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto">
+            {renderPackagingForm()}
+          </main>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+         STANDARD DASHBOARD VIEW
+         ═══════════════════════════════════════════════════════════════════ */}
+      <div className="space-y-6">
+        <PageHeader
+          title="Pouch Packaging"
+          subtitle="1 kg pouch weighing and GS1 Digital Link label printing across 3 scale stations."
+          actions={
+            <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
+              Focus Mode
+            </Button>
+          }
+        />
+
+        {/* Render Main Form */}
+        {renderPackagingForm()}
+
+        {/* Labeled Pouches History Table */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Labeled Pouches Ledger</h2>
+            <span className="text-xs text-muted-foreground font-mono">
+              Total {pouches.length} pouches labeled today
+            </span>
+          </div>
+          <DataTable
+            columns={columns}
+            data={pouches}
+            rowKey={(row) => row.id}
+            emptyTitle="No pouches labeled today."
+            emptyDescription="Weigh 1 kg pouch and approve to generate barcode label."
+          />
+        </section>
+      </div>
+    </>
   )
 }

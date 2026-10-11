@@ -6,6 +6,7 @@ import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 
 interface WeighingSettings {
+  // Intake Scale
   transmitterIp: string
   modbusPort: string
   slaveId: string
@@ -14,6 +15,19 @@ interface WeighingSettings {
   scaleCapacityKg: string
   stabilityGrams: string
   pollMs: string
+
+  // Packaging Scale Stations (3 Scale Channels)
+  st1Ip: string
+  st1Port: string
+  st1Register: string
+
+  st2Ip: string
+  st2Port: string
+  st2Register: string
+
+  st3Ip: string
+  st3Port: string
+  st3Register: string
 }
 
 const INITIAL_SETTINGS: WeighingSettings = {
@@ -25,6 +39,18 @@ const INITIAL_SETTINGS: WeighingSettings = {
   scaleCapacityKg: '150',
   stabilityGrams: '20',
   pollMs: '250',
+
+  st1Ip: '192.168.1.101',
+  st1Port: '502',
+  st1Register: '40001',
+
+  st2Ip: '192.168.1.102',
+  st2Port: '502',
+  st2Register: '40001',
+
+  st3Ip: '192.168.1.103',
+  st3Port: '502',
+  st3Register: '40001',
 }
 
 export default function SettingsPage() {
@@ -50,35 +76,35 @@ export default function SettingsPage() {
       toast.error('Scale capacity must be greater than 0 kg.')
       return
     }
-    toast.success('Modbus TCP weighing configuration saved.')
+    toast.success('Weighing & Packaging Modbus TCP configuration saved.')
   }
 
   return (
     <div className="space-y-6 max-w-4xl">
       <PageHeader
-        title="Weighing Configuration"
-        subtitle="Modbus TCP weight transmitter IP connection and scale parameters for receiving intake."
+        title="Weighing & Packaging Configuration"
+        subtitle="Modbus TCP weight transmitter IP connection, 3-station packaging scales, and scale parameters."
       />
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        {/* Modbus TCP Connection Settings Card */}
+        {/* Receiving Intake Modbus TCP Connection Settings Card */}
         <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <h2 className="text-base font-bold text-foreground tracking-tight">
-                Weight Transmitter (Modbus TCP)
+                Receiving Station Weight Transmitter (Modbus TCP)
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Target IP address and holding register configuration for digital scale indicator transmitter.
+                Target IP address and holding register configuration for intake scale indicator transmitter.
               </p>
             </div>
             <Badge tone="success" dot>
-              Modbus TCP Active
+              Intake Modbus TCP Active
             </Badge>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Transmitter IP Address" htmlFor="settings-ip" required hint="e.g. 192.168.1.100 or 192.168.4.1">
+            <Field label="Transmitter IP Address" htmlFor="settings-ip" required hint="e.g. 192.168.1.100">
               <Input
                 id="settings-ip"
                 mono
@@ -142,6 +168,137 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* 3 Packaging Area Scale Stations (Conflict-Free Channels) */}
+        <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
+            <div>
+              <h2 className="text-base font-bold text-foreground tracking-tight">
+                Packaging Area Multi-Scale Stations (3 Channels)
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Assigns independent Modbus TCP IP addresses for Station 1 (Grade A), Station 2 (Grade B), and Station 3 (Grade C) to prevent multi-operator conflicts.
+              </p>
+            </div>
+            <Badge tone="accent">3 Independent Channels</Badge>
+          </div>
+
+          <div className="space-y-6">
+            {/* Station 1 (Grade A) */}
+            <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+                  Station 1 — Scale Channel (Grade A)
+                </span>
+                <Badge tone="success">Grade A</Badge>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Field label="IP Address" htmlFor="st1-ip">
+                  <Input
+                    id="st1-ip"
+                    mono
+                    value={form.st1Ip}
+                    onChange={(e) => setForm({ ...form, st1Ip: e.target.value })}
+                  />
+                </Field>
+                <Field label="Port" htmlFor="st1-port">
+                  <Input
+                    id="st1-port"
+                    type="number"
+                    mono
+                    value={form.st1Port}
+                    onChange={(e) => setForm({ ...form, st1Port: e.target.value })}
+                  />
+                </Field>
+                <Field label="Weight Register" htmlFor="st1-reg">
+                  <Input
+                    id="st1-reg"
+                    type="number"
+                    mono
+                    value={form.st1Register}
+                    onChange={(e) => setForm({ ...form, st1Register: e.target.value })}
+                  />
+                </Field>
+              </div>
+            </div>
+
+            {/* Station 2 (Grade B) */}
+            <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+                  Station 2 — Scale Channel (Grade B)
+                </span>
+                <Badge tone="accent">Grade B</Badge>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Field label="IP Address" htmlFor="st2-ip">
+                  <Input
+                    id="st2-ip"
+                    mono
+                    value={form.st2Ip}
+                    onChange={(e) => setForm({ ...form, st2Ip: e.target.value })}
+                  />
+                </Field>
+                <Field label="Port" htmlFor="st2-port">
+                  <Input
+                    id="st2-port"
+                    type="number"
+                    mono
+                    value={form.st2Port}
+                    onChange={(e) => setForm({ ...form, st2Port: e.target.value })}
+                  />
+                </Field>
+                <Field label="Weight Register" htmlFor="st2-reg">
+                  <Input
+                    id="st2-reg"
+                    type="number"
+                    mono
+                    value={form.st2Register}
+                    onChange={(e) => setForm({ ...form, st2Register: e.target.value })}
+                  />
+                </Field>
+              </div>
+            </div>
+
+            {/* Station 3 (Grade C) */}
+            <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+                  Station 3 — Scale Channel (Grade C)
+                </span>
+                <Badge tone="warning">Grade C</Badge>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Field label="IP Address" htmlFor="st3-ip">
+                  <Input
+                    id="st3-ip"
+                    mono
+                    value={form.st3Ip}
+                    onChange={(e) => setForm({ ...form, st3Ip: e.target.value })}
+                  />
+                </Field>
+                <Field label="Port" htmlFor="st3-port">
+                  <Input
+                    id="st3-port"
+                    type="number"
+                    mono
+                    value={form.st3Port}
+                    onChange={(e) => setForm({ ...form, st3Port: e.target.value })}
+                  />
+                </Field>
+                <Field label="Weight Register" htmlFor="st3-reg">
+                  <Input
+                    id="st3-reg"
+                    type="number"
+                    mono
+                    value={form.st3Register}
+                    onChange={(e) => setForm({ ...form, st3Register: e.target.value })}
+                  />
+                </Field>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Scale Parameters Card */}
         <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
           <div className="border-b border-border pb-4">
@@ -152,7 +309,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Scale Capacity (kg)" htmlFor="settings-capacity" required hint="Maximum allowed intake weight">
+            <Field label="Intake Capacity (kg)" htmlFor="settings-capacity" required hint="Maximum allowed intake weight">
               <Input
                 id="settings-capacity"
                 type="number"

@@ -1,21 +1,10 @@
-/**
- * Grading — Area Sortir (Sorting).
- *
- * Implements the verified sorting flow:
- *   1. Scan / select approved intake pallet (PLT-...).
- *   2. Classify harvest into Grade A, B, or C.
- *   3. Print Grade Label (GRD-PLT-...-[GRADE]) to affix to the sorted pallet/crate.
- *   No scale in this area — weight per grade is captured downstream during 1 kg pouch packing.
- */
-import { useState } from 'react'
-import Card from '../components/shared/Card'
+import { useState, useEffect, useRef } from 'react'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
-import Icon from '../components/shared/Icon'
-import { Field, Input, Select } from '../components/shared/Form'
+import Logo from '../components/shared/Logo'
+import { Input } from '../components/shared/Form'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
-import ConfirmDialog from '../components/feedback/ConfirmDialog'
 import { useToast } from '../components/feedback/Toast'
 
 type GradeRecord = {
@@ -28,13 +17,6 @@ type GradeRecord = {
   printedCount: number
 }
 
-type ApprovedPallet = {
-  code: string
-  farmer: string
-  totalKg: number
-  depositDate: string
-}
-
 const GRADES: Array<'A' | 'B' | 'C'> = ['A', 'B', 'C']
 
 const GRADE_TONE: Record<GradeRecord['grade'], 'success' | 'accent' | 'warning'> = {
@@ -45,15 +27,17 @@ const GRADE_TONE: Record<GradeRecord['grade'], 'success' | 'accent' | 'warning'>
 
 export default function GradingPage() {
   const toast = useToast()
-  const [palletCode, setPalletCode] = useState('PLT-20261010-0001')
-  const [grade, setGrade] = useState<'A' | 'B' | 'C'>('A')
-  const [confirmRecord, setConfirmRecord] = useState<GradeRecord | null>(null)
-  const [isPrinting, setIsPrinting] = useState(false)
 
-  const [pallets] = useState<ApprovedPallet[]>([
-    { code: 'PLT-20261010-0001', farmer: 'Ahmad Santoso', totalKg: 45.5, depositDate: '2026-10-10' },
-    { code: 'PLT-20261010-0002', farmer: 'Budi Prasetyo', totalKg: 38.2, depositDate: '2026-10-10' },
-  ])
+  /* ── Mode & Stepper State ── */
+  const [focusMode, setFocusMode] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  /* ── Form State ── */
+  const [palletCode, setPalletCode] = useState('PLT-20261010-0001')
+  const [farmerName, setFarmerName] = useState('Ahmad Santoso')
+  const [selectedGrade, setSelectedGrade] = useState<'A' | 'B' | 'C'>('A')
+  const [isPrinting, setIsPrinting] = useState(false)
+  const scanInputRef = useRef<HTMLInputElement>(null)
 
   const [records, setRecords] = useState<GradeRecord[]>([
     {
@@ -76,37 +60,78 @@ export default function GradingPage() {
     },
   ])
 
-  const selectedPallet = pallets.find((item) => item.code === palletCode) ?? pallets[0]
+  /* Fullscreen & Esc Listener */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && focusMode) {
+        setFocusMode(false)
+        if (document.fullscreenElement) {
+          document.exitFullscreen?.().catch(() => {})
+        }
+      }
+    }
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement))
+    }
 
-  const handlePrintRequest = (e: React.FormEvent) => {
-    e.preventDefault()
-    const targetLabel = `GRD-${selectedPallet.code}-${grade}`
-    setConfirmRecord({
-      id: String(Date.now()),
-      palletCode: selectedPallet.code,
-      farmer: selectedPallet.farmer,
-      grade,
-      labelCode: targetLabel,
-      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-      printedCount: 1,
-    })
+    window.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }
+  }, [focusMode])
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {})
+    } else {
+      document.exitFullscreen?.().catch(() => {})
+    }
   }
 
-  const confirmAndPrint = () => {
-    if (!confirmRecord) return
+  const enterFocusMode = () => {
+    setFocusMode(true)
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {})
+    }
+  }
+
+  const exitFocusMode = () => {
+    setFocusMode(false)
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {})
+    }
+  }
+
+  const handlePrintGradeLabel = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!palletCode.trim()) {
+      toast.error('Pallet Code is required.')
+      return
+    }
+
+    const labelCode = `GRD-${palletCode.trim()}-${selectedGrade}`
     setIsPrinting(true)
-    toast.warning(`Sending Grade Label ${confirmRecord.labelCode} to printer…`)
 
     window.setTimeout(() => {
       setIsPrinting(false)
-      setRecords((current) => [confirmRecord, ...current])
-      toast.success(`Grade ${confirmRecord.grade} label printed! Affix to sorted pallet.`)
-      setConfirmRecord(null)
-    }, 700)
+      const newRecord: GradeRecord = {
+        id: String(Date.now()),
+        palletCode: palletCode.trim(),
+        farmer: farmerName || 'Intake Farmer',
+        grade: selectedGrade,
+        labelCode,
+        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        printedCount: 1,
+      }
+      setRecords((current) => [newRecord, ...current])
+      toast.success(`Grade ${selectedGrade} pallet label printed: ${labelCode}`)
+    }, 600)
   }
 
   const rePrintGradeLabel = (record: GradeRecord) => {
-    toast.warning(`Re-printing label ${record.labelCode}…`)
+    toast.warning(`Sending label ${record.labelCode} to printer…`)
     window.setTimeout(() => {
       setRecords((current) =>
         current.map((item) =>
@@ -114,165 +139,230 @@ export default function GradingPage() {
         ),
       )
       toast.success(`Label ${record.labelCode} re-printed successfully.`)
-    }, 700)
+    }, 600)
   }
 
   const columns: Column<GradeRecord>[] = [
-    { key: 'time', label: 'Time', render: (row) => <span className="mono t-small">{row.time}</span> },
-    { key: 'labelCode', label: 'Label Code', priority: true, render: (row) => <span className="mono cell-strong">{row.labelCode}</span> },
-    { key: 'palletCode', label: 'Intake Pallet', render: (row) => <span className="mono t-small cell-secondary">{row.palletCode}</span> },
-    { key: 'farmer', label: 'Farmer', render: (row) => <span className="cell-strong text-sm">{row.farmer}</span> },
+    {
+      key: 'palletCode',
+      label: 'Intake Pallet',
+      priority: true,
+      render: (row) => (
+        <div>
+          <span className="font-mono font-bold text-foreground block">{row.palletCode}</span>
+          <span className="text-xs text-muted-foreground">{row.farmer}</span>
+        </div>
+      ),
+    },
     {
       key: 'grade',
-      label: 'Grade',
+      label: 'Assigned Grade',
       priority: true,
-      render: (row) => <Badge tone={GRADE_TONE[row.grade]}>Grade {row.grade}</Badge>,
+      render: (row) => (
+        <Badge tone={GRADE_TONE[row.grade]}>
+          Grade {row.grade}
+        </Badge>
+      ),
+    },
+    {
+      key: 'labelCode',
+      label: 'Grade Label Code',
+      render: (row) => <span className="font-mono text-xs text-foreground font-semibold">{row.labelCode}</span>,
+    },
+    {
+      key: 'time',
+      label: 'Printed Time',
+      render: (row) => (
+        <div>
+          <span className="font-mono text-xs block text-foreground">{row.time}</span>
+          <span className="text-xs text-muted-foreground">Copies: {row.printedCount}</span>
+        </div>
+      ),
     },
     {
       key: 'actions',
-      label: 'Actions',
+      label: 'Action',
       align: 'right',
-      priority: true,
       render: (row) => (
         <Button size="sm" variant="outline" icon="print" onClick={() => rePrintGradeLabel(row)}>
-          Re-Print ({row.printedCount})
+          Re-print
         </Button>
       ),
     },
   ]
 
-  return (
-    <div className="stack stack-lg">
-      <PageHeader
-        title="Grading & Sorting"
-        subtitle="Sorting area — scan intake pallet, classify into Grade A/B/C, and print grade label for the sorted pallet (no scale in this area)."
-        actions={<Badge tone="neutral" icon="info">Pure Classification · No Scale</Badge>}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-md">
-        {/* Intake Pallet Context */}
-        <Card
-          title="Intake Pallet in Sorting"
-          subtitle="Scan or select the approved intake pallet currently being sorted."
-        >
-          <div className="stack-md">
-            <Field label="Intake Pallet (PLT-...)" htmlFor="grading-pallet" required hint="Scan QR code from pallet box.">
-              <Select
-                id="grading-pallet"
-                mono
-                value={palletCode}
-                onChange={(e) => setPalletCode(e.target.value)}
-              >
-                {pallets.map((item) => (
-                  <option key={item.code} value={item.code}>
-                    {item.code} — {item.farmer} ({item.totalKg.toFixed(1)} kg)
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            <div className="p-3 bg-surface-2 border border-border rounded-lg stack-xs">
-              <div className="flex justify-between text-xs">
-                <span className="text-text-secondary">Farmer:</span>
-                <span className="font-semibold">{selectedPallet.farmer}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-text-secondary">Approved Net Weight:</span>
-                <span className="mono font-bold text-green-700">{selectedPallet.totalKg.toFixed(1)} kg</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-text-secondary">Deposit Date:</span>
-                <span className="mono">{selectedPallet.depositDate}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-text-secondary">Commodity:</span>
-                <span>Kentang (Potatoes)</span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Grade Classification & Label Printing */}
-        <div className="lg:col-span-2">
-          <Card
-            title="Classify & Print Grade Label"
-            subtitle="Select the sorted grade and print the label to affix to the sorted pallet."
-          >
-            <form className="stack-md" onSubmit={handlePrintRequest}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-md items-end">
-                <Field label="Sorted Grade" htmlFor="grading-grade" required hint="Quality classification result.">
-                  <Select
-                    id="grading-grade"
-                    value={grade}
-                    onChange={(e) => setGrade(e.target.value as GradeRecord['grade'])}
-                  >
-                    {GRADES.map((item) => (
-                      <option key={item} value={item}>
-                        Grade {item}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-
-                <Field label="Target Grade Label Code" htmlFor="grading-label" hint="System-generated label format.">
-                  <Input id="grading-label" mono value={`GRD-${selectedPallet.code}-${grade}`} readOnly />
-                </Field>
-              </div>
-
-              {/* Label Preview Card */}
-              <div className="p-4 border border-dashed border-gray-300 rounded-lg bg-surface flex items-center justify-between flex-wrap gap-3">
-                <div className="stack-xs">
-                  <span className="t-caption text-text-secondary uppercase">Label Preview</span>
-                  <span className="mono font-bold text-base">GRD-{selectedPallet.code}-{grade}</span>
-                  <span className="t-caption text-text-secondary">
-                    Sorted Pallet · Grade {grade} · Kentang (Potatoes) · Source: {selectedPallet.code}
-                  </span>
-                </div>
-                <Button type="submit" variant="primary" icon="print" touch size="md">
-                  Print Grade Label
-                </Button>
-              </div>
-
-              <p className="t-caption text-text-secondary">
-                <Icon name="info" size={13} /> Sesuai SOP, Area Sortir tidak memiliki timbangan. Tempel label grade ini pada palet hasil sortir sebelum dialirkan ke Area Pengepakan.
-              </p>
-            </form>
-          </Card>
+  /* ═══════════════════════════════════════════════════════════════════
+     RENDER: Form Content
+     ═══════════════════════════════════════════════════════════════════ */
+  const renderGradingForm = () => (
+    <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
+      <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Scan Pallet & Classify Grade</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Scan intake pallet label, select crop grade, and print sorted pallet label.
+          </p>
         </div>
+        <Badge tone="accent" icon="scan">
+          Scan Ready
+        </Badge>
       </div>
 
-      <section className="stack-sm">
-        <div className="section-header">
-          <h2 className="section-title">Sorted Pallet Labels Today</h2>
-          <span className="t-caption text-text-secondary">{records.length} grade labels issued</span>
-        </div>
-        <DataTable
-          columns={columns}
-          data={records}
-          rowKey={(row) => row.id}
-          emptyTitle="No sorting labels printed yet."
-          emptyDescription="Scan an intake pallet and print the first grade label."
-        />
-      </section>
+      <form onSubmit={handlePrintGradeLabel} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label htmlFor="grading-pallet" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+              1. Intake Pallet Code (Scan / Type)
+            </label>
+            <Input
+              id="grading-pallet"
+              ref={scanInputRef}
+              mono
+              value={palletCode}
+              onChange={(e) => setPalletCode(e.target.value)}
+              placeholder="Scan barcode or type PLT-..."
+              className="py-3 text-base"
+              autoFocus
+            />
+          </div>
 
-      {/* Confirmation Dialog */}
-      <ConfirmDialog
-        open={Boolean(confirmRecord)}
-        tone="accent"
-        title="Print Sorted Pallet Grade Label?"
-        description={
-          confirmRecord ? (
-            <>
-              Print grade label <strong>{confirmRecord.labelCode}</strong> for{' '}
-              <strong>Grade {confirmRecord.grade}</strong> (Source: {confirmRecord.palletCode})?
-              Affix this label to the sorted pallet.
-            </>
-          ) : null
-        }
-        confirmLabel={isPrinting ? 'Printing…' : 'Yes, Print Label'}
-        onConfirm={confirmAndPrint}
-        onCancel={() => setConfirmRecord(null)}
-      />
+          <div className="space-y-2">
+            <label htmlFor="grading-farmer" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+              Farmer / Source Lot
+            </label>
+            <Input
+              id="grading-farmer"
+              value={farmerName}
+              onChange={(e) => setFarmerName(e.target.value)}
+              placeholder="Farmer name"
+              className="py-3 text-base"
+            />
+          </div>
+        </div>
+
+        {/* Grade Selector Buttons */}
+        <div className="space-y-2">
+          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+            2. Select Commodity Grade
+          </label>
+          <div className="grid grid-cols-3 gap-3">
+            {GRADES.map((g) => {
+              const isSelected = selectedGrade === g
+              return (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setSelectedGrade(g)}
+                  className={`p-4 rounded-xl border text-center transition-all cursor-pointer ${
+                    isSelected
+                      ? 'border-primary bg-primary/10 ring-2 ring-primary text-foreground font-bold shadow-sm'
+                      : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  <span className="text-2xl font-black block">Grade {g}</span>
+                  <span className="text-xs text-muted-foreground font-normal">
+                    {g === 'A' ? 'Premium Large' : g === 'B' ? 'Medium Standard' : 'Small / Industrial'}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Generated Label Preview */}
+        <div className="p-4 bg-muted/30 border border-border rounded-xl flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <span className="text-xs text-muted-foreground block font-medium">Generated Sorted Pallet Code</span>
+            <span className="font-mono font-bold text-lg text-primary block">
+              GRD-{palletCode.trim() || 'PLT-...'}-{selectedGrade}
+            </span>
+          </div>
+          <Button
+            type="submit"
+            variant="primary"
+            icon="print"
+            touch
+            loading={isPrinting}
+          >
+            Print Grade {selectedGrade} Label
+          </Button>
+        </div>
+      </form>
     </div>
+  )
+
+  return (
+    <>
+      {/* ═══════════════════════════════════════════════════════════════════
+         FULLSCREEN FOCUS MODE OVERLAY
+         ═══════════════════════════════════════════════════════════════════ */}
+      {focusMode && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto" role="dialog" aria-modal="true" aria-label="Sorting Focus Mode">
+          <header className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
+            <div className="flex items-center gap-3">
+              <Logo className="h-6 w-auto" markOnly />
+              <div>
+                <span className="font-semibold text-sm block leading-none text-foreground">Sorting & Grading Station</span>
+                <span className="text-[10px] text-muted-foreground font-mono">Focus Mode</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={isFullscreen ? 'compress' : 'expand'}
+                onClick={toggleFullscreen}
+                title="Toggle Fullscreen"
+              >
+                {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+              </Button>
+              <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode}>
+                Exit Focus
+              </Button>
+            </div>
+          </header>
+
+          <main className="flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto">
+            {renderGradingForm()}
+          </main>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+         STANDARD DASHBOARD VIEW
+         ═══════════════════════════════════════════════════════════════════ */}
+      <div className="space-y-6">
+        <PageHeader
+          title="Sorting & Grading"
+          subtitle="Scan intake pallet label, classify harvest into Grade A/B/C, and print sorted pallet label."
+          actions={
+            <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
+              Focus Mode
+            </Button>
+          }
+        />
+
+        {/* Render Main Form */}
+        {renderGradingForm()}
+
+        {/* Printed Records Table */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Today's Printed Grade Labels</h2>
+            <span className="text-xs text-muted-foreground font-mono">
+              Total {records.length} sorted pallets
+            </span>
+          </div>
+          <DataTable
+            columns={columns}
+            data={records}
+            rowKey={(row) => row.id}
+            emptyTitle="No grade labels printed today."
+            emptyDescription="Scan an intake pallet and assign its commodity grade to print."
+          />
+        </section>
+      </div>
+    </>
   )
 }
