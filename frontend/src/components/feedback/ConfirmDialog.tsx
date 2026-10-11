@@ -55,7 +55,7 @@ export default function ConfirmDialog({
           <div
             className={cn(
               'size-10 rounded-md flex items-center justify-center shrink-0',
-              tone === 'danger' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600',
+              tone === 'danger' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700',
             )}
           >
             <Icon name={tone === 'danger' ? 'alert' : 'info'} size={20} />

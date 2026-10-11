@@ -239,7 +239,7 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#fafafa] text-[#171717] font-['Archivo',sans-serif] selection:bg-[#eff6ff] selection:text-[#0070f3] overflow-x-hidden relative">
+    <div className="min-h-screen bg-[#fafafa] text-[#171717] font-['Archivo',sans-serif] selection:bg-[#f0fdf4] selection:text-[#15803d] overflow-x-hidden relative">
       {/* ── Sub-pixel Grain Overlay ── */}
       <div
         className="fixed inset-[-10%] pointer-events-none z-[190] opacity-[0.04] mix-blend-multiply"
@@ -316,7 +316,7 @@ export default function LandingPage() {
           position: absolute;
           width: 12px;
           height: 12px;
-          border: 1.5px solid #0070f3;
+          border: 1.5px solid #229856;
           pointer-events: none;
         }
         .notch-corner::before {
@@ -344,8 +344,8 @@ export default function LandingPage() {
           left: 0;
           width: 48px;
           height: 48px;
-          border-top: 2px solid #0070f3;
-          border-left: 2px solid #0070f3;
+          border-top: 2px solid #229856;
+          border-left: 2px solid #229856;
           pointer-events: none;
         }
         .booking-frame::after {
@@ -355,8 +355,8 @@ export default function LandingPage() {
           right: 0;
           width: 48px;
           height: 48px;
-          border-bottom: 2px solid #0070f3;
-          border-right: 2px solid #0070f3;
+          border-bottom: 2px solid #229856;
+          border-right: 2px solid #229856;
           pointer-events: none;
         }
 
@@ -367,7 +367,7 @@ export default function LandingPage() {
         .wave-bar {
           display: inline-block;
           width: 2px;
-          background: #0070f3;
+          background: #229856;
           margin: 0 1px;
           height: 3px;
           vertical-align: bottom;
@@ -382,10 +382,10 @@ export default function LandingPage() {
 
         @keyframes pulse-btn-glow {
           0%, 100% {
-            box-shadow: 0 0 0 0 rgba(0, 112, 243, 0.4), 0 4px 12px rgba(0, 112, 243, 0.2);
+            box-shadow: 0 0 0 0 rgba(34, 152, 86, 0.4), 0 4px 12px rgba(34, 152, 86, 0.2);
           }
           50% {
-            box-shadow: 0 0 0 14px rgba(0, 112, 243, 0), 0 4px 12px rgba(0, 112, 243, 0.2);
+            box-shadow: 0 0 0 14px rgba(34, 152, 86, 0), 0 4px 12px rgba(34, 152, 86, 0.2);
           }
         }
         .pulse-btn {
@@ -421,7 +421,7 @@ export default function LandingPage() {
             <a href="#booking" className="hover:text-[#171717] transition-colors">
               Deployment
             </a>
-            <Link to="/traceability" className="hover:text-[#0070f3] text-[#0070f3] font-semibold transition-colors">
+            <Link to="/traceability" className="hover:text-[#15803d] text-[#15803d] font-semibold transition-colors">
               Public Trace
             </Link>
           </nav>
@@ -477,13 +477,13 @@ export default function LandingPage() {
           {/* Top Right Live Telemetry Controls */}
           <div className="absolute top-28 right-6 lg:right-10 flex items-center gap-4 z-30">
             <div className="hidden sm:flex items-center gap-2 font-mono-custom text-[11px] text-white/80 bg-black/50 border border-white/10 px-3 py-1.5 backdrop-blur-sm">
-              <span className="w-2 h-2 rounded-full bg-[#0070f3] animate-ping"></span>
+              <span className="w-2 h-2 rounded-full bg-[#15803d] animate-ping"></span>
               <span className="tracking-[0.2em]">MODBUS TCP · STREAM</span>
             </div>
 
             <button
               onClick={() => setMuted(!muted)}
-              className={`flex items-center gap-2.5 px-3.5 py-2 border border-white/20 bg-black/60 backdrop-blur-md transition-colors hover:border-[#0070f3] ${
+              className={`flex items-center gap-2.5 px-3.5 py-2 border border-white/20 bg-black/60 backdrop-blur-md transition-colors hover:border-[#229856] ${
                 !muted ? 'unmuted' : ''
               }`}
             >
@@ -502,8 +502,8 @@ export default function LandingPage() {
 
           {/* Main Headline */}
           <div className="max-w-5xl">
-            <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#0070f3] tracking-[0.25em] uppercase mb-4">
-              <span className="w-8 h-[2px] bg-[#0070f3]"></span>
+            <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#15803d] tracking-[0.25em] uppercase mb-4">
+              <span className="w-8 h-[2px] bg-[#15803d]"></span>
               <span>EST. 2024 · IOT SMART PACKHOUSE</span>
             </div>
 
@@ -511,7 +511,7 @@ export default function LandingPage() {
               <span className="block">BUILT BY DATA.</span>
               <span className="block text-stroke-white">VERIFIED IN SCALE.</span>
               <span className="block">
-                TRACEABLE IN <span className="text-[#0070f3]">FULL.</span>
+                TRACEABLE IN <span className="text-[#15803d]">FULL.</span>
               </span>
             </h1>
 
@@ -530,7 +530,7 @@ export default function LandingPage() {
                 <div className="w-11 h-11 rounded-full border-2 border-black bg-[#171717] flex items-center justify-center text-xs font-bold text-white shadow-sm">
                   <Icon name="scale" size={16} />
                 </div>
-                <div className="w-11 h-11 rounded-full border-2 border-black bg-[#0070f3] flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                <div className="w-11 h-11 rounded-full border-2 border-black bg-[#15803d] flex items-center justify-center text-xs font-bold text-white shadow-sm">
                   <Icon name="sortir" size={16} />
                 </div>
                 <div className="w-11 h-11 rounded-full border-2 border-black bg-[#15803d] flex items-center justify-center text-xs font-bold text-white shadow-sm">
@@ -557,11 +557,11 @@ export default function LandingPage() {
               </div>
               <div className="flex-1 h-[2px] bg-white/20 overflow-hidden rounded-full">
                 <div
-                  className="h-full bg-[#0070f3] transition-all duration-75"
+                  className="h-full bg-[#15803d] transition-all duration-75"
                   style={{ width: `${reelProgress}%` }}
                 />
               </div>
-              <div className="font-mono-custom text-[10px] text-[#0070f3] tracking-[0.2em] uppercase">
+              <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase">
                 {reelFrames[currentFrame].subtitle}
               </div>
             </div>
@@ -572,29 +572,29 @@ export default function LandingPage() {
         <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-black/80 backdrop-blur-md py-3 overflow-hidden z-20">
           <div className="marquee-track font-heading text-xs tracking-[0.25em] uppercase text-white/70">
             <span className="px-8">WEIGHED & APPROVED</span>
-            <span className="text-[#0070f3]">/</span>
+            <span className="text-[#15803d]">/</span>
             <span className="px-8">GS1 DIGITAL LINK</span>
-            <span className="text-[#0070f3]">/</span>
+            <span className="text-[#15803d]">/</span>
             <span className="px-8">MODBUS TCP INTEGRATION</span>
-            <span className="text-[#0070f3]">/</span>
+            <span className="text-[#15803d]">/</span>
             <span className="px-8">SINGLE CANONICAL SORTING</span>
-            <span className="text-[#0070f3]">/</span>
+            <span className="text-[#15803d]">/</span>
             <span className="px-8">ZERO WEIGHT CONFLICT</span>
-            <span className="text-[#0070f3]">/</span>
+            <span className="text-[#15803d]">/</span>
             <span className="px-8">PUBLIC QR TRACEABILITY</span>
-            <span className="text-[#0070f3]">/</span>
+            <span className="text-[#15803d]">/</span>
             <span className="px-8">FIELD TO EXPORT CONTAINER</span>
-            <span className="text-[#0070f3]">/</span>
+            <span className="text-[#15803d]">/</span>
             <span className="px-8">WEIGHED & APPROVED</span>
-            <span className="text-[#0070f3]">/</span>
+            <span className="text-[#15803d]">/</span>
             <span className="px-8">GS1 DIGITAL LINK</span>
-            <span className="text-[#0070f3]">/</span>
+            <span className="text-[#15803d]">/</span>
             <span className="px-8">MODBUS TCP INTEGRATION</span>
-            <span className="text-[#0070f3]">/</span>
+            <span className="text-[#15803d]">/</span>
             <span className="px-8">SINGLE CANONICAL SORTING</span>
-            <span className="text-[#0070f3]">/</span>
+            <span className="text-[#15803d]">/</span>
             <span className="px-8">ZERO WEIGHT CONFLICT</span>
-            <span className="text-[#0070f3]">/</span>
+            <span className="text-[#15803d]">/</span>
           </div>
         </div>
       </section>
@@ -612,8 +612,8 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="border-l-2 border-[#0070f3] pl-6">
-              <div className="font-display text-6xl md:text-7xl text-[#0070f3] tabular-nums">
+            <div className="border-l-2 border-[#229856] pl-6">
+              <div className="font-display text-6xl md:text-7xl text-[#15803d] tabular-nums">
                 {counters.farmers}+
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
@@ -647,14 +647,14 @@ export default function LandingPage() {
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10">
           <div className="grid lg:grid-cols-12 gap-8 mb-16 items-end">
             <div className="lg:col-span-6">
-              <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#0070f3] tracking-[0.25em] uppercase mb-4">
-                <span className="w-8 h-[2px] bg-[#0070f3]"></span>
+              <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#15803d] tracking-[0.25em] uppercase mb-4">
+                <span className="w-8 h-[2px] bg-[#15803d]"></span>
                 <span>02 — Operational Pipeline</span>
               </div>
               <h2 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9]">
                 Three stations.<br />
                 <span className="text-stroke">One outcome:</span><br />
-                <span className="text-[#0070f3]">100% verified trace.</span>
+                <span className="text-[#15803d]">100% verified trace.</span>
               </h2>
             </div>
 
@@ -668,7 +668,7 @@ export default function LandingPage() {
                   onClick={() => setActiveCategory('all')}
                   className={`px-4 py-2 font-heading text-xs uppercase tracking-[0.15em] border transition-all ${
                     activeCategory === 'all'
-                      ? 'bg-[#0070f3] border-[#0070f3] text-white font-semibold'
+                      ? 'bg-[#15803d] border-[#229856] text-white font-semibold'
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
@@ -678,7 +678,7 @@ export default function LandingPage() {
                   onClick={() => setActiveCategory('weighing')}
                   className={`px-4 py-2 font-heading text-xs uppercase tracking-[0.15em] border transition-all ${
                     activeCategory === 'weighing'
-                      ? 'bg-[#0070f3] border-[#0070f3] text-white font-semibold'
+                      ? 'bg-[#15803d] border-[#229856] text-white font-semibold'
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
@@ -688,7 +688,7 @@ export default function LandingPage() {
                   onClick={() => setActiveCategory('sorting')}
                   className={`px-4 py-2 font-heading text-xs uppercase tracking-[0.15em] border transition-all ${
                     activeCategory === 'sorting'
-                      ? 'bg-[#0070f3] border-[#0070f3] text-white font-semibold'
+                      ? 'bg-[#15803d] border-[#229856] text-white font-semibold'
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
@@ -698,7 +698,7 @@ export default function LandingPage() {
                   onClick={() => setActiveCategory('packaging')}
                   className={`px-4 py-2 font-heading text-xs uppercase tracking-[0.15em] border transition-all ${
                     activeCategory === 'packaging'
-                      ? 'bg-[#0070f3] border-[#0070f3] text-white font-semibold'
+                      ? 'bg-[#15803d] border-[#229856] text-white font-semibold'
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
@@ -712,7 +712,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {/* Card 1: Weighing Station */}
             {(activeCategory === 'all' || activeCategory === 'weighing') && (
-              <article className="notch-corner border border-[#eaeaea] bg-white shadow-xs group transition-all duration-300 hover:shadow-md hover:border-[#0070f3]">
+              <article className="notch-corner border border-[#eaeaea] bg-white shadow-xs group transition-all duration-300 hover:shadow-md hover:border-[#229856]">
                 <div className="relative h-64 overflow-hidden bg-black">
                   <img
                     src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80"
@@ -720,10 +720,10 @@ export default function LandingPage() {
                     className="w-full h-full object-cover filter contrast-[1.2] opacity-80 group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#3291ff] tracking-[0.2em]">
+                  <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#93c749] tracking-[0.2em]">
                     01 / INTAKE WEIGHING
                   </div>
-                  <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#0070f3] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
+                  <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#15803d] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
                     DUAL PRINT OUTPUT
                   </div>
                 </div>
@@ -764,7 +764,7 @@ export default function LandingPage() {
 
                   <Link
                     to="/dashboard/weighing"
-                    className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#0070f3] transition-colors"
+                    className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#15803d] transition-colors"
                   >
                     <span>Launch Station</span>
                     <Icon name="arrow-right" size={16} />
@@ -775,7 +775,7 @@ export default function LandingPage() {
 
             {/* Card 2: Sorting Station */}
             {(activeCategory === 'all' || activeCategory === 'sorting') && (
-              <article className="notch-corner border border-[#eaeaea] bg-white shadow-xs group transition-all duration-300 hover:shadow-md hover:border-[#0070f3]">
+              <article className="notch-corner border border-[#eaeaea] bg-white shadow-xs group transition-all duration-300 hover:shadow-md hover:border-[#229856]">
                 <div className="relative h-64 overflow-hidden bg-black">
                   <img
                     src="https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80"
@@ -783,7 +783,7 @@ export default function LandingPage() {
                     className="w-full h-full object-cover filter contrast-[1.2] opacity-80 group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#3291ff] tracking-[0.2em]">
+                  <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#93c749] tracking-[0.2em]">
                     02 / CLASSIFICATION
                   </div>
                   <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#15803d] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
@@ -827,7 +827,7 @@ export default function LandingPage() {
 
                   <Link
                     to="/dashboard/sorting"
-                    className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#0070f3] transition-colors"
+                    className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#15803d] transition-colors"
                   >
                     <span>Launch Station</span>
                     <Icon name="arrow-right" size={16} />
@@ -838,7 +838,7 @@ export default function LandingPage() {
 
             {/* Card 3: Packaging Station */}
             {(activeCategory === 'all' || activeCategory === 'packaging') && (
-              <article className="notch-corner border border-[#eaeaea] bg-white shadow-xs group transition-all duration-300 hover:shadow-md hover:border-[#0070f3]">
+              <article className="notch-corner border border-[#eaeaea] bg-white shadow-xs group transition-all duration-300 hover:shadow-md hover:border-[#229856]">
                 <div className="relative h-64 overflow-hidden bg-black">
                   <img
                     src="https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80"
@@ -846,7 +846,7 @@ export default function LandingPage() {
                     className="w-full h-full object-cover filter contrast-[1.2] opacity-80 group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#3291ff] tracking-[0.2em]">
+                  <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#93c749] tracking-[0.2em]">
                     03 / RETAIL POUCH
                   </div>
                   <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#171717] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
@@ -890,7 +890,7 @@ export default function LandingPage() {
 
                   <Link
                     to="/dashboard/packaging"
-                    className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#0070f3] transition-colors"
+                    className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#15803d] transition-colors"
                   >
                     <span>Launch Station</span>
                     <Icon name="arrow-right" size={16} />
@@ -907,12 +907,12 @@ export default function LandingPage() {
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10">
           <div className="grid lg:grid-cols-12 gap-8 mb-16 items-end">
             <div className="lg:col-span-7">
-              <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#0070f3] tracking-[0.25em] uppercase mb-4">
-                <span className="w-8 h-[2px] bg-[#0070f3]"></span>
+              <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#15803d] tracking-[0.25em] uppercase mb-4">
+                <span className="w-8 h-[2px] bg-[#15803d]"></span>
                 <span>03 — Hardware & Stations</span>
               </div>
               <h2 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9]">
-                Systems that <span className="text-[#0070f3]">verify</span>,<br />
+                Systems that <span className="text-[#15803d]">verify</span>,<br />
                 hardware that <span className="text-stroke">endures.</span>
               </h2>
             </div>
@@ -940,7 +940,7 @@ export default function LandingPage() {
                       alt="Weight Transmitter Module"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
-                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#3291ff] tracking-[0.2em]">
+                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#93c749] tracking-[0.2em]">
                       / 01
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
@@ -958,7 +958,7 @@ export default function LandingPage() {
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
                         MODBUS TCP :502
                       </span>
-                      <span className="font-mono-custom text-[10px] text-[#0070f3] tracking-wider font-semibold">
+                      <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
                         SPECS →
                       </span>
                     </div>
@@ -966,34 +966,34 @@ export default function LandingPage() {
                 </div>
 
                 {/* Back */}
-                <div className="flip-face flip-back border border-[#0070f3] bg-white p-6 flex flex-col justify-between shadow-md">
+                <div className="flip-face flip-back border border-[#229856] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
-                    <div className="font-mono-custom text-[10px] text-[#0070f3] tracking-[0.2em] uppercase mb-3">
+                    <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-3">
                       / Architecture Specs
                     </div>
                     <h3 className="font-display text-2xl mb-4 text-[#171717]">HARDWARE REVISION 1.7</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Median-of-5 Spike Rejection Filter</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Adaptive Exponential Moving Average</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Two-offset Tare & Zero point persistence</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>W5500 Ethernet + Fallback WiFi STA</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
                     <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Stability Bit</div>
-                    <div className="font-display text-xl text-[#0070f3]">HOLDING REG 0x0010</div>
+                    <div className="font-display text-xl text-[#15803d]">HOLDING REG 0x0010</div>
                     <p className="text-[11px] text-[#666666] mt-1">±20 g threshold held for 2.000 ms lock.</p>
                   </div>
                 </div>
@@ -1014,7 +1014,7 @@ export default function LandingPage() {
                       alt="Pallet QR Label Engine"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
-                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#3291ff] tracking-[0.2em]">
+                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#93c749] tracking-[0.2em]">
                       / 02
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
@@ -1032,7 +1032,7 @@ export default function LandingPage() {
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
                         AUTO-GENERATION
                       </span>
-                      <span className="font-mono-custom text-[10px] text-[#0070f3] tracking-wider font-semibold">
+                      <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
                         SPECS →
                       </span>
                     </div>
@@ -1040,34 +1040,34 @@ export default function LandingPage() {
                 </div>
 
                 {/* Back */}
-                <div className="flip-face flip-back border border-[#0070f3] bg-white p-6 flex flex-col justify-between shadow-md">
+                <div className="flip-face flip-back border border-[#229856] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
-                    <div className="font-mono-custom text-[10px] text-[#0070f3] tracking-[0.2em] uppercase mb-3">
+                    <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-3">
                       / Print Engine Specs
                     </div>
                     <h3 className="font-display text-2xl mb-4 text-[#171717]">DUAL OUTPUT MATRIX</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Struk Petani: 58 mm / 80 mm Thermal slip</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Pallet Label: 100×150 mm Weatherproof</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Zero Dialog Preview modal option</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>High-contrast visual fallback printer</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
                     <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Standard Prefix</div>
-                    <div className="font-display text-xl text-[#0070f3]">PLT-YYYYMMDD-XXXX</div>
+                    <div className="font-display text-xl text-[#15803d]">PLT-YYYYMMDD-XXXX</div>
                     <p className="text-[11px] text-[#666666] mt-1">Single atomic commit per weighing session.</p>
                   </div>
                 </div>
@@ -1088,7 +1088,7 @@ export default function LandingPage() {
                       alt="3-Channel Packaging Scale"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
-                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#3291ff] tracking-[0.2em]">
+                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#93c749] tracking-[0.2em]">
                       / 03
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
@@ -1106,7 +1106,7 @@ export default function LandingPage() {
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
                         1 KG POUCH SPEC
                       </span>
-                      <span className="font-mono-custom text-[10px] text-[#0070f3] tracking-wider font-semibold">
+                      <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
                         SPECS →
                       </span>
                     </div>
@@ -1114,34 +1114,34 @@ export default function LandingPage() {
                 </div>
 
                 {/* Back */}
-                <div className="flip-face flip-back border border-[#0070f3] bg-white p-6 flex flex-col justify-between shadow-md">
+                <div className="flip-face flip-back border border-[#229856] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
-                    <div className="font-mono-custom text-[10px] text-[#0070f3] tracking-[0.2em] uppercase mb-3">
+                    <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-3">
                       / Packaging Protocol
                     </div>
                     <h3 className="font-display text-2xl mb-4 text-[#171717]">CHANNEL ISOLATION</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Station A: IP .50 · Grade A Dedication</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Station B: IP .51 · Grade B Dedication</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Station C: IP .52 · Grade C Dedication</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Automatic port offset avoidance</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
                     <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Target Calibration</div>
-                    <div className="font-display text-xl text-[#0070f3]">1.000 KG ± 0.005 KG</div>
+                    <div className="font-display text-xl text-[#15803d]">1.000 KG ± 0.005 KG</div>
                     <p className="text-[11px] text-[#666666] mt-1">Live bar indicator locks upon stability window.</p>
                   </div>
                 </div>
@@ -1162,7 +1162,7 @@ export default function LandingPage() {
                       alt="Public Traceability Web Engine"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
-                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#3291ff] tracking-[0.2em]">
+                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#93c749] tracking-[0.2em]">
                       / 04
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
@@ -1180,7 +1180,7 @@ export default function LandingPage() {
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
                         ZERO-LOGIN SCAN
                       </span>
-                      <span className="font-mono-custom text-[10px] text-[#0070f3] tracking-wider font-semibold">
+                      <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
                         SPECS →
                       </span>
                     </div>
@@ -1188,34 +1188,34 @@ export default function LandingPage() {
                 </div>
 
                 {/* Back */}
-                <div className="flip-face flip-back border border-[#0070f3] bg-white p-6 flex flex-col justify-between shadow-md">
+                <div className="flip-face flip-back border border-[#229856] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
-                    <div className="font-mono-custom text-[10px] text-[#0070f3] tracking-[0.2em] uppercase mb-3">
+                    <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-3">
                       / Traceability Engine
                     </div>
                     <h3 className="font-display text-2xl mb-4 text-[#171717]">GS1 DIGITAL LINK</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Direct phone camera browser redirection</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Farmer profile, elevation, harvest date</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Grading batch certificate & QA approval</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#0070f3] shrink-0" />
+                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
                         <span>Cold-chain transit & delivery timeline</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
                     <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">URI Standard</div>
-                    <div className="font-display text-xl text-[#0070f3]">/01/GTIN/21/SERIAL</div>
+                    <div className="font-display text-xl text-[#15803d]">/01/GTIN/21/SERIAL</div>
                     <p className="text-[11px] text-[#666666] mt-1">Conforms to GS1 General Specifications Release 23.0.</p>
                   </div>
                 </div>
@@ -1230,13 +1230,13 @@ export default function LandingPage() {
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10 mb-14">
           <div className="grid lg:grid-cols-12 gap-8 items-end">
             <div className="lg:col-span-7">
-              <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#0070f3] tracking-[0.25em] uppercase mb-4">
-                <span className="w-8 h-[2px] bg-[#0070f3]"></span>
+              <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#15803d] tracking-[0.25em] uppercase mb-4">
+                <span className="w-8 h-[2px] bg-[#15803d]"></span>
                 <span>04 — Verified in the Field</span>
               </div>
               <h2 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9]">
                 Real harvests.<br />
-                <span className="text-[#0070f3]">Relentless</span> traceability.
+                <span className="text-[#15803d]">Relentless</span> traceability.
               </h2>
             </div>
             <div className="lg:col-span-5 flex flex-col justify-end">
@@ -1245,7 +1245,7 @@ export default function LandingPage() {
                 batches tracked from the field through the ENYX-Smart Hub ecosystem.
               </p>
               <div className="flex items-center gap-3 font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                <Icon name="scan" size={13} className="text-[#0070f3]" />
+                <Icon name="scan" size={13} className="text-[#15803d]" />
                 <span>Swipeable · Interactive Records · Active Batches</span>
               </div>
             </div>
@@ -1262,7 +1262,7 @@ export default function LandingPage() {
               {stories.map((story) => (
                 <article
                   key={story.caseId}
-                  className="w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] shrink-0 border border-[#eaeaea] bg-white shadow-xs hover:border-[#0070f3] transition-colors"
+                  className="w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] shrink-0 border border-[#eaeaea] bg-white shadow-xs hover:border-[#229856] transition-colors"
                 >
                   <div className="relative h-56 overflow-hidden bg-black">
                     <img
@@ -1270,10 +1270,10 @@ export default function LandingPage() {
                       alt={story.farmer}
                       className="w-full h-full object-cover filter contrast-[1.2] brightness-90"
                     />
-                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#3291ff] tracking-[0.2em]">
+                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#93c749] tracking-[0.2em]">
                       {story.caseId}
                     </div>
-                    <div className="absolute bottom-4 right-4 px-2.5 py-1 bg-[#0070f3] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
+                    <div className="absolute bottom-4 right-4 px-2.5 py-1 bg-[#15803d] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
                       {story.badge}
                     </div>
                   </div>
@@ -1292,7 +1292,7 @@ export default function LandingPage() {
 
                     <div className="grid grid-cols-3 gap-2 pt-4 border-t border-[#eaeaea]">
                       <div>
-                        <div className="font-display text-2xl text-[#0070f3]">{story.metric1.val}</div>
+                        <div className="font-display text-2xl text-[#15803d]">{story.metric1.val}</div>
                         <div className="font-mono-custom text-[9px] text-[#666666] tracking-wider uppercase">
                           {story.metric1.label}
                         </div>
@@ -1325,7 +1325,7 @@ export default function LandingPage() {
                   key={i}
                   onClick={() => setStoryIndex(i)}
                   className={`transition-all duration-300 rounded-full h-1 ${
-                    i === storyIndex ? 'w-8 bg-[#0070f3]' : 'w-2 bg-[#d1d5db]'
+                    i === storyIndex ? 'w-8 bg-[#15803d]' : 'w-2 bg-[#d1d5db]'
                   }`}
                   aria-label={`Go to case ${i + 1}`}
                 />
@@ -1336,14 +1336,14 @@ export default function LandingPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePrevStory}
-                className="w-10 h-10 border border-[#eaeaea] bg-white hover:border-[#0070f3] hover:text-[#0070f3] flex items-center justify-center transition-colors shadow-xs"
+                className="w-10 h-10 border border-[#eaeaea] bg-white hover:border-[#229856] hover:text-[#15803d] flex items-center justify-center transition-colors shadow-xs"
                 aria-label="Previous case"
               >
                 <Icon name="arrow-left" size={14} />
               </button>
               <button
                 onClick={handleNextStory}
-                className="w-10 h-10 border border-[#eaeaea] bg-white hover:border-[#0070f3] hover:text-[#0070f3] flex items-center justify-center transition-colors shadow-xs"
+                className="w-10 h-10 border border-[#eaeaea] bg-white hover:border-[#229856] hover:text-[#15803d] flex items-center justify-center transition-colors shadow-xs"
                 aria-label="Next case"
               >
                 <Icon name="arrow-right" size={14} />
@@ -1357,13 +1357,13 @@ export default function LandingPage() {
       <section className="py-24 lg:py-32 bg-[#fafafa] border-t border-[#eaeaea]" id="booking">
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10">
           <div className="mb-14">
-            <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#0070f3] tracking-[0.25em] uppercase mb-4">
-              <span className="w-8 h-[2px] bg-[#0070f3]"></span>
+            <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#15803d] tracking-[0.25em] uppercase mb-4">
+              <span className="w-8 h-[2px] bg-[#15803d]"></span>
               <span>05 — Begin the Deployment</span>
             </div>
             <h2 className="font-display text-6xl md:text-7xl lg:text-[7rem] leading-[0.9]">
               STOP GUESSING.<br />
-              <span className="text-stroke">START</span> <span className="text-[#0070f3]">TRACING.</span>
+              <span className="text-stroke">START</span> <span className="text-[#15803d]">TRACING.</span>
             </h2>
           </div>
 
@@ -1371,7 +1371,7 @@ export default function LandingPage() {
             {/* Form Frame */}
             <div className="lg:col-span-7">
               <div className="booking-frame p-8 lg:p-12 shadow-sm">
-                <div className="font-mono-custom text-[11px] text-[#0070f3] tracking-[0.2em] uppercase mb-2">
+                <div className="font-mono-custom text-[11px] text-[#15803d] tracking-[0.2em] uppercase mb-2">
                   // Packhouse Onboarding Request
                 </div>
                 <h3 className="font-display text-4xl mb-2 text-[#171717]">SCHEDULE A SMART HUB DEMO</h3>
@@ -1389,7 +1389,7 @@ export default function LandingPage() {
                         type="text"
                         required
                         placeholder="John Doe"
-                        className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#0070f3] transition-colors"
+                        className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#229856] transition-colors"
                       />
                     </div>
                     <div>
@@ -1400,7 +1400,7 @@ export default function LandingPage() {
                         type="tel"
                         required
                         placeholder="+62 812 3456 7890"
-                        className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#0070f3] transition-colors"
+                        className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#229856] transition-colors"
                       />
                     </div>
                   </div>
@@ -1413,7 +1413,7 @@ export default function LandingPage() {
                       type="email"
                       required
                       placeholder="packhouse@cooperative.id"
-                      className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#0070f3] transition-colors"
+                      className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#229856] transition-colors"
                     />
                   </div>
 
@@ -1435,7 +1435,7 @@ export default function LandingPage() {
                           onClick={() => setSelectedGoal(item.id)}
                           className={`px-3.5 py-1.5 font-heading text-xs uppercase tracking-wider border transition-all ${
                             selectedGoal === item.id
-                              ? 'bg-[#0070f3] border-[#0070f3] text-white font-semibold'
+                              ? 'bg-[#15803d] border-[#229856] text-white font-semibold'
                               : 'bg-white border-[#eaeaea] text-[#666666] hover:border-[#d1d5db]'
                           }`}
                         >
@@ -1462,7 +1462,7 @@ export default function LandingPage() {
                           onClick={() => setSelectedShift(shift.id)}
                           className={`cursor-pointer p-3 border text-center transition-all ${
                             selectedShift === shift.id
-                              ? 'bg-[#0070f3] border-[#0070f3] text-white'
+                              ? 'bg-[#15803d] border-[#229856] text-white'
                               : 'bg-white border-[#eaeaea] text-[#666666] hover:border-[#d1d5db]'
                           }`}
                         >
@@ -1491,7 +1491,7 @@ export default function LandingPage() {
             {/* Info Panel */}
             <div className="lg:col-span-5 space-y-6">
               <div className="border border-[#eaeaea] bg-white p-7 shadow-xs">
-                <div className="font-mono-custom text-[10px] text-[#0070f3] tracking-[0.2em] uppercase mb-2">
+                <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-2">
                   / Hub Locations
                 </div>
                 <h4 className="font-display text-2xl mb-2 text-[#171717]">CENTRAL PACKHOUSE PILOT</h4>
@@ -1499,14 +1499,14 @@ export default function LandingPage() {
                   Pangalengan Agricultural Complex<br />
                   Bandung Regency, West Java 40378
                 </p>
-                <div className="flex items-center gap-2 font-mono-custom text-[11px] text-[#0070f3]">
+                <div className="flex items-center gap-2 font-mono-custom text-[11px] text-[#15803d]">
                   <Icon name="location" size={13} />
                   <span>ELEVATION: 1,420M ASL · FIBER CONNECTED</span>
                 </div>
               </div>
 
               <div className="border border-[#eaeaea] bg-white p-7 shadow-xs">
-                <div className="font-mono-custom text-[10px] text-[#0070f3] tracking-[0.2em] uppercase mb-2">
+                <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-2">
                   / Operating Schedule
                 </div>
                 <h4 className="font-display text-2xl mb-3 text-[#171717]">ACTIVE INTAKE WINDOWS</h4>
@@ -1527,23 +1527,23 @@ export default function LandingPage() {
               </div>
 
               <div className="border border-[#eaeaea] bg-white p-7 shadow-xs">
-                <div className="font-mono-custom text-[10px] text-[#0070f3] tracking-[0.2em] uppercase mb-2">
+                <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-2">
                   / Direct Engineer Contact
                 </div>
                 <h4 className="font-display text-2xl mb-3 text-[#171717]">TECHNICAL SUPPORT</h4>
                 <div className="space-y-2.5 text-sm font-body">
                   <a
                     href="tel:+62215550100"
-                    className="flex items-center gap-3 hover:text-[#0070f3] transition-colors text-[#525252]"
+                    className="flex items-center gap-3 hover:text-[#15803d] transition-colors text-[#525252]"
                   >
-                    <Icon name="phone" size={14} className="text-[#0070f3]" />
+                    <Icon name="phone" size={14} className="text-[#15803d]" />
                     <span className="font-mono-custom">+62 (21) 555-0100 (Packhouse Ops)</span>
                   </a>
                   <a
                     href="mailto:support@enyx.local"
-                    className="flex items-center gap-3 hover:text-[#0070f3] transition-colors text-[#525252]"
+                    className="flex items-center gap-3 hover:text-[#15803d] transition-colors text-[#525252]"
                   >
-                    <Icon name="send" size={14} className="text-[#0070f3]" />
+                    <Icon name="send" size={14} className="text-[#15803d]" />
                     <span className="font-mono-custom">engineering@enyx.local</span>
                   </a>
                 </div>
@@ -1592,7 +1592,7 @@ export default function LandingPage() {
             </div>
 
             <div className="md:col-span-2">
-              <h5 className="font-mono-custom text-[11px] text-[#0070f3] tracking-[0.2em] uppercase mb-4 font-semibold">
+              <h5 className="font-mono-custom text-[11px] text-[#15803d] tracking-[0.2em] uppercase mb-4 font-semibold">
                 Workstations
               </h5>
               <ul className="space-y-2 text-sm font-heading tracking-wider uppercase text-[#666666]">
@@ -1620,7 +1620,7 @@ export default function LandingPage() {
             </div>
 
             <div className="md:col-span-2">
-              <h5 className="font-mono-custom text-[11px] text-[#0070f3] tracking-[0.2em] uppercase mb-4 font-semibold">
+              <h5 className="font-mono-custom text-[11px] text-[#15803d] tracking-[0.2em] uppercase mb-4 font-semibold">
                 Traceability
               </h5>
               <ul className="space-y-2 text-sm font-heading tracking-wider uppercase text-[#666666]">
@@ -1648,7 +1648,7 @@ export default function LandingPage() {
             </div>
 
             <div className="md:col-span-3">
-              <h5 className="font-mono-custom text-[11px] text-[#0070f3] tracking-[0.2em] uppercase mb-4 font-semibold">
+              <h5 className="font-mono-custom text-[11px] text-[#15803d] tracking-[0.2em] uppercase mb-4 font-semibold">
                 System Updates
               </h5>
               <p className="text-[#666666] text-xs mb-3 font-body">
@@ -1664,7 +1664,7 @@ export default function LandingPage() {
                   setToastVisible(true)
                   setTimeout(() => setToastVisible(false), 4000)
                 }}
-                className="flex border border-[#eaeaea] bg-white focus-within:border-[#0070f3] transition-colors"
+                className="flex border border-[#eaeaea] bg-white focus-within:border-[#229856] transition-colors"
               >
                 <input
                   type="email"
@@ -1686,13 +1686,13 @@ export default function LandingPage() {
           <div className="border-t border-[#eaeaea] pt-6 flex flex-col md:flex-row justify-between gap-4 text-[#666666] font-mono-custom text-[11px] tracking-wider uppercase">
             <div>© {new Date().getFullYear()} ENYX ENTERPRISE · TRACEABILITY SYSTEM</div>
             <div className="flex gap-6">
-              <Link to="/traceability" className="hover:text-[#0070f3] transition-colors">
+              <Link to="/traceability" className="hover:text-[#15803d] transition-colors">
                 Public Trace
               </Link>
-              <Link to="/login" className="hover:text-[#0070f3] transition-colors">
+              <Link to="/login" className="hover:text-[#15803d] transition-colors">
                 Sign In
               </Link>
-              <a href="#hero" className="hover:text-[#0070f3] transition-colors">
+              <a href="#hero" className="hover:text-[#15803d] transition-colors">
                 Back to Top ↑
               </a>
             </div>
@@ -1702,14 +1702,14 @@ export default function LandingPage() {
 
       {/* ── STICKY CTA BAR ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-500 bg-white/95 backdrop-blur-md border-t border-[#0070f3]/40 shadow-lg ${
+        className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-500 bg-white/95 backdrop-blur-md border-t border-[#229856]/40 shadow-lg ${
           stickyVisible ? 'translate-y-0' : 'translate-y-[110%]'
         }`}
       >
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10 py-3.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 font-mono-custom text-[11px] text-[#0070f3] tracking-wider font-semibold">
-              <span className="w-2 h-2 rounded-full bg-[#0070f3] animate-ping"></span>
+            <div className="hidden sm:flex items-center gap-2 font-mono-custom text-[11px] text-[#15803d] tracking-wider font-semibold">
+              <span className="w-2 h-2 rounded-full bg-[#15803d] animate-ping"></span>
               <span>LIVE PACKHOUSE TELEMETRY</span>
             </div>
             <div>
@@ -1724,7 +1724,7 @@ export default function LandingPage() {
 
           <a
             href="#booking"
-            className="pulse-btn bg-[#0070f3] text-white px-6 py-2.5 font-heading text-xs uppercase tracking-[0.18em] hover:bg-[#3291ff] transition-colors flex items-center gap-2 rounded-sm shrink-0 font-semibold"
+            className="pulse-btn bg-[#15803d] text-white px-6 py-2.5 font-heading text-xs uppercase tracking-[0.18em] hover:bg-[#16a34a] transition-colors flex items-center gap-2 rounded-sm shrink-0 font-semibold"
           >
             <span>Deploy System</span>
             <Icon name="arrow-right" size={14} />
@@ -1734,13 +1734,13 @@ export default function LandingPage() {
 
       {/* ── SLIDE-IN TOAST NOTIFICATION ── */}
       <div
-        className={`fixed top-20 right-6 z-[160] transition-transform duration-500 bg-white border border-[#0070f3] border-l-4 border-l-[#0070f3] p-4 shadow-xl max-w-sm ${
+        className={`fixed top-20 right-6 z-[160] transition-transform duration-500 bg-white border border-[#229856] border-l-4 border-l-[#229856] p-4 shadow-xl max-w-sm ${
           toastVisible ? 'translate-x-0' : 'translate-x-[120%]'
         }`}
         role="alert"
       >
         <div className="flex items-start gap-3">
-          <div className="w-7 h-7 bg-[#0070f3] text-white flex items-center justify-center shrink-0 rounded-sm">
+          <div className="w-7 h-7 bg-[#15803d] text-white flex items-center justify-center shrink-0 rounded-sm">
             <Icon name="check" size={14} />
           </div>
           <div>

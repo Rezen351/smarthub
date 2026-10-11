@@ -22,7 +22,7 @@
     --muted: #f5f5f5;
     --muted-foreground: #666666;
 
-    --accent: #0070f3;
+    --accent: #15803d;
     --accent-foreground: #ffffff;
 
     --destructive: #ee0000;
@@ -30,20 +30,22 @@
 
     --border: #eaeaea;
     --input: #d4d4d4;
-    --ring: #0070f3;
+    --ring: #229856;
 
     --radius: 0.5rem;
 
-    /* Design System Tokens (docs/laporan.pdf §9.2) */
+    /* Design System Tokens (Harmonized with Logo: #0E5030, #229856, #93C749) */
     --color-primary: #000000;
     --color-primary-hover: #333333;
     --color-primary-active: #000000;
     --color-on-primary: #ffffff;
 
-    --color-accent: #0070f3;
-    --color-accent-hover: #0051a8;
-    --color-accent-soft: #eff6ff;
-    --color-accent-border: #bfdbfe;
+    --color-accent: #15803d;
+    --color-accent-hover: #0e5030;
+    --color-accent-soft: #f0fdf4;
+    --color-accent-border: #bbf7d0;
+    --color-accent-bright: #229856;
+    --color-accent-lime: #93c749;
 
     --color-danger: #ee0000;
     --color-danger-hover: #cc0000;
@@ -218,8 +220,15 @@
     transition: background var(--transition-fast), color var(--transition-fast);
   }
   .sidebar-link:hover { background: var(--color-surface-2); color: var(--color-text); }
-  .sidebar-link.is-active { background: var(--color-primary); color: #fff; }
+  .sidebar-link.is-active {
+    background: var(--color-accent-soft);
+    color: #0E5030;
+    border-left: 3px solid #229856;
+    padding-left: 9px;
+    font-weight: 600;
+  }
   .sidebar-link-icon { display: flex; align-items: center; flex-shrink: 0; opacity: 0.85; }
+  .sidebar-link.is-active .sidebar-link-icon { color: #229856; opacity: 1; }
   .sidebar-overlay { position: fixed; inset: 0; background: var(--color-overlay); z-index: 65; animation: fadeIn 0.16s ease; }
 
   .app-shell { min-height: 100vh; min-height: 100dvh; display: flex; background: var(--color-background); }

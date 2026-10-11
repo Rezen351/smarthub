@@ -448,7 +448,7 @@ export default function PublicTraceabilityPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa] text-[#171717] font-['Archivo',sans-serif] selection:bg-[#eff6ff] selection:text-[#0070f3] flex flex-col">
+    <div className="min-h-screen bg-[#fafafa] text-[#171717] font-['Archivo',sans-serif] selection:bg-[#f0fdf4] selection:text-[#15803d] flex flex-col">
       {/* ── Top Header Bar ── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#eaeaea]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -512,7 +512,7 @@ export default function PublicTraceabilityPage() {
                   value={queryCode}
                   onChange={(e) => setQueryCode(e.target.value)}
                   placeholder="e.g. PCH-PLT-20260914-0001-001 or PLT-20261011-0042"
-                  className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-lg px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#0070f3] focus:ring-2 focus:ring-[#0070f3]/20 transition-all"
+                  className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-lg px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#229856] focus:ring-2 focus:ring-[#229856]/20 transition-all"
                 />
                 {queryCode && (
                   <button
@@ -556,7 +556,7 @@ export default function PublicTraceabilityPage() {
             <button
               type="button"
               onClick={() => handleSimulateScan('PCH-PLT-20260914-0001-001')}
-              className="text-xs font-mono bg-[#eff6ff] text-[#0070f3] hover:bg-[#dbeafe] border border-[#bfdbfe] px-2.5 py-1 rounded-md transition-colors"
+              className="text-xs font-mono bg-[#f0fdf4] text-[#15803d] hover:bg-[#dcfce7] border border-[#bbf7d0] px-2.5 py-1 rounded-md transition-colors"
             >
               Pouch 1 kg Grade A
             </button>
@@ -583,7 +583,7 @@ export default function PublicTraceabilityPage() {
             <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-[#eaeaea]">
               <div className="p-4 border-b border-[#eaeaea] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Icon name="scan" size={18} className="text-[#0070f3]" />
+                  <Icon name="scan" size={18} className="text-[#229856]" />
                   <span className="font-semibold text-sm text-[#171717]">Live QR Code Scanner</span>
                 </div>
                 <button
@@ -609,13 +609,13 @@ export default function PublicTraceabilityPage() {
                       autoPlay
                     />
                     {/* Viewfinder Reticle & Laser */}
-                    <div className="absolute inset-8 border-2 border-[#0070f3] rounded-lg pointer-events-none">
-                      <div className="w-full h-0.5 bg-[#0070f3] shadow-[0_0_8px_#0070f3] animate-bounce" />
+                    <div className="absolute inset-8 border-2 border-[#229856] rounded-lg pointer-events-none">
+                      <div className="w-full h-0.5 bg-[#229856] shadow-[0_0_8px_#229856] animate-bounce" />
                     </div>
                   </div>
                 ) : (
                   <div className="bg-[#fafafa] border border-dashed border-[#d1d5db] rounded-xl p-6 text-center space-y-3">
-                    <div className="w-12 h-12 rounded-full bg-[#eff6ff] text-[#0070f3] flex items-center justify-center mx-auto">
+                    <div className="w-12 h-12 rounded-full bg-[#f0fdf4] text-[#15803d] flex items-center justify-center mx-auto">
                       <Icon name="scan" size={24} />
                     </div>
                     <div className="space-y-1">
@@ -716,7 +716,7 @@ export default function PublicTraceabilityPage() {
                     {result.code}
                   </h2>
                   <p className="text-xs text-[#666666] font-mono mt-1">
-                    GS1 Digital Link URI: <a href={result.gs1Uri} target="_blank" rel="noreferrer" className="text-[#0070f3] hover:underline">{result.gs1Uri}</a>
+                    GS1 Digital Link URI: <a href={result.gs1Uri} target="_blank" rel="noreferrer" className="text-[#15803d] hover:underline">{result.gs1Uri}</a>
                   </p>
                 </div>
 
@@ -826,7 +826,7 @@ export default function PublicTraceabilityPage() {
                     <div
                       className={`absolute -left-[31px] sm:-left-[39px] top-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                         step.completed
-                          ? 'bg-[#0070f3] text-white shadow-[0_0_0_4px_#eff6ff]'
+                          ? 'bg-[#15803d] text-white shadow-[0_0_0_4px_#f0fdf4]'
                           : 'bg-[#e5e7eb] text-[#9ca3af]'
                       }`}
                     >
@@ -841,7 +841,7 @@ export default function PublicTraceabilityPage() {
                         </span>
                       </div>
 
-                      <p className="text-xs font-medium text-[#0070f3]">
+                      <p className="text-xs font-medium text-[#15803d]">
                         {step.location} · <span className="text-[#666666]">{step.operator}</span>
                       </p>
 
@@ -897,7 +897,7 @@ export default function PublicTraceabilityPage() {
             </span>
             <span>Traceability System v1.0.0</span>
           </div>
-          <Link to="/" className="text-[#0070f3] hover:underline font-medium">
+          <Link to="/" className="text-[#15803d] hover:underline font-medium">
             Smart Hub Overview
           </Link>
         </div>

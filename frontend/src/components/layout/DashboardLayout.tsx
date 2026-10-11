@@ -182,6 +182,12 @@ export default function DashboardLayout() {
             </div>
           </Link>
         </div>
+        <div className="px-3 pt-2 pb-1">
+          <div className="flex items-center gap-2 font-mono text-[10px] text-emerald-900 bg-emerald-50/80 border border-emerald-200/80 px-2.5 py-1 rounded">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#229856] animate-pulse"></span>
+            <span className="tracking-wider">MODBUS TELEMETRY · ACTIVE</span>
+          </div>
+        </div>
         {navLinks}
         {userCard}
       </aside>
