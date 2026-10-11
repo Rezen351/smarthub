@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
-import Icon from '../components/shared/Icon'
 import { Field, Input } from '../components/shared/Form'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
@@ -199,14 +198,6 @@ export default function SettingsPage() {
           </Button>
         </div>
       </form>
-
-      {/* Info Banner */}
-      <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-start gap-3 text-xs text-foreground">
-        <Icon name="info" size={18} className="text-primary shrink-0 mt-0.5" />
-        <div className="leading-relaxed text-muted-foreground">
-          <strong className="font-semibold text-primary">Modbus TCP Polling:</strong> The backend system continuously polls the weight transmitter at IP <code className="font-mono text-foreground font-semibold">{form.transmitterIp}:{form.modbusPort}</code> (Register {form.weightRegister}) and updates live scale readings across all active intake sessions.
-        </div>
-      </div>
     </div>
   )
 }

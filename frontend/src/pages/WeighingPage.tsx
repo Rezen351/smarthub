@@ -560,7 +560,7 @@ export default function WeighingPage() {
               disabled={!(Number(weightKg) > 0)}
               onClick={handleProceedToApproval}
             >
-              Proceed to Approval & Print →
+              Approve & Print →
             </Button>
           </div>
         </div>
@@ -770,7 +770,7 @@ export default function WeighingPage() {
                       triggerPrintBoth()
                     }}
                   >
-                    Approve & Print All (Receipt + Label)
+                    Approve & Print All
                   </Button>
                 </div>
               </>
@@ -785,7 +785,7 @@ export default function WeighingPage() {
                   </Button>
                 </div>
                 <Button variant="primary" icon="check" touch onClick={handleNextWeighing}>
-                  Next Weighing ⏎
+                  Next Weighing
                 </Button>
               </>
             )}
@@ -807,7 +807,7 @@ export default function WeighingPage() {
               <Logo className="h-6 w-auto" markOnly />
               <div>
                 <span className="font-semibold text-sm block leading-none text-foreground">Receiving Intake Station</span>
-                <span className="text-[10px] text-muted-foreground font-mono">Focus Mode · Distraction Free</span>
+                <span className="text-[10px] text-muted-foreground font-mono">Focus Mode</span>
               </div>
             </div>
 
@@ -857,7 +857,7 @@ export default function WeighingPage() {
                 {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
               </Button>
               <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode}>
-                Exit Focus (Esc)
+                Exit Focus
               </Button>
             </div>
           </header>
@@ -874,11 +874,11 @@ export default function WeighingPage() {
       <div className="space-y-6">
         <PageHeader
           title="Weighing Station"
-          subtitle="Receiving area — identify farmer, weigh harvest intake (pure weighing), approve to generate pallet and print label."
+          subtitle="Receiving intake station — farmer verification, harvest weighing, pallet labeling."
           actions={
             <div className="flex items-center gap-2">
               <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
-                Focus Mode (Full Screen)
+                Focus Mode
               </Button>
               <Button
                 variant="outline"
@@ -886,7 +886,7 @@ export default function WeighingPage() {
                 icon="history"
                 onClick={() => document.getElementById('weighing-records')?.scrollIntoView({ behavior: 'smooth' })}
               >
-                Today's records ({records.length})
+                Records ({records.length})
               </Button>
             </div>
           }
@@ -926,7 +926,7 @@ export default function WeighingPage() {
               <Badge tone="accent">Step {activeStep} of 3</Badge>
             </div>
             <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-              Open in Focus Mode (Full Screen)
+              Open Focus Mode
             </Button>
           </div>
 

@@ -59,6 +59,7 @@
 | 2026-10-11 | Removed "Select Registered Farmer" button grid from WeighingPage | ✅ | Removed redundant farmer card selection grid from Step 1 in `WeighingPage.tsx`; enhanced search input handler to verify any typed/scanned farmer name or ID directly; build & typecheck verified SUCCESS. |
 | 2026-10-11 | Removed Automated Lifecycle Alert banner from PalletsPage | ✅ | Removed the `"There is no manual 'Create Pallet' step..."` informational alert banner from `PalletsPage.tsx`; cleaned up unused imports; build & typecheck verified SUCCESS. |
 | 2026-10-11 | Streamlined SettingsPage for Modbus TCP Weight Transmitter configuration | ✅ | Refactored `SettingsPage.tsx` to focus strictly on Modbus TCP weight transmitter parameters (Transmitter IP Address, Modbus Port, Slave ID, Weight & Status Register Addresses) and Scale Parameters; removed unrelated general network/WiFi controls; build & typecheck verified SUCCESS. |
+| 2026-10-11 | Concise & Objective UI text refactor and AGENTS.md rule update | ✅ | Updated `AGENTS.md` §6.1 to enforce concise & objective UI text without fluff or internal reasoning; simplified button labels across `WeighingPage.tsx` (`"Focus Mode"`, `"Open Focus Mode"`, `"Exit Focus"`, `"Records"`); removed verbose Modbus TCP polling explanation box from `SettingsPage.tsx`; build & typecheck verified SUCCESS. |
 
 ## Technical Decisions
 | Date | Decision | Rationale | Impact |
