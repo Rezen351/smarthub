@@ -156,10 +156,10 @@ export default function DashboardLayout() {
       </Link>
       <div className="pt-2 border-t border-border flex flex-col gap-0.5 text-text-light font-mono text-[11px]">
         <div className="flex items-center justify-between">
-          <span className="font-semibold text-text">ENYX-SMART HUB</span>
-          <span className="bg-bg-alt px-1.5 py-0.5 rounded-none text-[9px] font-mono tracking-wider">ENTERPRISE</span>
+          <span className="font-semibold text-text">ENYX-ENTERPRISE</span>
+          <span className="bg-bg-alt px-1.5 py-0.5 rounded-none text-[9px] font-mono tracking-wider">SMART HUB</span>
         </div>
-        <span className="text-[10px]">Traceability Enterprise v1.0.0</span>
+        <span className="text-[10px]">Traceability Smart Hub v1.0.0</span>
       </div>
     </div>
   )
@@ -173,15 +173,15 @@ export default function DashboardLayout() {
             to="/dashboard"
             className="flex items-center gap-3 text-inherit group"
             style={{ textDecoration: 'none' }}
-            aria-label="ENYX-SMART HUB home"
+            aria-label="ENYX-ENTERPRISE home"
           >
             <Logo className="h-8 w-auto" markOnly />
             <div>
               <div className="font-display text-xl leading-none tracking-wider text-text flex items-center gap-1.5">
-                ENYX-SMART HUB
+                ENYX-ENTERPRISE
               </div>
               <div className="font-mono-custom text-[9px] text-text-light tracking-[0.22em] uppercase mt-0.5">
-                TRACEABILITY · ENTERPRISE
+                TRACEABILITY · SMART HUB
               </div>
             </div>
           </Link>
@@ -217,15 +217,15 @@ export default function DashboardLayout() {
             to="/dashboard"
             className="hide-desktop flex items-center gap-2.5 text-inherit group"
             style={{ textDecoration: 'none' }}
-            aria-label="ENYX-SMART HUB home"
+            aria-label="ENYX-ENTERPRISE home"
           >
             <Logo className="h-7 w-auto" markOnly />
             <div>
               <div className="font-display text-base leading-none tracking-wider text-text">
-                ENYX-SMART HUB
+                ENYX-ENTERPRISE
               </div>
               <div className="font-mono-custom text-[8px] text-text-light tracking-[0.2em] uppercase">
-                TRACEABILITY · ENTERPRISE
+                TRACEABILITY · SMART HUB
               </div>
             </div>
           </Link>

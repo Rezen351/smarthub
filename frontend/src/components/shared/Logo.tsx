@@ -15,7 +15,7 @@ export default function Logo({ className = 'h-8 w-auto', markOnly = false }: Log
   return (
     <img
       src={src}
-      alt="ENYX-Smart Hub"
+      alt="ENYX-ENTERPRISE"
       className={`${className} object-contain shrink-0`}
     />
   )

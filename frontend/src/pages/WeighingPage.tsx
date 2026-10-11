@@ -762,7 +762,7 @@ export default function WeighingPage() {
               <Logo className="h-7 w-auto" markOnly />
               <div>
                 <div className="font-display text-lg leading-none tracking-wider text-foreground">
-                  ENYX-SMART HUB
+                  ENYX-ENTERPRISE
                 </div>
                 <div className="font-mono text-[9px] text-muted-foreground tracking-[0.2em] uppercase mt-0.5">
                   RECEIVING INTAKE · FOCUS MODE

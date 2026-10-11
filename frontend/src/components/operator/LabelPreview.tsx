@@ -90,7 +90,7 @@ export default function LabelPreview({
       >
         <div className="text-center pb-2 border-b border-dashed border-gray-400">
           <span className="text-[11px] font-bold tracking-wider uppercase block text-gray-800">
-            ENYX-SMART HUB · RECEIVING INTAKE SLIP
+            ENYX-ENTERPRISE · RECEIVING INTAKE SLIP
           </span>
           <span className="text-[10px] text-gray-500 block">OFFICIAL WEIGHING RECEIPT</span>
           <span className="text-xs font-semibold text-gray-700 block mt-1">
@@ -136,7 +136,7 @@ export default function LabelPreview({
         <div className="flex items-center justify-between pb-2 border-b border-gray-300">
           <div>
             <span className="text-[10px] uppercase tracking-wider font-bold block text-gray-600">
-              ENYX-SMART HUB · INTAKE PALLET
+              ENYX-ENTERPRISE · INTAKE PALLET
             </span>
             <span className="text-base font-bold tracking-tight block text-gray-900 mt-0.5">
               {code || 'PLT-PENDING'}
@@ -180,7 +180,7 @@ export default function LabelPreview({
         <div className="flex items-center justify-between pb-2 border-b border-gray-300">
           <div>
             <span className="text-[10px] uppercase tracking-wider font-bold block text-gray-600">
-              ENYX-SMART HUB · SORTED PALLET
+              ENYX-ENTERPRISE · SORTED PALLET
             </span>
             <span className="text-base font-bold tracking-tight block text-gray-900 mt-0.5">
               {code}
@@ -226,7 +226,7 @@ export default function LabelPreview({
       <div className="flex items-center justify-between pb-2 border-b border-gray-300">
         <div>
           <span className="text-[10px] uppercase tracking-wider font-bold block text-gray-600">
-            ENYX-SMART HUB · 1 KG POUCH
+            ENYX-ENTERPRISE · 1 KG POUCH
           </span>
           <span className="text-xs font-bold text-gray-900 block mt-0.5">{commodity}</span>
         </div>
