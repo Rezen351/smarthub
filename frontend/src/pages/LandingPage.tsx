@@ -1573,7 +1573,7 @@ export default function LandingPage() {
                     ENYX-SMART HUB
                   </div>
                   <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
-                    POTATO TRACEABILITY SYSTEM
+                    TRACEABILITY · ENTERPRISE
                   </div>
                 </div>
               </div>
@@ -1684,7 +1684,7 @@ export default function LandingPage() {
           </div>
 
           <div className="border-t border-[#eaeaea] pt-6 flex flex-col md:flex-row justify-between gap-4 text-[#666666] font-mono-custom text-[11px] tracking-wider uppercase">
-            <div>© {new Date().getFullYear()} ENYX ENTERPRISE · TRACEABILITY SYSTEM</div>
+            <div>© {new Date().getFullYear()} ENYX-SMART HUB · TRACEABILITY ENTERPRISE</div>
             <div className="flex gap-6">
               <Link to="/traceability" className="hover:text-[#15803d] transition-colors">
                 Public Trace

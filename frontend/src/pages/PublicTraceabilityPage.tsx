@@ -452,15 +452,15 @@ export default function PublicTraceabilityPage() {
       {/* ── Top Header Bar ── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#eaeaea]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/" className="flex items-center gap-3 group" aria-label="ENYX-SMART HUB home">
             <Logo className="h-8 w-auto" markOnly />
-            <div className="flex flex-col">
-              <span className="font-semibold text-base tracking-tight leading-tight text-[#171717]">
-                Traceability System
-              </span>
-              <span className="text-[11px] text-[#666666] leading-none font-mono">
-                ENYX Enterprise
-              </span>
+            <div>
+              <div className="font-display text-2xl leading-none tracking-wider text-[#171717] flex items-center gap-2">
+                ENYX-SMART HUB
+              </div>
+              <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
+                TRACEABILITY · ENTERPRISE
+              </div>
             </div>
           </Link>
 
@@ -890,12 +890,12 @@ export default function PublicTraceabilityPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-[#eaeaea] bg-white py-6 text-xs text-[#666666] mt-auto">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} ENYX Enterprise. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} ENYX-SMART HUB. All rights reserved.</p>
           <div className="flex items-center gap-3">
-            <span className="bg-[#f5f5f5] px-2 py-0.5 rounded font-mono border border-[#eaeaea]">
+            <span className="bg-[#f5f5f5] px-2 py-0.5 rounded-none font-mono border border-[#eaeaea]">
               Type: enyx-enterprise
             </span>
-            <span>Traceability System v1.0.0</span>
+            <span>Traceability Enterprise v1.0.0</span>
           </div>
           <Link to="/" className="text-[#15803d] hover:underline font-medium">
             Smart Hub Overview

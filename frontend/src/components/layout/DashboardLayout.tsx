@@ -156,10 +156,10 @@ export default function DashboardLayout() {
       </Link>
       <div className="pt-2 border-t border-border flex flex-col gap-0.5 text-text-light font-mono text-[11px]">
         <div className="flex items-center justify-between">
-          <span>ENYX Enterprise</span>
-          <span className="bg-bg-alt px-1.5 py-0.5 rounded text-[10px]">enyx-enterprise</span>
+          <span className="font-semibold text-text">ENYX-SMART HUB</span>
+          <span className="bg-bg-alt px-1.5 py-0.5 rounded-none text-[9px] font-mono tracking-wider">ENTERPRISE</span>
         </div>
-        <span className="text-[10px]">Traceability System v1.0.0</span>
+        <span className="text-[10px]">Traceability Enterprise v1.0.0</span>
       </div>
     </div>
   )
@@ -171,19 +171,23 @@ export default function DashboardLayout() {
         <div className="sidebar-brand">
           <Link
             to="/dashboard"
-            className="flex items-center gap-2.5 text-inherit"
+            className="flex items-center gap-3 text-inherit group"
             style={{ textDecoration: 'none' }}
-            aria-label="ENYX Traceability System home"
+            aria-label="ENYX-SMART HUB home"
           >
-            <Logo className="h-7 w-auto" markOnly />
-            <div className="min-w-0">
-              <span className="font-semibold text-sm tracking-tight block leading-tight text-text">Traceability System</span>
-              <span className="text-[11px] text-text-light block leading-none mt-0.5 font-mono">ENYX Enterprise</span>
+            <Logo className="h-8 w-auto" markOnly />
+            <div>
+              <div className="font-display text-xl leading-none tracking-wider text-text flex items-center gap-1.5">
+                ENYX-SMART HUB
+              </div>
+              <div className="font-mono-custom text-[9px] text-text-light tracking-[0.22em] uppercase mt-0.5">
+                TRACEABILITY · ENTERPRISE
+              </div>
             </div>
           </Link>
         </div>
         <div className="px-3 pt-2 pb-1">
-          <div className="flex items-center gap-2 font-mono text-[10px] text-emerald-900 bg-emerald-50/80 border border-emerald-200/80 px-2.5 py-1 rounded">
+          <div className="flex items-center gap-2 font-mono text-[10px] text-emerald-900 bg-emerald-50/80 border border-emerald-200/80 px-2.5 py-1 rounded-none">
             <span className="w-1.5 h-1.5 rounded-full bg-[#229856] animate-pulse"></span>
             <span className="tracking-wider">MODBUS TELEMETRY · ACTIVE</span>
           </div>
@@ -211,14 +215,18 @@ export default function DashboardLayout() {
           {/* On mobile: show product brand in navbar because sidebar is off-canvas */}
           <Link
             to="/dashboard"
-            className="hide-desktop flex items-center gap-2 text-inherit"
+            className="hide-desktop flex items-center gap-2.5 text-inherit group"
             style={{ textDecoration: 'none' }}
-            aria-label="ENYX Traceability System home"
+            aria-label="ENYX-SMART HUB home"
           >
-            <Logo className="h-6 w-auto" markOnly />
-            <div className="flex flex-col">
-              <span className="font-semibold text-xs tracking-tight leading-tight text-text">Traceability System</span>
-              <span className="text-[9px] text-text-light leading-none font-mono">ENYX Enterprise</span>
+            <Logo className="h-7 w-auto" markOnly />
+            <div>
+              <div className="font-display text-base leading-none tracking-wider text-text">
+                ENYX-SMART HUB
+              </div>
+              <div className="font-mono-custom text-[8px] text-text-light tracking-[0.2em] uppercase">
+                TRACEABILITY · ENTERPRISE
+              </div>
             </div>
           </Link>
 

@@ -319,10 +319,14 @@ export default function GradingPage() {
         <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto" role="dialog" aria-modal="true" aria-label="Sorting Focus Mode">
           <header className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
             <div className="flex items-center gap-3">
-              <Logo className="h-6 w-auto" markOnly />
+              <Logo className="h-7 w-auto" markOnly />
               <div>
-                <span className="font-semibold text-sm block leading-none text-foreground">Sorting Station</span>
-                <span className="text-[10px] text-muted-foreground font-mono">Focus Mode</span>
+                <div className="font-display text-lg leading-none tracking-wider text-foreground">
+                  ENYX-SMART HUB
+                </div>
+                <div className="font-mono text-[9px] text-muted-foreground tracking-[0.2em] uppercase mt-0.5">
+                  SORTING STATION · FOCUS MODE
+                </div>
               </div>
             </div>
 
