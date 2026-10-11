@@ -9,6 +9,7 @@
 ## Recent Activities
 | Date | Activity | Status | Notes |
 |------|----------|--------|-------|
+| 2026-10-11 | Brand subtitle harmonization to `TRACEABILITY SYSTEM` | ✅ | Updated header subtitle and document title across all pages and layouts (LandingPage, DashboardLayout desktop & mobile, LoginPage, PublicTraceabilityPage, index.html) to `TRACEABILITY SYSTEM` under the primary title `ENYX-ENTERPRISE`. Production build verified clean. |
 | 2026-10-11 | Header logo & title brand unification to `ENYX-ENTERPRISE` (`TRACEABILITY · SMART HUB`) | ✅ | Replaced header titles across all pages and layouts (DashboardLayout desktop sidebar & mobile navbar, LandingPage, LoginPage, PublicTraceabilityPage, focus kiosk headers, labels in LabelPreview, and document title in index.html) with `ENYX-ENTERPRISE` and `TRACEABILITY · SMART HUB`. Production build verified clean. |
 | 2026-10-11 | Brutalist industrial styling & non-rounded card harmonization across all operational pages | ✅ | Aligned full operational suite (Weighing, Sorting, Packaging, Warehouse, Pallets, Traceability, Deliveries, Settings, Farmer, Driver) with Landing Page brutalist visual identity: enforced 0px radius (`rounded-none`), unified brand color harmony (#0E5030, #229856, #93C749), industrial typography, and clean borders without altering any workflows or business logic. Production build verified clean. |
 | 2026-09-14 | Architecture definition & documentation | ✅ | Defined modular monolith architecture, tech stack, and 8-module structure |

@@ -127,7 +127,7 @@ export default function LoginPage() {
                 ENYX-ENTERPRISE
               </div>
               <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
-                TRACEABILITY · SMART HUB
+                TRACEABILITY SYSTEM
               </div>
             </div>
           </Link>
@@ -284,7 +284,7 @@ export default function LoginPage() {
             <span className="bg-[#f5f5f5] px-2 py-0.5 border border-[#eaeaea] text-[#171717]">
               Type: enyx-enterprise
             </span>
-            <span>Traceability Smart Hub v1.0.0</span>
+            <span>Traceability System v1.0.0</span>
           </div>
           <Link to="/traceability" className="text-[#15803d] hover:underline font-medium">
             Public Traceability Portal →

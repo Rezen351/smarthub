@@ -157,9 +157,9 @@ export default function DashboardLayout() {
       <div className="pt-2 border-t border-border flex flex-col gap-0.5 text-text-light font-mono text-[11px]">
         <div className="flex items-center justify-between">
           <span className="font-semibold text-text">ENYX-ENTERPRISE</span>
-          <span className="bg-bg-alt px-1.5 py-0.5 rounded-none text-[9px] font-mono tracking-wider">SMART HUB</span>
+          <span className="bg-bg-alt px-1.5 py-0.5 rounded-none text-[9px] font-mono tracking-wider">ENTERPRISE</span>
         </div>
-        <span className="text-[10px]">Traceability Smart Hub v1.0.0</span>
+        <span className="text-[10px]">Traceability System v1.0.0</span>
       </div>
     </div>
   )
@@ -181,7 +181,7 @@ export default function DashboardLayout() {
                 ENYX-ENTERPRISE
               </div>
               <div className="font-mono-custom text-[9px] text-text-light tracking-[0.22em] uppercase mt-0.5">
-                TRACEABILITY · SMART HUB
+                TRACEABILITY SYSTEM
               </div>
             </div>
           </Link>
@@ -225,7 +225,7 @@ export default function DashboardLayout() {
                 ENYX-ENTERPRISE
               </div>
               <div className="font-mono-custom text-[8px] text-text-light tracking-[0.2em] uppercase">
-                TRACEABILITY · SMART HUB
+                TRACEABILITY SYSTEM
               </div>
             </div>
           </Link>

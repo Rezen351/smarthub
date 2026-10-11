@@ -459,7 +459,7 @@ export default function PublicTraceabilityPage() {
                 ENYX-ENTERPRISE
               </div>
               <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
-                TRACEABILITY · SMART HUB
+                TRACEABILITY SYSTEM
               </div>
             </div>
           </Link>
@@ -895,7 +895,7 @@ export default function PublicTraceabilityPage() {
             <span className="bg-[#f5f5f5] px-2 py-0.5 rounded-none font-mono border border-[#eaeaea]">
               Type: enyx-enterprise
             </span>
-            <span>Traceability Smart Hub v1.0.0</span>
+            <span>Traceability System v1.0.0</span>
           </div>
           <Link to="/" className="text-[#15803d] hover:underline font-medium">
             Smart Hub Overview
