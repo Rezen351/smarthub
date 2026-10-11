@@ -6,6 +6,7 @@ import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
+import LabelPreview from '../components/operator/LabelPreview'
 
 type PouchRecord = {
   id: string
@@ -271,28 +272,21 @@ export default function PackagingPage() {
             </div>
           </div>
 
-          <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
-            <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider block">
-              Pouch Label Specs
-            </span>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Commodity:</span>
-                <span className="font-semibold text-foreground">Kentang (Potatoes)</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Assigned Grade:</span>
-                <span className="font-bold text-foreground">Grade {activeStation.grade}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Target Weight:</span>
-                <span className="font-mono font-semibold text-foreground">1.000 kg</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Barcode Format:</span>
-                <span className="font-mono text-muted-foreground">GS1 Digital Link (QR)</span>
-              </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+                Live Label Preview
+              </span>
+              <Badge tone="accent">PCH Serial Next</Badge>
             </div>
+            <LabelPreview
+              type="pouch"
+              code={`PCH-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(pouches.length + 1).padStart(3, '0')}`}
+              grade={activeStation.grade}
+              weightKg={weightValue > 0 ? weightValue : 1.000}
+              commodity="Kentang Dieng"
+              stationName={activeStation.name}
+            />
           </div>
         </div>
 

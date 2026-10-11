@@ -6,11 +6,11 @@ import { useState } from 'react'
 import Card from '../components/shared/Card'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
-import Icon from '../components/shared/Icon'
 import { Field, Input, Select } from '../components/shared/Form'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
+import LabelPreview from '../components/operator/LabelPreview'
 
 type LabelType = 'grade' | 'pallet' | 'packaging'
 
@@ -146,40 +146,13 @@ export default function LabelsPage() {
         </Card>
 
         <Card title="Label preview" subtitle={`Standard: ${TYPE_META[form.type].standard}`}>
-          <div className="label-preview">
-            <div className="label-qr">
-              <Icon name="qr" size={48} className="text-text-light" />
-            </div>
-            <div className="label-body">
-              <p className="t-caption text-text-secondary uppercase">Preview</p>
-              <p className="mono t-medium text-truncate">
-                {form.code.trim() || `${TYPE_META[form.type].prefix}-YYYYMMDD-SEQ`}
-              </p>
-              <div className="divider" style={{ margin: '8px 0' }} />
-              <dl className="stack-xs">
-                <div className="label-row">
-                  <dt>Commodity</dt>
-                  <dd>Kentang</dd>
-                </div>
-                <div className="label-row">
-                  <dt>Grade</dt>
-                  <dd>A / B / C</dd>
-                </div>
-                <div className="label-row">
-                  <dt>Weight</dt>
-                  <dd>1 kg pouch</dd>
-                </div>
-              </dl>
-              <div className="label-barcode" aria-hidden="true">
-                {[3, 1, 2, 1, 4, 1, 2, 3, 1, 2, 4, 1, 3, 1, 2, 1, 3, 2, 1, 4].map((height, index) => (
-                  <span key={index} style={{ width: index % 3 === 0 ? 3 : 1, height: height * 8 }} />
-                ))}
-              </div>
-              <p className="t-caption text-text-light">
-                GS1 Digital Link: https://{'{domain}'}/01/{'{GTIN}'}/10/{'{PALLET}'}-{'{GRADE}'}/21/{'{PCH}'}
-              </p>
-            </div>
-          </div>
+          <LabelPreview
+            type={form.type === 'packaging' ? 'pouch' : form.type === 'grade' ? 'grade' : 'pallet'}
+            code={form.code.trim() || `${TYPE_META[form.type].prefix}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-0001`}
+            grade="A"
+            weightKg={form.type === 'packaging' ? 1.000 : 156.400}
+            commodity="Kentang (Potatoes)"
+          />
         </Card>
       </div>
 

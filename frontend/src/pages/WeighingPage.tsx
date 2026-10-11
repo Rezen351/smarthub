@@ -19,6 +19,7 @@ import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
+import LabelPreview from '../components/operator/LabelPreview'
 import { useSessionContext } from '../hooks/useSessionContext'
 
 type WeighingStatus = 'PENDING' | 'APPROVED'
@@ -517,35 +518,49 @@ export default function WeighingPage() {
               )}
             </div>
 
-            <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
-              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                <Icon name="info" size={14} /> Intake Metadata
-              </span>
-              <div className="space-y-2 text-sm pt-1">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Farmer:</span>
-                  <span className="font-semibold text-foreground">{farmer?.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Commodity:</span>
-                  <span className="font-semibold text-foreground">Kentang (Potatoes)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Deposit Date:</span>
-                  <span className="font-mono font-semibold text-foreground flex items-center gap-1">
-                    {today()} <Badge tone="accent">Auto</Badge>
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Next Pallet:</span>
-                  <span className="font-mono text-xs font-semibold text-foreground">
-                    {nextPalletCode(palletCounter)}
-                  </span>
+            <div className="space-y-4">
+              <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
+                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <Icon name="info" size={14} /> Intake Metadata
+                </span>
+                <div className="space-y-2 text-sm pt-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Farmer:</span>
+                    <span className="font-semibold text-foreground">{farmer?.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Commodity:</span>
+                    <span className="font-semibold text-foreground">Kentang (Potatoes)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Deposit Date:</span>
+                    <span className="font-mono font-semibold text-foreground flex items-center gap-1">
+                      {today()} <Badge tone="accent">Auto</Badge>
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Next Pallet:</span>
+                    <span className="font-mono text-xs font-semibold text-foreground">
+                      {nextPalletCode(palletCounter)}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground pt-3 border-t border-border leading-relaxed">
-                Deposit date is assigned automatically by the system. Pallet ID is officially bound upon approval.
-              </p>
+
+              {/* Real-time Pallet Label Preview */}
+              <div className="space-y-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+                  Live Pallet Label Preview
+                </span>
+                <LabelPreview
+                  type="pallet"
+                  code={nextPalletCode(palletCounter)}
+                  farmerName={farmer?.name}
+                  farmerId={farmer?.id}
+                  weightKg={Number(weightKg) > 0 ? Number(weightKg) : undefined}
+                  compact
+                />
+              </div>
             </div>
           </div>
 
@@ -662,88 +677,27 @@ export default function WeighingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
               {/* Receipt Preview */}
               {(printTab === 'both' || printTab === 'receipt') && (
-                <div className="p-4 rounded-xl bg-white text-black border border-gray-300 font-mono shadow-sm space-y-3">
-                  <div className="text-center pb-2 border-b border-dashed border-gray-400">
-                    <span className="text-[11px] font-bold tracking-wider uppercase block text-gray-800">
-                      ENYX-SMART HUB · RECEIVING INTAKE SLIP
-                    </span>
-                    <span className="text-[10px] text-gray-500 block">
-                      OFFICIAL WEIGHING RECEIPT
-                    </span>
-                    <span className="text-xs font-semibold text-gray-700 block mt-1">
-                      {today()} · {confirmApprove?.time ?? 'Live'}
-                    </span>
-                  </div>
-                  <div className="py-2 border-b border-dashed border-gray-300 text-xs space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Farmer:</span>
-                      <span className="font-bold">{confirmApprove?.farmerName ?? farmer?.name}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Pallet Code:</span>
-                      <span className="font-mono font-semibold">
-                        {approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Commodity:</span>
-                      <span>Kentang (Potatoes)</span>
-                    </div>
-                  </div>
-                  <div className="py-3 border-b border-dashed border-gray-400 text-center">
-                    <span className="text-[10px] uppercase text-gray-500 block">OFFICIAL NET WEIGHT</span>
-                    <span className="text-2xl font-black text-green-800 block">
-                      {(confirmApprove?.weightKg ?? Number(weightKg)).toFixed(3)} kg
-                    </span>
-                    <span className="text-[10px] text-green-700 font-bold block uppercase">
-                      {approvedSuccessRecord ? 'Status: APPROVED (VERIFIED)' : 'Ready for Approval'}
-                    </span>
-                  </div>
-                  <div className="pt-1 text-[10px] text-gray-500 text-center italic">
-                    * Please retain this receipt for official intake records. *
-                  </div>
-                </div>
+                <LabelPreview
+                  type="receipt"
+                  code={approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}
+                  farmerName={confirmApprove?.farmerName ?? farmer?.name}
+                  farmerId={confirmApprove?.farmerId ?? farmer?.id}
+                  weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
+                  time={confirmApprove?.time ?? 'Live'}
+                  date={today()}
+                />
               )}
 
               {/* Pallet Label Preview */}
               {(printTab === 'both' || printTab === 'label') && (
-                <div className="p-4 rounded-xl bg-white text-black border-2 border-dashed border-gray-400 font-mono shadow-sm space-y-3">
-                  <div className="text-center pb-2 border-b border-gray-300">
-                    <span className="text-xs uppercase tracking-wider font-bold block text-gray-700">
-                      E-Tani Smart Hub · Receiving Pallet
-                    </span>
-                    <span className="text-xl font-bold tracking-tight block text-gray-900 mt-1">
-                      {approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-center py-2 border-b border-gray-200">
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="flex gap-1 h-9 items-center justify-center px-4 bg-gray-100 rounded">
-                        {[3, 1, 4, 2, 1, 3, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 2].map((w, idx) => (
-                          <span key={idx} className="bg-black inline-block h-7" style={{ width: `${w * 2}px` }} />
-                        ))}
-                      </div>
-                      <span className="text-[10px] tracking-widest text-gray-600">
-                        *{approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}*
-                      </span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                    <div>
-                      <span className="text-gray-500 block text-[10px]">Farmer</span>
-                      <span className="font-semibold">{confirmApprove?.farmerName ?? farmer?.name}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 block text-[10px]">Weight</span>
-                      <span className="font-bold text-green-700">
-                        {(confirmApprove?.weightKg ?? Number(weightKg)).toFixed(3)} kg
-                      </span>
-                    </div>
-                  </div>
-                  <div className="pt-1 text-[10px] text-gray-500 text-center border-t border-gray-200">
-                    Attach label to physical box or pallet prior to sorting.
-                  </div>
-                </div>
+                <LabelPreview
+                  type="pallet"
+                  code={approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}
+                  farmerName={confirmApprove?.farmerName ?? farmer?.name}
+                  farmerId={confirmApprove?.farmerId ?? farmer?.id}
+                  weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
+                  date={today()}
+                />
               )}
             </div>
           </div>

@@ -6,6 +6,7 @@ import { Input } from '../components/shared/Form'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
+import LabelPreview from '../components/operator/LabelPreview'
 
 type GradeRecord = {
   id: string
@@ -209,67 +210,85 @@ export default function GradingPage() {
       </div>
 
       <form onSubmit={handlePrintGradeLabel} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label htmlFor="grading-pallet" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
-              1. Intake Pallet Code (Scan / Type)
-            </label>
-            <Input
-              id="grading-pallet"
-              ref={scanInputRef}
-              mono
-              value={palletCode}
-              onChange={(e) => setPalletCode(e.target.value)}
-              placeholder="Scan barcode or type PLT-..."
-              className="py-3 text-base"
-              autoFocus
-            />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="grading-pallet" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+                  1. Intake Pallet Code (Scan / Type)
+                </label>
+                <Input
+                  id="grading-pallet"
+                  ref={scanInputRef}
+                  mono
+                  value={palletCode}
+                  onChange={(e) => setPalletCode(e.target.value)}
+                  placeholder="Scan barcode or type PLT-..."
+                  className="py-3 text-base"
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="grading-farmer" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+                  Farmer / Source Lot
+                </label>
+                <Input
+                  id="grading-farmer"
+                  value={farmerName}
+                  onChange={(e) => setFarmerName(e.target.value)}
+                  placeholder="Farmer name"
+                  className="py-3 text-base"
+                />
+              </div>
+            </div>
+
+            {/* Grade Selector Buttons */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+                2. Select Commodity Grade
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {GRADES.map((g) => {
+                  const isSelected = selectedGrade === g
+                  return (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => setSelectedGrade(g)}
+                      className={`p-4 rounded-xl border text-center transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-primary bg-primary/10 ring-2 ring-primary text-foreground font-bold shadow-sm'
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      <span className="text-2xl font-black block">Grade {g}</span>
+                      <span className="text-xs text-muted-foreground font-normal">
+                        {g === 'A' ? 'Premium Large' : g === 'B' ? 'Medium Standard' : 'Small / Industrial'}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
 
+          {/* Real-time Thermal Label Preview Card */}
           <div className="space-y-2">
-            <label htmlFor="grading-farmer" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
-              Farmer / Source Lot
-            </label>
-            <Input
-              id="grading-farmer"
-              value={farmerName}
-              onChange={(e) => setFarmerName(e.target.value)}
-              placeholder="Farmer name"
-              className="py-3 text-base"
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+              Live Label Preview
+            </span>
+            <LabelPreview
+              type="grade"
+              code={`GRD-${palletCode.trim() || 'PLT-20261010-0001'}-${selectedGrade}`}
+              farmerName={farmerName || 'Ahmad Santoso'}
+              grade={selectedGrade}
+              commodity="Kentang (Potatoes)"
             />
           </div>
         </div>
 
-        {/* Grade Selector Buttons */}
-        <div className="space-y-2">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
-            2. Select Commodity Grade
-          </label>
-          <div className="grid grid-cols-3 gap-3">
-            {GRADES.map((g) => {
-              const isSelected = selectedGrade === g
-              return (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => setSelectedGrade(g)}
-                  className={`p-4 rounded-xl border text-center transition-all cursor-pointer ${
-                    isSelected
-                      ? 'border-primary bg-primary/10 ring-2 ring-primary text-foreground font-bold shadow-sm'
-                      : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                  }`}
-                >
-                  <span className="text-2xl font-black block">Grade {g}</span>
-                  <span className="text-xs text-muted-foreground font-normal">
-                    {g === 'A' ? 'Premium Large' : g === 'B' ? 'Medium Standard' : 'Small / Industrial'}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Generated Label Preview */}
+        {/* Action Bar */}
         <div className="p-4 bg-muted/30 border border-border rounded-xl flex items-center justify-between flex-wrap gap-2">
           <div>
             <span className="text-xs text-muted-foreground block font-medium">Generated Sorted Pallet Code</span>
