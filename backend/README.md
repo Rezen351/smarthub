@@ -69,9 +69,10 @@ npm run format           # Format code with Prettier
 
 - `ADMIN` — Full access
 - `WEIGHING_OPERATOR` — Weighing operations
-- `SORTING_OPERATOR` — Grading & sorting
+- `SORTING_OPERATOR` — Sorting & grading
+- `PACKAGING_OPERATOR` — 1 kg pouch packaging operations
 - `WAREHOUSE_OPERATOR` — Warehouse management
-- `DELIVERY_OPERATOR` — Delivery & packaging
+- `DELIVERY_OPERATOR` — Delivery operations
 - `FARMER` — Traceability only
 
 ## 📡 MQTT Integration

@@ -33,7 +33,7 @@ const router = Router();
  *                 format: password
  *               role:
  *                 type: string
- *                 enum: [ADMIN, WEIGHING_OPERATOR, SORTING_OPERATOR, WAREHOUSE_OPERATOR, DELIVERY_OPERATOR, FARMER]
+ *                 enum: [ADMIN, WEIGHING_OPERATOR, SORTING_OPERATOR, PACKAGING_OPERATOR, WAREHOUSE_OPERATOR, DELIVERY_OPERATOR, FARMER]
  *     responses:
  *       201:
  *         description: User created successfully

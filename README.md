@@ -167,9 +167,10 @@ Menambah commodity baru di masa depan (Tomat, Cabai, dll.) hanya memerlukan data
 |------|--------|
 | `ADMIN` | Full system configuration + user management |
 | `WEIGHING_OPERATOR` | Scan farmer IDs, pure intake weighing, approve weights, print pallet labels |
-| `SORTING_OPERATOR` | Grade produce, create pouches, print labels |
+| `SORTING_OPERATOR` | Grade produce, print pallet grading labels |
+| `PACKAGING_OPERATOR` | 1 kg pouch packaging, live scale approval, label printing |
 | `WAREHOUSE_OPERATOR` | Stock in/out, capacity monitoring, inventory |
-| `DELIVERY_OPERATOR` | Package cartons, verify shipments, dispatch trucks |
+| `DELIVERY_OPERATOR` | Verify shipments, dispatch trucks |
 | `FARMER` | View personal harvest history + traceability |
 
 ---

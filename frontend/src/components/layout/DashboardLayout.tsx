@@ -33,6 +33,11 @@ const roleMenu: Record<string, MenuItem[]> = {
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
     { label: 'Sorting', path: '/dashboard/sorting', icon: 'sortir' },
   ],
+  PACKAGING_OPERATOR: [
+    { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
+    { label: 'Packaging', path: '/dashboard/packaging', icon: 'package' },
+    { label: 'Configuration', path: '/dashboard/settings', icon: 'settings' },
+  ],
   WAREHOUSE_OPERATOR: [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
     { label: 'Stock In', path: '/dashboard/stock-in', icon: 'arrow-down' },
@@ -40,7 +45,6 @@ const roleMenu: Record<string, MenuItem[]> = {
   ],
   DELIVERY_OPERATOR: [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
-    { label: 'Packaging', path: '/dashboard/packaging', icon: 'package' },
     { label: 'Deliveries', path: '/dashboard/deliveries', icon: 'truck' },
   ],
   FARMER: [
@@ -55,6 +59,7 @@ const roleLabel: Record<string, string> = {
   ADMIN: 'Admin',
   WEIGHING_OPERATOR: 'Weighing Operator',
   SORTING_OPERATOR: 'Sorting Operator',
+  PACKAGING_OPERATOR: 'Packaging Operator',
   WAREHOUSE_OPERATOR: 'Warehouse Operator',
   DELIVERY_OPERATOR: 'Delivery Operator',
   FARMER: 'Farmer',

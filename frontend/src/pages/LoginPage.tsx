@@ -12,6 +12,7 @@ const demoAccounts = [
   { email: 'admin@enyx.local', role: 'Admin' },
   { email: 'weighing@enyx.local', role: 'Weighing Operator' },
   { email: 'sorting@enyx.local', role: 'Sorting Operator' },
+  { email: 'packaging@enyx.local', role: 'Packaging Operator' },
   { email: 'warehouse@enyx.local', role: 'Warehouse Operator' },
   { email: 'delivery@enyx.local', role: 'Delivery Operator' },
   { email: 'farmer@enyx.local', role: 'Farmer' },

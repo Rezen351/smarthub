@@ -53,6 +53,7 @@ frontend/
 | admin@enyx.local | password | ADMIN |
 | weighing@enyx.local | password | WEIGHING_OPERATOR |
 | sorting@enyx.local | password | SORTING_OPERATOR |
+| packaging@enyx.local | password | PACKAGING_OPERATOR |
 | warehouse@enyx.local | password | WAREHOUSE_OPERATOR |
 | delivery@enyx.local | password | DELIVERY_OPERATOR |
 | farmer@enyx.local | password | FARMER |

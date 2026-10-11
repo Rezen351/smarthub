@@ -4,7 +4,7 @@ export interface User {
   id: string
   email: string
   name: string
-  role: 'ADMIN' | 'WEIGHING_OPERATOR' | 'SORTING_OPERATOR' | 'WAREHOUSE_OPERATOR' | 'DELIVERY_OPERATOR' | 'FARMER'
+  role: 'ADMIN' | 'WEIGHING_OPERATOR' | 'SORTING_OPERATOR' | 'PACKAGING_OPERATOR' | 'WAREHOUSE_OPERATOR' | 'DELIVERY_OPERATOR' | 'FARMER'
   farmerId?: string
 }
 
@@ -49,20 +49,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: 'Sorting Operator',
         role: 'SORTING_OPERATOR',
       },
-      'warehouse@enyx.local': {
+      'packaging@enyx.local': {
         id: 'user-4',
+        email: 'packaging@enyx.local',
+        name: 'Packaging Operator',
+        role: 'PACKAGING_OPERATOR',
+      },
+      'warehouse@enyx.local': {
+        id: 'user-5',
         email: 'warehouse@enyx.local',
         name: 'Warehouse Operator',
         role: 'WAREHOUSE_OPERATOR',
       },
       'delivery@enyx.local': {
-        id: 'user-5',
+        id: 'user-6',
         email: 'delivery@enyx.local',
         name: 'Delivery Operator',
         role: 'DELIVERY_OPERATOR',
       },
       'farmer@enyx.local': {
-        id: 'user-6',
+        id: 'user-7',
         email: 'farmer@enyx.local',
         name: 'Farmer',
         role: 'FARMER',
