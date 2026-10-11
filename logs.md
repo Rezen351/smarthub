@@ -56,6 +56,7 @@
 | 2026-10-11 | Frontend browser audit & modernization (LandingPage, LoginPage, domain widget styles) | ✅ | Audited frontend rendered classes; restored domain widget helper styles (progress track, timeline journey, label preview, quick actions, radio card, code block); modernized LandingPage and LoginPage to use pure Tailwind CSS classes and shadcn Card/Alert primitives; verified clean TypeScript check and Vite production build. |
 | 2026-10-11 | Weighing Station UI modernized & English localization completed | ✅ | Modernized WeighingPage.tsx using pure Tailwind CSS & shadcn components; updated Focus Mode stepper & print labels; converted remaining UI text to English per AGENTS.md §1; build & typecheck verified SUCCESS. |
 | 2026-10-11 | PalletsPage UI modernized & stat-card styles restored | ✅ | Modernized PalletsPage.tsx with pure Tailwind CSS & shadcn Alert primitive; restored `.stat-card` styling rules in `index.css` for system-wide backward compatibility across all dashboards; build & typecheck verified SUCCESS. |
+| 2026-10-11 | Removed "Select Registered Farmer" button grid from WeighingPage | ✅ | Removed redundant farmer card selection grid from Step 1 in `WeighingPage.tsx`; enhanced search input handler to verify any typed/scanned farmer name or ID directly; build & typecheck verified SUCCESS. |
 
 ## Technical Decisions
 | Date | Decision | Rationale | Impact |

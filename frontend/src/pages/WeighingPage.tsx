@@ -174,24 +174,30 @@ export default function WeighingPage() {
   const handleScanSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     setScanError('')
-    const query = (manualSearch || scanFarmerId).trim().toLowerCase()
+    const query = (manualSearch || scanFarmerId).trim()
     if (!query) {
-      setScanError('Please scan or type a Farmer ID / Barcode.')
+      setScanError('Please scan or type a Farmer ID / Barcode / Name.')
       return
     }
 
     const matched = FARMERS.find(
       (f) =>
-        f.id.toLowerCase() === query ||
-        f.name.toLowerCase().includes(query) ||
-        f.village.toLowerCase().includes(query),
+        f.id.toLowerCase() === query.toLowerCase() ||
+        f.name.toLowerCase().includes(query.toLowerCase()) ||
+        f.village.toLowerCase().includes(query.toLowerCase()),
     )
 
     if (matched) {
       selectFarmer(matched)
       setManualSearch('')
     } else {
-      setScanError(`No farmer found matching "${query}". Select from the list below.`)
+      const customFarmer = {
+        id: `FRM-${String(Math.floor(Math.random() * 9000) + 1000)}`,
+        name: query,
+        village: 'Dieng, Wonosobo',
+      }
+      selectFarmer(customFarmer)
+      setManualSearch('')
     }
   }
 
@@ -465,40 +471,6 @@ export default function WeighingPage() {
               </Button>
             </div>
           </form>
-
-          <div className="pt-2 border-t border-border">
-            <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-3">
-              Or Select Registered Farmer
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {FARMERS.map((f) => {
-                const isSelected = active && farmer?.id === f.id
-                return (
-                  <button
-                    key={f.id}
-                    type="button"
-                    className={`bg-card border rounded-lg p-3 text-left transition-all cursor-pointer hover:border-primary hover:shadow-sm ${
-                      isSelected
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                        : 'border-border'
-                    }`}
-                    onClick={() => selectFarmer(f)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center shrink-0">
-                        {f.name.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{f.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{f.village}</p>
-                        <span className="text-[11px] font-mono text-muted-foreground">{f.id}</span>
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
         </div>
       )}
 
