@@ -427,13 +427,13 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 font-mono-custom text-[11px] text-[#666666] border border-[#eaeaea] bg-[#f5f5f5] px-3 py-1.5 rounded-sm">
+            <div className="hidden md:flex items-center gap-2 font-mono-custom text-[11px] text-[#666666] border border-[#eaeaea] bg-[#f5f5f5] px-3 py-1.5 rounded-none">
               <span className="w-2 h-2 rounded-full bg-[#15803d] animate-pulse"></span>
               <span>LIVE TELEMETRY · 192.168.1.50</span>
             </div>
             <Link
               to="/login"
-              className="font-heading text-xs tracking-[0.18em] uppercase text-white bg-[#000000] px-5 py-2.5 hover:bg-[#333333] transition-colors rounded-sm"
+              className="font-heading text-xs tracking-[0.18em] uppercase text-white bg-[#000000] px-5 py-2.5 hover:bg-[#333333] transition-colors rounded-none"
             >
               Sign In
             </Link>
@@ -1475,7 +1475,7 @@ export default function LandingPage() {
 
                   <button
                     type="submit"
-                    className="pulse-btn w-full bg-[#000000] text-white py-4 font-display text-2xl tracking-wider hover:bg-[#333333] transition-colors flex items-center justify-center gap-3 rounded-sm"
+                    className="pulse-btn w-full bg-[#000000] text-white py-4 font-display text-2xl tracking-wider hover:bg-[#333333] transition-colors flex items-center justify-center gap-3 rounded-none"
                   >
                     <span>SUBMIT DEPLOYMENT REQUEST</span>
                     <Icon name="arrow-right" size={20} />
@@ -1724,7 +1724,7 @@ export default function LandingPage() {
 
           <a
             href="#booking"
-            className="pulse-btn bg-[#15803d] text-white px-6 py-2.5 font-heading text-xs uppercase tracking-[0.18em] hover:bg-[#16a34a] transition-colors flex items-center gap-2 rounded-sm shrink-0 font-semibold"
+            className="pulse-btn bg-[#15803d] text-white px-6 py-2.5 font-heading text-xs uppercase tracking-[0.18em] hover:bg-[#16a34a] transition-colors flex items-center gap-2 rounded-none shrink-0 font-semibold"
           >
             <span>Deploy System</span>
             <Icon name="arrow-right" size={14} />
@@ -1740,7 +1740,7 @@ export default function LandingPage() {
         role="alert"
       >
         <div className="flex items-start gap-3">
-          <div className="w-7 h-7 bg-[#15803d] text-white flex items-center justify-center shrink-0 rounded-sm">
+          <div className="w-7 h-7 bg-[#15803d] text-white flex items-center justify-center shrink-0 rounded-none">
             <Icon name="check" size={14} />
           </div>
           <div>
