@@ -31,22 +31,21 @@ interface Activity {
 }
 
 const stats: Stat[] = [
-  { label: 'Pending Grading', value: '12', sub: 'Pallets to sort', trend: 'down', icon: 'sortir' },
-  { label: 'Grades Recorded', value: '156', sub: 'kg allocated today', trend: 'up', icon: 'grade' },
+  { label: 'Pending Sorting', value: '12', sub: 'Pallets to sort', trend: 'down', icon: 'sortir' },
+  { label: 'Pallets Sorted', value: '156', sub: 'Pallets processed', trend: 'up', icon: 'grade' },
   { label: 'Labels Printed', value: '142', sub: 'Grade labels', trend: 'up', icon: 'label' },
-  { label: 'Grade Labels Queued', value: '3', sub: 'Waiting for printer', trend: 'neutral', icon: 'print' },
+  { label: 'Queue Status', value: 'Ready', sub: 'Printer online', trend: 'neutral', icon: 'print' },
 ]
 
 const quickActions: QuickAction[] = [
-  { label: 'Sorting', path: '/dashboard/grading', icon: 'sortir', desc: 'Grade A/B/C per pallet', primary: true },
-  { label: 'Label Queue', path: '/dashboard/labels', icon: 'label', desc: 'Print grade labels' },
-  { label: 'Sorting History', path: '/dashboard/grading', icon: 'history', desc: 'Records per pallet' },
+  { label: 'Sorting Station', path: '/dashboard/sorting', icon: 'sortir', desc: 'Sort Grade A/B/C per pallet', primary: true },
+  { label: 'Sorting History', path: '/dashboard/sorting', icon: 'history', desc: 'Today sorted records' },
 ]
 
 const activities: Activity[] = [
-  { time: '10:15', action: 'Grade A: 45.5 kg recorded', icon: 'grade', status: 'Recorded', tone: 'success' },
-  { time: '09:45', action: 'Pouch PCH-PLT-20260914-0001-001 created', icon: 'package', status: 'Packed', tone: 'success' },
-  { time: '09:30', action: 'Label printed: PCH-PLT-20260914-0001-001', icon: 'label', status: 'Queued', tone: 'warning' },
+  { time: '10:30', action: 'Sorted Pallet GRD-PLT-20261010-0001-B printed', icon: 'grade', status: 'Labeled', tone: 'success' },
+  { time: '10:25', action: 'Sorted Pallet GRD-PLT-20261010-0001-A printed', icon: 'grade', status: 'Labeled', tone: 'success' },
+  { time: '09:45', action: 'Intake Pallet PLT-20261010-0001 verified', icon: 'pallet', status: 'Verified', tone: 'success' },
 ]
 
 export default function SortingDashboardHome() {

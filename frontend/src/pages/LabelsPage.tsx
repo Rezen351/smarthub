@@ -12,7 +12,7 @@ import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 
-type LabelType = 'pouch' | 'grade' | 'pallet' | 'packaging'
+type LabelType = 'grade' | 'pallet' | 'packaging'
 
 type LabelJob = {
   id: string
@@ -24,10 +24,9 @@ type LabelJob = {
 }
 
 const TYPE_META: Record<LabelType, { label: string; standard: string; prefix: string }> = {
-  pouch: { label: 'Pouch (QR GS1 Digital Link + EAN-13)', standard: 'QR + EAN-13', prefix: 'PCH' },
-  grade: { label: 'Grade (GRD-...)', standard: 'QR code', prefix: 'GRD' },
-  pallet: { label: 'Pallet (PLT-...)', standard: 'QR code', prefix: 'PLT' },
-  packaging: { label: 'Packaging (ITF-14)', standard: 'ITF-14', prefix: 'PKG' },
+  grade: { label: 'Grade Pallet (GRD-...)', standard: 'QR code', prefix: 'GRD' },
+  pallet: { label: 'Intake Pallet (PLT-...)', standard: 'QR code', prefix: 'PLT' },
+  packaging: { label: 'Packaging Master Unit (ITF-14)', standard: 'ITF-14', prefix: 'PKG' },
 }
 
 const nextSeq = (jobs: LabelJob[], prefix: string) => {
@@ -37,11 +36,11 @@ const nextSeq = (jobs: LabelJob[], prefix: string) => {
 
 export default function LabelsPage() {
   const toast = useToast()
-  const [form, setForm] = useState({ code: '', type: 'pouch' as LabelType })
+  const [form, setForm] = useState({ code: '', type: 'grade' as LabelType })
   const [jobs, setJobs] = useState<LabelJob[]>([
-    { id: '1', code: 'PCH-PLT-20260914-0001-001', type: 'pouch', standard: 'QR + EAN-13', status: 'PRINTED', created: '09:12' },
-    { id: '2', code: 'PCH-PLT-20260914-0001-002', type: 'pouch', standard: 'QR + EAN-13', status: 'PENDING', created: '09:20' },
-    { id: '3', code: 'GRD-PLT-20260914-0001-B', type: 'grade', standard: 'QR code', status: 'PENDING', created: '10:20' },
+    { id: '1', code: 'GRD-PLT-20261010-0001-A', type: 'grade', standard: 'QR code', status: 'PRINTED', created: '10:25' },
+    { id: '2', code: 'GRD-PLT-20261010-0001-B', type: 'grade', standard: 'QR code', status: 'PRINTED', created: '10:30' },
+    { id: '3', code: 'PLT-20261010-0001', type: 'pallet', standard: 'QR code', status: 'PRINTED', created: '10:15' },
   ])
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -107,7 +106,7 @@ export default function LabelsPage() {
     <div className="stack stack-lg">
       <PageHeader
         title="Labels"
-        subtitle="Queue and print pallet, grade and pouch labels from one station."
+        subtitle="Queue and print pallet, grade and packaging master labels."
         actions={<Badge tone={pending.length ? 'warning' : 'success'} dot>{pending.length} in queue</Badge>}
       />
 

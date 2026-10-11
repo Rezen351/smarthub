@@ -31,8 +31,7 @@ const roleMenu: Record<string, MenuItem[]> = {
   ],
   SORTING_OPERATOR: [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
-    { label: 'Grading', path: '/dashboard/grading', icon: 'sortir' },
-    { label: 'Labels', path: '/dashboard/labels', icon: 'label' },
+    { label: 'Sorting', path: '/dashboard/sorting', icon: 'sortir' },
   ],
   WAREHOUSE_OPERATOR: [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },

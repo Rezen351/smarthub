@@ -57,7 +57,8 @@ function App() {
         <Route index element={<DashboardHomeRouter />} />
         <Route path="weighing" element={<WeighingPage />} />
         <Route path="pallets" element={<PalletsPage />} />
-        <Route path="grading" element={<GradingPage />} />
+        <Route path="sorting" element={<GradingPage />} />
+        <Route path="grading" element={<Navigate to="/dashboard/sorting" replace />} />
         <Route path="labels" element={<LabelsPage />} />
         <Route path="stock-in" element={<StockInPage />} />
         <Route path="stock-out" element={<StockOutPage />} />

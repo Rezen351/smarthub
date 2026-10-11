@@ -85,6 +85,7 @@ Sebelum melakukan modifikasi kode yang bersifat kompleks:
 1. **Ringkas & Informatif**: Berikan penjelasan yang padat, langsung ke tujuan, dan format dengan Markdown yang bersih.
 2. **Konfirmasi Tindakan Berisiko**: Minta konfirmasi pengguna sebelum melakukan tindakan yang merusak (seperti menghapus database, file penting, atau mereset sistem).
 3. **Prinsip Teks Ringkas & Objektif (Concise & Objective UI/Doc Rule)**: Semua teks UI, label tombol, field hints, deskripsi, komentar kode, dan laporan WAJIB ditulis secara ringkas, objektif, dan efisien. DILARANG KERAS menggunakan kata-kata bertele-tele, penjelasan mekanisme internal yang tidak perlu (misal: deskripsi background polling yang panjang), narasi tambahan, atau reasoning internal agent.
+4. **Aturan Istilah Kanonik Tunggal (Single Canonical Terminology Rule)**: Gunakan TEPAT SATU istilah kanonik per domain dan DILARANG KERAS mencampur kata-kata bersinonim (contoh: gunakan istilah **"Sorting"** secara konsisten, dilarang mencampur sinonim seperti **"Grading"** atau **"Sorting & Grading"**). Pouch label printing berada eksklusif pada domain **"Packaging"**.
 
 ### 6.2 Protokol Perilaku AI Agent
 1. **Zero-Placeholder Rule**: DILARANG KERAS menghasilkan kode dengan komentar placeholder seperti `// TODO: implement here`, `/* sisa kode ... */`, atau `// ...`. Semua perubahan kode harus lengkap, fungsional, dan siap dijalankan.

@@ -302,7 +302,7 @@ export default function GradingPage() {
             <div className="flex items-center gap-3">
               <Logo className="h-6 w-auto" markOnly />
               <div>
-                <span className="font-semibold text-sm block leading-none text-foreground">Sorting & Grading Station</span>
+                <span className="font-semibold text-sm block leading-none text-foreground">Sorting Station</span>
                 <span className="text-[10px] text-muted-foreground font-mono">Focus Mode</span>
               </div>
             </div>
@@ -334,7 +334,7 @@ export default function GradingPage() {
          ═══════════════════════════════════════════════════════════════════ */}
       <div className="space-y-6">
         <PageHeader
-          title="Sorting & Grading"
+          title="Sorting"
           subtitle="Scan intake pallet label, classify harvest into Grade A/B/C, and print sorted pallet label."
           actions={
             <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
