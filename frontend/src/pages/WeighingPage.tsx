@@ -21,6 +21,7 @@ import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import LabelPreview from '../components/operator/LabelPreview'
 import { useSessionContext } from '../hooks/useSessionContext'
+import { formatWeight } from '../lib/utils'
 
 type WeighingStatus = 'PENDING' | 'APPROVED'
 
@@ -338,7 +339,7 @@ export default function WeighingPage() {
       align: 'right',
       render: (row) => (
         <span className="font-mono font-bold text-base text-foreground">
-          {row.weightKg.toFixed(3)} kg
+          {formatWeight(row.weightKg)} kg
         </span>
       ),
     },
@@ -618,7 +619,7 @@ export default function WeighingPage() {
             <div>
               <span className="text-xs text-muted-foreground block font-medium">Harvest Net Weight</span>
               <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400 block tracking-tight">
-                {confirmApprove?.weightKg.toFixed(3) ?? Number(weightKg).toFixed(3)}
+                {formatWeight(confirmApprove?.weightKg ?? weightKg)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
               </span>
             </div>

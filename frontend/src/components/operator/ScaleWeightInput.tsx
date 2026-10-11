@@ -4,6 +4,7 @@ import Button from '../shared/Button'
 import { Field, Input } from '../shared/Form'
 import Icon from '../shared/Icon'
 import { useToast } from '../feedback/Toast'
+import { formatWeight } from '../../lib/utils'
 
 /**
  * Weight input with Auto (live scale) and Manual modes — laporan.pdf §9.6.
@@ -49,7 +50,7 @@ function readMode(): Mode {
 }
 
 function formatKg(value: number) {
-  return value.toFixed(3)
+  return formatWeight(value)
 }
 
 export default function ScaleWeightInput({
@@ -275,7 +276,7 @@ export default function ScaleWeightInput({
             className="input-lg"
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            placeholder="0.000"
+            placeholder="0"
             invalid={invalid}
             required
           />
@@ -299,7 +300,7 @@ export default function ScaleWeightInput({
             className={`input-lg ${flash ? 'scale-flash' : ''}`}
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            placeholder="0.000"
+            placeholder="0"
             invalid={invalid}
           />
         </Field>

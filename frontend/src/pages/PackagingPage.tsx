@@ -7,6 +7,7 @@ import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import LabelPreview from '../components/operator/LabelPreview'
+import { formatWeight } from '../lib/utils'
 
 type PouchRecord = {
   id: string
@@ -141,7 +142,7 @@ export default function PackagingPage() {
         status: 'LABELLED',
       }
       setPouches((current) => [newPouch, ...current])
-      toast.success(`Pouch ${code} (${weightValue.toFixed(3)} kg) approved & printed!`)
+      toast.success(`Pouch ${code} (${formatWeight(weightValue)} kg) approved & printed!`)
     }, 600)
   }
 
@@ -175,7 +176,7 @@ export default function PackagingPage() {
       align: 'right',
       render: (row) => (
         <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-          {row.weightKg.toFixed(3)} kg
+          {formatWeight(row.weightKg)} kg
         </span>
       ),
     },

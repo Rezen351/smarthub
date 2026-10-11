@@ -4,6 +4,7 @@ import Button from '../components/shared/Button'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
+import { formatWeight } from '../lib/utils'
 
 type Pallet = {
   id: string
@@ -85,7 +86,7 @@ export default function PalletsPage() {
       key: 'weightKg',
       label: 'Approved Weight (kg)',
       align: 'right',
-      render: (row) => <span className="font-mono font-bold text-foreground">{row.weightKg.toFixed(3)}</span>,
+      render: (row) => <span className="font-mono font-bold text-foreground">{formatWeight(row.weightKg)}</span>,
     },
     {
       key: 'depositDate',

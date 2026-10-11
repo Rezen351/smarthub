@@ -1,3 +1,5 @@
+import { formatWeight } from '../../lib/utils'
+
 export interface LabelPreviewProps {
   type: 'pallet' | 'grade' | 'pouch' | 'receipt'
   code: string
@@ -112,7 +114,7 @@ export default function LabelPreview({
         <div className="py-3 border-b border-dashed border-gray-400 text-center">
           <span className="text-[10px] uppercase text-gray-500 block">OFFICIAL NET WEIGHT</span>
           <span className="text-2xl font-black text-emerald-800 block">
-            {weightKg !== undefined ? weightKg.toFixed(3) : '0.000'} kg
+            {weightKg !== undefined ? formatWeight(weightKg) : '0'} kg
           </span>
           <span className="text-[10px] text-emerald-700 font-bold block uppercase mt-0.5">
             Status: APPROVED & LABELED
@@ -156,7 +158,7 @@ export default function LabelPreview({
           <div>
             <span className="text-gray-500 block text-[10px]">Net Weight</span>
             <span className="font-bold text-emerald-800 text-sm block">
-              {weightKg !== undefined ? weightKg.toFixed(3) : '---'} kg
+              {weightKg !== undefined ? formatWeight(weightKg) : '---'} kg
             </span>
             <span className="text-[10px] text-gray-500">{commodity}</span>
           </div>
@@ -237,7 +239,7 @@ export default function LabelPreview({
         <div className="space-y-1">
           <span className="text-[10px] text-gray-500 uppercase block">Net Weight</span>
           <span className="text-2xl font-black text-emerald-800 tracking-tight block">
-            {weightKg !== undefined ? weightKg.toFixed(3) : '1.000'} kg
+            {weightKg !== undefined ? formatWeight(weightKg) : '1'} kg
           </span>
           <span className="text-[10px] text-gray-600 font-mono block">
             {code || 'PCH-20261010-001'}
