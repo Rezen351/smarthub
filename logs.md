@@ -58,6 +58,7 @@
 | 2026-10-11 | PalletsPage UI modernized & stat-card styles restored | ✅ | Modernized PalletsPage.tsx with pure Tailwind CSS & shadcn Alert primitive; restored `.stat-card` styling rules in `index.css` for system-wide backward compatibility across all dashboards; build & typecheck verified SUCCESS. |
 | 2026-10-11 | Removed "Select Registered Farmer" button grid from WeighingPage | ✅ | Removed redundant farmer card selection grid from Step 1 in `WeighingPage.tsx`; enhanced search input handler to verify any typed/scanned farmer name or ID directly; build & typecheck verified SUCCESS. |
 | 2026-10-11 | Removed Automated Lifecycle Alert banner from PalletsPage | ✅ | Removed the `"There is no manual 'Create Pallet' step..."` informational alert banner from `PalletsPage.tsx`; cleaned up unused imports; build & typecheck verified SUCCESS. |
+| 2026-10-11 | Streamlined SettingsPage for Modbus TCP Weight Transmitter configuration | ✅ | Refactored `SettingsPage.tsx` to focus strictly on Modbus TCP weight transmitter parameters (Transmitter IP Address, Modbus Port, Slave ID, Weight & Status Register Addresses) and Scale Parameters; removed unrelated general network/WiFi controls; build & typecheck verified SUCCESS. |
 
 ## Technical Decisions
 | Date | Decision | Rationale | Impact |

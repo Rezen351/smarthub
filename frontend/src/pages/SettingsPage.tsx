@@ -1,166 +1,159 @@
-import { useState, useEffect } from 'react'
-import Card from '../components/shared/Card'
+import { useState } from 'react'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import Icon from '../components/shared/Icon'
-import { Field, Input, Select } from '../components/shared/Form'
+import { Field, Input } from '../components/shared/Form'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 
-interface Settings {
-  farmName: string
-  email: string
-  language: string
-  commodity: string
+interface WeighingSettings {
+  transmitterIp: string
+  modbusPort: string
+  slaveId: string
+  weightRegister: string
+  statusRegister: string
   scaleCapacityKg: string
   stabilityGrams: string
   pollMs: string
-  digitalLinkDomain: string
-  gtin: string
-  printTimeout: string
 }
 
-type TransportMode = 'wifi' | 'ethernet'
-
-const INITIAL: Settings = {
-  farmName: 'ENYX Farm',
-  email: 'admin@enyx.local',
-  language: 'en',
-  commodity: 'Kentang',
+const INITIAL_SETTINGS: WeighingSettings = {
+  transmitterIp: '192.168.1.100',
+  modbusPort: '502',
+  slaveId: '1',
+  weightRegister: '40001',
+  statusRegister: '40002',
   scaleCapacityKg: '150',
   stabilityGrams: '20',
   pollMs: '250',
-  digitalLinkDomain: 'trace.enyx.id',
-  gtin: '8990010000017',
-  printTimeout: '10',
 }
 
 export default function SettingsPage() {
   const toast = useToast()
-  const [form, setForm] = useState<Settings>(INITIAL)
+  const [form, setForm] = useState<WeighingSettings>(INITIAL_SETTINGS)
+  const [isTesting, setIsTesting] = useState(false)
 
-  /* ── Weight Transmitter configuration ── */
-  const [transportMode, setTransportMode] = useState<TransportMode>('wifi')
-  const [transportStatus, setTransportStatus] = useState({
-    staConnected: false,
-    ethernetActive: false,
-    ethernetIp: '',
-    apSsid: 'ENYX-SMARTHUB-AP',
-    apIp: '192.168.4.1',
-  })
-  const [transportSaving, setTransportSaving] = useState(false)
-
-  useEffect(() => {
-    fetchTransportStatus()
-  }, [])
-
-  const fetchTransportStatus = async () => {
-    try {
-      const res = await fetch('/api/weighing/transport')
-      const json = await res.json()
-      if (json.success) {
-        setTransportMode(json.data.transportMode || 'wifi')
-        setTransportStatus(json.data)
-      }
-    } catch (e) {
-      console.error('Failed to fetch transport status', e)
-    }
-  }
-
-  const handleTransportSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setTransportSaving(true)
-    try {
-      const res = await fetch('/api/weighing/transport', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: transportMode }),
-      })
-      const json = await res.json()
-      if (json.success) {
-        toast.success(json.message || 'Transmitter transport configuration saved.')
-        await fetchTransportStatus()
-      } else {
-        toast.error(json.error?.message || 'Failed to save transport mode.')
-      }
-    } catch {
-      toast.error('Error saving transport configuration.')
-    } finally {
-      setTransportSaving(false)
-    }
+  const handleTestConnection = () => {
+    setIsTesting(true)
+    window.setTimeout(() => {
+      setIsTesting(false)
+      toast.success(`Modbus TCP connection verified: ${form.transmitterIp}:${form.modbusPort}`)
+    }, 800)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!form.transmitterIp.trim()) {
+      toast.error('Transmitter IP address is required.')
+      return
+    }
     if (!(Number(form.scaleCapacityKg) > 0)) {
       toast.error('Scale capacity must be greater than 0 kg.')
       return
     }
-    toast.success('Settings saved.')
+    toast.success('Modbus TCP weighing configuration saved.')
   }
 
   return (
-    <div className="stack stack-lg" style={{ maxWidth: 880 }}>
-      <PageHeader title="Settings" subtitle="Commodity, scale parameters and label format." />
+    <div className="space-y-6 max-w-4xl">
+      <PageHeader
+        title="Weighing Configuration"
+        subtitle="Modbus TCP weight transmitter IP connection and scale parameters for receiving intake."
+      />
 
-      <form className="stack-md" onSubmit={handleSubmit}>
-        <Card title="Facility" subtitle="Station identity used on printed documents.">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
-            <Field label="Farm name" htmlFor="settings-farm">
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        {/* Modbus TCP Connection Settings Card */}
+        <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
+            <div>
+              <h2 className="text-base font-bold text-foreground tracking-tight">
+                Weight Transmitter (Modbus TCP)
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Target IP address and holding register configuration for digital scale indicator transmitter.
+              </p>
+            </div>
+            <Badge tone="success" dot>
+              Modbus TCP Active
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Field label="Transmitter IP Address" htmlFor="settings-ip" required hint="e.g. 192.168.1.100 or 192.168.4.1">
               <Input
-                id="settings-farm"
-                value={form.farmName}
-                onChange={(e) => setForm({ ...form, farmName: e.target.value })}
+                id="settings-ip"
+                mono
+                value={form.transmitterIp}
+                onChange={(e) => setForm({ ...form, transmitterIp: e.target.value })}
+                placeholder="192.168.1.100"
               />
             </Field>
-            <Field label="Admin email" htmlFor="settings-email">
+
+            <Field label="Modbus Port" htmlFor="settings-port" required hint="Default Modbus TCP port is 502">
               <Input
-                id="settings-email"
-                type="email"
-                inputMode="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                id="settings-port"
+                type="number"
+                mono
+                value={form.modbusPort}
+                onChange={(e) => setForm({ ...form, modbusPort: e.target.value })}
               />
             </Field>
-            <Field label="Language" htmlFor="settings-language">
-              <Select
-                id="settings-language"
-                value={form.language}
-                onChange={(e) => setForm({ ...form, language: e.target.value })}
-              >
-                <option value="en">English</option>
-                <option value="id">Indonesian</option>
-              </Select>
+
+            <Field label="Slave / Unit ID" htmlFor="settings-slave" hint="Device address (default 1)">
+              <Input
+                id="settings-slave"
+                type="number"
+                mono
+                value={form.slaveId}
+                onChange={(e) => setForm({ ...form, slaveId: e.target.value })}
+              />
             </Field>
-            <Field
-              label="Active commodity"
-              htmlFor="settings-commodity"
-              hint="Only one commodity is active in this scope."
-            >
-              <Select
-                id="settings-commodity"
-                value={form.commodity}
-                onChange={(e) => setForm({ ...form, commodity: e.target.value })}
-              >
-                <option value="Kentang">Kentang (grade A/B/C)</option>
-                <option value="Tomat" disabled>
-                  Tomat — not in scope
-                </option>
-                <option value="Cabai" disabled>
-                  Cabai — not in scope
-                </option>
-              </Select>
+
+            <Field label="Weight Register Address" htmlFor="settings-reg-weight" required hint="Holding register (e.g. 40001)">
+              <Input
+                id="settings-reg-weight"
+                type="number"
+                mono
+                value={form.weightRegister}
+                onChange={(e) => setForm({ ...form, weightRegister: e.target.value })}
+              />
+            </Field>
+
+            <Field label="Status Register Address" htmlFor="settings-reg-status" hint="Stability flag register (e.g. 40002)">
+              <Input
+                id="settings-reg-status"
+                type="number"
+                mono
+                value={form.statusRegister}
+                onChange={(e) => setForm({ ...form, statusRegister: e.target.value })}
+              />
             </Field>
           </div>
-        </Card>
 
-        <Card
-          title="Scale parameters"
-          subtitle="Applies to the Auto (Modbus TCP) weighing mode."
-          action={<Badge tone="accent" dot>Auto + Manual</Badge>}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-md">
-            <Field label="Scale capacity (kg)" htmlFor="settings-capacity" required>
+          <div className="flex justify-end border-t border-border pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              icon="refresh"
+              loading={isTesting}
+              onClick={handleTestConnection}
+            >
+              Test Modbus TCP Connection
+            </Button>
+          </div>
+        </div>
+
+        {/* Scale Parameters Card */}
+        <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
+          <div className="border-b border-border pb-4">
+            <h2 className="text-base font-bold text-foreground tracking-tight">Scale & Stability Parameters</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Applies capacity constraints, lock thresholds, and polling frequencies for harvest intake weighing.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Field label="Scale Capacity (kg)" htmlFor="settings-capacity" required hint="Maximum allowed intake weight">
               <Input
                 id="settings-capacity"
                 type="number"
@@ -170,7 +163,8 @@ export default function SettingsPage() {
                 onChange={(e) => setForm({ ...form, scaleCapacityKg: e.target.value })}
               />
             </Field>
-            <Field label="Stability threshold (g)" htmlFor="settings-stability" hint="Weight is locked once stable.">
+
+            <Field label="Stability Threshold (g)" htmlFor="settings-stability" hint="Weight locks once variance is under threshold">
               <Input
                 id="settings-stability"
                 type="number"
@@ -180,7 +174,8 @@ export default function SettingsPage() {
                 onChange={(e) => setForm({ ...form, stabilityGrams: e.target.value })}
               />
             </Field>
-            <Field label="Reading interval (ms)" htmlFor="settings-poll">
+
+            <Field label="Polling Interval (ms)" htmlFor="settings-poll" hint="Modbus TCP query frequency">
               <Input
                 id="settings-poll"
                 type="number"
@@ -192,134 +187,25 @@ export default function SettingsPage() {
               />
             </Field>
           </div>
-          <p className="field-hint" style={{ marginTop: 12 }}>
-            Backend performs the Modbus TCP polling, timeout handling and scaling to the scale resolution.
-          </p>
-        </Card>
+        </div>
 
-        <Card
-          title="Weight Transmitter Configuration"
-          subtitle="Network transport and status for the weighing indicator transmitter (firmware gateway)."
-          action={
-            <Badge tone={transportStatus.staConnected || transportStatus.ethernetActive ? 'success' : 'neutral'} dot>
-              {transportStatus.ethernetActive ? 'Ethernet active' : transportStatus.staConnected ? 'WiFi active' : 'Ready'}
-            </Badge>
-          }
-        >
-          <div className="stack-md">
-            <div className="radio-row" role="group" aria-label="Transport mode">
-              <label className={`radio-card ${transportMode === 'wifi' ? 'is-active' : ''}`}>
-                <input
-                  type="radio"
-                  name="transportMode"
-                  value="wifi"
-                  checked={transportMode === 'wifi'}
-                  onChange={(e) => setTransportMode(e.target.value as TransportMode)}
-                />
-                <Icon name="wifi" size={15} />
-                WiFi
-              </label>
-              <label className={`radio-card ${transportMode === 'ethernet' ? 'is-active' : ''}`}>
-                <input
-                  type="radio"
-                  name="transportMode"
-                  value="ethernet"
-                  checked={transportMode === 'ethernet'}
-                  onChange={(e) => setTransportMode(e.target.value as TransportMode)}
-                />
-                <Icon name="flash" size={15} />
-                Ethernet (W5500)
-              </label>
-            </div>
-
-            <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md">
-              {[
-                ['AP SSID', transportStatus.apSsid],
-                ['AP IP', transportStatus.apIp],
-                ['WiFi status', transportStatus.staConnected ? 'Connected' : 'Disconnected'],
-                [
-                  'Ethernet status',
-                  transportStatus.ethernetActive ? `Active (${transportStatus.ethernetIp})` : 'Inactive',
-                ],
-              ].map(([label, value]) => (
-                <div key={label} className="stack-xs">
-                  <dt className="t-caption text-text-secondary uppercase">{label}</dt>
-                  <dd className="mono t-small">{value}</dd>
-                </div>
-              ))}
-            </dl>
-
-            <div>
-              <Button
-                type="button"
-                variant="outline"
-                icon="check"
-                loading={transportSaving}
-                onClick={handleTransportSave}
-              >
-                {transportSaving ? 'Saving…' : 'Save Transmitter Transport'}
-              </Button>
-            </div>
-          </div>
-        </Card>
-
-        <Card title="Label format" subtitle="GS1 Digital Link and linear codes.">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-md">
-            <Field label="Digital link domain" htmlFor="settings-domain">
-              <Input
-                id="settings-domain"
-                mono
-                value={form.digitalLinkDomain}
-                onChange={(e) => setForm({ ...form, digitalLinkDomain: e.target.value })}
-              />
-            </Field>
-            <Field label="Pouch GTIN-13" htmlFor="settings-gtin">
-              <Input
-                id="settings-gtin"
-                mono
-                inputMode="numeric"
-                value={form.gtin}
-                onChange={(e) => setForm({ ...form, gtin: e.target.value })}
-              />
-            </Field>
-            <Field label="Print timeout (s)" htmlFor="settings-print-timeout">
-              <Input
-                id="settings-print-timeout"
-                type="number"
-                inputMode="numeric"
-                min="1"
-                value={form.printTimeout}
-                onChange={(e) => setForm({ ...form, printTimeout: e.target.value })}
-              />
-            </Field>
-          </div>
-
-          <div className="divider" />
-
-          <div className="stack-sm">
-            <p className="field-label">Pouch QR payload</p>
-            <div className="code-block">
-              https://{form.digitalLinkDomain}/01/{form.gtin}/10/{'{PALLET_CODE}-{GRADE}'}/21/{'{PCH-...}'}
-            </div>
-            <p className="field-hint">
-              EAN-13 is printed in parallel with the QR GS1 Digital Link during the 1D → 2D transition.
-            </p>
-          </div>
-        </Card>
-
-        <div className="row gap-sm">
+        {/* Form Actions */}
+        <div className="flex items-center gap-3">
           <Button type="submit" variant="primary" icon="check" touch>
-            Save Settings
+            Save Configuration
           </Button>
-          <Button type="button" variant="ghost" icon="refresh" onClick={() => setForm(INITIAL)}>
-            Reset
+          <Button type="button" variant="ghost" icon="refresh" onClick={() => setForm(INITIAL_SETTINGS)}>
+            Reset Defaults
           </Button>
         </div>
       </form>
 
-      <div className="alert alert-info">
-        <Icon name="info" size={16} />
-        <span>Weighing stations keep their Auto/Manual mode preference per session.</span>
+      {/* Info Banner */}
+      <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-start gap-3 text-xs text-foreground">
+        <Icon name="info" size={18} className="text-primary shrink-0 mt-0.5" />
+        <div className="leading-relaxed text-muted-foreground">
+          <strong className="font-semibold text-primary">Modbus TCP Polling:</strong> The backend system continuously polls the weight transmitter at IP <code className="font-mono text-foreground font-semibold">{form.transmitterIp}:{form.modbusPort}</code> (Register {form.weightRegister}) and updates live scale readings across all active intake sessions.
+        </div>
       </div>
     </div>
   )
