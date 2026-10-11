@@ -121,6 +121,7 @@
 | 2026-10-11 | Add packaging operator role & packaging navigation | ✅ | Added PACKAGING_OPERATOR role across useAuth, LoginPage, DashboardLayout, DashboardHomeRouter, UsersPage, FarmerProfilePage, and backend models. Provides dedicated access to 1 kg pouch packaging station. |
 | 2026-10-11 | Add PackagingDashboardHome & admin station links | ✅ | Created PackagingDashboardHome for packaging area with live stats, station status, and quick actions. Added Packaging, Weighing, and Sorting quick actions to AdminDashboardHome and Admin sidebar menu. |
 | 2026-10-11 | Live thermal label previews across receiving, sorting & packaging | ✅ | Created LabelPreview component with barcode, QR, and thermal styling. Embedded real-time live previews in WeighingPage (pallet label & receipt), GradingPage (sorted pallet label), PackagingPage (1 kg pouch GS1 label), and LabelsPage without modal interruptions. |
+| 2026-10-11 | Redesign Grade Distribution metric card | ✅ | Replaced wrapped pipe string with structured Grade A/B/C breakdown (A: 180, B: 120, C: 42) and multi-color distribution proportion bar. Updated StatCard to support complex ReactNode layouts. |
 
 ---
 

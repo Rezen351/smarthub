@@ -21,15 +21,15 @@ export default function StatCard({ label, value, sub, trend = 'neutral', icon, l
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
         {icon && <span className="text-muted-foreground/80 shrink-0">{icon}</span>}
       </div>
-      <p
+      <div
         className={cn(
           'font-bold tracking-tight tabular-nums text-foreground',
           large ? 'text-3xl md:text-4xl' : 'text-2xl md:text-3xl',
         )}
       >
         {value}
-      </p>
-      {sub && <p className={cn('text-xs font-medium', trendColor)}>{sub}</p>}
+      </div>
+      {sub && <div className={cn('text-xs font-medium', trendColor)}>{sub}</div>}
     </>
   )
 

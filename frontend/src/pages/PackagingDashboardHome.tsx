@@ -1,3 +1,4 @@
+import { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import Badge from '../components/shared/Badge'
@@ -8,9 +9,9 @@ import StatCard from '../components/shared/StatCard'
 
 interface Stat {
   label: string
-  value: string
-  sub: string
-  trend: 'up' | 'down' | 'neutral'
+  value: ReactNode
+  sub: ReactNode
+  trend?: 'up' | 'down' | 'neutral'
   icon: IconName
 }
 
@@ -32,7 +33,41 @@ interface Activity {
 
 const stats: Stat[] = [
   { label: "Today's Pouches", value: '342', sub: '1 kg packs', trend: 'up', icon: 'package' },
-  { label: 'Grade Distribution', value: 'A: 180 | B: 120 | C: 42', sub: 'Active batches', trend: 'neutral', icon: 'grade' },
+  {
+    label: 'Grade Distribution',
+    value: (
+      <div className="flex items-baseline justify-between gap-1 py-0.5 w-full">
+        <div className="flex items-baseline gap-1">
+          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">A:</span>
+          <span className="text-xl font-bold text-foreground">180</span>
+        </div>
+        <span className="text-muted-foreground/30 font-light">·</span>
+        <div className="flex items-baseline gap-1">
+          <span className="text-xs font-bold text-sky-600 dark:text-sky-400">B:</span>
+          <span className="text-xl font-bold text-foreground">120</span>
+        </div>
+        <span className="text-muted-foreground/30 font-light">·</span>
+        <div className="flex items-baseline gap-1">
+          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">C:</span>
+          <span className="text-xl font-bold text-foreground">42</span>
+        </div>
+      </div>
+    ),
+    sub: (
+      <div className="space-y-1 w-full pt-0.5">
+        <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-muted">
+          <div style={{ width: '52.6%' }} className="bg-emerald-500" title="Grade A: 53%" />
+          <div style={{ width: '35.1%' }} className="bg-sky-500" title="Grade B: 35%" />
+          <div style={{ width: '12.3%' }} className="bg-amber-500" title="Grade C: 12%" />
+        </div>
+        <span className="text-[11px] text-muted-foreground font-medium block">
+          53% A · 35% B · 12% C
+        </span>
+      </div>
+    ),
+    trend: 'neutral',
+    icon: 'grade',
+  },
   { label: 'Scale Stations', value: '3 Online', sub: 'Channels A, B, C', trend: 'up', icon: 'scale' },
   { label: 'Printer Status', value: 'Ready', sub: 'Pouch thermal printer', trend: 'neutral', icon: 'print' },
 ]
