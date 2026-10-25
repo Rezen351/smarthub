@@ -1,27 +1,22 @@
 % ============================================================================
 % Laporan Sistem ENYX-Smart Hub
 %
-% KOMPILASI (terverifikasi 10 Oktober 2026):
-%   cd docs && pdflatex laporan.tex && pdflatex laporan.tex   -> laporan.pdf (15 hal)
+% KOMPILASI (terverifikasi 25 Oktober 2026):
+%   cd docs && pdflatex -interaction=nonstopmode laporan.tex && pdflatex -interaction=nonstopmode laporan.tex
 %
 % Catatan compiler:
 % - pdflatex (rekomendasi, termasuk recipe "pdfLaTeX" di VS Code LaTeX Workshop):
 %   memilih figure .png secara otomatis (include ditulis tanpa ekstensi).
-% - dvilualatex: dokumen juga compile menjadi DVI (memilih figure .eps),
-%   namun konversi DVI -> PDF pada route dvipdfmx TIDAK mendukung EPS tanpa
-%   Ghostscript. Pakai recipe pdfLaTeX untuk output PDF.
-%
-% Paket: geometry, graphicx, booktabs, longtable, array, xcolor, hyperref,
-%        mathptmx (font Times New Roman / URW Nimbus Roman, ukuran 12pt)
-%        (semua tersedia di TeX Live 2023/Debian: texlive-latex-base,
-%         texlive-latex-recommended, texlive-fonts-recommended)
-% Sumber diagram: docs/DIAGRAM.md (PlantUML) -> docs/figures/ (png + eps)
+% - Paket: geometry, graphicx, booktabs, longtable, array, xcolor, hyperref,
+%          amsmath, mathptmx (Times New Roman / URW Nimbus Roman, ukuran 12pt)
+% Sumber diagram: docs/DIAGRAM.md (PlantUML) -> docs/figures/ (png)
 % ============================================================================
 \documentclass[12pt,a4paper]{article}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage{mathptmx}   % Times New Roman (URW Nimbus Roman) untuk teks & matematika
+\usepackage{amsmath}
+\usepackage{mathptmx}
 \usepackage[vmargin=2.2cm,hmargin=2.4cm]{geometry}
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -32,7 +27,7 @@
 
 \graphicspath{{figures/}{./}}
 
-\setlength{\emergencystretch}{3em}   % kurangi overfull pada paragraf justified
+\setlength{\emergencystretch}{3em}
 
 \definecolor{enyxgreen}{HTML}{166534}
 \definecolor{enyxlight}{HTML}{EAF4FB}
@@ -40,10 +35,10 @@
 
 \title{%
   \textbf{Laporan Sistem ENYX-Smart Hub}\\[6pt]
-  \large Tata Kelola Pengemasan Kentang Berbasis IoT\\ dengan Traceability GS1 Digital Link%
+  \large Tata Kelola Pascapanen \& Pengemasan Kentang Berbasis IoT\\ dengan Tiga Konsol Stasiun Kerja Fisik, Palet Grade Ber-QR Tertempel,\\ Mesin Fisik Mandiri, Traceability GS1, Timbang Susut, \& RBAC Terpadu%
 }
 \author{ENYX-Smart Hub --- Tim Pengembangan}
-\date{Versi 2.0 --- 10 Oktober 2026}
+\date{Versi 4.1 --- 25 Oktober 2026}
 
 \begin{document}
 
@@ -51,13 +46,7 @@
 
 \begin{abstract}
 \noindent
-Laporan ini mendokumentasikan rancangan dan keputusan desain sistem ENYX-Smart Hub:
-platform pengemasan kentang berbasis IoT yang mengintegrasikan timbangan RS485, scanner
-barcode, printer label, dan MQTT broker pada satu server lokal dengan akses enterprise
-melalui domain HTTPS. Laporan ini merupakan konsolidasi dari seluruh dokumen rancangan
-sebelumnya (arsitektur, tech stack, perangkat keras, API, UI/UX, dan rencana implementasi)
-ke dalam satu acuan resmi. Workflow, diagram arsitektur, dan skema database tetap dikelola
-secara visual pada \texttt{docs/DIAGRAM.md}.
+Laporan ini menyajikan spesifikasi arsitektur dan keputusan desain sistem ENYX-Smart Hub Versi 4.1: platform tata kelola penanganan pascapanen dan pengemasan kentang berbasis IoT yang disederhanakan ke dalam tiga konsol stasiun kerja fisik utama. Ketiga konsol ini berpadanan langsung 1:1 dengan tiga unit timbangan digital industri berprotokol Modbus TCP port 502, yaitu Konsol 01 Penerimaan (Timbangan 01), Konsol 02 Sortir dan Grading (Timbangan 02), serta Konsol 03 Pengepakan dan Pengiriman (Timbangan 03). Integrasi ini mencakup pelabelan waring intake, gudang penyangga antrean tertib FIFO, penyortiran bertaut palet, pemilahan ukuran mekanis fisik mandiri, pencatatan status pencucian pasca-sortir, kalkulasi otomatis penyusutan bobot, penautan kode QR fisik yang sudah tertempel secara permanen pada palet grade tanpa memerlukan pencetakan label tambahan, pelabelan ganda produksi pouch retail berstandar QR GS1 Digital Link dan kemasan ekspor barcode GS1 ITF-14, serta pengelolaan gudang produk jadi. Seluruh mesin pemilah dan pencucian beroperasi secara mandiri (\emph{stand-alone}), di mana sistem perangkat lunak murni bertindak sebagai pencatat (\emph{recorder}). Antarmuka \emph{Focus Mode} dioptimalkan menjadi sangat ringkas untuk meminimalkan beban kognitif operator. Sistem menerapkan model RBAC 3-role (Admin, Operator terpadu dengan navigasi modular stasiun kerja, dan Petani) serta akses penelusuran publik untuk konsumen tanpa login. Seluruh diagram visual, alur kerja operasional, dan skema basis data dikelola pada dokumen \texttt{docs/DIAGRAM.md}.
 \end{abstract}
 
 \tableofcontents
@@ -68,903 +57,384 @@ secara visual pada \texttt{docs/DIAGRAM.md}.
 % ============================================================================
 
 \subsection{Latar Belakang}
-Rantai pasok kentang di Indonesia umumnya masih bertumpu pada pencatatan manual pada
-tahap pascapanen: penimbangan, sortir, hingga pengemasan sering dicatat di kertas atau
-tidak dicatat sama sekali. Akibatnya, penelusuran asal produk (traceability) menjadi
-lambat, data kesepakatan berat antara petani dan fasilitas mudah berbeda, dan produk
-kesulitan memenuhi persyaratan ekspor yang menuntut identitas produk berstandar GS1.
+Rantai pasok komoditas hortikultura kentang menghadapi tantangan nyata pada penanganan pascapanen: pencatatan setoran petani sering kali tidak transparan, penyusutan bobot akibat tanah, lumpur, dan kentang afkir tidak terukur secara objektif, serta penelusuran asal-usul produk belum terintegrasi dari kebun hingga konsumen akhir. Selain itu, pasar ritel modern dan pasar ekspor menuntut identitas produk berstandar global GS1 serta konsistensi mutu yang terjamin.
 
-ENYX-Smart Hub hadir untuk mendigitalkan alur tersebut end-to-end: mulai dari petani
-menyerahkan hasil panen, operator memverifikasi dan menimbang, sortir grade, pengepakan
-pouch 1 kg, penyimpanan warehouse, hingga pengiriman ekspor --- dengan pencatatan
-otomatis di setiap tahap dan label berstandar GS1 (QR GS1 Digital Link, EAN-13, ITF-14).
+ENYX-Smart Hub mendigitalkan seluruh tahapan operasional fasilitas pengemasan kentang melalui konsolidasi praktis menjadi \textbf{3 Konsol Stasiun Kerja Fisik} yang menaungi fungsi operasional inti:
+\begin{enumerate}
+  \item \textbf{Konsol 01: Penerimaan \& Waring Intake} (Timbangan 01 kapasitas 150 kg):
+  Identifikasi petani melalui kartu QR, penimbangan bruto panen, penerbitan label identitas waring (\texttt{WRG-\ldots}), pencetakan struk tanda terima resmi, dan pencatatan otomatis ke dalam antrean gudang penyangga berbasis sistem FIFO.
+  
+  \item \textbf{Konsol 02: Sortir, Sizing \& Grading} (Timbangan 02 kapasitas 100 kg):
+  Pengambilan waring dari antrean penyangga, penyortiran manual bertaut palet penampung ber-QR (\texttt{PLT-\ldots}) untuk mengunci data silsilah petani, pemilahan ukuran umbi pada mesin sortir mekanis fisik mandiri, pencatatan status pencucian pasca-sortir (Washed/Unwashed), penimbangan bersih kelas mutu komersial (Grade A, B, dan C saja; kentang reject/afkir dipisahkan tanpa ditimbang), kalkulasi otomatis penyusutan bobot, dan pemindaian penautan QR fisik yang sudah tertempel secara permanen pada palet grade (\texttt{PLT-GRD-\ldots}) tanpa memerlukan pencetakan label baru.
+  
+  \item \textbf{Konsol 03: Pengepakan \& Pengiriman} (Timbangan 03 kapasitas 30 kg):
+  Penimbangan presisi pouch retail 1 kg berlabel QR GS1 Digital Link dan EAN-13, atau kardus/karung ekspor berlabel barcode GS1 ITF-14, pemutakhiran stok produk jadi secara otomatis, dan verifikasi pemindaian muatan truk saat keberangkatan pengiriman.
+\end{enumerate}
 
 \subsection{Tujuan Laporan}
 \begin{itemize}
-  \item Menjadi acuan tunggal (single reference) untuk desain sistem.
-  \item Merekam keputusan desain beserta alasannya agar konsisten saat implementasi.
-  \item Menjadi dasar assessment kelayakan teknis, biaya (BOM), dan rencana pengembangan.
+  \item Menjadi acuan tunggal untuk spesifikasi teknis dan implementasi sistem di fasilitas.
+  \item Merekam seluruh keputusan desain, penyederhanaan antarmuka operator (\emph{Focus Mode}), konfigurasi tiga timbangan Modbus TCP port 502, arsitektur pencatat data (\emph{data recorder}) tanpa kontrol mesin aktif, penggunaan QR palet grade tertempel, formula penyusutan bobot, dan model RBAC 3-role.
+  \item Menjadi pedoman pengujian mutu perangkat lunak, integrasi perangkat keras, dan rencana peluncuran produksi.
 \end{itemize}
 
-\subsection{Lingkup Saat Ini}
-Sistem beroperasi untuk \textbf{satu komoditas: Kentang} (grade A/B/C). Arsitektur dan
-skema data dirancang \emph{multi-commodity-ready} sehingga penambahan komoditas baru
-(Tomat, Cabai, dsb.) di masa depan hanya memerlukan data master tanpa migrasi skema.
+\subsection{Lingkup Operasional}
+Sistem beroperasi penuh untuk \textbf{komoditas Kentang} (Grade A, B, C, Reject). Arsitektur dan skema basis data dirancang siap multi-komoditas sehingga varietas tambahan di masa mendatang dapat diakomodasi melalui data master tanpa mengubah struktur relasional dasar.
 
 % ============================================================================
 \section{Keputusan Desain}
+% ============================================================================
 
-Tabel berikut merangkum keputusan desain final beserta alasannya. Keputusan ini
-merefleksikan workflow operasional yang telah divalidasi pada \texttt{docs/DIAGRAM.md}.
+Tabel berikut merangkum keputusan desain utama sistem ENYX-Smart Hub:
 
 \begin{longtable}{@{}>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}p{6.2cm}>{\raggedright\arraybackslash}p{4.6cm}@{}}
 \toprule
 \textbf{Keputusan} & \textbf{Alasan} & \textbf{Dampak} \\
 \midrule
 \endhead
-Satu komoditas: Kentang & Fokus MVP, operasional tunggal; multi-commodity belum jadi kebutuhan & Kolom \texttt{commodityId} tetap ada; kode commodity \texttt{002}/\texttt{003} reserved \\
+Konsolidasi 3 Konsol Stasiun Kerja Fisik & Operator bekerja di depan meja timbangan fisik; pemisahan layar berlebih membingungkan pengguna & Antarmuka disederhanakan menjadi 3 stasiun kerja utama sesuai lokasi fisik 3 timbangan \\
 \hline
-Petani hanya menunjukkan ID; \textbf{operator yang approve} berat & Menghindari sengketa di timbangan sekaligus menjaga interaksi petani tetap minimal & Status \texttt{APPROVED} dicatat operator; tidak ada aksi approval dari petani \\
+Tiga Titik Penimbangan Modbus TCP Port 502 & Mengetahui berat bruto setoran, menghitung susut grading secara presisi, dan menjamin target bobot kemasan & Timbangan 01 di Penerimaan (150 kg), Timbangan 02 di Grading (100 kg), Timbangan 03 di Pengepakan (30 kg) \\
 \hline
-Penimbangan hanya di Area Penerimaan (karung/palet) dan Area Pengepakan (pouch 1 kg) & Area Sortir tidak perlu timbangan; berat per grade diperoleh dari akumulasi pouch & Timbangan hanya di 2 area; Area Sortir murni scan palet \& cetak label grade \\
+Waring sebagai Wadah Intake Ber-ID Unik & Memisahkan lot setoran petani secara fisik dan digital sebelum disatukan ke palet sortir & Entitas waring diterbitkan setelah approval berat intake; dilabeli stiker QR fisik (\texttt{WRG-\ldots}) \\
 \hline
-Cetak ganda di penerimaan: Struk Petani \& Label Palet & Petani butuh bukti setoran resmi; wadah fisik palet butuh identitas QR traceability & Sistem mencetak Struk Bukti Timbang Petani (nota thermal) dan Label Stiker Palet (PLT-...) \\
+Fungsi Ganda Gudang Fasilitas & Fasilitas membutuhkan zona antrean bahan mentah dan zona penyimpanan produk jadi secara terpisah & Gudang dipartisi menjadi dua zona terdata: Zona Penyangga dan Zona Produk Jadi \\
 \hline
-Palet dibuat otomatis pasca-approve berat & Palet adalah unit fisik ber-ID dasar seluruh traceability & Entity \texttt{Pallet} diterbitkan saat operator approve; kode \texttt{PLT-YYYYMMDD-SEQ} \\
+Penyortiran Manual Bertaut Palet & Menjaga rantai ketertelusuran hulu saat kentang dari beberapa waring digabung ke satu palet & Operator memindai QR waring dan QR palet; sistem menyimpan relasi pada tabel \texttt{pallet\_warings} \\
 \hline
-Pengepakan tanpa scan palet, timbang 1 kg \& cetak label & Grade dan palet sudah berlabel pada kelompok sortir; akumulasi berat per grade dihitung dari pouch 1 kg & Scan manual di pengepakan dihilangkan; timbangan meja target 1 kg $\pm$5 g mentrigger cetak label pouch \\
+Mesin Fisik Mandiri \& Sistem sebagai Pencatat & Mesin pemilah ukuran dan pencucian beroperasi independen dengan sakelar/panel listrik sendiri & Sistem web tidak mengontrol motor mesin, murni mencatat status proses (\emph{data recorder}) \\
 \hline
-Label pouch memakai QR \textbf{GS1 Digital Link} & Satu simbol untuk dua pembaca: scanner internal dan smartphone konsumen; searah dengan arah industri (Sunrise 2027) & QR pouch berisi URL; server menyediakan resolver + halaman traceability publik; EAN-13 tetap dicetak paralel \\
+Palet Grade Ber-QR Fisik Tertempel (Tanpa Cetak) & Menghemat bahan cetak label dan mempercepat alur kerja di stasiun grading & Palet mutu menggunakan stiker QR permanen; operator cukup scan dan tautkan ke hasil timbang \\
 \hline
-Arsitektur centralized DB (bukan blockchain) & Fasilitas adalah aktor tunggal; database lokal terpercaya sudah cukup & Tanpa infra multi-pihak; blockchain ditunda sampai ada jaringan pemangku kepentingan \\
+Focus Mode Ringkas \& Bebas Friksi & Operator di lapangan membutuhkan layar besar yang minim distraksi dan cepat & Tampilan angka timbangan raksasa, quick pull waring buffer, scan QR palet cepat, dan tombol simpan tunggal \\
+\hline
+Kalkulasi Penyusutan Otomatis & Memberikan transparansi rendemen bersih kepada petani dan fasilitas mengenai berat kotoran dan afkir & Sistem menghitung $\text{Susut} = \text{Bruto Waring} - \sum \text{Net Grade}$; disajikan otomatis di layar operator dan portal petani \\
+\hline
+Penyederhanaan RBAC 3-Role Terpadu & Efisiensi operasional di mana satu operator lapangan bertugas di beberapa stasiun kerja & Tiga role sistem: Admin, Operator (dengan menu pemilih stasiun kerja terpadu), dan Petani, ditambah akses publik Konsumen \\
+\hline
+Label Ganda Produksi GS1 Link dan Ekspor ITF-14 & Kemasan retail butuh akses publik konsumen via ponsel, sedangkan kemasan ekspor butuh standar logistik global & QR GS1 Digital Link pada pouch 1 kg; barcode GS1 ITF-14 pada kemasan ekspor 10/50 kg \\
 \bottomrule
 \end{longtable}
 
 % ============================================================================
 \section{Arsitektur Sistem}
+% ============================================================================
 
 \subsection{Gambaran 5 Layer}
-Sistem disusun dalam lima layer, dari perangkat lapangan hingga akses pengguna:
+Sistem disusun dalam lima layer fungsional, dari perangkat keras lapangan hingga akses pengguna internet:
 
 \begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{7.0cm}>{\raggedright\arraybackslash}p{5.0cm}@{}}
 \toprule
 \textbf{Layer} & \textbf{Komponen} & \textbf{Fungsi} \\
 \midrule
 \endhead
-Field Level & Timbangan RS485 (Area Penerimaan \& Pengemasan), scanner QR, printer struk thermal (tanda terima petani), printer label (palet, grade, pouch), scanner warehouse, scanner pengiriman, smartphone petani & Input data timbang, scan, cetak struk tanda terima petani, dan cetak label wadah/pouch di lapangan \\
+Field Level & 3$\times$ Timbangan digital industri RS485, scanner barcode 2D, printer struk thermal, printer label barcode GS1, mesin sortir mekanis mandiri, unit pencucian mandiri & Akuisisi sinyal berat, pemindaian identitas fisik wadah dan palet, serta pencetakan tanda terima dan label kemasan \\
 \hline
-Edge / Gateway & 2$\times$ ESP32 (Area Penerimaan, Area Pengemasan), router/switch & Akuisisi data timbangan via RS485; publish ke broker via MQTT/Wi-Fi LAN \\
+Edge / Gateway & 3$\times$ ESP32 Node MCU, Ethernet W5500 / Wi-Fi industri, switch jaringan LAN & Konversi data Modbus RTU timbangan menjadi Modbus TCP Server port 502 secara deterministik \\
 \hline
-Application Level & PC Server: web server (Nginx), aplikasi (business logic), MQTT broker (Mosquitto), session context manager, traceability page + GS1 Digital Link resolver, database & Logika bisnis, session context, penyajian halaman traceability, penyimpanan lokal \\
+Application Level & PC Server lokal fasilitas: Nginx, Express Backend, Modbus TCP Client Poller, Socket.io, Shrinkage Engine, PostgreSQL & Logika bisnis terpusat, polling berkala holding registers timbangan, kalkulasi susut, dan basis data lokal \\
 \hline
-Cloud Level & Cloud database (Neon/Supabase) & Backup berkala dan disaster recovery \\
+Cloud Level & Database Cloud (Neon / Supabase) & Cadangan terjadwal berkala dan pemulihan data aman \\
 \hline
-Enterprise Level & Domain HTTPS (Cloudflare + Let's Encrypt), akses pengguna & Akses admin/operator/petani dan halaman traceability publik untuk konsumen/buyer \\
+Enterprise Level & Domain HTTPS publik (\texttt{trace.enyx.id}), RBAC 3-Role, dan halaman penelusuran publik & Portal manajemen eksekutif, konsol stasiun kerja operator, portal petani, dan verifikasi konsumen \\
 \bottomrule
 \end{longtable}
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{arsitektur}
-  \caption{Diagram arsitektur sistem --- Field Level hingga Enterprise Level.\newline
-  (Sumber: \texttt{docs/DIAGRAM.md}; render terakhir 10 Oktober 2026)}
+  \caption{Diagram arsitektur sistem ENYX-Smart Hub 5-Layer dengan 3 titik timbangan Modbus TCP dan model RBAC 3-role.\newline
+  (Sumber: \texttt{docs/DIAGRAM.md})}
 \end{figure}
 
-\subsection{Prinsip Deployment}
+\subsection{Prinsip Deployment \& Stabilitas Operasional}
 \begin{itemize}
-  \item \textbf{Local-first}: seluruh layanan inti (backend, DB, broker, web) berjalan pada satu PC server di lokasi fasilitas; operasional tetap berjalan saat internet terputus.
-  \item \textbf{Backup berkala}: sinkronisasi logis ke cloud database setiap 1--6 jam (cron/backup); data time-series diagregasi sebelum dikirim untuk menghemat bandwidth.
-  \item \textbf{Keamanan}: HTTPS wajib untuk akses enterprise (Let's Encrypt); MQTT broker memakai autentikasi perangkat; jaringan IoT diisolasi dengan VLAN.
+  \item \textbf{Local-First}: Seluruh layanan inti (backend, database, poller Modbus TCP, Socket.io, dan web server) berjalan pada PC server lokal fasilitas. Operasional penimbangan, sortir, dan pengemasan tetap berjalan 100\% normal tanpa ketergantungan koneksi internet.
+  \item \textbf{Pemisahan Kontrol Mesin}: Mesin sizer dan unit cuci/pengering memiliki sistem kelistrikan mandiri di fasilitas. Aplikasi web tidak mengintervensi kendali fisik motor, sehingga kegagalan perangkat lunak atau jaringan tidak akan menghentikan operasi fisik mesin.
+  \item \textbf{Segmentasi Jaringan Industri}: Lalu lintas Modbus TCP lokal berada pada segmen jaringan terisolasi untuk menjamin keamanan dan stabilitas transmisi data timbangan.
 \end{itemize}
 
-\subsection{Struktur Aplikasi (Modular Monolith)}
-Backend disusun sebagai modular monolith agar mudah diuji dan nanti dapat diekstrak
-menjadi microservice bila skala bertambah:
+\subsection{Peta Holding Register Modbus TCP Port 502}
+Akuisisi data timbangan menggunakan protokol Modbus TCP pada port standar \texttt{502}. ESP32 bertindak sebagai Modbus TCP Server, dan PC Server bertindak sebagai Modbus TCP Client yang melakukan polling holding register dengan interval 200--500 ms:
 
-\begin{verbatim}
-backend/src/
-  modules/     auth, farmers, pallets, weighing, warehouse,
-               labels, packaging, deliveries
-  shared/      mqtt, socket, barcode, database
-  config/ middlewares/ routes/ controllers/ types/
-\end{verbatim}
-
-Setiap modul berisi service (logika), controller (handler ringkas), routes, schema
-validasi (Zod), dan index sebagai public API modul. Komponen \texttt{shared} hanya
-menangani infrastruktur lintas modul tanpa business logic.
-
-\subsection{Session Context \& Auto-Fill}
-Untuk meminimalkan input operator, sistem menyimpan \emph{session context} setelah scan
-pertama. Context disimpan di Redis (TTL 4 jam, diperpanjang setiap aktivitas) dan dapat
-di-reset manual:
-
-\begin{verbatim}
-Context: farmerId, farmerName, commodityId (auto: Kentang),
-         depositDate (auto), palletCode (setelah approve)
-\end{verbatim}
-
-Alur kerja: \textbf{Scan ID Petani $\rightarrow$ Murni Timbang Hasil Panen (Auto/Manual) $\rightarrow$ Approve $\rightarrow$ Cetak Struk Petani \& Label Palet (PLT-\ldots)}.
-Tidak ada proses atau halaman manual ``Buat Palet''; nomor dan entitas Pallet ID diterbitkan secara otomatis oleh sistem saat operator menekan Approve pada penimbangan yang valid. Setelah approval, sistem mengaktifkan langkah cetak ganda: Struk Bukti Timbang Petani (nota tanda terima resmi yang sah untuk dibawa pulang) serta pencetakan label QR palet untuk ditempelkan pada fisik wadah/palet intake. Dashboard menampilkan context aktif secara ringkas agar operator selalu sadar petani yang sedang diproses.
-
-\subsection{Modul dan Shared Components}
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{11.8cm}@{}}
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{2.2cm}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{6.8cm}@{}}
 \toprule
-\textbf{Komponen} & \textbf{Tanggung jawab} \\
+\textbf{Alamat / Offset} & \textbf{Tipe Data} & \textbf{Nama Parameter} & \textbf{Keterangan} \\
 \midrule
 \endhead
-\texttt{auth} & Login, JWT, hashing bcrypt, middleware RBAC untuk role Admin, Weighing/Sorting/Warehouse/Delivery Operator, Farmer \\
-\texttt{farmers} & CRUD petani, generate kode \texttt{FRM}, riwayat setoran, ringkasan grade \\
-\texttt{pallets} & Register palet terbit otomatis, kode \texttt{PLT}, keterkaitan palet--petani--komoditas, riwayat timbang resmi, dan penelusuran status \\
-\texttt{weighing} & Pencatatan timbang (penerimaan \& pengepakan), integrasi MQTT scale readings, real-time via Socket.io, total per grade per petani \\
-\texttt{warehouse} & Stok masuk/keluar, kapasitas, ringkasan stok per grade \\
-\texttt{labels} & Generate QR GS1 Digital Link, EAN-13, ITF-14; layout dan perintah cetak \\
-\texttt{packaging} & Tipe/ukuran packaging, packaging unit, validasi kapasitas, relasi item--packaging \\
-\texttt{deliveries} & Delivery, verifikasi muatan via ITF-14, pencatatan keberangkatan, stok keluar \\
-\hline
-\texttt{shared/mqtt} & Koneksi broker, subscribe/publish, parsing dan routing pesan \\
-\texttt{shared/socket} & Event real-time ke dashboard (\texttt{weighing:new}, \texttt{warehouse:update}, \texttt{scale:reading}, dll.) \\
-\texttt{shared/barcode} & Utilitas generate/validasi barcode (rencana: bwip-js) \\
-\texttt{shared/database} & Prisma client, koneksi, transaksi, paginasi \\
+Offset 0--1 & Float32 & \texttt{stableWeightG} & Berat stabil terfilter dalam satuan gram \\
+Offset 2--3 & Float32 & \texttt{liveWeightG} & Berat mentah real-time dalam satuan gram \\
+Offset 4--5 & Float32 & \texttt{tareWeightG} & Bobot kontainer atau tara aktif \\
+Offset 6--7 & Float32 & \texttt{unitPrice} & Harga satuan per kg (opsional) \\
+Offset 8--9 & Float32 & \texttt{totalPrice} & Total kalkulasi nilai uang \\
+Offset 10 & UInt16 & \texttt{statusBitmask} & Bit 0: Stabil, Bit 1: Tara aktif, Bit 4: Titik nol \\
+Offset 11 & UInt16 & \texttt{commandReg} & Register perintah kontrol (1: Tare, 2: Zero, 3: Clear) \\
 \bottomrule
 \end{longtable}
 
-\subsection{Konvensi MQTT}
-\begin{verbatim}
-enyx/kentang/penerimaan/scale/big     -> timbangan besar Area Penerimaan
-enyx/kentang/pengemasan/scale/pouch   -> timbangan pouch 1 kg
-enyx/kentang/penerimaan/print/pallet  -> cetak QR label palet
-enyx/kentang/sortir/print/grade       -> cetak label grade
-enyx/kentang/pengemasan/print/pouch   -> cetak label pouch
-enyx/warehouse/scan/in                -> warehouse in
-enyx/warehouse/scan/out               -> warehouse out
-enyx/delivery/truck/status            -> status truck
-\end{verbatim}
-
-Catatan: segment \texttt{kentang} menjadi placeholder \texttt{<commodity>} ketika
-multi-commodity diaktifkan. QoS 1 untuk pembacaan timbangan (data kritis), QoS 0 untuk
-perintah (print/trigger), payload berbentuk JSON.
-
 % ============================================================================
-\section{Alur Kerja}
+\section{Alur Kerja \& Tiga Konsol Stasiun Kerja}
+% ============================================================================
 
-\subsection{Aturan Penimbangan}
-Penimbangan hanya dilakukan di \textbf{Area Penerimaan} (karung per palet) dan
-\textbf{Area Pengepakan} (pouch 1 kg per grade). \textbf{Area Sortir tidak memiliki
-timbangan}; berat per grade diperoleh dari akumulasi pouch 1 kg.
+\subsection{Konfigurasi Tiga Titik Penimbangan}
+Sistem menerapkan tiga titik penimbangan terkalibrasi untuk menjamin integritas data:
+\begin{enumerate}
+  \item \textbf{Timbangan 01 (Area Penerimaan)}: Timbangan duduk kapasitas 150 kg untuk menimbang bobot bruto setoran waring petani.
+  \item \textbf{Timbangan 02 (Area Grading)}: Timbangan lantai kapasitas 100 kg untuk menimbang bobot bersih kelas komersial (Grade A, B, C saja); umbi reject/afkir dipisahkan tanpa ditimbang dan otomatis terhitung ke dalam susut bobot.
+  \item \textbf{Timbangan 03 (Area Pengepakan)}: Timbangan meja presisi kapasitas 30 kg untuk menimbang kemasan pouch retail 1 kg ($\pm$5 g) serta kemasan ekspor 10/50 kg.
+\end{enumerate}
 
-\subsection{Enam Tahap Proses}
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{7.6cm}>{\raggedright\arraybackslash}p{5.0cm}@{}}
+\subsection{Tiga Konsol Stasiun Kerja Fisik}
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{6.4cm}>{\raggedright\arraybackslash}p{5.4cm}@{}}
 \toprule
-\textbf{Tahap} & \textbf{Fungsi} & \textbf{Tujuan} \\
+\textbf{Konsol Stasiun Kerja} & \textbf{Aktivitas Operasional} & \textbf{Keluaran \& Dokumen} \\
 \midrule
 \endhead
-1. Penerimaan & Operator scan/pilih ID petani. Halaman penimbangan murni hanya menimbang hasil panen saja (Auto via Modbus TCP atau Manual) tanpa input grade, pallet ID, dan note; tanggal setor otomatis oleh sistem. Operator verifikasi \& approve berat resmi (koreksi bila perlu). Setelah approve, sistem otomatis menerbitkan Pallet ID dan membuka langkah cetak ganda: Struk Bukti Timbang Petani (nota thermal tanda terima sah) dan QR label palet (\texttt{PLT-\ldots}) untuk ditempel pada box/palet & Menetapkan berat setoran resmi secara murni, memberikan bukti fisik sah kepada petani, mencatat tanggal setor otomatis, dan menerbitkan identitas fisik palet ber-QR untuk tahap berikutnya \\
+\textbf{Konsol 01:\newline Penerimaan \& Waring Intake}\newline(Timbangan 01: 150 kg) &
+Scan ID petani (\texttt{FRM-\ldots}), timbang bruto panen, verifikasi berat stabil, penerbitan identitas waring (\texttt{WRG-\ldots}), transfer otomatis ke antrean gudang penyangga berbasis FIFO. &
+Struk nota timbang resmi petani, label stiker QR waring intake, dan pencatatan kuantitas buffer gudang. \\
 \hline
-2. Pencucian \newline (opsional) & Mencuci dan mengeringkan kentang bila kondisinya memerlukan; dilewati jika sudah bersih & Membersihkan komoditas sebelum sortir agar mutu tidak tercemar kotoran \\
+\textbf{Konsol 02:\newline Sortir, Sizing \& Grading}\newline(Timbangan 02: 100 kg) &
+Workflow sekuensial 5 tahap: (1) Scan waring intake (\texttt{WRG-\ldots}) dari antrean buffer, (2) Umpan umbi ke mesin sortir ukuran mekanis mandiri, (3) Pencatatan opsi cuci/kering pasca-alat sortir (Washed/Unwashed), (4) Penimbangan net grade komersial (Grade A, B, C saja; reject tidak ditimbang) pada Timbangan 02 dan scan penautan QR fisik yang sudah tertempel di palet grade (\texttt{PLT-GRD-\ldots}), dan (5) Review susut bobot otomatis lalu konfirmasi selesai menuju packaging. &
+Relasi silsilah data waring-palet, data susut bobot (kg dan \%), keterikatan QR palet grade fisik (\texttt{PLT-GRD-\ldots}) tanpa cetak label, dan status siap kemas. \\
 \hline
-3. Sortir & Operator scan QR palet intake (\texttt{PLT-\ldots}), memisahkan kentang ke grade A/B/C secara fisik, memilih grade, mencetak label grade (\texttt{GRD-\ldots}), dan menempelkannya pada palet/keranjang sortir per kelompok. Murni klasifikasi mutu tanpa penimbangan & Mengelompokkan mutu dan memberi identitas fisik palet per grade untuk pengepakan; berat per grade diperoleh dari akumulasi pouch 1 kg \\
-\hline
-4. Pengepakan & Menimbang \& mengisi pouch 1 kg per grade (timbangan meja target 1 kg $\pm$5 g), lalu mencetak label pouch (QR GS1 Digital Link + EAN-13) tanpa scan karena grade dan palet sudah berlabel pada kelompok sortir & Menghasilkan unit retail 1 kg dengan berat akurat dan identitas GS1; berat riil per grade dihitung dari akumulasi jumlah pouch \\
-\hline
-5. Penyimpanan \newline Warehouse & Operator scan pouch/pallet saat warehouse in; sistem mencatat stok masuk (jumlah, grade, total berat) dan memperbarui kapasitas serta sisa ruang & Menyimpan stok dalam status terdata dan real-time per grade \\
-\hline
-6. Pengiriman & Pouch ditarik dari warehouse dan dikemas menjadi packaging ekspor 10 kg/50 kg dengan label ITF-14, dimuat ke truck, lalu barcode ITF-14 di-scan untuk verifikasi muatan (jumlah, grade, batch, tujuan) & Menyiapkan unit logistik ekspor berstandar GS1 dan memastikan muatan sesuai rencana pengiriman \\
+\textbf{Konsol 03:\newline Pengepakan \& Pengiriman}\newline(Timbangan 03: 30 kg) &
+Timbang pouch retail 1 kg (toleransi $\pm$5 g), cetak label QR GS1 Digital Link dan barcode EAN-13, atau timbang kardus/karung ekspor berlabel barcode GS1 ITF-14, pemutakhiran stok gudang produk jadi, dan verifikasi muatan truk saat pengiriman. &
+Pouch retail bersertifikasi GS1, kemasan ekspor terstandarisasi, stok barang jadi real-time, dan surat jalan pengiriman. \\
 \bottomrule
 \end{longtable}
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{workflow}
-  \caption{Diagram workflow pengemasan kentang (7 swimlane: Petani, Operator, Sistem,
-  Proses, Pengemasan, Warehouse, Pengiriman).\newline
+  \caption{Diagram alur kerja pengemasan kentang terpadu dengan 3 konsol stasiun kerja fisik dan 3 titik timbangan IoT.\newline
   (Sumber: \texttt{docs/DIAGRAM.md})}
 \end{figure}
 
-\subsection{Peran per Swimlane}
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{12.6cm}@{}}
-\toprule
-\textbf{Lane} & \textbf{Peran} \\
-\midrule
-\endhead
-Petani & Membawa panen, menunjukkan ID petani, menyerahkan hasil panen \\
-Operator & Scan ID, timbang panen (Auto/Manual), verifikasi \& approve, cetak struk petani \& label palet; saat sortir: scan palet intake \& cetak label grade (A/B/C) \\
-Sistem & Auto-fetch context, pencatatan otomatis (status \texttt{APPROVED}), update stok \& kapasitas, resolve GS1 Digital Link ke halaman traceability publik \\
-Proses & Pencucian (opsional), sortir \& pengelompokan grade \\
-Pengemasan & Timbang \& isi pouch 1 kg per grade, cetak label (QR GS1 Digital Link + EAN-13) --- tanpa scan, grade sudah terpisah di palet \\
-Warehouse & Warehouse in (scan pouch/pallet), manajemen stok masuk/keluar \\
-Pengiriman & Loading truck, verifikasi muatan + grade via ITF-14, keberangkatan \\
-\bottomrule
-\end{longtable}
+\subsection{Formula Penyusutan Bobot (Shrinkage Engine)}
+Penyusutan bobot dihitung secara otomatis saat seluruh fraksi grade mutu dari suatu palet selesai ditimbang:
+$$\text{Susut Bobot (kg)} = \text{Berat Bruto Intake Waring} - \sum (\text{Berat Bersih Grade A + B + C})$$
+$$\text{Persentase Susut (\%)} = \left(\frac{\text{Susut Bobot (kg)}}{\text{Berat Bruto Intake Waring}}\right) \times 100\%$$
+
+Data penyusutan ini tersimpan pada tabel \texttt{grading\_records} dan langsung dapat diakses pada ringkasan operasional stasiun kerja, laporan analitik admin, serta portal mandiri petani.
 
 % ============================================================================
 \section{Standar Identifikasi \& Barcode}
+% ============================================================================
 
-Seluruh identifier mengikuti standar berikut (GS1 Indonesia):
+Seluruh identifier fisik di fasilitas mengikuti standar penomoran terstruktur:
 
 \begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{6.6cm}>{\raggedright\arraybackslash}p{5.6cm}@{}}
 \toprule
-\textbf{Kode} & \textbf{Format} & \textbf{Penggunaan} \\
+\textbf{Identifier} & \textbf{Format Standar} & \textbf{Penggunaan Fisik} \\
 \midrule
 \endhead
-Farmer & \texttt{FRM-\{YYYY\}-\{SEQ\}} & QR pada ID card petani \\
-Pallet & \texttt{PLT-\{YYYYMMDD\}-\{SEQ\}} & QR label palet, ditempel pada box/palet setelah approve \\
-Grade & \texttt{GRD-\{PALLET\_CODE\}-\{GRADE\}} & Label grade pada kelompok hasil sortir di palet \\
-Pouch QR & \texttt{https://\{domain\}/01/\{GTIN-13\}/}\newline\texttt{10/\{LOT\}/21/\{SERIAL\}} & QR GS1 Digital Link pada label pouch 1 kg \\
-Pouch EAN-13 & \texttt{899\{COMMODITY\_CODE\}\{SEQ\}} & EAN-13 pada label pouch (\texttt{899} = kode negara Indonesia) \\
-Packaging ITF-14 & \texttt{\{GTIN-14\}} & ITF-14 pada packaging ekspor 10 kg/50 kg \\
+Farmer ID & \texttt{FRM-\{YYYY\}-\{SEQ\}} & Kartu identitas QR Petani untuk aktivasi setoran \\
+Waring Code & \texttt{WRG-\{YYYYMMDD\}-\{SEQ\}} & Label stiker QR pada waring intake \\
+Pallet Code & \texttt{PLT-\{YYYYMMDD\}-\{SEQ\}} & Label QR palet sortir penampung kentang \\
+Pallet Grade QR & \texttt{PLT-GRD-\{GRADE\}-\{ID\}} & Stiker QR permanen tertempel di palet grade (discan \& ditautkan tanpa cetak) \\
+Pouch QR & \texttt{https://\{domain\}/01/\{GTIN\}/}\newline\texttt{10/\{LOT\}/21/\{SERIAL\}} & QR GS1 Digital Link pada pouch retail 1 kg \\
+Pouch EAN-13 & \texttt{899\{COMMODITY\_CODE\}\{SEQ\}} & Barcode EAN-13 pada kemasan retail \\
+Kemasan Ekspor & \texttt{\{GTIN-14\}} & Barcode GS1 ITF-14 pada kardus/karung ekspor \\
 \bottomrule
 \end{longtable}
 
-\subsection{GS1 Digital Link pada Label Pouch}
-Contoh konfigurasi URI pada QR label pouch:
-
+\subsection{Penerapan Standar GS1 Digital Link}
+URI pada label QR kemasan pouch retail mengikuti struktur resmi GS1 Digital Link:
 {\scriptsize
 \begin{verbatim}
-https://trace.enyx.id/01/899001000001/10/PLT-20260914-0001-A/21/PCH-PLT-20260914-0001-001
+https://trace.enyx.id/01/899001000001/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001
                    |                |                    |
                  AI 01            AI 10                 AI 21
-               (GTIN-13)      (batch/lot)            (serial)
+               (GTIN-13)       (batch/lot)           (serial unik)
 \end{verbatim}
 }
-
-\begin{itemize}
-  \item \textbf{Satu simbol, dua pembaca}: scanner internal mendecode element string GS1 (tanpa internet); smartphone (konsumen/buyer) mengikuti resolusi URL ke halaman traceability publik.
-  \item Halaman traceability menampilkan: nama petani, lokasi kebun, tanggal panen, komoditas, grade, berat, serta status perjalanan produk.
-  \item EAN-13 tetap dicetak paralel selama transisi 1D $\rightarrow$ 2D berlangsung.
-  \item Resolver tersedia pada komponen \emph{Traceability Page + GS1 Digital Link Resolver} di Application Level; akses publik tanpa login.
-\end{itemize}
-
-\subsection{Ringkasan Barcode per Wadah}
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{5.2cm}@{}}
-\toprule
-\textbf{Wadah} & \textbf{Barcode} & \textbf{Standar} & \textbf{Fungsi} \\
-\midrule
-\endhead
-Kelompok grade (palet) & QR/Barcode grade & Internal & Identifikasi grade (A/B/C) per kelompok sortir \\
-Pouch 1 kg & QR GS1 Digital Link & GS1 internal + publik & Scanner internal decode GS1 key; smartphone konsumen buka halaman traceability \\
-Pouch 1 kg & EAN-13 & GS1 ritel & Identifikasi produk ritel/ekspor \\
-Packaging 10/50 kg & ITF-14 & GS1 logistik & Identifikasi kemasan logistik ekspor \\
-\bottomrule
-\end{longtable}
+Kamera ponsel pintar konsumen langsung membuka halaman web penelusuran publik via HTTPS, menyajikan data nama petani, lokasi panen, tanggal penimbangan, kelas mutu, dan status distribusi tanpa memerlukan aplikasi khusus.
 
 % ============================================================================
-\section{Skema Data}
+\section{Skema Basis Data}
+% ============================================================================
 
-Skema database dirancang relasional (PostgreSQL) dengan perluasan TimescaleDB untuk
-data time-series pembacaan sensor. Setiap tabel bisnis memiliki \texttt{commodityId}
-sehingga multi-commodity cukup mengandalkan data master.
+Basis data relasional PostgreSQL mengelola data transaksi dari penerimaan hingga pengiriman:
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.72\textwidth]{database}
-  \caption{Diagram skema database (ERD).\newline (Sumber: \texttt{docs/DIAGRAM.md})}
+  \caption{Diagram relasi entitas basis data ENYX-Smart Hub.\newline (Sumber: \texttt{docs/DIAGRAM.md})}
 \end{figure}
 
-\subsection{Entitas Inti}
+\subsection{Daftar Entitas Inti}
 \begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{11.0cm}@{}}
 \toprule
 \textbf{Entitas} & \textbf{Keterangan} \\
 \midrule
 \endhead
-\texttt{commodity} & Master komoditas; saat ini hanya Kentang aktif (\texttt{001}); Tomat (\texttt{002}), Cabai (\texttt{003}) reserved \\
-\texttt{grade} & Grade per komoditas (Kentang: A/B/C) \\
-\texttt{farmer} / \texttt{user} & Data petani dan akun pengguna dengan role RBAC \\
-\texttt{pallet} & Wadah/palet ber-ID kode \texttt{PLT} (diterbitkan otomatis pasca-approve penimbangan); memuat \texttt{farmerId}, \texttt{commodityId}, dan \texttt{depositDate} (tanggal setor otomatis) \\
-\texttt{weighing\_record} & Penimbangan per palet; status \texttt{APPROVED} oleh operator \\
-\texttt{pouch} & Unit retail 1 kg; memuat kode \texttt{PCH}, QR GS1 Digital Link, dan EAN-13 \\
-\texttt{warehouse\_stock} & Stok per grade; quantity dan total berat, tracking kapasitas \\
-\texttt{packaging\_*} & Tipe, ukuran, unit packaging (10/50 kg), dan relasi item--packaging \\
-\texttt{delivery} & Pengiriman: truck, tujuan, verifikasi ITF-14, keberangkatan \\
-\texttt{scale\_reading} & Time-series (hypertable) pembacaan timbangan dari MQTT \\
+\texttt{user} & Akun sistem dengan 3 role: \texttt{ADMIN}, \texttt{OPERATOR}, \texttt{FARMER} \\
+\texttt{farmer} & Data profil petani (\texttt{code}, nama, telepon, alamat, lokasi lahan) \\
+\texttt{commodity} & Master komoditas (Kentang aktif: \texttt{001}; Tomat \texttt{002} dan Cabai \texttt{003} dicadangkan) \\
+\texttt{waring} & Entitas waring intake (\texttt{code}, \texttt{farmerId}, \texttt{initialWeightKg}, \texttt{status}, \texttt{receivedAt}) \\
+\texttt{pallet} & Entitas palet sortir (\texttt{code}, \texttt{status}: \texttt{IN\_SORTING}, \texttt{GRADED}, \texttt{PACKED}) \\
+\texttt{pallet\_waring} & Tabel asosiasi penghubung relasi waring dan palet untuk silsilah ketertelusuran \\
+\texttt{grade} & Master kelas mutu (Grade A, Grade B, Grade C, Reject) \\
+\texttt{grading\_record} & Catatan timbang per grade, menyimpan bobot bersih, susut bobot kg, persentase susut, serta QR palet grade fisik yang ditautkan \\
+\texttt{weighing\_record} & Histori pembacaan timbangan berdasarkan stasiun (\texttt{INTAKE}, \texttt{GRADING}, \texttt{PACKAGING}) \\
+\texttt{pouch} & Unit kemasan pouch retail 1 kg (\texttt{qrCode} GS1 Digital Link, \texttt{ean13}, \texttt{weightKg}) \\
+\texttt{warehouse} & Master gudang dengan dua zona: \texttt{BUFFER\_WAITING} dan \texttt{FINISHED\_GOODS} \\
+\texttt{warehouse\_stock} & Rekapitulasi kuantitas dan total bobot stok per grade \\
+\texttt{packaging\_*} & Unit kemasan ekspor 10/50 kg berlabel ITF-14 dan relasi isi kemasan \\
+\texttt{delivery} & Manifest pengiriman: plat nomor truk, tujuan, pengemudi, dan verifikasi keberangkatan \\
+\texttt{scale\_reading} & Catatan time-series pembacaan sinyal timbangan real-time dari Modbus TCP \\
 \bottomrule
 \end{longtable}
 
 % ============================================================================
-\section{Tech Stack}
+\section{Tech Stack \& Estimasi Biaya Perangkat Keras}
+% ============================================================================
 
+\subsection{Daftar Teknologi}
 \begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}p{7.2cm}@{}}
 \toprule
-\textbf{Layer} & \textbf{Teknologi} & \textbf{Alasan} \\
+\textbf{Layer} & \textbf{Teknologi} & \textbf{Keunggulan} \\
 \midrule
 \endhead
-Edge/MCU & ESP32 + PlatformIO & WiFi + MQTT native, RS485 via modul MAX485, hemat biaya \\
-MQTT Broker & Eclipse Mosquitto 2.x & Ringan, stabil untuk LAN, QoS 0/1/2, autentikasi perangkat \\
-Backend & Node.js 20 + Express 5 + TypeScript & Ekosistem MQTT matang, real-time mudah, type safety \\
-ORM & Prisma & Query type-safe, migrasi terkelola \\
-Database & PostgreSQL 17 + TimescaleDB & Relasional untuk bisnis + time-series IoT dalam satu server \\
-Frontend & React 19 + TypeScript + Vite & Modern, HMR cepat, ekosistem luas \\
-Styling & Tailwind CSS v4 (komponen kustom) & Konsisten, cepat dikembangkan; shadcn/ui opsional roadmap \\
-Real-time & Socket.io 4 \textit{(rencana)} & WebSocket + fallback otomatis untuk dashboard live; belum terpasang di frontend \\
-Auth & JWT + RBAC middleware & Stateless, sesuai skema role operasional \\
-Barcode & bwip-js + html5-qrcode \textit{(rencana)} & Untuk generate/scan EAN-13, ITF-14, QR/GS1 Digital Link; belum terpasang \\
-Cloud/Backup & Neon/Supabase PostgreSQL & Managed PITR tanpa ribet \\
-Infra & Docker Compose + Nginx + Let's Encrypt & Deploy di satu PC server, HTTPS siap \\
+Edge / MCU & 3$\times$ ESP32 + PlatformIO & Ethernet W5500 + Wi-Fi industri, Modbus TCP Server port 502, FreeRTOS \\
+Protokol IoT & Modbus TCP (Port 502) & Standar industri deterministik, membaca holding register timbangan secara langsung \\
+Backend & Node.js 20 + Express 5 + TypeScript & Ekosistem IoT matang, modular monolith, type-safety \\
+ORM & Prisma & Type-safe database client dengan manajemen migrasi terstruktur \\
+Basis Data & PostgreSQL 17 + TimescaleDB & Relasional tangguh dan hypertable time-series sensor IoT dalam satu mesin \\
+Frontend & React 19 + TypeScript + Vite & Cepat, modular, responsif, waktu kompilasi instan \\
+Styling & Tailwind CSS v4 & Utilitas CSS fleksibel, desain ringkas, performa tinggi \\
+Real-Time & Socket.io 4 & Distribusi real-time bobot timbangan, status buffer, dan pembaruan stok \\
+Autentikasi & JWT + RBAC 3-Role Middleware & Stateless, aman, membatasi akses Admin, Operator, dan Farmer \\
+Barcode & bwip-js + html5-qrcode & Generator barcode standar GS1 dan pemindaian kamera responsif \\
+Infrastruktur & Docker Compose + Nginx & Orkestrasi kontainer satu mesin PC server fasilitas dengan reverse proxy \\
 \bottomrule
 \end{longtable}
 
-Struktur repositori mengikuti pemisahan \texttt{firmware/} (sketsa ESP32),
-\texttt{backend/} (modular monolith + Prisma), dan \texttt{frontend/} (React SPA),
-dengan Docker Compose sebagai orkestrasi lokal.
-
-% ============================================================================
-\section{Perangkat Keras (BOM Ringkas)}
-
-Estimasi biaya perangkat keras dan infrastruktur berdasarkan harga pasar Indonesia
-(September 2026). Sumber: e-commerce dan distributor lokal (Shopee, Tokopedia,
-Blueprint Indonesia, Indotrading, PT. Altraman).
-
+\subsection{Estimasi Biaya Perangkat Keras (BOM)}
 \begin{longtable}{@{}>{\raggedright\arraybackslash}p{5.4cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{2.6cm}@{}}
 \toprule
 \textbf{Kategori} & \textbf{Minimum} & \textbf{Maksimum} & \textbf{Rekomendasi} \\
 \midrule
 \endhead
-Edge / MCU \& IoT & Rp 2.390.000 & Rp 3.500.000 & Rp 2.900.000 \\
-Field Devices & Rp 14.500.000 & Rp 24.000.000 & Rp 18.000.000 \\
-Networking \& Infrastruktur & Rp 4.500.000 & Rp 7.500.000 & Rp 5.500.000 \\
-Application Server \& Database & Rp 12.750.000 & Rp 18.000.000 & Rp 14.500.000 \\
-Consumables \& Spare Parts & Rp 920.000 & Rp 1.500.000 & Rp 1.200.000 \\
-Testing \& Kalibrasi & Rp 1.950.000 & Rp 2.500.000 & Rp 2.000.000 \\
-Safety \& Protection & Rp 760.000 & Rp 1.200.000 & Rp 900.000 \\
-Software Licenses \& Services (1 tahun) & Rp 575.000 & Rp 4.000.000 & Rp 2.000.000 \\
+Modul Edge IoT (3 unit ESP32 + casing industri) & Rp 3.200.000 & Rp 4.800.000 & Rp 3.900.000 \\
+Perangkat Lapangan (3 timbangan RS485, printer, scanner) & Rp 22.000.000 & Rp 34.000.000 & Rp 27.500.000 \\
+Jaringan LAN \& Switch Industri & Rp 4.500.000 & Rp 7.500.000 & Rp 5.500.000 \\
+PC Server Lokal \& Penyimpanan SSD & Rp 12.750.000 & Rp 18.000.000 & Rp 14.500.000 \\
+Bahan Habis Pakai (Label stiker waring, palet, kemasan) & Rp 1.500.000 & Rp 2.500.000 & Rp 1.900.000 \\
+Kalibrasi Timbangan \& Sertifikasi Tera & Rp 2.000.000 & Rp 3.000.000 & Rp 2.500.000 \\
+Proteksi Daya (UPS industri \& panel listrik) & Rp 1.500.000 & Rp 2.500.000 & Rp 1.800.000 \\
 \midrule
-\textbf{TOTAL} & \textbf{Rp 38.345.000} & \textbf{Rp 62.200.000} & \textbf{Rp 47.000.000} \\
+\textbf{TOTAL} & \textbf{Rp 47.450.000} & \textbf{Rp 72.300.000} & \textbf{Rp 57.600.000} \\
 \bottomrule
 \end{longtable}
 
-\textbf{Catatan penting:}
+% ============================================================================
+\section{Desain Antarmuka Pengguna \& RBAC}
+% ============================================================================
+
+\subsection{Hierarki Menu RBAC 3-Role}
+Sistem menerapkan pembagian hak akses terstruktur dengan satu portal login bersama:
+\begin{enumerate}
+  \item \textbf{Admin}: Pengaturan sistem, audit trail, master data komoditas dan grade, manajemen akun pengguna, konfigurasi koneksi timbangan, serta laporan analitik hasil panen.
+  \item \textbf{Operator}: Seluruh aktivitas operasional lapangan diakses melalui satu akun operator terpadu. Operator memilih stasiun kerja melalui bilah navigasi atau tombol stasiun pada beranda dashboard:
+  \begin{itemize}
+    \item \textbf{Station 1: Reception Desk} (\texttt{/dashboard/weighing}) --- Scan petani, timbang bruto Timbangan 01, cetak struk nota dan stiker QR waring intake.
+    \item \textbf{Station 2: Sorting \& Grading} (\texttt{/dashboard/grading}) --- Tarik waring dari buffer, sortir manual bertaut palet, catat status pencucian pasca-sortir, timbang net komersial (Grade A, B, C saja; reject tidak ditimbang) di Timbangan 02, kalkulasi susut otomatis, dan scan penautan QR fisik yang sudah tertempel di palet grade.
+    \item \textbf{Station 3: Packaging \& Dispatch} (\texttt{/dashboard/packaging}) --- Timbang pouch retail 1 kg di Timbangan 03, cetak label GS1 Digital Link dan EAN-13, timbang kemasan ekspor ITF-14, kelola stok gudang produk jadi, dan validasi manifest muatan truk pengiriman.
+    \item \textbf{Menu Pendukung}: Registrasi Palet (\texttt{/dashboard/pallets}) dan Buku Stok Gudang (\texttt{/dashboard/warehouse}).
+  \end{itemize}
+  \item \textbf{Petani}: Portal mandiri untuk memantau ringkasan setoran waring, nota timbang digital resmi, perolehan grade mutu, transparansi persentase susut bobot, dan kartu identitas QR petani.
+  \item \textbf{Konsumen (Publik)}: Halaman penelusuran asal-usul produk tanpa login pada rute publik \texttt{/traceability}.
+\end{enumerate}
+
+\subsection{Pembaruan Focus Mode yang Disederhanakan}
+Pada mode fokus di stasiun grading, tampilan layar dirancang khusus untuk meminimalkan beban operator lapangan:
 \begin{itemize}
-  \item Penyesuaian terkait aturan penimbangan baru: timbangan 100 kg RS485 hanya diperlukan untuk \emph{dua lokasi} (Area Penerimaan dan Area Pengemasan), bukan tiga stasiun grade. Detail komponen tetap mengacu pada struktur BOM; revisi qty/price adalah langkah procurement berikutnya.
-  \item Timbangan sebaiknya dibeli dari distributor resmi (PT. Altraman, Rice Lake) untuk garansi dan kalibrasi.
-  \item Software inti semuanya open source (lisensi Rp 0); biaya layanan opsional adalah cloud backup, domain, dan SSL gratis.
+  \item \textbf{Layar Timbangan Raksasa}: Menampilkan angka pembacaan live dan status stabilitas Modbus TCP secara menonjol agar terbaca jelas dari jarak kerja.
+  \item \textbf{Penarikan Waring Cepat}: Operator dapat menarik waring dari antrean buffer penyangga dengan satu sentuhan.
+  \item \textbf{Pemindaian QR Palet Terpasang}: Operator cukup memindai atau memasukkan kode QR yang sudah terpasang pada palet tanpa prosedur pencetakan label.
+  \item \textbf{Pencatat Status Mandiri}: Tombol pencatatan status pencucian umbi (Washed/Unwashed) yang ringkas tanpa intervensi sakelar mesin.
+  \item \textbf{Kalkulasi Susut Real-Time}: Menampilkan bobot susut dan persentase defisit seketika saat berat dimasukkan.
+\end{itemize}
+
+\subsection{Mode Input Timbangan: Auto \& Manual}
+Operator dapat memilih dua mode pembacaan berat di setiap stasiun kerja:
+\begin{itemize}
+  \item \textbf{Mode Auto}: Sistem secara otomatis membaca holding register timbangan melalui Modbus TCP port 502 secara real-time. Tombol approval berat aktif ketika indikator stabil terpenuhi.
+  \item \textbf{Mode Manual}: Apabila terjadi kendala komunikasi jaringan pada perangkat timbangan, operator dapat menginput nilai berat secara manual melalui keypad numerik sebagai mekanisme cadangan (\emph{fallback}).
 \end{itemize}
 
 % ============================================================================
-\section{UI/UX}
-
-\subsection{Prinsip Desain}
-Minimalis (tanpa shadow/dekorasi berlebih), konsisten antar-role, fungsional,
-mobile-first responsif, dan aksesibel (kontras tinggi, font readable).
-
-\subsection*{Status Implementasi Frontend}
-Frontend berjalan sebagai SPA React 19 + Vite + Tailwind v4 (\texttt{npm run dev},
-port 5173, proxy \texttt{/api} ke backend). Saat ini memakai komponen kustom dan
-mock data lokal; halaman traceability konsumen telah terpasang sebagai route
-publik \texttt{/traceability}. Dialog konfirmasi, toast, integrasi kamera
-(\texttt{html5-qrcode}), koneksi backend/WebSocket, dan mode input timbangan
-Auto (Modbus TCP) / Manual menjadi pekerjaan berikutnya mengikuti spesifikasi di
-section ini.
-
-\subsection{Palet Warna \& Tipografi}
-Palet berikut adalah design system yang **terpasang di frontend** (Tailwind v4
-\texttt{@theme} pada \texttt{frontend/src/styles/index.css}):
-
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{9.0cm}@{}}
-\toprule
-\textbf{Warna} & \textbf{Hex} & \textbf{Penggunaan} \\
-\midrule
-\endhead
-Primary & \texttt{\#000000} & Tombol utama, link aktif, heading \\
-Primary Hover & \texttt{\#333333} & Hover state tombol utama \\
-Accent & \texttt{\#0070f3} & Aksen, spinner, tanda aktif pada journey \\
-Accent Hover & \texttt{\#0051a8} & Hover state aksen \\
-Danger & \texttt{\#e00} / \texttt{\#c00} & Aksi berisiko, tombol logout \\
-Background & \texttt{\#fafafa} & Background page dan sidebar \\
-Surface & \texttt{\#ffffff} & Background card dan navbar \\
-Text & \texttt{\#171717} / \texttt{\#666666} / \texttt{\#999999} & Teks utama, sekunder, redup \\
-Border & \texttt{\#eaeaea} & Border, divider, tabel \\
-\bottomrule
-\end{longtable}
-
-Tipografi: \textbf{Inter} (weight 400--700, di-load dari Google Fonts), base
-16px, line-height 1.5; font monospace untuk blok kode dan nomor seri.
-
-\subsection{Layar per Role}
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{11.6cm}@{}}
-\toprule
-\textbf{Role} & \textbf{Fokus layar} \\
-\midrule
-\endhead
-Admin & Manajemen pengguna dan komoditas, laporan, konfigurasi sistem \\
-Weighing Operator & Input cepat: scan ID petani, pure timbang hasil panen (Auto/Manual), approve, cetak struk tanda terima petani dan label QR palet \\
-Sorting Operator & Scan palet intake, kelompokkan grade A/B/C, cetak label grade palet (murni tanpa timbang) \\
-Packing Operator & Timbang \& isi pouch target 1 kg per grade (tanpa scan palet), preview \& cetak label (QR + EAN-13) \\
-Warehouse Operator & Scan warehouse in/out, ringkasan stok per grade, alert kapasitas \\
-Delivery Operator & Loading truck, scan ITF-14 verifikasi muatan, catat keberangkatan \\
-Farmer & Riwayat setoran dan traceability gaya mobile-banking: total pengiriman, aktivitas terbaru, pencarian barcode \\
-Konsumen (publik) & Halaman traceability hasil scan QR GS1 Digital Link, tanpa login \\
-\bottomrule
-\end{longtable}
-
-\subsection{Hierarki Halaman}
-
-Struktur halaman disusun mengikuti alur kerja dan role. Spesifikasi berikut
-mencakup **fungsi dan tujuan tiap halaman** (bukan detail layout visual).
-
-{\scriptsize
-\begin{verbatim}
-ENYX-Smart Hub
-+-- Publik (tanpa login)
-|   +-- Traceability Konsumen        — publik, /traceability: input/scan kode PCH-/PLT-
-+-- Autentikasi
-|   +-- Login                        — masuk semua role internal
-+-- Admin
-|   +-- Dashboard                    — ringkasan operasional sistem
-|   +-- Manajemen Pengguna           — akun & role (Weighing/Sorting/Packing/Warehouse/Delivery/Farmer)
-|   +-- Master Data                  — petani, grade (A/B/C), perangkat (timbangan, printer, scanner)
-|   +-- Laporan & Analitik           — rekap setoran, stok, pengiriman
-|   +-- Pengaturan Sistem            — komoditas aktif (Kentang), parameter timbangan, konfigurasi label
-+-- Weighing Operator (Area Penerimaan)
-|   +-- Identifikasi Petani          — scan/pilih ID petani; tanggal setor otomatis
-|   +-- Penimbangan Hasil Panen      — pure timbang hasil panen (Auto Modbus/Manual), approve/koreksi
-|   +-- Step Cetak Struk & Label     — cetak struk tanda terima petani & cetak QR label palet PLT-...
-|   +-- Riwayat Timbang              — daftar setoran hasil panen (pending & approved)
-+-- Sorting Operator (Area Sortir)
-|   +-- Scan Palet Intake            — scan QR label palet PLT-... untuk memuat palet sumber
-|   +-- Klasifikasi Grade & Cetak    — pilih grade (A/B/C) & cetak label GRD-... untuk palet sortir (tanpa timbang)
-|   +-- Riwayat Sortir               — rekap hasil sortir dan label yang diterbitkan
-+-- Packing Operator (Area Pengepakan)
-|   +-- Timbang & Isi Pouch 1 kg     — timbang target 1 kg ± 5 g per grade (tanpa scan palet)
-|   +-- Cetak Label Pouch            — preview & cetak QR GS1 Digital Link + EAN-13 per pouch 1 kg
-|   +-- Riwayat Pengemasan           — daftar pouch yang sudah berlabel
-+-- Warehouse Operator
-|   +-- Warehouse In                 — scan pouch/pallet, catat stok masuk
-|   +-- Warehouse Out                — packaging ekspor 10/50 kg + label ITF-14
-|   +-- Status Stok & Kapasitas      — stok per grade, sisa kapasitas
-|   +-- Alert Kapasitas              — notifikasi kapasitas menipis/penuh
-+-- Delivery Operator
-|   +-- Buat Delivery                — susun muatan dari packaging unit
-|   +-- Verifikasi Muatan            — scan ITF-14 (jumlah, grade, batch, tujuan)
-|   +-- Keberangkatan                — catat truck, tujuan, waktu berangkat
-+-- Petani
-    +-- Beranda                      — ringkasan setoran & aktivitas terbaru
-    +-- Setoran Saya                 — riwayat setoran per palet/grade
-    +-- My QR (/dashboard/traceability) — QR identitas petani untuk discan operator
-    +-- Lacak Produk (/traceability)   — halaman traceability publik (tanpa login)
-    +-- Profil                       — data petani & lokasi kebun
-\end{verbatim}
-}
-
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}p{4.2cm}@{}}
-\toprule
-\textbf{Grup} & \textbf{Halaman} & \textbf{Fungsi} & \textbf{Tujuan} \\
-\midrule
-\endhead
-Publik & Traceability Konsumen & Menampilkan data asal-usul produk (petani, kebun, tanggal panen, grade, berat, perjalanan) dari kode QR yang di-scan/dimasukkan; terpasang di route \texttt{/traceability} (entri dari landing page), data masih contoh sampai backend aktif & Memberi transparansi kepada konsumen/buyer tanpa perlu akun \\
-\hline
-Weighing Operator & Identifikasi Petani & Scan ID petani, aktivasi context petani, dan tanggal setor otomatis oleh sistem & Mengikat setoran intake ke petani yang tepat dengan tanggal otomatis \\
-\hline
-Weighing Operator & Penimbangan Hasil Panen & Murni menimbang hasil panen (Auto Modbus TCP atau Manual) tanpa input grade, pallet ID, dan note; tombol Approve dan Koreksi/Timbang Ulang & Menetapkan berat setoran panen resmi secara akurat dan objektif \\
-\hline
-Weighing Operator & Step Cetak Struk \& Label & Muncul setelah approve; terbitkan kode \texttt{PLT-...}, cetak Struk Bukti Timbang Petani dan QR Label Palet & Memberikan bukti fisik tanda terima kepada petani dan identitas QR palet untuk alur operasional \\
-\hline
-Sorting Operator & Sortir \& Label Grade & Scan QR palet intake, kelompokkan grade A/B/C, pilih grade dan cetak label tanpa timbang & Memisahkan mutu dan memberi penanda fisik grade pada palet sortir \\
-\hline
-Packing Operator & Timbang \& Isi Pouch & Timbang dan isi pouch target 1 kg $\pm$5 g per grade tanpa scan palet & Menghasilkan unit retail dengan berat akurat dan menghitung akumulasi bobot per grade \\
-\hline
-Packing Operator & Cetak Label Pouch & Preview dan cetak label QR GS1 Digital Link + EAN-13 per pouch 1 kg & Memberi identitas GS1 dan kanal traceability pada tiap pouch unit \\
-\hline
-Warehouse Operator & Warehouse In/Out & Scan pouch/pallet untuk stok masuk; scan packaging untuk stok keluar & Menjaga stok terdata dan kapasitas terkendali \\
-\hline
-Warehouse Operator & Status Stok \& Kapasitas & Ringkasan stok per grade dan sisa kapasitas & Mendukung keputusan penyimpanan dan pengambilan stok \\
-\hline
-Delivery Operator & Verifikasi Muatan & Scan ITF-14 untuk mencocokkan jumlah, grade, batch, dan tujuan & Mencegah salah kirim sebelum truck berangkat \\
-\hline
-Petani & Setoran Saya \& My QR & Riwayat setoran per palet/grade; QR identitas petani untuk discan operator & Memberi visibilitas hasil panen dan memperkuat kepercayaan \\
-\bottomrule
-\end{longtable}
-
-\subsection{Spesifikasi Responsivitas Mobile}
-
-Operator bekerja dengan tablet atau smartphone di stasiun kerja, sehingga seluruh
-halaman dirancang \emph{mobile-first} dan berfungsi penuh pada layar kecil.
-
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{5.6cm}>{\raggedright\arraybackslash}p{6.2cm}@{}}
-\toprule
-\textbf{Aspek} & \textbf{Spesifikasi} & \textbf{Alasan} \\
-\midrule
-\endhead
-Breakpoint & Mobile $<$ 768px; Tablet 768--1024px; Desktop $\geq$ 1024px & Satu kode base untuk tablet stasiun dan desktop admin \\
-\hline
-Navigasi & Navbar menyusut menjadi menu ringkas (hamburger) di bawah 768px; area konten memenuhi lebar layar dengan padding 16px & Layar sempit di stasiun harus tetap terjangkau satu tangan \\
-\hline
-Target sentuh & Tombol aksi utama minimum 44$\times$44px; aksi kritis (Simpan, Approve, Cetak) ditempatkan tetap (sticky) di bagian bawah & Operator bersarung tangan dan bekerja cepat; mencegah salah tekan \\
-\hline
-Tabel data & Pada mobile, baris tabel berubah menjadi daftar kartu atau tabel dengan scroll horizontal; maksimal 3 kolom prioritas ditampilkan & Tabel lebar tidak terbaca di layar $<$ 768px \\
-\hline
-Input berat & Field numerik memakai keypad numerik besar; pada mode Auto pembacaan Modbus TCP tampil real-time dan terkunci ke field berat saat stabil & Meminimalkan typing saat menimbang \\
-\hline
-Scan barcode & Pemindaian memakai kamera perangkat (target: \texttt{html5-qrcode}) dengan area fokus besar; fallback input manual kode & Scanner USB tetap didukung di desktop \\
-\hline
-Orientasi & Halaman penimbangan dan pengepakan mendukung orientasi landscape dengan tampilan angka besar & Posisi timbangan sering memaksa perangkat miring \\
-\hline
-PWA \& offline & Halaman aktif dapat di-cache; data context disimpan lokal; aksi scan/input masuk antrean saat offline dan dikirim saat koneksi kembali & Internet fasilitas sesekali terputus \\
-\hline
-Tipografi & Font minimum 16px pada input (mencegah auto-zoom iOS) & Kenyamanan membaca dan mengisi di lapangan \\
-\hline
-Aksesibilitas & Kontras warna memenuhi rasio AA; seluruh aksi dapat dijangkau tanpa hover (khususnya tombol cetak dan approve) & Digunakan di lingkungan tidak selalu ideal \\
-\hline
-Performa & Halaman di luar halaman aktif dimuat lazy; preview label dioptimalkan (render terjadwal) & Perangkat kelas menengah tetap responsif \\
-\bottomrule
-\end{longtable}
-
-\subsection{RBAC}
-Role diimplementasikan sebagai klaim \texttt{role} pada JWT dengan middleware
-verifikasi di setiap endpoint: \texttt{ADMIN}, \texttt{WEIGHING\_OPERATOR},
-\texttt{SORTING\_OPERATOR}, \texttt{WAREHOUSE\_OPERATOR},
-\texttt{DELIVERY\_OPERATOR}, \texttt{FARMER}. Konsumen mengakses halaman
-traceability publik tanpa autentikasi.
-
-\subsection{Input Timbangan: Auto (Modbus TCP) \& Manual}
-
-Timbangan terhubung melalui \textbf{Modbus TCP} (backend sebagai Modbus client
-membaca holding register timbangan melalui jaringan LAN). Operator memilih dua
-mode input pada setiap form penimbangan:
-
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{6.2cm}>{\raggedright\arraybackslash}p{6.2cm}@{}}
-\toprule
-\textbf{Aspek} & \textbf{Mode Auto} & \textbf{Mode Manual} \\
-\midrule
-\endhead
-Cara pakai & Operator menekan tombol \textbf{Auto}; sistem langsung membaca berat dari timbangan via Modbus TCP & Operator mengetik berat yang terlihat pada indikator timbangan \\
-\hline
-Tampilan & Angka berat besar (live, refresh $\pm$200--500ms) dengan tanda \emph{live}; nilai terkunci setelah stabil & Field input angka biasa dengan keypad numerik \\
-\hline
-Stabilitas & Indikator ``stabil'' saat perubahan berat $<$ ambang (misal $\pm$20g) selama $\pm$2 detik; tombol \textbf{Gunakan Nilai Ini} aktif saat stabil & Tidak ada; operator memastikan sendiri \\
-\hline
-Status koneksi & Menampilkan alamat timbangan (IP:port), status \emph{connected/disconnected}, waktu pembacaan terakhir & Tidak bergantung koneksi \\
-\hline
-Kegagalan & Timeout/tidak terjangkau muncul notifikasi + saran lanjut manual; nilai live ditandai jelas berbeda dari nilai manual & Selalu tersedia sebagai fallback \\
-\hline
-Berlaku di & Area Penerimaan (timbang karung) dan Area Pengepakan (timbang pouch 1 kg) & Sama \\
-\bottomrule
-\end{longtable}
-
-\textbf{Perilaku tambahan:}
-\begin{itemize}
-  \item Mode disimpan per stasiun selama sesi operator; stasiun dengan timbangan terhubung default \emph{Auto}.
-  \item Pada pengepakan pouch, mode Auto menampilkan target \textbf{1 kg} dengan toleransi (misal $\pm$5g) dan indikator ``muat sampai target''.
-  \item Validasi berat: harus $>$ 0 dan tidak melebihi kapasitas timbangan; nilai di-lock ke field sebelum record dibuat (status \texttt{PENDING} menunggu approve).
-  \item Backend bertugas melakukan polling Modbus TCP, timeout, dan penskalaan nilai sesuai resolusi timbangan (misal 5g/10g) --- aspek tersebut di luar lingkup UI/UX ini.
-\end{itemize}
-
-Catatan: integrasi Modbus TCP pada backend dan antarmuka Auto/Manual pada
-frontend merupakan pekerjaan implementasi berikutnya; spesifikasi di atas menjadi
-acuan desain interaksinya.
-
-\subsection{Session Context Indicator}
-
-Session context adalah elemen UI paling kritis bagi operator: salah petani atau
-salah palet berarti data penimbangan tercatat ke entitas yang salah. Spesifikasi
-berikut memastikan operator selalu sadar konteks aktif.
-
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}p{7.4cm}@{}}
-\toprule
-\textbf{Elemen} & \textbf{Tampilan} & \textbf{Perilaku} \\
-\midrule
-\endhead
-Context bar & Sticky di bagian atas semua halaman operator (di bawah navbar); latar
-  \texttt{\#EAF4FB} (enyxlight) & Selalu terlihat; tidak bisa di-scroll hilang;
-  muncul setelah scan pertama berhasil \\
-\hline
-Informasi yang ditampilkan & \textbf{Nama Petani} | \textbf{Kode Palet} (setelah approve) |
-  \textbf{Tanggal Setor} & Diambil dari session context; diperbarui via
-  event \texttt{context:updated} (Socket.io) \\
-\hline
-Tombol Reset Context & Teks merah (\texttt{Reset}), ikon sampah, pojok kanan
-  context bar & Memunculkan dialog konfirmasi destruktif sebelum reset;
-  setelah reset, context bar hilang hingga scan berikutnya \\
-\hline
-Timeout indicator & Progress bar tipis (2px) di bawah context bar; memudar
-  saat TTL Redis mendekati habis (TTL 4 jam) & Memberi peringatan visual
-  sebelum sesi habis; operator dapat memperpanjang dengan aktivitas apapun \\
-\hline
-Status offline & Context bar berubah warna menjadi abu-abu dengan ikon
-  peringatan bila koneksi WebSocket terputus & Operator tahu data mungkin
-  belum tersinkron \\
-\bottomrule
-\end{longtable}
-
-\subsection{Feedback Visual \& State Indikator}
-
-Setiap aksi kritis harus memberikan umpan balik langsung agar operator tidak
-bertanya-tanya apakah aksi sudah berhasil atau gagal.
-
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{3.8cm}>{\raggedright\arraybackslash}p{7.6cm}@{}}
-\toprule
-\textbf{Sumber} & \textbf{Indikator} & \textbf{Spesifikasi} \\
-\midrule
-\endhead
-Koneksi MQTT / timbangan & Badge status di navbar & Hijau (\texttt{Connected})
-  / Abu-abu (\texttt{Disconnected}) / Kuning (\texttt{Reconnecting}); diperbarui
-  real-time via event \texttt{scale:status} \\
-\hline
-Pembacaan timbangan live & Field berat real-time & Angka diperbarui langsung
-  dari event \texttt{scale:reading}; background field berkedip hijau saat
-  nilai stabil ($\pm$0,05~kg selama 1~detik) \\
-\hline
-Approve berat & Toast sukses + suara klik & Toast hijau muncul 3~detik;
-  status \texttt{APPROVED} terupdate di tabel riwayat tanpa refresh halaman \\
-\hline
-Cetak label & Toast + indikator antrean cetak & Toast kuning \emph{Printing\ldots}
-  saat perintah dikirim; berubah hijau jika berhasil atau merah jika timeout
-  (10~detik) \\
-\hline
-Scan barcode berhasil & Animasi border hijau + suara beep & Area kamera
-  mendapat border hijau 500~ms; data petani/palet langsung populate ke form \\
-\hline
-Scan barcode gagal & Border merah + pesan inline & Pesan \emph{``Barcode not
-  recognized --- try manual input''} muncul di bawah area scan \\
-\hline
-Koneksi WebSocket & Banner kuning sticky di atas context bar & Muncul saat
-  WebSocket terputus: \emph{``Real-time connection lost. Data may be delayed.''}
-  Hilang otomatis saat reconnect \\
-\hline
-Aksi loading & Skeleton screen + spinner pada tombol & Tombol aksi menampilkan
-  spinner dan menjadi \texttt{disabled} selama request berlangsung; mencegah
-  double-submit \\
-\bottomrule
-\end{longtable}
-
-\subsection{Skala Tipografi}
-
-Selain basis font Poppins 16px yang sudah ditetapkan, skala berikut mengatur
-hierarki visual secara konsisten di seluruh halaman:
-
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{2.2cm}>{\raggedright\arraybackslash}p{2.0cm}>{\raggedright\arraybackslash}p{7.8cm}@{}}
-\toprule
-\textbf{Token} & \textbf{Ukuran} & \textbf{Weight} & \textbf{Penggunaan} \\
-\midrule
-\endhead
-\texttt{display} & 32px & 700 & Angka berat real-time, total stok --- elemen
-  yang harus terbaca dari jarak jauh \\
-\hline
-\texttt{h1} & 24px & 700 & Judul halaman (satu per halaman) \\
-\hline
-\texttt{h2} & 20px & 600 & Sub-judul bagian, judul kartu \\
-\hline
-\texttt{h3} & 18px & 600 & Label grup form, judul kolom tabel \\
-\hline
-\texttt{body} & 16px & 400 & Teks utama, isi tabel, label input \\
-\hline
-\texttt{body-medium} & 16px & 500 & Nilai penting dalam tabel (berat, kode palet) \\
-\hline
-\texttt{small} & 14px & 400 & Teks sekunder, placeholder, caption tabel \\
-\hline
-\texttt{caption} & 12px & 400 & Timestamp, keterangan gambar, label badge \\
-\bottomrule
-\end{longtable}
-
-\textbf{Aturan tambahan:} Tidak ada teks di bawah 12px pada antarmuka operasional.
-Input numerik (berat, jumlah pouch) menggunakan token \texttt{display} agar terbaca
-dari jarak wajar stasiun kerja. Seluruh teks pada input field minimal 16px untuk
-mencegah auto-zoom pada browser iOS.
-
-\subsection{Komponen Antarmuka (Terpasang \& Target)}
-
-Komponen kritis saat ini diimplementasikan sebagai \textbf{komponen kustom +
-Tailwind v4} pada \texttt{frontend/src} (Card, DataTable, Logo, PlaceholderPage,
-badge, tabel, spinner, alert-box di \texttt{styles/index.css}). Migrasi ke
-\texttt{shadcn/ui} (Radix-based) direncakan sebagai roadmap; kolom ``Terpasang
-saat ini'' menunjukkan padanan yang sudah dipakai.
-
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{3.7cm}>{\raggedright\arraybackslash}p{8.1cm}@{}}
-\toprule
-\textbf{Komponen} & \textbf{Terpasang saat ini} & \textbf{Digunakan untuk} \\
-\midrule
-\endhead
-Toast/notifikasi & \texttt{alert-box} (CSS) & Notifikasi sukses/gagal: approve berat,
-  cetak label, scan barcode, reset context \\
-\hline
-Dialog konfirmasi & Dialog kustom (target) & Konfirmasi aksi destruktif: Reset Context,
-  Approve Berat, Catat Keberangkatan \\
-\hline
-Badge status & \texttt{.badge-*} (CSS) & Status palet (\texttt{APPROVED}/\texttt{PENDING}),
-  status koneksi MQTT, grade (A/B/C) \\
-\hline
-Tabel data & \texttt{.table-container}\newline + \texttt{DataTable} & Riwayat timbang, daftar petani, status stok,
-  riwayat pengiriman \\
-\hline
-Kartu ringkasan & \texttt{Card} (kustom) & Metrik hari ini: total berat diterima,
-  jumlah pouch, kapasitas warehouse \\
-\hline
-Form input & \texttt{Input + Label} (kustom) & Input berat, kode petani, jumlah pouch;
-  atribut \texttt{inputMode="numeric"} pada field angka \\
-\hline
-Select & \texttt{Select} (native) & Pilih grade (A/B/C), pilih tipe packaging \\
-\hline
-Loading state & \texttt{.spinner} (CSS) & Loading state tabel, kartu metrik, preview label \\
-\hline
-Alert kapasitas & \texttt{Alert} (target) & Warning kapasitas warehouse menipis
-  ($<$20\%) atau penuh \\
-\hline
-Progress TTL context & Garis tipis kustom (target) & Indikator TTL session context; progress
-  loading cetak label \\
-\hline
-Tabs & Navigasi menu (target) & Navigasi sub-halaman: Warehouse In / Warehouse Out;
-  Riwayat / Aktif \\
-\bottomrule
-\end{longtable}
-
-\subsection{Dialog Konfirmasi Aksi Destruktif}
-
-Aksi berikut bersifat \textbf{tidak dapat diundo} dan wajib dilindungi dengan
-\texttt{AlertDialog} dua langkah (tampilkan ringkasan $\rightarrow$ konfirmasi
-eksplisit) untuk mencegah kesalahan operator.
-
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{5.0cm}>{\raggedright\arraybackslash}p{6.8cm}@{}}
-\toprule
-\textbf{Aksi} & \textbf{Isi Dialog} & \textbf{Perilaku setelah Konfirmasi} \\
-\midrule
-\endhead
-Reset Context & \emph{``Reset session context? Farmer \textbf{[Nama]} and
-  pallet \textbf{[Kode]} will be cleared. Any unsaved weighing will be lost.''}
-  & Context bar hilang; halaman kembali ke layar Scan \& Context; event
-  \texttt{context:updated} dipancarkan ke semua tab \\
-\hline
-Approve Berat & \emph{``Approve official weight \textbf{[X]} kg for \textbf{[Nama Petani]}? Upon approval, a Pallet ID will be generated and you will be prompted to print the farmer receipt and pallet label.''}
-  & Status record menjadi \texttt{APPROVED}; Pallet ID diterbitkan otomatis; dialog/modal cetak langsung aktif untuk mencetak Struk Bukti Timbang Petani dan Label QR Palet \\
-\hline
-Catat Keberangkatan & \emph{``Confirm departure of truck \textbf{[Plat]} with
-  \textbf{[N]} packaging units to \textbf{[Tujuan]}? Stock will be deducted.''}
-  & Status delivery berubah menjadi \texttt{DEPARTED}; stok warehouse
-  berkurang; event \texttt{delivery:update} dipancarkan \\
-\hline
-Hapus Pengguna (Admin) & \emph{``Delete user \textbf{[Nama]} (\textbf{[Role]})?
-  All sessions will be invalidated immediately.''}
-  & Akun dihapus; JWT diblacklist via Redis \\
-\hline
-Warehouse Out manual & \emph{``Remove \textbf{[N]} units of Grade \textbf{[X]}
-  from stock? This action is permanent.''}
-  & Stok dikurangi; catatan warehouse out dibuat dengan timestamp dan
-  operator id \\
-\bottomrule
-\end{longtable}
-
-\textbf{Aturan implementasi dialog:}
-\begin{itemize}
-  \item Tombol konfirmasi berwarna merah (\texttt{variant="destructive"}) dan
-    \textbf{tidak boleh menjadi tombol default} (mencegah konfirmasi tidak
-    sengaja saat tekan Enter).
-  \item Teks tombol batal selalu \emph{``Cancel''}, teks konfirmasi spesifik
-    per aksi (misal: \emph{``Yes, Approve''}, \emph{``Yes, Depart''}).
-  \item Dialog tidak bisa ditutup dengan klik di luar area dialog
-    (\texttt{closeOnOutsideClick=false}) untuk mencegah dismissal tidak sengaja
-    pada layar sentuh.
-\end{itemize}
-
-\subsection{Empty State}
-
-Setiap halaman yang menampilkan daftar atau tabel wajib mendefinisikan tampilan
-saat data kosong. Empty state yang baik mengurangi kebingungan operator baru
-dan memberi arahan tindakan selanjutnya.
-
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}p{6.8cm}@{}}
-\toprule
-\textbf{Halaman} & \textbf{Pesan Empty State} & \textbf{Aksi yang Ditawarkan} \\
-\midrule
-\endhead
-Riwayat Timbang & \emph{``No weighing records today.''} & Tombol \emph{``Start
-  Weighing''} mengarah ke halaman Scan \& Context \\
-\hline
-Status Stok Warehouse & \emph{``No stock recorded yet.''} & Tombol \emph{``Go
-  to Warehouse In''} \\
-\hline
-Daftar Petani & \emph{``No farmers registered.''} & Tombol \emph{``Add Farmer''}
-  (Admin only) \\
-\hline
-Riwayat Sortir & \emph{``No sorting records for this pallet.''} & Informasi
-  bahwa sortir dilakukan setelah palet di-approve \\
-\hline
-Riwayat Pengiriman & \emph{``No deliveries recorded.''} & Tombol \emph{``Create
-  Delivery''} (Delivery Operator) \\
-\hline
-Hasil Scan Traceability (publik) & \emph{``Product not found. Please check
-  the QR code or enter the code manually.''} & Input manual kode; link
-  \emph{``Contact us''} \\
-\hline
-Antrean Cetak Label & \emph{``No labels in print queue.''} & Informasi printer
-  siap; tombol kembali ke halaman sebelumnya \\
-\bottomrule
-\end{longtable}
-
-\textbf{Aturan implementasi empty state:}
-\begin{itemize}
-  \item Ilustrasi ringan (ikon SVG, bukan gambar berat) di atas pesan untuk
-    daya tarik visual minimal.
-  \item Pesan berbahasa Inggris sesuai aturan bahasa antarmuka.
-  \item Aksi yang ditawarkan harus kontekstual --- bukan tombol generik
-    \emph{``Go Back''}.
-  \item Komponen menggunakan \texttt{Card} dengan padding vertikal cukup
-    (minimal 48px) agar tidak tampak seperti error.
-\end{itemize}
-
+\section{Rencana Implementasi \& Spesifikasi MVP}
 % ============================================================================
-\section{API (Ringkasan)}
 
-Format respons mengikuti standar proyek:
-sukses \texttt{\{"success": true, "data": ...\}} dan error
-\texttt{\{"success": false, "error": \{code, message\}\}} dengan pesan berbahasa Inggris.
+\subsection{Definisi \& Sasaran MVP}
+Target Minimum Viable Product (MVP) adalah menghadirkan sistem tata kelola penanganan pascapanen dan pengemasan kentang siap pakai dalam kurun waktu \textbf{4--6 minggu} hingga fase produksi di fasilitas. Fokus operasional MVP dibatasi pada \textbf{satu komoditas tunggal: Kentang} (Grade A, B, C, dan Reject) untuk memvalidasi alur tanpa kertas, menjamin akurasi data timbangan IoT di tiga stasiun, mengeliminasi sengketa penyusutan bobot melalui kalkulasi transparan, dan menerbitkan kemasan retail (GS1 Digital Link) serta ekspor (ITF-14).
 
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{12.2cm}@{}}
+\subsection{Ruang Lingkup Fitur MVP}
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}p{10.8cm}@{}}
 \toprule
-\textbf{Modul} & \textbf{Endpoint utama} \\
+\textbf{Kategori} & \textbf{Cakupan Fitur \& Komponen} \\
 \midrule
 \endhead
-Auth & \texttt{POST /api/auth/register}, \texttt{/login}, \texttt{/logout}, \texttt{/refresh}, \texttt{GET /api/auth/me} \\
-Farmers & \texttt{GET/POST /api/farmers}, \texttt{GET/PUT /api/farmers/:id}, \texttt{GET /api/farmers/:id/pallets}, \texttt{GET /api/farmers/:id/summary} \\
-Pallets & \texttt{POST /api/pallets}, \texttt{GET /api/pallets/:id}, \texttt{POST /api/pallets/:id/weigh}, \texttt{POST /api/pallets/:id/pouches}, \texttt{GET /api/pallets/:id/weighings} \\
-Context & \texttt{GET/POST /api/context}, \texttt{POST /api/context/reset}, \texttt{GET /api/context/suggestions} \\
-Weighing & \texttt{POST /api/weighing}, \texttt{POST /api/weighing/quick}, \texttt{GET /api/grades} \\
-Warehouse & \texttt{POST /api/warehouse/in}, \texttt{POST /api/warehouse/out}, \texttt{GET /api/warehouse/summary}, \texttt{GET /api/warehouse/capacity} \\
-Labels & \texttt{GET /api/labels/pouch/:pouchId}, \texttt{GET /api/labels/packaging/:packagingId}, \texttt{POST /api/labels/print}, \texttt{GET /api/labels/preview/:type/:id} \\
-Packaging & \texttt{GET/POST /api/packaging/types}, \texttt{/sizes}, \texttt{/units}, \texttt{POST /api/packaging/units/:id/pack}, \texttt{DELETE /api/packaging/units/:id/items/:itemId} \\
-Deliveries & \texttt{POST /api/deliveries}, \texttt{POST /api/deliveries/:id/packaging}, \texttt{POST /api/deliveries/:id/depart}, \texttt{GET /api/deliveries/:id/verify} \\
-\bottomrule
-\end{longtable}
-
-Event WebSocket (Socket.io): \texttt{weighing:new}, \texttt{warehouse:update},
-\texttt{scale:reading}, \texttt{delivery:update}, \texttt{label:printed},
-dan \texttt{context:updated}.
-
-% ============================================================================
-\section{Rencana Implementasi}
-
-Target MVP: \textbf{4--6 minggu} hingga produksi. Luaran MVP mencakup enam alur inti:
-penerimaan, pencucian opsional + sortir, pengepakan pouch + label, warehouse,
-packaging ekspor, dan verifikasi keberangkatan. Di luar lingkup MVP: cloud backup sync,
-fitur AI/ML, aplikasi native (PWA memadai), dan analytics lanjutan.
-
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{2.0cm}>{\raggedright\arraybackslash}p{9.8cm}@{}}
-\toprule
-\textbf{Fase} & \textbf{Minggu} & \textbf{Isi} \\
-\midrule
-\endhead
-0. Setup \& Infrastruktur & 1 & Struktur proyek, Prisma schema, Docker Compose (PostgreSQL + Mosquitto + backend), health check, logging Winston, seed data, session context service \\
-1. Auth \& RBAC & 1--2 & User model, JWT, bcrypt, middleware RBAC multi-role, endpoint auth \\
-2. Farmer \& Pallet & 2 & CRUD farmer/pallet, generate kode, scan ID, integrasi context \\
-3. Weighing \& Grade & 2--3 & Pencatatan timbang (penerimaan \& pengepakan), grade per komoditas, total per grade per petani, MQTT scale integration, Socket.io \\
-4. Warehouse \& Pouch & 3--4 & Pembuatan pouch + QR/EAN-13, warehouse in/out, kapasitas, stok per grade \\
-5. Label Generation \& GS1 Digital Link & 4 & QR Digital Link, EAN-13, ITF-14, endpoint cetak/preview, halaman traceability publik \\
-6. Packaging \& Delivery & 4--5 & Tipe/ukuran/unit packaging, validasi kapasitas, delivery, verifikasi ITF-14, keberangkatan \\
-7. Real-time \& MQTT & 5 & Socket.io server, event real-time, jembatan MQTT $\rightarrow$ Socket.io, perintah MQTT \\
-8. Testing \& Dokumentasi & 5--6 & Unit test, integration test, MQTT test, coverage, Swagger, katalog Postman, load \& security test \\
-9. Deployment \& DevOps & 6 & Docker Compose produksi, Nginx, SSL Let's Encrypt, graceful shutdown, panduan deploy, backup opsional \\
-\bottomrule
-\end{longtable}
-
-\subsection{Strategi Pengujian}
+\textbf{In-Scope\newline(Fitur Inti MVP)} &
 \begin{itemize}
-  \item \textbf{Unit} (Jest + Supertest): auth, weighing, warehouse, labels --- setiap service bisnis kritis.
-  \item \textbf{Integration}: endpoint API end-to-end dan integrasi MQTT (broker test lokal).
-  \item \textbf{Load}: autocannon pada endpoint timbang/scan.
-  \item \textbf{Security}: audit JWT, RBAC, validasi input.
-  \item Target coverage MVP $>$ 80\%.
-\end{itemize}
+  \item \textbf{Konsol 01 (Penerimaan)}: Scan ID petani, pembacaan Timbangan 01 via Modbus TCP, approval berat, cetak struk nota thermal, cetak label QR waring, dan antrean otomatis ke gudang penyangga berbasis FIFO.
+  \item \textbf{Konsol 02 (Sortir \& Grading)}: Penarikan waring buffer, scan pairing waring ke palet ber-QR, pencatatan status pencucian pasca-sortir, pembacaan Timbangan 02 untuk kelas komersial (Grade A, B, C saja; reject tidak ditimbang), kalkulasi otomatis penyusutan bobot, dan scan penautan QR fisik yang sudah tertempel di palet grade tanpa cetak label.
+  \item \textbf{Konsol 03 (Pengepakan \& Dispatch)}: Pembacaan Timbangan 03 pouch 1 kg, generator QR GS1 Digital Link + EAN-13, kemasan ekspor barcode ITF-14, pemutakhiran stok produk jadi, dan validasi muatan pengiriman.
+  \item \textbf{RBAC 3-Role Terpadu}: Akun Admin, akun Operator terpadu dengan 3 konsol utama, akun Petani, dan akses publik Konsumen tanpa login.
+  \item \textbf{Infrastruktur Local-First}: PC Server Ubuntu di fasilitas (Nginx, Express, PostgreSQL, Redis, Modbus Poller) dengan ketahanan operasional penuh saat internet padam.
+\end{itemize} \\
+\hline
+\textbf{Out-of-Scope\newline(Fase Lanjutan)} &
+\begin{itemize}
+  \item Multi-komoditas tambahan (Tomat, Cabai) --- skema basis data siap, operasional MVP murni fokus pada Kentang.
+  \item Integrasi pembayaran digital petani --- pembayaran dilakukan reguler berbasis nota timbang sah.
+  \item Otomasi Computer Vision kamera --- pemilahan mengandalkan mesin sizer mekanis dan operator.
+  \item Aplikasi mobile native toko aplikasi --- seluruh antarmuka berjalan optimal sebagai Responsive Web App.
+\end{itemize} \\
+\bottomrule
+\end{longtable}
+
+\subsection{Timeline \& Matriks Milestone 6 Fase}
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{2.0cm}>{\raggedright\arraybackslash}p{6.6cm}>{\raggedright\arraybackslash}p{3.8cm}@{}}
+\toprule
+\textbf{Fase} & \textbf{Waktu} & \textbf{Deliverable \& Rincian Kerja} & \textbf{Keluaran / Output} \\
+\midrule
+\endhead
+Fase 0: Setup \& Infra & Minggu 1 & Setup PC Server fasilitas, Docker Compose (PostgreSQL, Redis), migrasi Prisma skema basis data, dan seed data master komoditas Kentang & Layanan basis data aktif, skema terverifikasi \\
+\hline
+Fase 1: Auth \& RBAC 3-Role & Minggu 1--2 & Implementasi autentikasi JWT, middleware RBAC 3-role (Admin, Operator, Farmer), modul CRUD Petani, dan kartu QR Petani & Login bersama, API auth, portal mandiri petani \\
+\hline
+Fase 2: Konsol 01 Penerimaan & Minggu 2--3 & Konsol Reception Desk, poller Modbus TCP Timbangan 01 (:502), generator QR Waring, integrasi printer struk nota thermal, dan buffer FIFO & Struk tanda terima sah, label waring, buffer gudang \\
+\hline
+Fase 3: Konsol 02 Sortir \& Grading & Minggu 3--4 & Antarmuka pairing waring ke palet, pencatatan status cuci, poller Modbus TCP Timbangan 02, engine perhitungan susut otomatis, dan penautan QR palet grade fisik & Relasi data silsilah, catatan grade, metrik susut bobot, tautan palet grade \\
+\hline
+Fase 4: Konsol 03 Pengepakan & Minggu 4--5 & Poller Modbus TCP Timbangan 03 pouch 1 kg, generator QR GS1 Digital Link, barcode ITF-14 ekspor, dan resolver publik penelusuran & Label GS1 pouch, label ekspor, web traceability \\
+\hline
+Fase 5: Dispatch \& UAT & Minggu 5--6 & Manajemen stok gudang produk jadi, verifikasi scan manifest pengiriman truk, Socket.io live updates, dan pengujian integrasi UAT & Sistem go-live di fasilitas pengemasan \\
+\bottomrule
+\end{longtable}
 
 \subsection{Kriteria Keberhasilan MVP}
-Alur inti berjalan penuh (terima $\rightarrow$ kirim) tanpa kegagalan; label pouch dan
-packaging dapat dicetak dan di-scan sesuai standar GS1; stok warehouse akurat secara
-real-time; deployment berjalan pada satu PC server dengan HTTPS.
+Peluncuran MVP dinyatakan berhasil apabila memenuhi indikator kinerja utama:
+\begin{enumerate}
+  \item \textbf{Akurasi Penimbangan 100\%}: Nilai berat bruto waring, berat per grade, dan berat kemasan tersinkronisasi presisi dari indikator timbangan digital ke sistem tanpa deviasi data.
+  \item \textbf{Keterlacakan Tanpa Cacat}: 100\% waring yang masuk tercatat hubungannya dengan palet penampung, kelas mutu akhir, dan QR palet grade fisik yang ditautkan.
+  \item \textbf{Perhitungan Susut Objektif}: Seluruh batch setoran memiliki catatan penyusutan bobot (kg dan \%) yang terverifikasi secara matematis, mengeliminasi selisih klaim antara petani dan fasilitas.
+  \item \textbf{Standardisasi GS1 Sesuai Regulasi}: QR GS1 Digital Link pada kemasan pouch 1 kg berhasil dibuka oleh ponsel pintar ke laman ketertelusuran publik, dan barcode ITF-14 terbaca oleh scanner logistik.
+  \item \textbf{Keandalan Operasional Mandiri}: Sistem tetap berjalan 100\% saat koneksi internet eksternal terputus berkat arsitektur server lokal.
+  \item \textbf{Efisiensi Operator}: Satu akun operator dapat mengakses 3 konsol utama melalui menu modular dan Focus Mode yang sangat ringkas tanpa beban pencetakan yang tidak perlu.
+\end{enumerate}
 
 % ============================================================================
 \section{Penutup}
+% ============================================================================
 
-Dokumen ini mengonsolidasikan seluruh keputusan rancangan sistem ENYX-Smart Hub. Diagram
-detail (workflow, arsitektur, ERD) tetap dikelola pada \texttt{docs/DIAGRAM.md} sebagai
-sumber visual; laporan ini menjadi narasi resmi untuk pengembangan, audit, dan
-pengambilan keputusan.
-
-\textbf{Langkah lanjut yang disarankan:}
-\begin{enumerate}
-  \item Revisi BOM sesuai aturan penimbangan terbaru (dua timbangan: penerimaan \& pengepakan; tambah printer label grade di Area Sortir).
-  \item Tambahkan field \texttt{harvestDate} ke \texttt{schema.prisma} implementasi dan sesuaikan seed data (nonaktifkan komoditas selain Kentang).
-  \item Implementasikan Phase 0--3 sesuai rencana, lanjutkan Phase 5 untuk GS1 Digital Link lebih awal karena menjadi nilai jual utama.
-  \item Uji pemindaian QR GS1 Digital Link dengan smartphone konsumen pada tahap prototype printer.
-\end{enumerate}
-
-\vspace{1em}
-\noindent\textit{Dokumen ini menggantikan dan mengonsolidasikan: \texttt{API.md},
-\texttt{ARCHITECTURE.md}, \texttt{BOM.md}, \texttt{PLANNING.md},
-\texttt{TECH\_STACK.md}, dan \texttt{UI\_UX\_GUIDE.md} (diarsipkan pada Git history).}
+Laporan resmi Versi 4.1 ini mendokumentasikan pembaruan menyeluruh sistem ENYX-Smart Hub dengan konsolidasi praktis menjadi 3 konsol stasiun kerja fisik yang berpadanan langsung dengan 3 unit timbangan Modbus TCP port 502, pemanfaatan palet ber-QR permanen tanpa pencetakan label grade berulang, pemisahan kendali fisik mesin yang mandiri dengan sistem sebagai pencatat data, Focus Mode yang ringkas, kalkulasi penyusutan bobot otomatis, serta model RBAC 3-role yang efisien bagi operator lapangan. Dengan integrasi label standar internasional GS1 Digital Link dan ITF-14, fasilitas pengemasan kentang memiliki kapabilitas tinggi untuk memenuhi standar mutu pasar ritel modern dan ekspor internasional.
 
 \end{document}

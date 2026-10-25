@@ -19,52 +19,33 @@ interface MenuItem {
 const roleMenu: Record<string, MenuItem[]> = {
   ADMIN: [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
-    { label: 'Weighing', path: '/dashboard/weighing', icon: 'scale' },
-    { label: 'Sorting', path: '/dashboard/sorting', icon: 'sortir' },
-    { label: 'Packaging', path: '/dashboard/packaging', icon: 'package' },
+    { label: 'Station 1: Reception', path: '/dashboard/weighing', icon: 'scale' },
+    { label: 'Station 2: Sorting', path: '/dashboard/grading', icon: 'sortir' },
+    { label: 'Station 3: Packaging', path: '/dashboard/packaging', icon: 'package' },
+    { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box' },
     { label: 'Users', path: '/dashboard/users', icon: 'users' },
     { label: 'Reports', path: '/dashboard/reports', icon: 'reports' },
-    { label: 'Settings', path: '/dashboard/settings', icon: 'settings' },
+    { label: 'Scale Settings', path: '/dashboard/settings', icon: 'settings' },
   ],
-  WEIGHING_OPERATOR: [
-    { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
-    { label: 'Weighing', path: '/dashboard/weighing', icon: 'scale' },
-    { label: 'Pallet Register', path: '/dashboard/pallets', icon: 'pallet' },
-    { label: 'Configuration', path: '/dashboard/settings', icon: 'settings' },
-  ],
-  SORTING_OPERATOR: [
-    { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
-    { label: 'Sorting', path: '/dashboard/sorting', icon: 'sortir' },
-  ],
-  PACKAGING_OPERATOR: [
-    { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
-    { label: 'Packaging', path: '/dashboard/packaging', icon: 'package' },
-    { label: 'Configuration', path: '/dashboard/settings', icon: 'settings' },
-  ],
-  WAREHOUSE_OPERATOR: [
-    { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
-    { label: 'Stock In', path: '/dashboard/stock-in', icon: 'arrow-down' },
-    { label: 'Stock Out', path: '/dashboard/stock-out', icon: 'arrow-up' },
-  ],
-  DELIVERY_OPERATOR: [
-    { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
-    { label: 'Deliveries', path: '/dashboard/deliveries', icon: 'truck' },
+  OPERATOR: [
+    { label: 'Workstation Hub', path: '/dashboard', icon: 'dashboard', end: true },
+    { label: 'Station 1: Reception', path: '/dashboard/weighing', icon: 'scale' },
+    { label: 'Station 2: Sorting', path: '/dashboard/grading', icon: 'sortir' },
+    { label: 'Station 3: Packaging', path: '/dashboard/packaging', icon: 'package' },
+    { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box' },
+    { label: 'Scale Settings', path: '/dashboard/settings', icon: 'settings' },
   ],
   FARMER: [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
     { label: 'My Deposits', path: '/dashboard/my-deliveries', icon: 'clipboard' },
-    { label: 'My QR', path: '/dashboard/traceability', icon: 'qr' },
+    { label: 'My Farmer QR', path: '/dashboard/traceability', icon: 'qr' },
     { label: 'Profile', path: '/dashboard/profile', icon: 'user' },
   ],
 }
 
 const roleLabel: Record<string, string> = {
-  ADMIN: 'Admin',
-  WEIGHING_OPERATOR: 'Weighing Operator',
-  SORTING_OPERATOR: 'Sorting Operator',
-  PACKAGING_OPERATOR: 'Packaging Operator',
-  WAREHOUSE_OPERATOR: 'Warehouse Operator',
-  DELIVERY_OPERATOR: 'Delivery Operator',
+  ADMIN: 'System Admin',
+  OPERATOR: 'Plant Operator',
   FARMER: 'Farmer',
 }
 
@@ -237,7 +218,7 @@ export default function DashboardLayout() {
 
           <div className="navbar-spacer" />
 
-          <ConnectionBadge state={navigator.onLine ? 'connected' : 'disconnected'} label="Scale" />
+          <ConnectionBadge state={navigator.onLine ? 'connected' : 'disconnected'} label="Server" />
 
           <div className="relative" ref={userMenuRef}>
             <Button

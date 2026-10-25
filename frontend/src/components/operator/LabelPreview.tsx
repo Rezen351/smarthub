@@ -1,7 +1,7 @@
 import { formatWeight } from '../../lib/utils'
 
 export interface LabelPreviewProps {
-  type: 'pallet' | 'grade' | 'pouch' | 'receipt'
+  type: 'pallet' | 'grade' | 'pouch' | 'receipt' | 'waring' | 'export'
   code: string
   farmerName?: string
   farmerId?: string
@@ -103,7 +103,11 @@ export default function LabelPreview({
             <span className="font-bold">{farmerName}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600">Pallet Code:</span>
+            <span className="text-gray-600">Farmer ID:</span>
+            <span className="font-mono text-xs">{farmerId}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Waring Code:</span>
             <span className="font-mono font-semibold">{code}</span>
           </div>
           <div className="flex justify-between">
@@ -112,22 +116,76 @@ export default function LabelPreview({
           </div>
         </div>
         <div className="py-3 border-b border-dashed border-gray-400 text-center">
-          <span className="text-[10px] uppercase text-gray-500 block">OFFICIAL NET WEIGHT</span>
+          <span className="text-[10px] uppercase text-gray-500 block">OFFICIAL GROSS INTAKE WEIGHT</span>
           <span className="text-2xl font-black text-emerald-800 block">
             {weightKg !== undefined ? formatWeight(weightKg) : '0'} kg
           </span>
           <span className="text-[10px] text-emerald-700 font-bold block uppercase mt-0.5">
-            Status: APPROVED & LABELED
+            Status: BUFFER_WAITING (DISPATCHED TO QUEUE)
           </span>
         </div>
         <div className="pt-1 text-[10px] text-gray-500 text-center italic">
-          * Retain this receipt for official farmer payment & traceability records. *
+          * Retain this receipt for farmer settlement & deposit verification. *
         </div>
       </div>
     )
   }
 
-  /* ── 2. INTAKE PALLET LABEL ── */
+  /* ── 2. WARING INTAKE QR LABEL (WRG-...) ── */
+  if (type === 'waring') {
+    return (
+      <div
+        className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
+      >
+        <div className="flex items-center justify-between pb-2 border-b border-gray-300">
+          <div>
+            <span className="text-[10px] uppercase tracking-wider font-bold block text-gray-600">
+              ENYX-ENTERPRISE · RAW HARVEST WARING
+            </span>
+            <span className="text-base font-bold tracking-tight block text-gray-900 mt-0.5">
+              {code || 'WRG-PENDING'}
+            </span>
+          </div>
+          <div className="px-2 py-0.5 bg-amber-100 text-amber-900 font-bold text-[10px] border border-amber-300">
+            BUFFER QUEUE
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 py-1">
+          <div className="flex-1 space-y-1">
+            <span className="text-[10px] text-gray-500 uppercase block">Gross Weight</span>
+            <span className="text-2xl font-black text-emerald-800 tracking-tight block">
+              {weightKg !== undefined ? formatWeight(weightKg) : '---'} kg
+            </span>
+            <span className="text-[10px] text-gray-600 block">{commodity}</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <QrGraphic size={compact ? 44 : 52} />
+            <span className="text-[8px] text-gray-500 uppercase">Scan to Pair</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-gray-200">
+          <div>
+            <span className="text-gray-500 block text-[10px]">Farmer</span>
+            <span className="font-semibold truncate block">{farmerName}</span>
+            <span className="text-[10px] text-gray-500 font-mono">{farmerId}</span>
+          </div>
+          <div>
+            <span className="text-gray-500 block text-[10px]">Destination</span>
+            <span className="font-semibold text-gray-800 block">Buffer Warehouse</span>
+            <span className="text-[10px] text-gray-500">Zone: Raw Queue</span>
+          </div>
+        </div>
+
+        <div className="pt-1 text-[10px] text-gray-500 text-center border-t border-gray-200">
+          Date: {date} · Scan at Manual Sorting station to associate with pallet.
+        </div>
+      </div>
+    )
+  }
+
+  /* ── 3. INTAKE PALLET LABEL (PLT-...) ── */
   if (type === 'pallet') {
     return (
       <div
@@ -136,7 +194,7 @@ export default function LabelPreview({
         <div className="flex items-center justify-between pb-2 border-b border-gray-300">
           <div>
             <span className="text-[10px] uppercase tracking-wider font-bold block text-gray-600">
-              ENYX-ENTERPRISE · INTAKE PALLET
+              ENYX-ENTERPRISE · SORTING PALLET
             </span>
             <span className="text-base font-bold tracking-tight block text-gray-900 mt-0.5">
               {code || 'PLT-PENDING'}
@@ -151,27 +209,23 @@ export default function LabelPreview({
 
         <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-gray-200">
           <div>
-            <span className="text-gray-500 block text-[10px]">Farmer</span>
-            <span className="font-semibold truncate block">{farmerName}</span>
-            <span className="text-[10px] text-gray-500 font-mono">{farmerId}</span>
+            <span className="text-gray-500 block text-[10px]">Associated Waring</span>
+            <span className="font-semibold font-mono truncate block text-xs">{farmerId || 'WRG-BATCH'}</span>
           </div>
           <div>
-            <span className="text-gray-500 block text-[10px]">Net Weight</span>
-            <span className="font-bold text-emerald-800 text-sm block">
-              {weightKg !== undefined ? formatWeight(weightKg) : '---'} kg
-            </span>
-            <span className="text-[10px] text-gray-500">{commodity}</span>
+            <span className="text-gray-500 block text-[10px]">Sorting Status</span>
+            <span className="font-bold text-emerald-800 block">MANUAL SORTED</span>
           </div>
         </div>
 
         <div className="pt-1 text-[10px] text-gray-500 text-center border-t border-gray-200">
-          Date: {date} · Attach label to physical pallet box prior to sorting.
+          Date: {date} · Target: Mechanical Sizer & Grading Station.
         </div>
       </div>
     )
   }
 
-  /* ── 3. SORTED PALLET LABEL (GRD-...) ── */
+  /* ── 4. SORTED PALLET LABEL (GRD-...) ── */
   if (type === 'grade') {
     return (
       <div
@@ -218,7 +272,67 @@ export default function LabelPreview({
     )
   }
 
-  /* ── 4. 1 KG POUCH RETAIL LABEL (GS1 Digital Link) ── */
+  /* ── 5. BULK EXPORT MASTER LABEL (ITF-14) ── */
+  if (type === 'export') {
+    return (
+      <div
+        className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
+      >
+        <div className="flex items-center justify-between pb-2 border-b border-gray-300">
+          <div>
+            <span className="text-[10px] uppercase tracking-wider font-bold block text-gray-600">
+              ENYX-ENTERPRISE · EXPORT MASTER UNIT
+            </span>
+            <span className="text-xs font-bold text-gray-900 block mt-0.5">
+              {commodity} · BULK EXPORT CRATE
+            </span>
+          </div>
+          <div className="px-2.5 py-0.5 bg-blue-700 text-white rounded-none font-bold text-xs tracking-wider">
+            GRADE {grade}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 py-1">
+          <div className="space-y-1">
+            <span className="text-[10px] text-gray-500 uppercase block">Net Master Weight</span>
+            <span className="text-2xl font-black text-gray-900 tracking-tight block">
+              {weightKg !== undefined ? formatWeight(weightKg) : '10.00'} kg
+            </span>
+            <span className="text-[10px] text-gray-600 font-mono block">
+              ITF-14: 01 08990012345678
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <QrGraphic size={compact ? 48 : 56} />
+            <span className="text-[9px] text-gray-500">GS1 Export QR</span>
+          </div>
+        </div>
+
+        <div className="py-1 border-t border-gray-200">
+          <BarcodeGraphic code="0108990012345678" height={24} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-gray-200">
+          <div>
+            <span className="text-gray-500 block text-[10px]">Carton Spec</span>
+            <span className="font-semibold text-gray-900 block">
+              {weightKg && weightKg >= 30 ? '50 kg Export Carton' : '10 kg Export Carton'}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-500 block text-[10px]">Unit Code</span>
+            <span className="font-mono text-gray-800 block text-xs">{code || 'EXP-BATCH-001'}</span>
+          </div>
+        </div>
+
+        <div className="pt-1 text-[9px] text-gray-500 text-center border-t border-gray-200">
+          Pack Date: {date} · Standard export packaging specification.
+        </div>
+      </div>
+    )
+  }
+
+  /* ── 6. 1 KG POUCH RETAIL LABEL (GS1 Digital Link) ── */
   return (
     <div
       className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
@@ -239,7 +353,7 @@ export default function LabelPreview({
         <div className="space-y-1">
           <span className="text-[10px] text-gray-500 uppercase block">Net Weight</span>
           <span className="text-2xl font-black text-emerald-800 tracking-tight block">
-            {weightKg !== undefined ? formatWeight(weightKg) : '1'} kg
+            {weightKg !== undefined ? formatWeight(weightKg) : '1.000'} kg
           </span>
           <span className="text-[10px] text-gray-600 font-mono block">
             {code || 'PCH-20261010-001'}

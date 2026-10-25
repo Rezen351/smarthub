@@ -32,19 +32,22 @@ interface Activity {
 }
 
 const stats: Stat[] = [
-  { label: 'Total Users', value: '24', sub: '6 roles configured', trend: 'up', icon: 'users' },
-  { label: 'Active Today', value: '18', sub: '75% of accounts', trend: 'up', icon: 'check-circle' },
-  { label: 'Pending Approvals', value: '5', sub: 'Weighing records', trend: 'down', icon: 'clock' },
-  { label: 'System Status', value: 'Online', sub: 'All services healthy', trend: 'neutral', icon: 'shield' },
+  { label: 'System Users', value: '3', sub: '3-Role RBAC (Admin, Operator, Farmer)', trend: 'neutral', icon: 'users' },
+  { label: 'Intake Today', value: '1,420 kg', sub: '32 Warings received', trend: 'up', icon: 'scale' },
+  { label: 'Grading Yield', value: '91.4%', sub: '8.6% Shrinkage loss', trend: 'up', icon: 'clipboard' },
+  { label: 'Modbus TCP', value: 'Online', sub: 'Holding registers synced', trend: 'neutral', icon: 'shield' },
 ]
 
 const quickActions: QuickAction[] = [
-  { label: 'Weighing Area', path: '/dashboard/weighing', icon: 'scale', desc: 'Intake weighing station' },
-  { label: 'Sorting Area', path: '/dashboard/sorting', icon: 'sortir', desc: 'Grade sorting & labels' },
-  { label: 'Packaging Area', path: '/dashboard/packaging', icon: 'package', desc: 'Live scale 1 kg pouch packaging', primary: true },
-  { label: 'Manage Users', path: '/dashboard/users', icon: 'users', desc: 'Accounts & roles' },
-  { label: 'View Reports', path: '/dashboard/reports', icon: 'reports', desc: 'Setoran & stock' },
-  { label: 'Settings', path: '/dashboard/settings', icon: 'settings', desc: 'Modbus TCP & hardware setup' },
+  { label: '1. Intake Weighing', path: '/dashboard/weighing', icon: 'scale', desc: 'Gross intake scale & waring QR' },
+  { label: '2. Buffer Warehouse', path: '/dashboard/warehouse?zone=buffer', icon: 'box', desc: 'Raw waring queue (FIFO)' },
+  { label: '3. Sorting & Pairing', path: '/dashboard/sorting', icon: 'sortir', desc: 'Pair waring to pallet & sizer' },
+  { label: '4. Grading & Shrinkage', path: '/dashboard/grading', icon: 'clipboard', desc: 'Net grade weights & yield' },
+  { label: '5. Packaging', path: '/dashboard/packaging', icon: 'package', desc: 'Retail 1 kg & bulk export', primary: true },
+  { label: '6. Finished Warehouse', path: '/dashboard/warehouse?zone=finished', icon: 'stack', desc: 'Finished goods storage' },
+  { label: '7. Deliveries', path: '/dashboard/deliveries', icon: 'truck', desc: 'Dispatch scan & truck departure' },
+  { label: 'User Admin', path: '/dashboard/users', icon: 'users', desc: '3-role RBAC accounts' },
+  { label: 'Settings', path: '/dashboard/settings', icon: 'settings', desc: 'Modbus TCP telemetry setup' },
 ]
 
 const activities: Activity[] = [

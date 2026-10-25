@@ -5,31 +5,19 @@ import Logo from '../components/shared/Logo'
 import Icon, { type IconName } from '../components/shared/Icon'
 
 const demoAccounts = [
-  { email: 'admin@enyx.local', role: 'Admin' },
-  { email: 'weighing@enyx.local', role: 'Weighing Operator' },
-  { email: 'sorting@enyx.local', role: 'Sorting Operator' },
-  { email: 'packaging@enyx.local', role: 'Packaging Operator' },
-  { email: 'warehouse@enyx.local', role: 'Warehouse Operator' },
-  { email: 'delivery@enyx.local', role: 'Delivery Operator' },
-  { email: 'farmer@enyx.local', role: 'Farmer' },
+  { email: 'admin@enyx.local', role: 'System Admin', desc: 'Master Ledger & Admin' },
+  { email: 'operator@enyx.local', role: 'Plant Operator', desc: 'Workstation Hub & Operations' },
+  { email: 'farmer@enyx.local', role: 'Farmer', desc: 'Deposits & Farmer QR' },
 ]
 
 const getRoleIcon = (role: string): IconName => {
   switch (role) {
-    case 'Admin':
+    case 'System Admin':
       return 'shield'
-    case 'Weighing Operator':
-      return 'scale'
-    case 'Sorting Operator':
-      return 'sortir'
-    case 'Packaging Operator':
-      return 'package'
-    case 'Warehouse Operator':
-      return 'box'
-    case 'Delivery Operator':
-      return 'truck'
+    case 'Plant Operator':
+      return 'dashboard'
     case 'Farmer':
-      return 'user'
+      return 'leaf'
     default:
       return 'user'
   }
@@ -287,7 +275,7 @@ export default function LoginPage() {
             <span>Traceability System v1.0.0</span>
           </div>
           <Link to="/traceability" className="text-[#15803d] hover:underline font-medium">
-            Public Traceability Portal →
+            Public Traceability Portal
           </Link>
         </div>
       </footer>

@@ -9,7 +9,7 @@ import PageHeader from '../components/shared/PageHeader'
 import ConfirmDialog from '../components/feedback/ConfirmDialog'
 import { useToast } from '../components/feedback/Toast'
 
-type Role = 'ADMIN' | 'WEIGHING_OPERATOR' | 'SORTING_OPERATOR' | 'PACKAGING_OPERATOR' | 'WAREHOUSE_OPERATOR' | 'DELIVERY_OPERATOR' | 'FARMER'
+type Role = 'ADMIN' | 'OPERATOR' | 'FARMER'
 
 type User = {
   id: string
@@ -21,39 +21,27 @@ type User = {
 
 const ROLE_LABEL: Record<Role, string> = {
   ADMIN: 'Admin',
-  WEIGHING_OPERATOR: 'Weighing',
-  SORTING_OPERATOR: 'Sorting',
-  PACKAGING_OPERATOR: 'Packaging',
-  WAREHOUSE_OPERATOR: 'Warehouse',
-  DELIVERY_OPERATOR: 'Delivery',
+  OPERATOR: 'Plant Operator',
   FARMER: 'Farmer',
 }
 
 const ROLE_TONE: Record<Role, 'neutral' | 'accent' | 'success' | 'warning'> = {
   ADMIN: 'neutral',
-  WEIGHING_OPERATOR: 'accent',
-  SORTING_OPERATOR: 'accent',
-  PACKAGING_OPERATOR: 'accent',
-  WAREHOUSE_OPERATOR: 'accent',
-  DELIVERY_OPERATOR: 'accent',
+  OPERATOR: 'accent',
   FARMER: 'success',
 }
 
 const INITIAL_USERS: User[] = [
-  { id: '1', name: 'Admin', email: 'admin@enyx.local', role: 'ADMIN', status: 'ACTIVE' },
-  { id: '2', name: 'Weighing Operator', email: 'weighing@enyx.local', role: 'WEIGHING_OPERATOR', status: 'ACTIVE' },
-  { id: '3', name: 'Sorting Operator', email: 'sorting@enyx.local', role: 'SORTING_OPERATOR', status: 'ACTIVE' },
-  { id: '4', name: 'Packaging Operator', email: 'packaging@enyx.local', role: 'PACKAGING_OPERATOR', status: 'ACTIVE' },
-  { id: '5', name: 'Warehouse Operator', email: 'warehouse@enyx.local', role: 'WAREHOUSE_OPERATOR', status: 'ACTIVE' },
-  { id: '6', name: 'Delivery Operator', email: 'delivery@enyx.local', role: 'DELIVERY_OPERATOR', status: 'ACTIVE' },
-  { id: '7', name: 'Farmer', email: 'farmer@enyx.local', role: 'FARMER', status: 'ACTIVE' },
+  { id: '1', name: 'System Admin', email: 'admin@enyx.local', role: 'ADMIN', status: 'ACTIVE' },
+  { id: '2', name: 'Plant Operator', email: 'operator@enyx.local', role: 'OPERATOR', status: 'ACTIVE' },
+  { id: '3', name: 'Ahmad Santoso (Farmer)', email: 'farmer@enyx.local', role: 'FARMER', status: 'ACTIVE' },
 ]
 
 export default function UsersPage() {
   const toast = useToast()
   const [users, setUsers] = useState<User[]>(INITIAL_USERS)
   const [search, setSearch] = useState('')
-  const [form, setForm] = useState({ name: '', email: '', role: 'WEIGHING_OPERATOR' as Role })
+  const [form, setForm] = useState({ name: '', email: '', role: 'OPERATOR' as Role })
   const [formOpen, setFormOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<User | null>(null)
 

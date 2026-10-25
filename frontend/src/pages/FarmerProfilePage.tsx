@@ -10,11 +10,7 @@ import { useToast } from '../components/feedback/Toast'
 
 const ROLE_LABEL: Record<string, string> = {
   ADMIN: 'Admin',
-  WEIGHING_OPERATOR: 'Weighing Operator',
-  SORTING_OPERATOR: 'Sorting Operator',
-  PACKAGING_OPERATOR: 'Packaging Operator',
-  WAREHOUSE_OPERATOR: 'Warehouse Operator',
-  DELIVERY_OPERATOR: 'Delivery Operator',
+  OPERATOR: 'Plant Operator',
   FARMER: 'Farmer',
 }
 

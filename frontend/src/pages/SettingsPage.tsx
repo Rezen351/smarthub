@@ -5,152 +5,269 @@ import { Field, Input } from '../components/shared/Form'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 
-interface WeighingSettings {
-  // Intake Scale
-  transmitterIp: string
-  modbusPort: string
+export interface ScaleConfig {
+  ip: string
+  port: string
   slaveId: string
   weightRegister: string
   statusRegister: string
-  scaleCapacityKg: string
+  capacityKg: string
   stabilityGrams: string
-  pollMs: string
-
-  // Packaging Scale Stations (3 Scale Channels)
-  st1Ip: string
-  st1Port: string
-  st1Register: string
-
-  st2Ip: string
-  st2Port: string
-  st2Register: string
-
-  st3Ip: string
-  st3Port: string
-  st3Register: string
 }
 
-const INITIAL_SETTINGS: WeighingSettings = {
-  transmitterIp: '192.168.1.100',
-  modbusPort: '502',
-  slaveId: '1',
-  weightRegister: '40001',
-  statusRegister: '40002',
-  scaleCapacityKg: '150',
-  stabilityGrams: '20',
-  pollMs: '250',
-
-  st1Ip: '192.168.1.101',
-  st1Port: '502',
-  st1Register: '40001',
-
-  st2Ip: '192.168.1.102',
-  st2Port: '502',
-  st2Register: '40001',
-
-  st3Ip: '192.168.1.103',
-  st3Port: '502',
-  st3Register: '40001',
+export interface PackagingScaleConfig extends ScaleConfig {
+  pouchToleranceGrams: string
 }
+
+export interface SystemScaleSettings {
+  intake: ScaleConfig
+  grading: ScaleConfig
+  packaging: PackagingScaleConfig
+  pollIntervalMs: string
+  timeoutMs: string
+}
+
+export const INITIAL_SETTINGS: SystemScaleSettings = {
+  intake: {
+    ip: '192.168.1.100',
+    port: '502',
+    slaveId: '1',
+    weightRegister: '40001',
+    statusRegister: '40002',
+    capacityKg: '150',
+    stabilityGrams: '20',
+  },
+  grading: {
+    ip: '192.168.1.101',
+    port: '502',
+    slaveId: '1',
+    weightRegister: '40001',
+    statusRegister: '40002',
+    capacityKg: '100',
+    stabilityGrams: '10',
+  },
+  packaging: {
+    ip: '192.168.1.102',
+    port: '502',
+    slaveId: '1',
+    weightRegister: '40001',
+    statusRegister: '40002',
+    capacityKg: '30',
+    stabilityGrams: '2',
+    pouchToleranceGrams: '5',
+  },
+  pollIntervalMs: '250',
+  timeoutMs: '1000',
+}
+
+const STORAGE_KEY = 'smarthub_scale_settings'
 
 export default function SettingsPage() {
   const toast = useToast()
-  const [form, setForm] = useState<WeighingSettings>(INITIAL_SETTINGS)
-  const [isTesting, setIsTesting] = useState(false)
+  const [form, setForm] = useState<SystemScaleSettings>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) return JSON.parse(saved)
+    } catch {
+      // fallback
+    }
+    return INITIAL_SETTINGS
+  })
+  const [testingTarget, setTestingTarget] = useState<string | null>(null)
 
-  const handleTestConnection = () => {
-    setIsTesting(true)
+  const handleTestConnection = (stationId: string, stationLabel: string, ip: string, port: string) => {
+    setTestingTarget(stationId)
     window.setTimeout(() => {
-      setIsTesting(false)
-      toast.success(`Modbus TCP connection verified: ${form.transmitterIp}:${form.modbusPort}`)
-    }, 800)
+      setTestingTarget(null)
+      toast.success(`${stationLabel} verified at ${ip}:${port}`)
+    }, 600)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.transmitterIp.trim()) {
-      toast.error('Transmitter IP address is required.')
+
+    if (!form.intake.ip.trim() || !form.grading.ip.trim() || !form.packaging.ip.trim()) {
+      toast.error('All 3 scale IP addresses are required.')
       return
     }
-    if (!(Number(form.scaleCapacityKg) > 0)) {
-      toast.error('Scale capacity must be greater than 0 kg.')
+
+    if (
+      Number(form.intake.capacityKg) <= 0 ||
+      Number(form.grading.capacityKg) <= 0 ||
+      Number(form.packaging.capacityKg) <= 0
+    ) {
+      toast.error('Capacity must be greater than zero.')
       return
     }
-    toast.success('Weighing & Packaging Modbus TCP configuration saved.')
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(form))
+    } catch {
+      // storage unavailable
+    }
+
+    toast.success('Settings saved.')
+  }
+
+  const handleResetDefaults = () => {
+    setForm(INITIAL_SETTINGS)
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch {
+      // storage unavailable
+    }
+    toast.info('Settings reset to defaults.')
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <PageHeader
-        title="Weighing & Packaging Configuration"
-        subtitle="Modbus TCP weight transmitter IP connection, 3-station packaging scales, and scale parameters."
+        title="Scale Settings"
+        subtitle="Modbus TCP parameters for Stations 01, 02, and 03."
+        actions={
+          <Badge tone="success" dot live>
+            Port 502 · Active
+          </Badge>
+        }
       />
 
+      {/* 4 Quick Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Station 01</p>
+          <p className="text-xl font-bold font-mono tracking-tight text-foreground">{form.intake.ip}:{form.intake.port}</p>
+          <p className="text-xs text-muted-foreground">150 kg Floor Scale</p>
+        </div>
+
+        <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Station 02</p>
+          <p className="text-xl font-bold font-mono tracking-tight text-foreground">{form.grading.ip}:{form.grading.port}</p>
+          <p className="text-xs text-muted-foreground">100 kg Floor Scale</p>
+        </div>
+
+        <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Station 03</p>
+          <p className="text-xl font-bold font-mono tracking-tight text-foreground">{form.packaging.ip}:{form.packaging.port}</p>
+          <p className="text-xs text-muted-foreground">30 kg Bench Scale</p>
+        </div>
+
+        <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Polling</p>
+          <p className="text-xl font-bold font-mono tracking-tight text-foreground">{form.pollIntervalMs} ms</p>
+          <p className="text-xs text-muted-foreground">{form.timeoutMs} ms Timeout</p>
+        </div>
+      </div>
+
       <form className="space-y-6" onSubmit={handleSubmit}>
-        {/* Receiving Intake Modbus TCP Connection Settings Card */}
+        {/* Station 01: Reception */}
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
-            <div>
-              <h2 className="text-base font-bold text-foreground tracking-tight">
-                Receiving Station Weight Transmitter (Modbus TCP)
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Target IP address and holding register configuration for intake scale indicator transmitter.
-              </p>
-            </div>
-            <Badge tone="success" dot>
-              Intake Modbus TCP Active
-            </Badge>
+          <div className="flex items-center justify-between border-b border-border pb-4">
+            <span className="font-semibold text-base text-foreground">Station 01: Reception</span>
+            <Badge tone="success" dot>Online</Badge>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Transmitter IP Address" htmlFor="settings-ip" required hint="e.g. 192.168.1.100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Field label="IP Address" htmlFor="intake-ip" required>
               <Input
-                id="settings-ip"
+                id="intake-ip"
                 mono
-                value={form.transmitterIp}
-                onChange={(e) => setForm({ ...form, transmitterIp: e.target.value })}
-                placeholder="192.168.1.100"
+                value={form.intake.ip}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    intake: { ...form.intake, ip: e.target.value },
+                  })
+                }
               />
             </Field>
 
-            <Field label="Modbus Port" htmlFor="settings-port" required hint="Default Modbus TCP port is 502">
+            <Field label="Port" htmlFor="intake-port" required>
               <Input
-                id="settings-port"
+                id="intake-port"
                 type="number"
                 mono
-                value={form.modbusPort}
-                onChange={(e) => setForm({ ...form, modbusPort: e.target.value })}
+                value={form.intake.port}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    intake: { ...form.intake, port: e.target.value },
+                  })
+                }
               />
             </Field>
 
-            <Field label="Slave / Unit ID" htmlFor="settings-slave" hint="Device address (default 1)">
+            <Field label="Slave ID" htmlFor="intake-slave">
               <Input
-                id="settings-slave"
+                id="intake-slave"
                 type="number"
                 mono
-                value={form.slaveId}
-                onChange={(e) => setForm({ ...form, slaveId: e.target.value })}
+                value={form.intake.slaveId}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    intake: { ...form.intake, slaveId: e.target.value },
+                  })
+                }
               />
             </Field>
 
-            <Field label="Weight Register Address" htmlFor="settings-reg-weight" required hint="Holding register (e.g. 40001)">
+            <Field label="Weight Register" htmlFor="intake-reg-weight" required>
               <Input
-                id="settings-reg-weight"
+                id="intake-reg-weight"
                 type="number"
                 mono
-                value={form.weightRegister}
-                onChange={(e) => setForm({ ...form, weightRegister: e.target.value })}
+                value={form.intake.weightRegister}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    intake: { ...form.intake, weightRegister: e.target.value },
+                  })
+                }
               />
             </Field>
 
-            <Field label="Status Register Address" htmlFor="settings-reg-status" hint="Stability flag register (e.g. 40002)">
+            <Field label="Status Register" htmlFor="intake-reg-status">
               <Input
-                id="settings-reg-status"
+                id="intake-reg-status"
                 type="number"
                 mono
-                value={form.statusRegister}
-                onChange={(e) => setForm({ ...form, statusRegister: e.target.value })}
+                value={form.intake.statusRegister}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    intake: { ...form.intake, statusRegister: e.target.value },
+                  })
+                }
+              />
+            </Field>
+
+            <Field label="Capacity (kg)" htmlFor="intake-cap" required>
+              <Input
+                id="intake-cap"
+                type="number"
+                mono
+                value={form.intake.capacityKg}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    intake: { ...form.intake, capacityKg: e.target.value },
+                  })
+                }
+              />
+            </Field>
+
+            <Field label="Stability (g)" htmlFor="intake-stab">
+              <Input
+                id="intake-stab"
+                type="number"
+                mono
+                value={form.intake.stabilityGrams}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    intake: { ...form.intake, stabilityGrams: e.target.value },
+                  })
+                }
               />
             </Field>
           </div>
@@ -160,197 +277,320 @@ export default function SettingsPage() {
               type="button"
               variant="outline"
               icon="refresh"
-              loading={isTesting}
-              onClick={handleTestConnection}
+              loading={testingTarget === 'st-01'}
+              onClick={() => handleTestConnection('st-01', 'Station 01', form.intake.ip, form.intake.port)}
             >
-              Test Modbus TCP Connection
+              Test Connection
             </Button>
           </div>
         </div>
 
-        {/* 3 Packaging Area Scale Stations (Conflict-Free Channels) */}
+        {/* Station 02: Sorting */}
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
-            <div>
-              <h2 className="text-base font-bold text-foreground tracking-tight">
-                Packaging Area Multi-Scale Stations (3 Channels)
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Assigns independent Modbus TCP IP addresses for Station 1 (Grade A), Station 2 (Grade B), and Station 3 (Grade C) to prevent multi-operator conflicts.
-              </p>
-            </div>
-            <Badge tone="accent">3 Independent Channels</Badge>
+          <div className="flex items-center justify-between border-b border-border pb-4">
+            <span className="font-semibold text-base text-foreground">Station 02: Sorting</span>
+            <Badge tone="success" dot>Online</Badge>
           </div>
 
-          <div className="space-y-6">
-            {/* Station 1 (Grade A) */}
-            <div className="p-4 bg-muted/30 border border-border rounded-none space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-foreground uppercase tracking-wider">
-                  Station 1 — Scale Channel (Grade A)
-                </span>
-                <Badge tone="success">Grade A</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Field label="IP Address" htmlFor="st1-ip">
-                  <Input
-                    id="st1-ip"
-                    mono
-                    value={form.st1Ip}
-                    onChange={(e) => setForm({ ...form, st1Ip: e.target.value })}
-                  />
-                </Field>
-                <Field label="Port" htmlFor="st1-port">
-                  <Input
-                    id="st1-port"
-                    type="number"
-                    mono
-                    value={form.st1Port}
-                    onChange={(e) => setForm({ ...form, st1Port: e.target.value })}
-                  />
-                </Field>
-                <Field label="Weight Register" htmlFor="st1-reg">
-                  <Input
-                    id="st1-reg"
-                    type="number"
-                    mono
-                    value={form.st1Register}
-                    onChange={(e) => setForm({ ...form, st1Register: e.target.value })}
-                  />
-                </Field>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Field label="IP Address" htmlFor="grading-ip" required>
+              <Input
+                id="grading-ip"
+                mono
+                value={form.grading.ip}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    grading: { ...form.grading, ip: e.target.value },
+                  })
+                }
+              />
+            </Field>
 
-            {/* Station 2 (Grade B) */}
-            <div className="p-4 bg-muted/30 border border-border rounded-none space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-foreground uppercase tracking-wider">
-                  Station 2 — Scale Channel (Grade B)
-                </span>
-                <Badge tone="accent">Grade B</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Field label="IP Address" htmlFor="st2-ip">
-                  <Input
-                    id="st2-ip"
-                    mono
-                    value={form.st2Ip}
-                    onChange={(e) => setForm({ ...form, st2Ip: e.target.value })}
-                  />
-                </Field>
-                <Field label="Port" htmlFor="st2-port">
-                  <Input
-                    id="st2-port"
-                    type="number"
-                    mono
-                    value={form.st2Port}
-                    onChange={(e) => setForm({ ...form, st2Port: e.target.value })}
-                  />
-                </Field>
-                <Field label="Weight Register" htmlFor="st2-reg">
-                  <Input
-                    id="st2-reg"
-                    type="number"
-                    mono
-                    value={form.st2Register}
-                    onChange={(e) => setForm({ ...form, st2Register: e.target.value })}
-                  />
-                </Field>
-              </div>
-            </div>
+            <Field label="Port" htmlFor="grading-port" required>
+              <Input
+                id="grading-port"
+                type="number"
+                mono
+                value={form.grading.port}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    grading: { ...form.grading, port: e.target.value },
+                  })
+                }
+              />
+            </Field>
 
-            {/* Station 3 (Grade C) */}
-            <div className="p-4 bg-muted/30 border border-border rounded-none space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-foreground uppercase tracking-wider">
-                  Station 3 — Scale Channel (Grade C)
-                </span>
-                <Badge tone="warning">Grade C</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Field label="IP Address" htmlFor="st3-ip">
-                  <Input
-                    id="st3-ip"
-                    mono
-                    value={form.st3Ip}
-                    onChange={(e) => setForm({ ...form, st3Ip: e.target.value })}
-                  />
-                </Field>
-                <Field label="Port" htmlFor="st3-port">
-                  <Input
-                    id="st3-port"
-                    type="number"
-                    mono
-                    value={form.st3Port}
-                    onChange={(e) => setForm({ ...form, st3Port: e.target.value })}
-                  />
-                </Field>
-                <Field label="Weight Register" htmlFor="st3-reg">
-                  <Input
-                    id="st3-reg"
-                    type="number"
-                    mono
-                    value={form.st3Register}
-                    onChange={(e) => setForm({ ...form, st3Register: e.target.value })}
-                  />
-                </Field>
-              </div>
-            </div>
+            <Field label="Slave ID" htmlFor="grading-slave">
+              <Input
+                id="grading-slave"
+                type="number"
+                mono
+                value={form.grading.slaveId}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    grading: { ...form.grading, slaveId: e.target.value },
+                  })
+                }
+              />
+            </Field>
+
+            <Field label="Weight Register" htmlFor="grading-reg-weight" required>
+              <Input
+                id="grading-reg-weight"
+                type="number"
+                mono
+                value={form.grading.weightRegister}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    grading: { ...form.grading, weightRegister: e.target.value },
+                  })
+                }
+              />
+            </Field>
+
+            <Field label="Status Register" htmlFor="grading-reg-status">
+              <Input
+                id="grading-reg-status"
+                type="number"
+                mono
+                value={form.grading.statusRegister}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    grading: { ...form.grading, statusRegister: e.target.value },
+                  })
+                }
+              />
+            </Field>
+
+            <Field label="Capacity (kg)" htmlFor="grading-cap" required>
+              <Input
+                id="grading-cap"
+                type="number"
+                mono
+                value={form.grading.capacityKg}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    grading: { ...form.grading, capacityKg: e.target.value },
+                  })
+                }
+              />
+            </Field>
+
+            <Field label="Stability (g)" htmlFor="grading-stab">
+              <Input
+                id="grading-stab"
+                type="number"
+                mono
+                value={form.grading.stabilityGrams}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    grading: { ...form.grading, stabilityGrams: e.target.value },
+                  })
+                }
+              />
+            </Field>
+          </div>
+
+          <div className="flex justify-end border-t border-border pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              icon="refresh"
+              loading={testingTarget === 'st-02'}
+              onClick={() => handleTestConnection('st-02', 'Station 02', form.grading.ip, form.grading.port)}
+            >
+              Test Connection
+            </Button>
           </div>
         </div>
 
-        {/* Scale Parameters Card */}
+        {/* Station 03: Packaging */}
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
-          <div className="border-b border-border pb-4">
-            <h2 className="text-base font-bold text-foreground tracking-tight">Scale & Stability Parameters</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Applies capacity constraints, lock thresholds, and polling frequencies for harvest intake weighing.
-            </p>
+          <div className="flex items-center justify-between border-b border-border pb-4">
+            <span className="font-semibold text-base text-foreground">Station 03: Packaging</span>
+            <Badge tone="success" dot>Online</Badge>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Intake Capacity (kg)" htmlFor="settings-capacity" required hint="Maximum allowed intake weight">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Field label="IP Address" htmlFor="pkg-ip" required>
               <Input
-                id="settings-capacity"
-                type="number"
-                inputMode="decimal"
-                min="1"
-                value={form.scaleCapacityKg}
-                onChange={(e) => setForm({ ...form, scaleCapacityKg: e.target.value })}
+                id="pkg-ip"
+                mono
+                value={form.packaging.ip}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    packaging: { ...form.packaging, ip: e.target.value },
+                  })
+                }
               />
             </Field>
 
-            <Field label="Stability Threshold (g)" htmlFor="settings-stability" hint="Weight locks once variance is under threshold">
+            <Field label="Port" htmlFor="pkg-port" required>
               <Input
-                id="settings-stability"
+                id="pkg-port"
                 type="number"
-                inputMode="numeric"
-                min="1"
-                value={form.stabilityGrams}
-                onChange={(e) => setForm({ ...form, stabilityGrams: e.target.value })}
+                mono
+                value={form.packaging.port}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    packaging: { ...form.packaging, port: e.target.value },
+                  })
+                }
               />
             </Field>
 
-            <Field label="Polling Interval (ms)" htmlFor="settings-poll" hint="Modbus TCP query frequency">
+            <Field label="Slave ID" htmlFor="pkg-slave">
               <Input
-                id="settings-poll"
+                id="pkg-slave"
                 type="number"
-                inputMode="numeric"
+                mono
+                value={form.packaging.slaveId}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    packaging: { ...form.packaging, slaveId: e.target.value },
+                  })
+                }
+              />
+            </Field>
+
+            <Field label="Weight Register" htmlFor="pkg-reg-weight" required>
+              <Input
+                id="pkg-reg-weight"
+                type="number"
+                mono
+                value={form.packaging.weightRegister}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    packaging: { ...form.packaging, weightRegister: e.target.value },
+                  })
+                }
+              />
+            </Field>
+
+            <Field label="Status Register" htmlFor="pkg-reg-status">
+              <Input
+                id="pkg-reg-status"
+                type="number"
+                mono
+                value={form.packaging.statusRegister}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    packaging: { ...form.packaging, statusRegister: e.target.value },
+                  })
+                }
+              />
+            </Field>
+
+            <Field label="Capacity (kg)" htmlFor="pkg-cap" required>
+              <Input
+                id="pkg-cap"
+                type="number"
+                mono
+                value={form.packaging.capacityKg}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    packaging: { ...form.packaging, capacityKg: e.target.value },
+                  })
+                }
+              />
+            </Field>
+
+            <Field label="Stability (g)" htmlFor="pkg-stab">
+              <Input
+                id="pkg-stab"
+                type="number"
+                mono
+                value={form.packaging.stabilityGrams}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    packaging: { ...form.packaging, stabilityGrams: e.target.value },
+                  })
+                }
+              />
+            </Field>
+
+            <Field label="Pouch Tolerance (g)" htmlFor="pkg-tol" required>
+              <Input
+                id="pkg-tol"
+                type="number"
+                mono
+                value={form.packaging.pouchToleranceGrams}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    packaging: { ...form.packaging, pouchToleranceGrams: e.target.value },
+                  })
+                }
+              />
+            </Field>
+          </div>
+
+          <div className="flex justify-end border-t border-border pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              icon="refresh"
+              loading={testingTarget === 'st-03'}
+              onClick={() => handleTestConnection('st-03', 'Station 03', form.packaging.ip, form.packaging.port)}
+            >
+              Test Connection
+            </Button>
+          </div>
+        </div>
+
+        {/* Global Settings */}
+        <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
+          <div className="border-b border-border pb-4">
+            <span className="font-semibold text-base text-foreground">Global Settings</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Polling (ms)" htmlFor="global-poll">
+              <Input
+                id="global-poll"
+                type="number"
+                mono
                 min="100"
                 step="50"
-                value={form.pollMs}
-                onChange={(e) => setForm({ ...form, pollMs: e.target.value })}
+                value={form.pollIntervalMs}
+                onChange={(e) => setForm({ ...form, pollIntervalMs: e.target.value })}
+              />
+            </Field>
+
+            <Field label="Timeout (ms)" htmlFor="global-timeout">
+              <Input
+                id="global-timeout"
+                type="number"
+                mono
+                min="200"
+                step="100"
+                value={form.timeoutMs}
+                onChange={(e) => setForm({ ...form, timeoutMs: e.target.value })}
               />
             </Field>
           </div>
         </div>
 
         {/* Form Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 pt-2">
           <Button type="submit" variant="primary" icon="check" touch>
-            Save Configuration
+            Save Settings
           </Button>
-          <Button type="button" variant="ghost" icon="refresh" onClick={() => setForm(INITIAL_SETTINGS)}>
+          <Button type="button" variant="ghost" icon="refresh" onClick={handleResetDefaults}>
             Reset Defaults
           </Button>
         </div>

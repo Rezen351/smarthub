@@ -32,14 +32,14 @@ interface Activity {
 
 const stats: Stat[] = [
   { label: "Today's Weighing", value: '156', sub: 'kg processed', trend: 'up', icon: 'scale' },
-  { label: 'Active Pallets', value: '24', sub: '3 created today', trend: 'up', icon: 'pallet' },
+  { label: 'Warehouse Stock', value: '24', sub: 'Pallets in buffer', trend: 'up', icon: 'box' },
   { label: 'Pending Approval', value: '5', sub: 'Awaiting verify', trend: 'down', icon: 'clock' },
   { label: 'Approved Today', value: '12', sub: 'Labels ready', trend: 'up', icon: 'check-circle' },
 ]
 
 const quickActions: QuickAction[] = [
   { label: 'New Weighing', path: '/dashboard/weighing', icon: 'scale', desc: 'Scan, weigh, approve', primary: true },
-  { label: 'Pallet Register', path: '/dashboard/pallets', icon: 'pallet', desc: 'View approved pallets' },
+  { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box', desc: 'Buffer & finished inventory' },
   { label: 'Weighing History', path: '/dashboard/weighing', icon: 'history', desc: "Today's records" },
 ]
 

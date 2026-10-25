@@ -4,11 +4,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import WeighingPage from './pages/WeighingPage'
-import PalletsPage from './pages/PalletsPage'
 import GradingPage from './pages/GradingPage'
-import LabelsPage from './pages/LabelsPage'
-import StockInPage from './pages/StockInPage'
-import StockOutPage from './pages/StockOutPage'
+import WarehousePage from './pages/WarehousePage'
 import PackagingPage from './pages/PackagingPage'
 import DeliveriesPage from './pages/DeliveriesPage'
 import MyDeliveriesPage from './pages/MyDeliveriesPage'
@@ -56,12 +53,13 @@ function App() {
       >
         <Route index element={<DashboardHomeRouter />} />
         <Route path="weighing" element={<WeighingPage />} />
-        <Route path="pallets" element={<PalletsPage />} />
-        <Route path="sorting" element={<GradingPage />} />
-        <Route path="grading" element={<Navigate to="/dashboard/sorting" replace />} />
-        <Route path="labels" element={<LabelsPage />} />
-        <Route path="stock-in" element={<StockInPage />} />
-        <Route path="stock-out" element={<StockOutPage />} />
+        <Route path="pallets" element={<Navigate to="/dashboard/warehouse" replace />} />
+        <Route path="sorting" element={<Navigate to="/dashboard/grading" replace />} />
+        <Route path="grading" element={<GradingPage />} />
+        <Route path="warehouse" element={<WarehousePage />} />
+        <Route path="labels" element={<Navigate to="/dashboard/packaging" replace />} />
+        <Route path="stock-in" element={<Navigate to="/dashboard/warehouse?zone=buffer" replace />} />
+        <Route path="stock-out" element={<Navigate to="/dashboard/warehouse?zone=finished" replace />} />
         <Route path="packaging" element={<PackagingPage />} />
         <Route path="deliveries" element={<DeliveriesPage />} />
         <Route path="my-deliveries" element={<MyDeliveriesPage />} />

@@ -159,7 +159,7 @@ export default function StockOutPage() {
           </div>
 
           <div className="row gap-sm">
-            <Button type="submit" variant="danger" icon="arrow-up" touch>
+            <Button type="submit" variant="danger" icon="check" touch>
               Record Stock Out
             </Button>
             <span className="t-caption text-text-light">A confirmation step protects against accidental removals.</span>

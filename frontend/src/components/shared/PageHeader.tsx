@@ -12,12 +12,12 @@ interface PageHeaderProps {
 export default function PageHeader({ title, subtitle, actions, children, className = '' }: PageHeaderProps) {
   return (
     <header className={cn('mb-6', className)}>
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
-          {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
+          {subtitle && <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{subtitle}</p>}
         </div>
-        {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
+        {actions && <div className="flex items-center gap-2 shrink-0 self-start">{actions}</div>}
       </div>
       {children}
     </header>

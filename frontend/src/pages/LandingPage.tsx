@@ -1612,8 +1612,8 @@ export default function LandingPage() {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/dashboard/pallets" className="hover:text-[#171717] transition-colors">
-                    Pallet Registry
+                  <Link to="/dashboard/warehouse" className="hover:text-[#171717] transition-colors">
+                    Warehouse Ledger
                   </Link>
                 </li>
               </ul>

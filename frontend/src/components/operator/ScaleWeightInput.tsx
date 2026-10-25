@@ -91,7 +91,6 @@ export default function ScaleWeightInput({
       simulatedTarget.current = Number((Math.random() * 12 + 1).toFixed(3))
     }
 
-    let failWindow = 0
     const timer = window.setInterval(() => {
       const drift = (Math.random() - 0.5) * 0.06
       setReading((current) => {
@@ -99,21 +98,12 @@ export default function ScaleWeightInput({
         return Number(next.toFixed(3))
       })
       setLastReadingAt(new Date())
-      failWindow += 1
     }, POLL_MS)
-
-    /* Timeout watchdog: if no reading arrives, fall back to manual. */
-    const watchdog = window.setTimeout(() => {
-      window.clearInterval(timer)
-      setConnection('disconnected')
-      toast.warning('Scale not responding. Switch to Manual mode to continue.')
-    }, 60000)
 
     return () => {
       window.clearInterval(timer)
-      window.clearTimeout(watchdog)
     }
-  }, [mode, toast])
+  }, [mode])
 
   /* Stability detection */
   useEffect(() => {
@@ -247,16 +237,7 @@ export default function ScaleWeightInput({
               <Button variant="outline" icon="refresh" onClick={setPlatformWeight}>
                 Simulate Load
               </Button>
-              <Button variant="ghost" onClick={() => setMode('manual')}>
-                Switch to Manual
-              </Button>
             </div>
-
-            <p className="field-hint">
-              {connection === 'connected'
-                ? 'Reading locks into the weight field once the value is stable.'
-                : 'Scale unreachable — enter the weight manually or check the connection.'}
-            </p>
           </div>
         </div>
       ) : (

@@ -4,7 +4,7 @@ export interface User {
   id: string
   email: string
   name: string
-  role: 'ADMIN' | 'WEIGHING_OPERATOR' | 'SORTING_OPERATOR' | 'PACKAGING_OPERATOR' | 'WAREHOUSE_OPERATOR' | 'DELIVERY_OPERATOR' | 'FARMER'
+  role: 'ADMIN' | 'OPERATOR' | 'FARMER'
   farmerId?: string
 }
 
@@ -34,43 +34,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       'admin@enyx.local': {
         id: 'user-1',
         email: 'admin@enyx.local',
-        name: 'Admin',
+        name: 'System Admin',
         role: 'ADMIN',
       },
-      'weighing@enyx.local': {
+      'operator@enyx.local': {
         id: 'user-2',
-        email: 'weighing@enyx.local',
-        name: 'Weighing Operator',
-        role: 'WEIGHING_OPERATOR',
-      },
-      'sorting@enyx.local': {
-        id: 'user-3',
-        email: 'sorting@enyx.local',
-        name: 'Sorting Operator',
-        role: 'SORTING_OPERATOR',
-      },
-      'packaging@enyx.local': {
-        id: 'user-4',
-        email: 'packaging@enyx.local',
-        name: 'Packaging Operator',
-        role: 'PACKAGING_OPERATOR',
-      },
-      'warehouse@enyx.local': {
-        id: 'user-5',
-        email: 'warehouse@enyx.local',
-        name: 'Warehouse Operator',
-        role: 'WAREHOUSE_OPERATOR',
-      },
-      'delivery@enyx.local': {
-        id: 'user-6',
-        email: 'delivery@enyx.local',
-        name: 'Delivery Operator',
-        role: 'DELIVERY_OPERATOR',
+        email: 'operator@enyx.local',
+        name: 'Plant Operator',
+        role: 'OPERATOR',
       },
       'farmer@enyx.local': {
-        id: 'user-7',
+        id: 'user-3',
         email: 'farmer@enyx.local',
-        name: 'Farmer',
+        name: 'Ahmad Santoso (Farmer)',
         role: 'FARMER',
         farmerId: 'farmer-1',
       },

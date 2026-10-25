@@ -8,13 +8,13 @@ interface ConnectionBadgeProps {
 }
 
 const labels: Record<ConnectionState, string> = {
-  connected: 'Connected',
+  connected: 'Running',
   reconnecting: 'Reconnecting',
-  disconnected: 'Disconnected',
+  disconnected: 'Offline',
 }
 
 /**
- * Scale / MQTT connection badge shown in the navbar (laporan.pdf §9.8).
+ * Server status badge shown in the navbar.
  */
 export default function ConnectionBadge({ state, label }: ConnectionBadgeProps) {
   return (
@@ -23,9 +23,9 @@ export default function ConnectionBadge({ state, label }: ConnectionBadgeProps) 
       dot
       live={state !== 'disconnected'}
       className="hide-mobile"
-      title={`Scale connection: ${labels[state]}`}
+      title={`Server status: ${labels[state]}`}
     >
-      {label ?? 'Scale'} · {labels[state]}
+      {label ?? 'Server'} · {labels[state]}
     </Badge>
   )
 }

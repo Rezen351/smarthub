@@ -4,8 +4,8 @@
  * Implements the revised pure intake weighing workflow with Focus Mode (Full Screen):
  *   Sequential 3-step workflow:
  *     1. Step 1: Farmer Identification (Scan barcode or select from directory)
- *     2. Step 2: Harvest Weighing (Live scale reading via Modbus TCP/MQTT or manual)
- *     3. Step 3: Approve & Print Label (Pallet ID generation, farmer receipt & pallet QR label)
+ *     2. Step 2: Harvest Weighing (Live gross scale reading via Modbus TCP RS485 indicator)
+ *     3. Step 3: Approve & Bag into Waring (WRG-... generation, thermal receipt & waring QR label)
  *
  * Weight transmitter network configuration is managed in Configuration (Settings).
  */
@@ -23,7 +23,7 @@ import LabelPreview from '../components/operator/LabelPreview'
 import { useSessionContext } from '../hooks/useSessionContext'
 import { formatWeight } from '../lib/utils'
 
-type WeighingStatus = 'PENDING' | 'APPROVED'
+type WeighingStatus = 'PENDING' | 'BUFFER_WAITING'
 
 type WeighingRecord = {
   id: string
@@ -34,7 +34,7 @@ type WeighingRecord = {
   depositDate: string
   time: string
   status: WeighingStatus
-  palletCode?: string
+  waringCode?: string
 }
 
 const FARMERS = [
@@ -45,17 +45,23 @@ const FARMERS = [
 
 const SCALE_CAPACITY_KG = 150
 
-const nextPalletCode = (index: number) => {
+const nextWaringCode = (index: number) => {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-  return `PLT-${date}-${String(index).padStart(4, '0')}`
+  return `WRG-${date}-${String(index).padStart(4, '0')}`
 }
 
 const today = () => new Date().toISOString().slice(0, 10)
 
 const statusTone: Record<WeighingStatus, 'success' | 'warning'> = {
-  APPROVED: 'success',
+  BUFFER_WAITING: 'success',
   PENDING: 'warning',
 }
+
+const STEPS = [
+  { id: 1, label: 'Farmer ID' },
+  { id: 2, label: 'Weigh Harvest' },
+  { id: 3, label: 'Approve & Label' },
+] as const
 
 export default function WeighingPage() {
   const toast = useToast()
@@ -94,8 +100,8 @@ export default function WeighingPage() {
       weightKg: 45.5,
       depositDate: today(),
       time: '10:15',
-      status: 'APPROVED',
-      palletCode: 'PLT-20261010-0001',
+      status: 'BUFFER_WAITING',
+      waringCode: 'WRG-20261025-0001',
     },
     {
       id: '2',
@@ -108,7 +114,7 @@ export default function WeighingPage() {
       status: 'PENDING',
     },
   ])
-  const [palletCounter, setPalletCounter] = useState(2)
+  const [waringCounter, setWaringCounter] = useState(2)
 
   /* Auto-focus scanner input in Step 1 */
   useEffect(() => {
@@ -250,22 +256,22 @@ export default function WeighingPage() {
   /* ── Step 3: Handle Approval & Print ── */
   const handleApproveCommit = (): WeighingRecord | null => {
     if (!confirmApprove) return null
-    const assignedCode = confirmApprove.palletCode || nextPalletCode(palletCounter)
-    if (!confirmApprove.palletCode) {
-      setPalletCounter((value) => value + 1)
+    const assignedCode = confirmApprove.waringCode || nextWaringCode(waringCounter)
+    if (!confirmApprove.waringCode) {
+      setWaringCounter((value) => value + 1)
     }
 
     const updatedRecord: WeighingRecord = {
       ...confirmApprove,
-      status: 'APPROVED',
-      palletCode: assignedCode,
+      status: 'BUFFER_WAITING',
+      waringCode: assignedCode,
     }
 
     setRecords((current) =>
       current.map((item) => (item.id === confirmApprove.id ? updatedRecord : item)),
     )
 
-    toast.success(`Weight approved. Pallet ${assignedCode} created.`)
+    toast.success(`Weight approved. Waring ${assignedCode} queued for Buffer Warehouse.`)
     setConfirmApprove(updatedRecord)
     setApprovedSuccessRecord(updatedRecord)
     setPrintModalRecord(updatedRecord)
@@ -311,14 +317,14 @@ export default function WeighingPage() {
     simulatePrint(`Receipt printed for ${printModalRecord.farmerName}`, 800)
   }
 
-  const triggerPrintPalletLabel = () => {
+  const triggerPrintWaringLabel = () => {
     if (!printModalRecord) return
-    simulatePrint(`Pallet label printed: ${printModalRecord.palletCode}`, 800)
+    simulatePrint(`Waring QR label printed: ${printModalRecord.waringCode}`, 800)
   }
 
   const triggerPrintBoth = (record: WeighingRecord | null = printModalRecord) => {
     if (!record) return
-    simulatePrint(`Receipt and pallet label ${record.palletCode} printed`, 1100)
+    simulatePrint(`Receipt and waring label ${record.waringCode} printed`, 1100)
   }
 
   /* ── Columns for History Table ── */
@@ -335,7 +341,7 @@ export default function WeighingPage() {
     },
     {
       key: 'weightKg',
-      label: 'Weight (kg)',
+      label: 'Weight kg',
       align: 'right',
       render: (row) => (
         <span className="font-mono font-bold text-base text-foreground">
@@ -363,11 +369,11 @@ export default function WeighingPage() {
       ),
     },
     {
-      key: 'palletCode',
-      label: 'Pallet Code',
+      key: 'waringCode',
+      label: 'Waring Code',
       render: (row) =>
-        row.palletCode ? (
-          <span className="font-mono font-medium tabular-nums text-foreground">{row.palletCode}</span>
+        row.waringCode ? (
+          <span className="font-mono font-medium tabular-nums text-foreground">{row.waringCode}</span>
         ) : (
           <span className="text-xs text-muted-foreground italic">Assigned on approval</span>
         ),
@@ -416,7 +422,53 @@ export default function WeighingPage() {
   ]
 
   const pendingCount = records.filter((item) => item.status === 'PENDING').length
-  const approvedToday = records.filter((item) => item.status === 'APPROVED').length
+  const approvedToday = records.filter((item) => item.status === 'BUFFER_WAITING').length
+
+  /* ─────────────────────────────────────────────────────────────
+     STEPPER PROGRESS BAR COMPONENT
+  ───────────────────────────────────────────────────────────── */
+  const renderStepperBar = () => (
+    <nav className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto" aria-label="Weighing steps">
+      {STEPS.map((step, idx) => {
+        const isCurrent = activeStep === step.id
+        const isDone = activeStep > step.id || (step.id === 3 && approvedSuccessRecord !== null)
+
+        return (
+          <div key={step.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                if (step.id < activeStep || approvedSuccessRecord) {
+                  setActiveStep(step.id as 1 | 2 | 3)
+                }
+              }}
+              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                isCurrent
+                  ? 'text-primary'
+                  : isDone
+                  ? 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-900'
+                  : 'text-muted-foreground'
+              }`}
+            >
+              <span
+                className={`w-5 h-5 flex items-center justify-center text-[11px] font-mono font-bold ${
+                  isCurrent
+                    ? 'bg-primary text-primary-foreground'
+                    : isDone
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-muted border border-border text-muted-foreground'
+                }`}
+              >
+                {isDone ? '✓' : step.id}
+              </span>
+              <span className="hidden sm:inline">{step.label}</span>
+            </button>
+            {idx < STEPS.length - 1 && <span className="text-muted-foreground/40 text-xs mx-1">/</span>}
+          </div>
+        )
+      })}
+    </nav>
+  )
 
   /* ═══════════════════════════════════════════════════════════════════
      RENDER: Focus Mode & Sequential Stepper Content
@@ -455,7 +507,7 @@ export default function WeighingPage() {
                     setManualSearch(e.target.value)
                     setScanError('')
                   }}
-                  placeholder="Scan barcode or type name (e.g. farmer-1, Ahmad)..."
+                  placeholder="Scan barcode or type name, e.g. farmer-1, Ahmad..."
                   className="text-center font-mono text-base py-3"
                   autoFocus
                 />
@@ -502,7 +554,7 @@ export default function WeighingPage() {
             <div className="lg:col-span-2 space-y-4">
               <ScaleWeightInput
                 id="focus-weighing-weight"
-                label="Incoming Harvest Net Weight (kg)"
+                label="Incoming Harvest Net Weight kg"
                 hint="Auto-locks from live scale indicator or type manually."
                 value={weightKg}
                 onChange={(val) => {
@@ -540,22 +592,22 @@ export default function WeighingPage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Next Pallet:</span>
+                    <span className="text-muted-foreground">Next Waring:</span>
                     <span className="font-mono text-xs font-semibold text-foreground">
-                      {nextPalletCode(palletCounter)}
+                      {nextWaringCode(waringCounter)}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Real-time Pallet Label Preview */}
+              {/* Real-time Waring Label Preview */}
               <div className="space-y-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
-                  Live Pallet Label Preview
+                  Live Waring QR Preview
                 </span>
                 <LabelPreview
-                  type="pallet"
-                  code={nextPalletCode(palletCounter)}
+                  type="waring"
+                  code={nextWaringCode(waringCounter)}
                   farmerName={farmer?.name}
                   farmerId={farmer?.id}
                   weightKg={Number(weightKg) > 0 ? Number(weightKg) : undefined}
@@ -566,17 +618,17 @@ export default function WeighingPage() {
           </div>
 
           <div className="flex items-center justify-between border-t border-border pt-4">
-            <Button variant="outline" icon="arrow-up" onClick={() => setActiveStep(1)}>
-              ← Back to Farmer
+            <Button variant="outline" onClick={() => setActiveStep(1)}>
+              Back to Farmer
             </Button>
             <Button
               variant="primary"
-              icon="arrow-down"
+              icon="check"
               touch
               disabled={!(Number(weightKg) > 0)}
               onClick={handleProceedToApproval}
             >
-              Approve & Print →
+              Approve & Print
             </Button>
           </div>
         </div>
@@ -629,11 +681,11 @@ export default function WeighingPage() {
               <span className="text-xs text-muted-foreground block">System timestamped</span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Assigned Pallet ID</span>
+              <span className="text-xs text-muted-foreground block font-medium">Assigned Waring ID</span>
               <span className="font-mono font-bold text-base text-primary block">
-                {approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}
+                {approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? nextWaringCode(waringCounter)}
               </span>
-              <span className="text-xs text-muted-foreground block">QR Pallet Label</span>
+              <span className="text-xs text-muted-foreground block">QR Waring Label</span>
             </div>
           </div>
 
@@ -671,7 +723,7 @@ export default function WeighingPage() {
                     : 'border-border bg-card text-muted-foreground hover:bg-muted'
                 }`}
               >
-                QR Pallet Box Label
+                QR Waring Label
               </button>
             </div>
 
@@ -680,7 +732,7 @@ export default function WeighingPage() {
               {(printTab === 'both' || printTab === 'receipt') && (
                 <LabelPreview
                   type="receipt"
-                  code={approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}
+                  code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? nextWaringCode(waringCounter)}
                   farmerName={confirmApprove?.farmerName ?? farmer?.name}
                   farmerId={confirmApprove?.farmerId ?? farmer?.id}
                   weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
@@ -689,11 +741,11 @@ export default function WeighingPage() {
                 />
               )}
 
-              {/* Pallet Label Preview */}
+              {/* Waring Label Preview */}
               {(printTab === 'both' || printTab === 'label') && (
                 <LabelPreview
-                  type="pallet"
-                  code={approvedSuccessRecord?.palletCode ?? confirmApprove?.palletCode ?? nextPalletCode(palletCounter)}
+                  type="waring"
+                  code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? nextWaringCode(waringCounter)}
                   farmerName={confirmApprove?.farmerName ?? farmer?.name}
                   farmerId={confirmApprove?.farmerId ?? farmer?.id}
                   weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
@@ -712,7 +764,7 @@ export default function WeighingPage() {
                   icon="refresh"
                   onClick={() => confirmApprove && handleKoreksi(confirmApprove)}
                 >
-                  ← Correct Weight
+                  Correct Weight
                 </Button>
                 <div className="flex items-center gap-2">
                   <Button
@@ -735,8 +787,8 @@ export default function WeighingPage() {
                   <Button variant="outline" icon="print" loading={isPrinting} onClick={triggerPrintReceipt}>
                     Re-print Receipt
                   </Button>
-                  <Button variant="outline" icon="print" loading={isPrinting} onClick={triggerPrintPalletLabel}>
-                    Re-print Pallet Label
+                  <Button variant="outline" icon="print" loading={isPrinting} onClick={triggerPrintWaringLabel}>
+                    Re-print Waring Label
                   </Button>
                 </div>
                 <Button variant="primary" icon="check" touch onClick={handleNextWeighing}>
@@ -765,44 +817,15 @@ export default function WeighingPage() {
                   ENYX-ENTERPRISE
                 </div>
                 <div className="font-mono text-[9px] text-muted-foreground tracking-[0.2em] uppercase mt-0.5">
-                  RECEIVING INTAKE · FOCUS MODE
+                  STATION 01 · RECEPTION · FOCUS MODE
                 </div>
               </div>
             </div>
 
             {/* Stepper Progress */}
-            <nav className="hidden md:flex items-center gap-3 bg-muted/50 px-4 py-2 rounded-none border border-border" aria-label="Weighing steps">
-              <div className={`flex items-center gap-2 text-xs font-semibold ${
-                activeStep === 1 ? 'text-primary' : activeStep > 1 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
-              }`}>
-                <span className={`w-5 h-5 rounded-none flex items-center justify-center text-[11px] font-mono font-bold ${
-                  activeStep === 1 ? 'bg-primary text-primary-foreground' : activeStep > 1 ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'
-                }`}>{activeStep > 1 ? '✓' : '1'}</span>
-                <span>Farmer ID</span>
-              </div>
-
-              <span className="text-muted-foreground/40 text-xs">/</span>
-
-              <div className={`flex items-center gap-2 text-xs font-semibold ${
-                activeStep === 2 ? 'text-primary' : activeStep > 2 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
-              }`}>
-                <span className={`w-5 h-5 rounded-none flex items-center justify-center text-[11px] font-mono font-bold ${
-                  activeStep === 2 ? 'bg-primary text-primary-foreground' : activeStep > 2 ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'
-                }`}>{activeStep > 2 ? '✓' : '2'}</span>
-                <span>Weigh Harvest</span>
-              </div>
-
-              <span className="text-muted-foreground/40 text-xs">/</span>
-
-              <div className={`flex items-center gap-2 text-xs font-semibold ${
-                activeStep === 3 ? 'text-primary' : approvedSuccessRecord ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
-              }`}>
-                <span className={`w-5 h-5 rounded-none flex items-center justify-center text-[11px] font-mono font-bold ${
-                  activeStep === 3 && !approvedSuccessRecord ? 'bg-primary text-primary-foreground' : approvedSuccessRecord ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'
-                }`}>{approvedSuccessRecord ? '✓' : '3'}</span>
-                <span>Approve & Label</span>
-              </div>
-            </nav>
+            <div className="hidden md:flex">
+              {renderStepperBar()}
+            </div>
 
             {/* Controls */}
             <div className="flex items-center gap-2">
@@ -821,7 +844,10 @@ export default function WeighingPage() {
             </div>
           </header>
 
-          <main className="flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto">
+          <main className="flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto space-y-6">
+            <div className="md:hidden">
+              {renderStepperBar()}
+            </div>
             {renderFocusContent()}
           </main>
         </div>
@@ -832,8 +858,8 @@ export default function WeighingPage() {
          ═══════════════════════════════════════════════════════════════════ */}
       <div className="space-y-6">
         <PageHeader
-          title="Weighing Station"
-          subtitle="Receiving intake station — farmer verification, harvest weighing, pallet labeling."
+          title="Station 01: Reception"
+          subtitle="Farmer verification, intake weighing, and buffer queue."
           actions={
             <div className="flex items-center gap-2">
               <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
@@ -856,24 +882,24 @@ export default function WeighingPage() {
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pending approval</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{pendingCount}</p>
-            <p className="text-xs text-muted-foreground">Waiting for verification</p>
+            <p className="text-xs text-muted-foreground">Awaiting verification</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Approved today</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{approvedToday}</p>
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
-              <Icon name="arrow-up" size={12} /> Pallets ready for sorting
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+              Approved warings
             </p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale Capacity</p>
-            <p className="text-2xl font-bold tracking-tight text-foreground">{SCALE_CAPACITY_KG}</p>
-            <p className="text-xs text-muted-foreground">kg maximum load</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">{SCALE_CAPACITY_KG} kg</p>
+            <p className="text-xs text-muted-foreground">Scale 01</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Workflow Mode</p>
             <p className="text-lg font-bold tracking-tight text-foreground">Sequential</p>
-            <p className="text-xs text-muted-foreground">Step 1 → Step 2 → Step 3</p>
+            <p className="text-xs text-muted-foreground">Step 1 to 3</p>
           </div>
         </div>
 
@@ -881,13 +907,21 @@ export default function WeighingPage() {
         <div id="weighing-stepper" className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div className="flex items-center gap-3">
-              <span className="font-semibold text-base text-foreground">Sequential Intake Stepper</span>
+              <span className="font-semibold text-base text-foreground">Reception Stepper</span>
               <Badge tone="accent">Step {activeStep} of 3</Badge>
             </div>
-            <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-              Open Focus Mode
-            </Button>
+            <div className="flex items-center gap-2">
+              <Badge tone="success" dot live>
+                Port 502 · Online
+              </Badge>
+              <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
+                Open Focus Mode
+              </Button>
+            </div>
           </div>
+
+          {/* Stepper Navigation Bar */}
+          {renderStepperBar()}
 
           {/* Embed the same sequential step logic */}
           {renderFocusContent()}
@@ -896,7 +930,7 @@ export default function WeighingPage() {
         {/* ── Today's Harvest Weighing Records Ledger ── */}
         <div id="weighing-records" className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight text-foreground">Today's Harvest Weighing Records</h2>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Today's Reception Records</h2>
             <span className="text-xs text-muted-foreground font-mono">
               {pendingCount} pending · {approvedToday} approved
             </span>
@@ -905,9 +939,8 @@ export default function WeighingPage() {
             columns={columns}
             data={records}
             rowKey={(row) => row.id}
-            emptyTitle="No harvest weighing records today."
-            emptyDescription="Select a farmer and record the first harvest weighing."
-            caption="Approve commits the weight and generates a Pallet ID for label printing; Correct reloads the weight into the scale form."
+            emptyTitle="No harvest records today."
+            emptyDescription="Select a farmer and record the first intake weighing."
           />
         </div>
       </div>
