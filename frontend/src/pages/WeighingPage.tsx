@@ -9,7 +9,7 @@
  *
  * Weight transmitter network configuration is managed in Configuration (Settings).
  */
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import Icon from '../components/shared/Icon'
@@ -77,6 +77,64 @@ export default function WeighingPage() {
   const [manualSearch, setManualSearch] = useState('')
   const [scanError, setScanError] = useState('')
   const scanInputRef = useRef<HTMLInputElement>(null)
+
+  /* ── Camera Scanner State ── */
+  const [cameraActive, setCameraActive] = useState(false)
+  const [cameraModalOpen, setCameraModalOpen] = useState(false)
+  const [cameraError, setCameraError] = useState<string | null>(null)
+  const [modalBarcodeQuery, setModalBarcodeQuery] = useState('')
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const modalInputRef = useRef<HTMLInputElement>(null)
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop())
+      streamRef.current = null
+    }
+    setCameraActive(false)
+  }, [])
+
+  const startCamera = async () => {
+    setCameraError(null)
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera access is not supported by your browser.')
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      })
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        videoRef.current.play()
+      }
+      setCameraActive(true)
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Unable to access camera.'
+      setCameraError(errMsg)
+      toast.error(errMsg)
+    }
+  }
+
+  const openCameraModal = () => {
+    setCameraModalOpen(true)
+    setModalBarcodeQuery('')
+    setCameraError(null)
+    startCamera()
+    setTimeout(() => modalInputRef.current?.focus(), 150)
+  }
+
+  const closeCameraModal = () => {
+    stopCamera()
+    setCameraModalOpen(false)
+  }
+
+  useEffect(() => {
+    return () => {
+      stopCamera()
+    }
+  }, [stopCamera])
 
   /* ── Step 2: Weighing Form ── */
   const [weightKg, setWeightKg] = useState('')
@@ -206,6 +264,29 @@ export default function WeighingPage() {
       }
       selectFarmer(customFarmer)
       setManualSearch('')
+    }
+  }
+
+  const handleVerifyScannedCode = (code: string) => {
+    const query = code.trim()
+    if (!query) return
+    const matched = FARMERS.find(
+      (f) =>
+        f.id.toLowerCase() === query.toLowerCase() ||
+        f.name.toLowerCase().includes(query.toLowerCase()) ||
+        f.village.toLowerCase().includes(query.toLowerCase()),
+    )
+    if (matched) {
+      selectFarmer(matched)
+      closeCameraModal()
+    } else {
+      const customFarmer = {
+        id: `FRM-${String(Math.floor(Math.random() * 9000) + 1000)}`,
+        name: query,
+        village: 'Dieng, Wonosobo',
+      }
+      selectFarmer(customFarmer)
+      closeCameraModal()
     }
   }
 
@@ -478,7 +559,7 @@ export default function WeighingPage() {
       {/* ── STEP 1: Farmer Identification ── */}
       {activeStep === 1 && (
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between border-b border-border pb-4">
+          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
                 Step 1 of 3 · Intake Identification
@@ -487,44 +568,87 @@ export default function WeighingPage() {
                 Scan Farmer Card or Select Farmer
               </h2>
             </div>
-            <Badge tone="accent" icon="scan">
-              Awaiting Scan
-            </Badge>
-          </div>
-
-          <form onSubmit={handleScanSubmit} className="space-y-4">
-            <div className="p-8 border-2 border-dashed border-primary/30 rounded-none bg-primary/5 text-center space-y-3">
-              <Icon name="scan" size={36} className="text-primary mx-auto" />
-              <p className="text-sm font-semibold text-foreground">Ready for Barcode Scanner</p>
-              <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                Scan barcode on the farmer ID card, or enter ID / name manually.
-              </p>
-              <div className="max-w-md mx-auto">
-                <Input
-                  ref={scanInputRef}
-                  value={manualSearch}
-                  onChange={(e) => {
-                    setManualSearch(e.target.value)
-                    setScanError('')
-                  }}
-                  placeholder="Scan barcode or type name, e.g. farmer-1, Ahmad..."
-                  className="text-center font-mono text-base py-3"
-                  autoFocus
-                />
-              </div>
-              {scanError && (
-                <p className="text-xs text-destructive font-medium mt-2">
-                  {scanError}
-                </p>
-              )}
-            </div>
-
-            <div className="flex justify-end">
-              <Button type="submit" variant="primary" icon="search" touch>
-                Find & Verify Farmer
+            <div className="flex items-center gap-2">
+              <Badge tone="accent" icon="scan">
+                Awaiting Scan
+              </Badge>
+              <Button
+                variant="primary"
+                size="sm"
+                icon="scan"
+                onClick={openCameraModal}
+              >
+                Scan with Camera
               </Button>
             </div>
-          </form>
+          </div>
+
+          <div className="p-8 border-2 border-dashed border-primary/30 rounded-none bg-primary/5 text-center space-y-4">
+            <div className="w-14 h-14 bg-primary/10 text-primary flex items-center justify-center mx-auto">
+              <Icon name="scan" size={32} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-base font-bold text-foreground">
+                Hardware 2D Scanner & Camera Ready
+              </p>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                Scan barcode on the farmer ID card with USB 2D hardware scanner, use device camera, or select from registered farmers.
+              </p>
+            </div>
+
+            <form onSubmit={handleScanSubmit} className="max-w-md mx-auto flex gap-2">
+              <Input
+                ref={scanInputRef}
+                value={manualSearch}
+                onChange={(e) => {
+                  setManualSearch(e.target.value)
+                  setScanError('')
+                }}
+                placeholder="Scan 2D barcode or enter name / ID..."
+                className="font-mono text-sm py-2.5 flex-1"
+                autoFocus
+              />
+              <Button type="submit" variant="primary" icon="check">
+                Verify
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                icon="scan"
+                onClick={openCameraModal}
+                title="Open Camera Scanner"
+              >
+                Camera
+              </Button>
+            </form>
+
+            {scanError && (
+              <p className="text-xs text-destructive font-medium mt-2">
+                {scanError}
+              </p>
+            )}
+
+            {/* Quick Simulation Chips */}
+            <div className="pt-2 border-t border-primary/10 space-y-2">
+              <span className="text-[11px] font-mono text-muted-foreground uppercase block">
+                Quick Farmer Select / Simulate Scan:
+              </span>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                {FARMERS.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => selectFarmer(f)}
+                    className="px-3 py-1 text-xs font-mono border border-border bg-card hover:bg-primary/10 hover:border-primary transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Icon name="scan" size={12} className="text-primary" />
+                    <span className="font-bold text-foreground">{f.name}</span>
+                    <span className="text-muted-foreground text-[10px]">({f.id})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -944,6 +1068,135 @@ export default function WeighingPage() {
           />
         </div>
       </div>
+
+      {/* ── Camera Scanner Viewfinder Modal for Farmer ID ── */}
+      {cameraModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card rounded-none max-w-md w-full overflow-hidden shadow-2xl border border-border">
+            <div className="p-4 border-b border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Icon name="scan" size={18} className="text-primary" />
+                <span className="font-bold text-sm text-foreground">
+                  Scan Farmer ID Card · Station 01 Reception
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={closeCameraModal}
+                className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"
+              >
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {cameraActive ? (
+                <div className="relative rounded-none overflow-hidden aspect-square bg-black flex items-center justify-center">
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    playsInline
+                    muted
+                    autoPlay
+                  />
+                  {/* Viewfinder Reticle & Laser */}
+                  <div className="absolute inset-8 border-2 border-emerald-500 rounded-none pointer-events-none">
+                    <div className="w-full h-0.5 bg-emerald-500 shadow-[0_0_8px_#10b981] animate-bounce" />
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-muted/30 border border-dashed border-border p-6 text-center space-y-3">
+                  <div className="w-12 h-12 bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                    <Icon name="scan" size={24} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">
+                      Ready to Scan Farmer ID
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Align the barcode or QR code on the farmer ID card within the camera viewport.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon="scan"
+                    onClick={startCamera}
+                  >
+                    Activate Camera
+                  </Button>
+                  {cameraError && (
+                    <p className="text-xs text-destructive">{cameraError}</p>
+                  )}
+                </div>
+              )}
+
+              {/* USB 2D Scanner Wedge Input in Modal */}
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-mono uppercase block">
+                  Or USB 2D Scanner Input:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    ref={modalInputRef}
+                    type="text"
+                    placeholder="Scan barcode or enter farmer ID / name..."
+                    value={modalBarcodeQuery}
+                    onChange={(e) => setModalBarcodeQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleVerifyScannedCode(modalBarcodeQuery)
+                      }
+                    }}
+                    className="flex-1 px-3 py-1.5 text-xs font-mono font-bold uppercase border border-border bg-background"
+                    autoFocus
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon="check"
+                    onClick={() => handleVerifyScannedCode(modalBarcodeQuery)}
+                  >
+                    Verify
+                  </Button>
+                </div>
+              </div>
+
+              {/* Quick Simulation Chips */}
+              <div className="space-y-1.5 pt-2 border-t border-border">
+                <p className="text-xs font-mono text-muted-foreground uppercase text-center">
+                  Simulate Farmer Scan:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {FARMERS.map((f) => (
+                    <Button
+                      key={f.id}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleVerifyScannedCode(f.id)}
+                      className="text-xs justify-center font-mono"
+                    >
+                      {f.id}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 bg-muted/30 border-t border-border text-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={closeCameraModal}
+                className="text-xs"
+              >
+                Close Scanner
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
