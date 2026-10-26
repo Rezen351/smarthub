@@ -20,6 +20,7 @@ import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import LabelPreview from '../components/operator/LabelPreview'
+import { printThermal } from '../lib/thermalPrint'
 import { useSessionContext } from '../hooks/useSessionContext'
 import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
@@ -415,33 +416,95 @@ export default function WeighingPage() {
     toast.warning('Record loaded back for re-weighing.')
   }
 
-  /* ── Print Actions ── */
-  const executeThermalPrint = (message: string, durationMs: number) => {
+  /* ── Thermal Print Actions ── */
+  const getPrintRecord = (override?: WeighingRecord | null) => {
+    return override ?? approvedSuccessRecord ?? confirmApprove ?? printModalRecord
+  }
+
+  const triggerPrintReceipt = (recordOverride?: WeighingRecord | null) => {
+    const rec = getPrintRecord(recordOverride)
+    if (!rec) return
     setIsPrinting(true)
-    window.setTimeout(() => {
-      setIsPrinting(false)
-      toast.success(message)
-      try {
-        window.print()
-      } catch {
-        // browser print dialog
+    printThermal(
+      <LabelPreview
+        type="receipt"
+        code={rec.waringCode || nextWaringCode(waringCounter)}
+        farmerName={rec.farmerName}
+        farmerId={rec.farmerId}
+        weightKg={rec.weightKg}
+        time={rec.time ?? 'Live'}
+        date={rec.depositDate ?? today()}
+      />,
+      () => {
+        setIsPrinting(false)
+        toast.success(`Receipt printed for ${rec.farmerName}`)
       }
-    }, durationMs)
+    )
   }
 
-  const triggerPrintReceipt = () => {
-    if (!printModalRecord) return
-    executeThermalPrint(`Receipt printed for ${printModalRecord.farmerName}`, 400)
+  const triggerPrintWaringLabel = (recordOverride?: WeighingRecord | null) => {
+    const rec = getPrintRecord(recordOverride)
+    if (!rec) return
+    setIsPrinting(true)
+    printThermal(
+      <LabelPreview
+        type="waring"
+        code={rec.waringCode || nextWaringCode(waringCounter)}
+        farmerName={rec.farmerName}
+        farmerId={rec.farmerId}
+        weightKg={rec.weightKg}
+        date={rec.depositDate ?? today()}
+      />,
+      () => {
+        setIsPrinting(false)
+        toast.success(`Waring QR label printed: ${rec.waringCode || ''}`)
+      }
+    )
   }
 
-  const triggerPrintWaringLabel = () => {
-    if (!printModalRecord) return
-    executeThermalPrint(`Waring QR label printed: ${printModalRecord.waringCode}`, 400)
-  }
+  const triggerPrintBoth = (recordOverride?: WeighingRecord | null) => {
+    const rec = getPrintRecord(recordOverride)
+    if (!rec) return
 
-  const triggerPrintBoth = (record: WeighingRecord | null = printModalRecord) => {
-    if (!record) return
-    executeThermalPrint(`Receipt and waring label ${record.waringCode} printed`, 500)
+    if (printTab === 'receipt') {
+      triggerPrintReceipt(rec)
+      return
+    }
+    if (printTab === 'label') {
+      triggerPrintWaringLabel(rec)
+      return
+    }
+
+    setIsPrinting(true)
+    printThermal(
+      <div>
+        <div className="print-page-break">
+          <LabelPreview
+            type="receipt"
+            code={rec.waringCode || nextWaringCode(waringCounter)}
+            farmerName={rec.farmerName}
+            farmerId={rec.farmerId}
+            weightKg={rec.weightKg}
+            time={rec.time ?? 'Live'}
+            date={rec.depositDate ?? today()}
+          />
+        </div>
+        <div>
+          <LabelPreview
+            type="waring"
+            code={rec.waringCode || nextWaringCode(waringCounter)}
+            farmerName={rec.farmerName}
+            farmerId={rec.farmerId}
+            weightKg={rec.weightKg}
+            date={rec.depositDate ?? today()}
+          />
+        </div>
+      </div>,
+      () => {
+        setIsPrinting(false)
+        toast.success(`Receipt & Waring label ${rec.waringCode || ''} printed`)
+      }
+    )
   }
 
   /* ── Columns for History Table ── */
@@ -788,7 +851,7 @@ export default function WeighingPage() {
       {/* ── STEP 3: Approve & Print Label ── */}
       {activeStep === 3 && (
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
+          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
                 Step 3 of 3 · Final Verification & Print
@@ -809,7 +872,7 @@ export default function WeighingPage() {
           </div>
 
           {/* Intake Verification Box */}
-          <div className="p-4 bg-muted/30 border border-border rounded-none grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="p-4 bg-muted/30 border border-border rounded-none grid grid-cols-1 sm:grid-cols-4 gap-4 no-print">
             <div>
               <span className="text-xs text-muted-foreground block font-medium">Farmer</span>
               <span className="font-semibold text-base text-foreground block">
@@ -842,7 +905,7 @@ export default function WeighingPage() {
 
           {/* Print Previews */}
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Print view mode">
+            <div className="flex flex-wrap gap-2 no-print" role="group" aria-label="Print view mode">
               <button
                 type="button"
                 onClick={() => setPrintTab('both')}
@@ -907,7 +970,7 @@ export default function WeighingPage() {
           </div>
 
           {/* Action Bar */}
-          <div className="flex items-center justify-between border-t border-border pt-4 flex-wrap gap-2">
+          <div className="flex items-center justify-between border-t border-border pt-4 flex-wrap gap-2 no-print">
             {!approvedSuccessRecord ? (
               <>
                 <Button
@@ -935,10 +998,10 @@ export default function WeighingPage() {
             ) : (
               <>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" icon="print" loading={isPrinting} onClick={triggerPrintReceipt}>
+                  <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintReceipt()}>
                     Re-print Receipt
                   </Button>
-                  <Button variant="outline" icon="print" loading={isPrinting} onClick={triggerPrintWaringLabel}>
+                  <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintWaringLabel()}>
                     Re-print Waring Label
                   </Button>
                 </div>
@@ -1008,28 +1071,30 @@ export default function WeighingPage() {
          STANDARD DASHBOARD VIEW (Non-focus mode)
          ═══════════════════════════════════════════════════════════════════ */}
       <div className="space-y-6">
-        <PageHeader
-          title="Station 01: Reception"
-          subtitle="Farmer verification, intake weighing, and buffer queue."
-          actions={
-            <div className="flex items-center gap-2">
-              <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
-                Focus Mode
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                icon="history"
-                onClick={() => document.getElementById('weighing-records')?.scrollIntoView({ behavior: 'smooth' })}
-              >
-                Records ({records.length})
-              </Button>
-            </div>
-          }
-        />
+        <div className="no-print">
+          <PageHeader
+            title="Station 01: Reception"
+            subtitle="Farmer verification, intake weighing, and buffer queue."
+            actions={
+              <div className="flex items-center gap-2">
+                <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
+                  Focus Mode
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon="history"
+                  onClick={() => document.getElementById('weighing-records')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  Records ({records.length})
+                </Button>
+              </div>
+            }
+          />
+        </div>
 
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pending approval</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{pendingCount}</p>
@@ -1056,7 +1121,7 @@ export default function WeighingPage() {
 
         {/* Sequential Stepper in Standard View */}
         <div id="weighing-stepper" className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
+          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <div className="flex items-center gap-3">
               <span className="font-semibold text-base text-foreground">Reception Stepper</span>
               <Badge tone="accent">Step {activeStep} of 3</Badge>
@@ -1072,14 +1137,16 @@ export default function WeighingPage() {
           </div>
 
           {/* Stepper Navigation Bar */}
-          {renderStepperBar()}
+          <div className="no-print">
+            {renderStepperBar()}
+          </div>
 
           {/* Embed the same sequential step logic */}
           {renderFocusContent()}
         </div>
 
         {/* ── Today's Harvest Weighing Records Ledger ── */}
-        <div id="weighing-records" className="space-y-3">
+        <div id="weighing-records" className="space-y-3 no-print">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold tracking-tight text-foreground">Today's Reception Records</h2>
             <span className="text-xs text-muted-foreground font-mono">

@@ -496,21 +496,43 @@
   border-top: none;
 }
 
+/* ── Thermal Print Portal (Screen vs Print) ── */
+#thermal-print-portal {
+  display: none !important;
+}
+
 /* ── Thermal Receipt & Label Print Styles ── */
 @media print {
   @page {
-    margin: 5mm;
+    margin: 0;
     size: auto;
   }
 
-  body {
+  /* When isolated thermal print portal is active, suppress main application entirely */
+  body.thermal-printing {
     background: #ffffff !important;
     color: #000000 !important;
     padding: 0 !important;
     margin: 0 !important;
+    width: 100% !important;
   }
 
-  /* Hide app chrome, navigation, buttons, background backdrops, toasts */
+  body.thermal-printing #root {
+    display: none !important;
+  }
+
+  body.thermal-printing #thermal-print-portal {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Hide app chrome, navigation, buttons, background backdrops, toasts, alerts, and steppers */
   nav,
   aside,
   header,
@@ -519,7 +541,15 @@
   .no-print,
   .dashboard-sidebar,
   .dashboard-header,
-  .toast-container {
+  .context-bar-wrap,
+  .context-bar,
+  .toast-container,
+  [role="alert"],
+  .stepper-header,
+  .step-progress-bar,
+  .step-verification-card,
+  .action-footer-bar,
+  .status-banner-card {
     display: none !important;
   }
 
@@ -533,24 +563,35 @@
     border: none !important;
   }
 
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   /* Printable label container */
   .printable-label {
     display: block !important;
-    page-break-inside: avoid;
-    break-inside: avoid;
-    margin: 0 auto 12px auto !important;
-    box-shadow: none !important;
-    border: 1px dashed #000000 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    box-sizing: border-box !important;
     width: 100% !important;
     max-width: 80mm !important; /* 80mm standard thermal roll width */
-    color: #000000 !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
     background: #ffffff !important;
-  }
-
-  .printable-label * {
     color: #000000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* Page break between consecutive thermal labels/slips */
+  .print-page-break {
+    page-break-after: always !important;
+    break-after: page !important;
   }
 }
 

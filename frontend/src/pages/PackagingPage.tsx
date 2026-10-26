@@ -17,6 +17,7 @@ import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import LabelPreview from '../components/operator/LabelPreview'
+import { printThermal } from '../lib/thermalPrint'
 import { formatWeight } from '../lib/utils'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
 
@@ -327,11 +328,31 @@ export default function PackagingPage() {
         storageLocation: packagingMode === 'RETAIL_POUCH' ? 'Rack A-01' : 'Pallet Bay 03',
       })
 
-      try {
-        window.print()
-      } catch {
-        // print dialog
-      }
+      printThermal(
+        packagingMode === 'RETAIL_POUCH' ? (
+          <LabelPreview
+            type="pouch"
+            code={newCode}
+            farmerName={sourceFarmer}
+            farmerId={sourcePalletCode}
+            grade={selectedGrade}
+            weightKg={weightValue}
+            stationName="Station 03 · Packaging"
+          />
+        ) : (
+          <LabelPreview
+            type="export"
+            code={newCode}
+            farmerName={sourceFarmer}
+            farmerId={sourcePalletCode}
+            grade={selectedGrade}
+            weightKg={weightValue}
+          />
+        ),
+        () => {
+          setIsPrinting(false)
+        }
+      )
 
       toast.success(
         `Printed & recorded ${newCode} (${
@@ -823,7 +844,7 @@ export default function PackagingPage() {
       {/* ── STEP 3: Label & Store ── */}
       {activeStep === 3 && (
         <div className="bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
+          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
                 Step 3 of 3 · Label & Store
@@ -844,7 +865,7 @@ export default function PackagingPage() {
           </div>
 
           {/* Summary Details Grid */}
-          <div className="p-4 bg-muted/30 border border-border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="p-4 bg-muted/30 border border-border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 no-print">
             <div>
               <span className="text-xs text-muted-foreground block font-medium">Unit Code</span>
               <span className="font-mono font-bold text-base text-foreground block">
@@ -902,7 +923,7 @@ export default function PackagingPage() {
           </div>
 
           {/* Action Footer */}
-          <div className="flex items-center justify-between border-t border-border pt-4 flex-wrap gap-2">
+          <div className="flex items-center justify-between border-t border-border pt-4 flex-wrap gap-2 no-print">
             {!savedSuccessRecord ? (
               <>
                 <Button variant="outline" onClick={() => setActiveStep(2)}>
@@ -921,8 +942,44 @@ export default function PackagingPage() {
               </>
             ) : (
               <>
-                <div className="text-xs text-muted-foreground font-mono">
-                  Stored: {savedSuccessRecord.code} ({savedSuccessRecord.time})
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground font-mono">
+                    Stored: {savedSuccessRecord.code} ({savedSuccessRecord.time})
+                  </span>
+                  <Button
+                    variant="outline"
+                    icon="print"
+                    loading={isPrinting}
+                    onClick={() => {
+                      if (!savedSuccessRecord) return
+                      setIsPrinting(true)
+                      printThermal(
+                        packagingMode === 'RETAIL_POUCH' ? (
+                          <LabelPreview
+                            type="pouch"
+                            code={savedSuccessRecord.code}
+                            farmerName={sourceFarmer}
+                            farmerId={sourcePalletCode}
+                            grade={selectedGrade}
+                            weightKg={savedSuccessRecord.weightKg}
+                            stationName="Station 03 · Packaging"
+                          />
+                        ) : (
+                          <LabelPreview
+                            type="export"
+                            code={savedSuccessRecord.code}
+                            farmerName={sourceFarmer}
+                            farmerId={sourcePalletCode}
+                            grade={selectedGrade}
+                            weightKg={savedSuccessRecord.weightKg}
+                          />
+                        ),
+                        () => setIsPrinting(false)
+                      )
+                    }}
+                  >
+                    Reprint Label
+                  </Button>
                 </div>
                 <div>
                   <Button variant="primary" icon="check" touch onClick={handleNextUnit}>
@@ -992,28 +1049,30 @@ export default function PackagingPage() {
 
       {/* ── NORMAL DASHBOARD PAGE VIEW ── */}
       <div className="space-y-6">
-        <PageHeader
-          title="Station 03: Packaging"
-          subtitle="Retail pouches, export cartons, and warehouse storage."
-          actions={
-            <div className="flex items-center gap-2">
-              <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
-                Focus Mode
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                icon="history"
-                onClick={() => document.getElementById('packaging-ledger')?.scrollIntoView({ behavior: 'smooth' })}
-              >
-                Records ({packages.length})
-              </Button>
-            </div>
-          }
-        />
+        <div className="no-print">
+          <PageHeader
+            title="Station 03: Packaging"
+            subtitle="Retail pouches, export cartons, and warehouse storage."
+            actions={
+              <div className="flex items-center gap-2">
+                <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
+                  Focus Mode
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon="history"
+                  onClick={() => document.getElementById('packaging-ledger')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  Records ({packages.length})
+                </Button>
+              </div>
+            }
+          />
+        </div>
 
         {/* Quick Stats Grid (4 Cards) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Retail Pouches</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{pouchCount}</p>
@@ -1040,7 +1099,7 @@ export default function PackagingPage() {
 
         {/* Sequential Stepper in Standard View */}
         <div id="packaging-stepper" className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
+          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <div className="flex items-center gap-3">
               <span className="font-semibold text-base text-foreground">Packaging Stepper</span>
               <Badge tone="accent">Step {activeStep} of 3</Badge>
@@ -1056,14 +1115,16 @@ export default function PackagingPage() {
           </div>
 
           {/* Stepper Navigation Bar */}
-          {renderStepperBar()}
+          <div className="no-print">
+            {renderStepperBar()}
+          </div>
 
           {/* Main Sequential Step Content */}
           {renderSequentialContent()}
         </div>
 
         {/* Packaged Output Ledger Table */}
-        <div id="packaging-ledger" className="space-y-3">
+        <div id="packaging-ledger" className="space-y-3 no-print">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold tracking-tight text-foreground">Today's Packaging Records</h2>
             <span className="text-xs text-muted-foreground font-mono">
