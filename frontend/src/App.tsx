@@ -4,7 +4,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import WeighingPage from './pages/WeighingPage'
-import GradingPage from './pages/GradingPage'
+import SortingPage from './pages/SortingPage'
 import WarehousePage from './pages/WarehousePage'
 import PackagingPage from './pages/PackagingPage'
 import DeliveriesPage from './pages/DeliveriesPage'
@@ -18,7 +18,13 @@ import SettingsPage from './pages/SettingsPage'
 import { useAuth } from './hooks/useAuth'
 import Icon from './components/shared/Icon'
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({
+  children,
+  allowedRoles,
+}: {
+  children: React.ReactNode
+  allowedRoles?: ('ADMIN' | 'OPERATOR' | 'FARMER')[]
+}) {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -32,6 +38,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/login" replace />
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />
   }
 
   return <>{children}</>
@@ -52,22 +62,78 @@ function App() {
         }
       >
         <Route index element={<DashboardHomeRouter />} />
-        <Route path="weighing" element={<WeighingPage />} />
+        <Route
+          path="weighing"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OPERATOR']}>
+              <WeighingPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="pallets" element={<Navigate to="/dashboard/warehouse" replace />} />
-        <Route path="sorting" element={<Navigate to="/dashboard/grading" replace />} />
-        <Route path="grading" element={<GradingPage />} />
-        <Route path="warehouse" element={<WarehousePage />} />
+        <Route
+          path="sorting"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OPERATOR']}>
+              <SortingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="grading" element={<Navigate to="/dashboard/sorting" replace />} />
+        <Route
+          path="warehouse"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OPERATOR']}>
+              <WarehousePage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="labels" element={<Navigate to="/dashboard/packaging" replace />} />
         <Route path="stock-in" element={<Navigate to="/dashboard/warehouse?zone=buffer" replace />} />
         <Route path="stock-out" element={<Navigate to="/dashboard/warehouse?zone=finished" replace />} />
-        <Route path="packaging" element={<PackagingPage />} />
-        <Route path="deliveries" element={<DeliveriesPage />} />
+        <Route
+          path="packaging"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OPERATOR']}>
+              <PackagingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="deliveries"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OPERATOR']}>
+              <DeliveriesPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="my-deliveries" element={<MyDeliveriesPage />} />
         <Route path="profile" element={<FarmerProfilePage />} />
         <Route path="traceability" element={<TraceabilityPage />} />
-        <Route path="users" element={<UsersPage />} />
-        <Route path="reports" element={<ReportsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
+        <Route
+          path="users"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <UsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="reports"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="settings"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OPERATOR']}>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

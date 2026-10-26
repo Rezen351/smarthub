@@ -14,17 +14,9 @@ import PageHeader from '../components/shared/PageHeader'
 import ConfirmDialog from '../components/feedback/ConfirmDialog'
 import { useToast } from '../components/feedback/Toast'
 
-type DeliveryStatus = 'LOADING' | 'READY' | 'DEPARTED' | 'DELIVERED'
+import { usePackhouseStore, type DeliveryRecord as Delivery } from '../hooks/usePackhouseStore'
 
-type Delivery = {
-  id: string
-  truckPlate: string
-  destination: string
-  driver: string
-  units: number
-  status: DeliveryStatus
-  time: string
-}
+type DeliveryStatus = 'LOADING' | 'READY' | 'DEPARTED' | 'DELIVERED'
 
 const STATUS_TONE: Record<DeliveryStatus, 'warning' | 'accent' | 'success' | 'neutral'> = {
   LOADING: 'warning',
@@ -43,16 +35,11 @@ const EXPECTED_LOAD = {
 
 export default function DeliveriesPage() {
   const toast = useToast()
-  const [form, setForm] = useState({ truckPlate: '', destination: '', driverName: '', units: '' })
+  const { deliveries, addDelivery, markDeliveryReady, departDelivery } = usePackhouseStore()
+  const [form, setForm] = useState({ truckPlate: '', destination: '', driverName: '', units: '', grade: 'A' })
   const [scanItf, setScanItf] = useState('')
   const [verification, setVerification] = useState<null | { ok: boolean; message: string }>(null)
   const [confirmDepart, setConfirmDepart] = useState<Delivery | null>(null)
-
-  const [deliveries, setDeliveries] = useState<Delivery[]>([
-    { id: '1', truckPlate: 'B1234XYZ', destination: 'Jakarta', driver: 'Ahmad', units: 4, status: 'LOADING', time: '07:40' },
-    { id: '2', truckPlate: 'B5678ABC', destination: 'Surabaya', driver: 'Budi', units: 2, status: 'READY', time: '08:10' },
-    { id: '3', truckPlate: 'B9012DEF', destination: 'Semarang', driver: 'Citra', units: 3, status: 'DEPARTED', time: '08:55' },
-  ])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,19 +52,17 @@ export default function DeliveriesPage() {
       toast.error('Number of packaging units must be greater than 0.')
       return
     }
-    setDeliveries([
-      {
-        id: String(Date.now()),
-        truckPlate: form.truckPlate.trim().toUpperCase(),
-        destination: form.destination.trim(),
-        driver: form.driverName.trim() || 'Unassigned',
-        units,
-        status: 'LOADING',
-        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-      },
-      ...deliveries,
-    ])
-    setForm({ truckPlate: '', destination: '', driverName: '', units: '' })
+    addDelivery({
+      truckPlate: form.truckPlate.trim().toUpperCase(),
+      destination: form.destination.trim(),
+      driver: form.driverName.trim() || 'Unassigned',
+      units,
+      grade: form.grade,
+      status: 'LOADING',
+      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      date: new Date().toISOString().slice(0, 10),
+    })
+    setForm({ truckPlate: '', destination: '', driverName: '', units: '', grade: 'A' })
     toast.success('Delivery created — load the packaging units.')
   }
 
@@ -99,10 +84,8 @@ export default function DeliveriesPage() {
 
   const confirmDeparture = () => {
     if (!confirmDepart) return
-    setDeliveries((current) =>
-      current.map((item) => (item.id === confirmDepart.id ? { ...item, status: 'DEPARTED' } : item)),
-    )
-    toast.success(`Truck ${confirmDepart.truckPlate} departed to ${confirmDepart.destination}.`)
+    departDelivery(confirmDepart.id)
+    toast.success(`Truck ${confirmDepart.truckPlate} departed to ${confirmDepart.destination}. Finished stock deducted.`)
     setConfirmDepart(null)
   }
 
@@ -126,9 +109,7 @@ export default function DeliveriesPage() {
         row.status === 'LOADING' || row.status === 'READY' ? (
           <div className="row gap-xs justify-end">
             <Button size="sm" variant="outline" onClick={() => {
-              setDeliveries((current) =>
-                current.map((item) => (item.id === row.id ? { ...item, status: 'READY' } : item)),
-              )
+              markDeliveryReady(row.id)
               toast.info(`${row.truckPlate} marked ready for verification.`)
             }}>
               Mark Ready

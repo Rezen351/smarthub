@@ -6,6 +6,7 @@ import Icon, { type IconName } from '../components/shared/Icon'
 import PageHeader from '../components/shared/PageHeader'
 import StatCard from '../components/shared/StatCard'
 import { useToast } from '../components/feedback/Toast'
+import { usePackhouseStore } from '../hooks/usePackhouseStore'
 
 interface Stat {
   label: string
@@ -17,7 +18,7 @@ interface Stat {
 
 const stats: Stat[] = [
   { label: 'Total Farmers', value: '128', sub: '+6 this week', trend: 'up', icon: 'users' },
-  { label: 'Total Pallets', value: '1,245', sub: 'Since go-live', trend: 'up', icon: 'pallet' },
+  { label: 'Total Warings', value: '1,245', sub: 'Since go-live', trend: 'up', icon: 'box' },
   { label: 'Total Weighing (kg)', value: '45,670', sub: 'Approved records', trend: 'up', icon: 'scale' },
   { label: 'Total Deliveries', value: '89', sub: '12 in transit', trend: 'neutral', icon: 'truck' },
 ]
@@ -43,6 +44,40 @@ const grades = [
 export default function ReportsPage() {
   const toast = useToast()
   const [range, setRange] = useState('7d')
+  const { bufferWarings, sortedBatches, finishedStock, deliveries } = usePackhouseStore()
+
+  const handleExportCsv = () => {
+    const rows = [
+      ['Report Generated', new Date().toISOString()],
+      ['Range', range],
+      [],
+      ['=== INTAKE WARING TRANSACTIONS ==='],
+      ['Date', 'Code', 'Farmer Name', 'Village', 'Gross Weight (kg)', 'Status'],
+      ...bufferWarings.map((w) => [w.date, w.code, w.farmerName, w.farmerVillage || '', String(w.grossWeightKg), w.status]),
+      [],
+      ['=== SORTING BATCH TRANSACTIONS ==='],
+      ['Timestamp', 'Pallet ID', 'Origin Waring', 'Farmer', 'Gross (kg)', 'Grade A (kg)', 'Grade B (kg)', 'Grade C (kg)', 'Loss (kg)', 'Yield %', 'Washing'],
+      ...sortedBatches.map((b) => [b.timestamp, b.palletCode, b.waringCode, b.farmerName, String(b.grossIntakeKg), String(b.gradeAKg), String(b.gradeBKg), String(b.gradeCKg), String(b.shrinkageKg), `${(100 - b.shrinkagePct).toFixed(1)}%`, b.washingRecord]),
+      [],
+      ['=== FINISHED GOODS INVENTORY ==='],
+      ['Packed Time', 'Code', 'Package Standard', 'Grade', 'Units', 'Total Weight (kg)', 'Location'],
+      ...finishedStock.map((f) => [f.packedTime, f.code, f.packageType, f.grade, String(f.units), String(f.totalWeightKg), f.storageLocation]),
+      [],
+      ['=== DELIVERIES & DISPATCH ==='],
+      ['Date', 'Truck Plate', 'Destination', 'Driver', 'Units', 'Status'],
+      ...deliveries.map((d) => [d.date, d.truckPlate, d.destination, d.driver, String(d.units), d.status]),
+    ]
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + rows.map((e) => e.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement('a')
+    link.setAttribute('href', encodedUri)
+    link.setAttribute('download', `packhouse_report_${range}_${new Date().toISOString().slice(0, 10)}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    toast.success('CSV Report exported successfully.')
+  }
 
   return (
     <div className="stack stack-lg">
@@ -73,7 +108,7 @@ export default function ReportsPage() {
               variant="outline"
               size="sm"
               icon="download"
-              onClick={() => toast.info('Preparing CSV export…')}
+              onClick={handleExportCsv}
             >
               Export
             </Button>

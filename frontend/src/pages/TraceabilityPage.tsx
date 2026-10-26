@@ -5,6 +5,7 @@ import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import Icon from '../components/shared/Icon'
 import PageHeader from '../components/shared/PageHeader'
+import OfflineQrCode from '../components/shared/OfflineQrCode'
 import { useToast } from '../components/feedback/Toast'
 
 export default function TraceabilityPage() {
@@ -25,16 +26,6 @@ export default function TraceabilityPage() {
     }
     return JSON.stringify(payload)
   }, [farmerId, farmerName, farmerEmail])
-
-  const qrSrc = useMemo(() => {
-    const encoded = encodeURIComponent(qrData)
-    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encoded}`
-  }, [qrData])
-
-  const fallbackQrSrc = useMemo(() => {
-    const encoded = encodeURIComponent(farmerId)
-    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encoded}`
-  }, [farmerId])
 
   const handleCopy = async () => {
     try {
@@ -59,20 +50,10 @@ export default function TraceabilityPage() {
         <div className="stack-md">
           <div className="flex flex-col items-center gap-md">
             <div
-              className="label-qr"
-              style={{ width: 208, height: 208, borderColor: 'var(--color-border-strong)' }}
+              className="p-3 bg-white border-2 border-border-strong rounded-none shadow-xs flex items-center justify-center"
+              style={{ width: 208, height: 208 }}
             >
-              <img
-                src={qrSrc}
-                alt="Farmer QR"
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  if (target.src !== fallbackQrSrc) {
-                    target.src = fallbackQrSrc
-                  }
-                }}
-              />
+              <OfflineQrCode value={qrData} size={184} />
             </div>
 
             <div className="text-center stack-xs">
@@ -93,19 +74,19 @@ export default function TraceabilityPage() {
             <p className="field-label">QR payload</p>
             <div className="code-block">{qrData}</div>
             <p className="field-hint">
-              The operator scans this code to open a session context before weighing your harvest.
+              The operator scans this code to link your session before weighing your harvest.
             </p>
           </div>
         </div>
       </Card>
 
-      <Card title="How deposits are recorded" subtitle="Receiving area — Area Penerimaan">
+      <Card title="How deposits are recorded" subtitle="Station 01: Reception & Intake">
         <ol className="journey">
           {[
-            { title: 'Scan your QR', desc: 'Operator scans this code at the receiving station.' },
-            { title: 'Pallet created', desc: 'A pallet code PLT-YYYYMMDD-SEQ is issued for your harvest.' },
-            { title: 'Weight approved', desc: 'Sacks are weighed and the weight is approved as the official deposit.' },
-            { title: 'Grade & pouch', desc: 'Sortir splits grade A/B/C, pouches are packed and labelled.' },
+            { title: 'Scan Farmer QR', desc: 'Operator scans this code at Station 01 Reception to load your profile.' },
+            { title: 'Waring Weighed & Tagged', desc: 'Sack is placed on the scale, net weight confirmed, and a Waring QR is issued.' },
+            { title: 'Buffer Warehouse Queue', desc: 'Waring enters the temporary storage buffer awaiting sorting.' },
+            { title: 'Sorting & Packaging', desc: 'Produce is washed, sorted into Grade A/B/C, and packaged into retail pouches.' },
           ].map((step, index) => (
             <li className={`journey-step ${index < 2 ? 'is-done' : ''}`} key={step.title}>
               <span className="journey-dot">

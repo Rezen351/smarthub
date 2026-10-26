@@ -5,6 +5,7 @@ import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import Icon from '../components/shared/Icon'
 import { formatWeight } from '../lib/utils'
+import OfflineQrCode from '../components/shared/OfflineQrCode'
 
 export type TraceStep = {
   stage: string
@@ -871,13 +872,7 @@ export default function PublicTraceabilityPage() {
               </div>
 
               <div className="p-4 bg-white border-2 border-[#171717] rounded-none shadow-xs text-center flex flex-col items-center shrink-0">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(
-                    result.gs1Uri
-                  )}`}
-                  alt="GS1 Digital Link QR"
-                  className="w-32 h-32 object-contain"
-                />
+                <OfflineQrCode value={result.gs1Uri} size={128} />
                 <span className="font-mono text-[10px] text-[#666666] mt-2 block">
                   {result.code}
                 </span>

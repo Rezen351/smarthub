@@ -731,34 +731,34 @@ export default function LandingPage() {
                 <div className="p-7">
                   <h3 className="font-display text-4xl mb-3 text-[#171717]">INTAKE WEIGHING</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Farmer ID identification, tare subtraction, live Modbus TCP stability detection, and automated
-                    dual print: Farmer Receipt Slip & QR Pallet Label (PLT-...).
+                    Farmer ID identification, tare subtraction, live scale stability detection, and automated
+                    dual print: Farmer Receipt Slip & Waring QR Label (WRG-...).
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Protocol
+                        Connection
                       </div>
-                      <div className="font-heading text-base text-[#171717]">MODBUS TCP :502</div>
+                      <div className="font-heading text-base text-[#171717]">DIRECT SCALE I/O</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
                         Capacity
                       </div>
-                      <div className="font-heading text-base text-[#171717]">300 KG PLATFORM</div>
+                      <div className="font-heading text-base text-[#171717]">150 KG FLOOR SCALE</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Stability
+                        Precision
                       </div>
-                      <div className="font-heading text-base text-[#171717]">±20 G / 2.0 SEC</div>
+                      <div className="font-heading text-base text-[#171717]">±20 G STABILITY</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Focus Mode
+                        Workflow
                       </div>
-                      <div className="font-heading text-base text-[#171717]">FULLSCREEN STEPPER</div>
+                      <div className="font-heading text-base text-[#171717]">FAST 4-STEP INTAKE</div>
                     </div>
                   </div>
 
@@ -794,8 +794,8 @@ export default function LandingPage() {
                 <div className="p-7">
                   <h3 className="font-display text-4xl mb-3 text-[#171717]">SORTING STATION</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Strict canonical sorting workflow: scan the intake pallet code, allocate into Grade A, B, or C,
-                    and print the designated Pallet Grade Label (GRD-PLT-...-[GRADE]).
+                    Canonical sorting workflow: scan the intake waring code (WRG-...), inspect produce into Grade A, B, or C,
+                    and link pre-attached pallet QR tags.
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
@@ -803,7 +803,7 @@ export default function LandingPage() {
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
                         Input
                       </div>
-                      <div className="font-heading text-base text-[#171717]">INTAKE PALLET QR</div>
+                      <div className="font-heading text-base text-[#171717]">WARING QR (WRG-...)</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
@@ -813,15 +813,15 @@ export default function LandingPage() {
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Speed
+                        Tracking
                       </div>
-                      <div className="font-heading text-base text-[#171717]">1-TOUCH APPROVAL</div>
+                      <div className="font-heading text-base text-[#171717]">PRE-ATTACHED PALLET QR</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
                         Standard
                       </div>
-                      <div className="font-heading text-base text-[#171717]">ZERO RE-WEIGH FORM</div>
+                      <div className="font-heading text-base text-[#171717]">SEAMLESS BUFFER LINK</div>
                     </div>
                   </div>
 
@@ -918,8 +918,8 @@ export default function LandingPage() {
             </div>
             <div className="lg:col-span-5 flex flex-col justify-end">
               <p className="text-[#666666] text-base leading-relaxed font-body">
-                Each packhouse module runs on dedicated dual-core firmware with hardware watchdog timers and
-                fail-safe state recovery. Hover or tap any unit to view technical architecture specifications.
+                Each packhouse station is designed for rapid operator workflows with clear visual feedback,
+                automatic calibration, and instant printing. Hover or tap any unit to view operational features.
               </p>
             </div>
           </div>
@@ -937,29 +937,29 @@ export default function LandingPage() {
                   <div className="relative h-64 overflow-hidden bg-black">
                     <img
                       src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80"
-                      alt="Weight Transmitter Module"
+                      alt="Precision Digital Scales"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
                     <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#93c749] tracking-[0.2em]">
                       / 01
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
-                      DUAL-CORE RTOS
+                      RAPID CAPTURE
                     </div>
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">WEIGHT TRANSMITTER</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">PRECISION SCALES</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        ESP32-S3 N16R8 · HX711 HAL
+                        Floor Scale & Bench Units
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        MODBUS TCP :502
+                        INTAKE & PACKAGING
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
-                        SPECS →
+                        DETAILS →
                       </span>
                     </div>
                   </div>
@@ -969,32 +969,32 @@ export default function LandingPage() {
                 <div className="flip-face flip-back border border-[#229856] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
                     <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-3">
-                      / Architecture Specs
+                      / Operational Features
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">HARDWARE REVISION 1.7</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">STABLE & FAST CAPTURE</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Median-of-5 Spike Rejection Filter</span>
+                        <span>Automatic vibration & motion damping</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Adaptive Exponential Moving Average</span>
+                        <span>One-touch Tare subtraction & zero reset</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Two-offset Tare & Zero point persistence</span>
+                        <span>Visual lock indicator for stable readings</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>W5500 Ethernet + Fallback WiFi STA</span>
+                        <span>Local Ethernet & wireless connectivity</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Stability Bit</div>
-                    <div className="font-display text-xl text-[#15803d]">HOLDING REG 0x0010</div>
-                    <p className="text-[11px] text-[#666666] mt-1">±20 g threshold held for 2.000 ms lock.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Stability Threshold</div>
+                    <div className="font-display text-xl text-[#15803d]">READY IN 2 SEC</div>
+                    <p className="text-[11px] text-[#666666] mt-1">±20 g precision held automatically before approval.</p>
                   </div>
                 </div>
               </div>
@@ -1023,9 +1023,9 @@ export default function LandingPage() {
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">LABEL ENGINE</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">LABEL PRINTER</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        Dual Receipt & QR Thermal
+                        Instant Thermal Receipts & Tags
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
@@ -1033,7 +1033,7 @@ export default function LandingPage() {
                         AUTO-GENERATION
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
-                        SPECS →
+                        DETAILS →
                       </span>
                     </div>
                   </div>
@@ -1043,32 +1043,32 @@ export default function LandingPage() {
                 <div className="flip-face flip-back border border-[#229856] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
                     <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-3">
-                      / Print Engine Specs
+                      / Print Engine Features
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">DUAL OUTPUT MATRIX</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">CLEAR PACKHOUSE OUTPUTS</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Struk Petani: 58 mm / 80 mm Thermal slip</span>
+                        <span>Farmer Receipt: 58 mm / 80 mm thermal slip</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Pallet Label: 100×150 mm Weatherproof</span>
+                        <span>Waring Label: Crisp scannable QR tag</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Zero Dialog Preview modal option</span>
+                        <span>Pallet Tags: High-contrast barcode labels</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>High-contrast visual fallback printer</span>
+                        <span>100% offline generation with zero network lag</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Standard Prefix</div>
-                    <div className="font-display text-xl text-[#15803d]">PLT-YYYYMMDD-XXXX</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Single atomic commit per weighing session.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Standard Prefixes</div>
+                    <div className="font-display text-xl text-[#15803d]">WRG & PLT CODES</div>
+                    <p className="text-[11px] text-[#666666] mt-1">Single atomic commit per intake & sorting session.</p>
                   </div>
                 </div>
               </div>
@@ -1085,21 +1085,21 @@ export default function LandingPage() {
                   <div className="relative h-64 overflow-hidden bg-black">
                     <img
                       src="https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=600&q=80"
-                      alt="3-Channel Packaging Scale"
+                      alt="Packaging Lines"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
                     <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#93c749] tracking-[0.2em]">
                       / 03
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
-                      CONCURRENCY
+                      PARALLEL LINES
                     </div>
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">PACKAGING CLUSTER</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">PACKAGING LINES</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        3 Parallel Scale Channels
+                        Dedicated Grade Stations
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
@@ -1107,7 +1107,7 @@ export default function LandingPage() {
                         1 KG POUCH SPEC
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
-                        SPECS →
+                        DETAILS →
                       </span>
                     </div>
                   </div>
@@ -1117,32 +1117,32 @@ export default function LandingPage() {
                 <div className="flip-face flip-back border border-[#229856] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
                     <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-3">
-                      / Packaging Protocol
+                      / Packaging Lines
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">CHANNEL ISOLATION</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">INDEPENDENT STATIONS</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Station A: IP .50 · Grade A Dedication</span>
+                        <span>Grade A Line: Premium supermarket retail pack</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Station B: IP .51 · Grade B Dedication</span>
+                        <span>Grade B Line: General consumer standard pack</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Station C: IP .52 · Grade C Dedication</span>
+                        <span>Grade C Line: Bulk and industrial food processing</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Automatic port offset avoidance</span>
+                        <span>Live target weight bars with instant visual feedback</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
                     <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Target Calibration</div>
-                    <div className="font-display text-xl text-[#15803d]">1.000 KG ± 0.005 KG</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Live bar indicator locks upon stability window.</p>
+                    <div className="font-display text-xl text-[#15803d]">1.000 KG ± 5 G</div>
+                    <p className="text-[11px] text-[#666666] mt-1">Locks green when weight falls within target tolerance.</p>
                   </div>
                 </div>
               </div>
@@ -1181,7 +1181,7 @@ export default function LandingPage() {
                         ZERO-LOGIN SCAN
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
-                        SPECS →
+                        DETAILS →
                       </span>
                     </div>
                   </div>

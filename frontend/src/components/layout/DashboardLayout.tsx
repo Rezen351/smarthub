@@ -20,9 +20,10 @@ const roleMenu: Record<string, MenuItem[]> = {
   ADMIN: [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
     { label: 'Station 1: Reception', path: '/dashboard/weighing', icon: 'scale' },
-    { label: 'Station 2: Sorting', path: '/dashboard/grading', icon: 'sortir' },
+    { label: 'Station 2: Sorting', path: '/dashboard/sorting', icon: 'sortir' },
     { label: 'Station 3: Packaging', path: '/dashboard/packaging', icon: 'package' },
     { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box' },
+    { label: 'Deliveries', path: '/dashboard/deliveries', icon: 'truck' },
     { label: 'Users', path: '/dashboard/users', icon: 'users' },
     { label: 'Reports', path: '/dashboard/reports', icon: 'reports' },
     { label: 'Scale Settings', path: '/dashboard/settings', icon: 'settings' },
@@ -30,9 +31,10 @@ const roleMenu: Record<string, MenuItem[]> = {
   OPERATOR: [
     { label: 'Workstation Hub', path: '/dashboard', icon: 'dashboard', end: true },
     { label: 'Station 1: Reception', path: '/dashboard/weighing', icon: 'scale' },
-    { label: 'Station 2: Sorting', path: '/dashboard/grading', icon: 'sortir' },
+    { label: 'Station 2: Sorting', path: '/dashboard/sorting', icon: 'sortir' },
     { label: 'Station 3: Packaging', path: '/dashboard/packaging', icon: 'package' },
     { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box' },
+    { label: 'Deliveries', path: '/dashboard/deliveries', icon: 'truck' },
     { label: 'Scale Settings', path: '/dashboard/settings', icon: 'settings' },
   ],
   FARMER: [

@@ -35,7 +35,7 @@ const WORKSTATIONS: WorkstationCard[] = [
     number: '02',
     title: 'Sorting',
     subtitle: 'Sizing, washing, and grade weighing',
-    path: '/dashboard/grading',
+    path: '/dashboard/sorting',
     icon: 'sortir',
     tag: 'STATION 02',
     badgeTone: 'success',
@@ -62,10 +62,7 @@ interface ScaleTcpNode {
   stationLabel: string
   scaleRole: string
   ip: string
-  port: string
-  slaveId: string
   capacity: string
-  register: string
   status: 'ONLINE' | 'STANDBY' | 'OFFLINE'
 }
 
@@ -87,10 +84,7 @@ export default function OperatorDashboardHome() {
       stationLabel: 'Reception',
       scaleRole: 'Floor Scale',
       ip: savedSettings?.intake?.ip ?? '192.168.1.100',
-      port: savedSettings?.intake?.port ?? '502',
-      slaveId: savedSettings?.intake?.slaveId ?? '1',
       capacity: `${savedSettings?.intake?.capacityKg ?? '150'} kg`,
-      register: `HR:${savedSettings?.intake?.weightRegister ?? '40001'}`,
       status: 'ONLINE',
     },
     {
@@ -99,10 +93,7 @@ export default function OperatorDashboardHome() {
       stationLabel: 'Sorting',
       scaleRole: 'Floor Scale',
       ip: savedSettings?.grading?.ip ?? '192.168.1.101',
-      port: savedSettings?.grading?.port ?? '502',
-      slaveId: savedSettings?.grading?.slaveId ?? '1',
       capacity: `${savedSettings?.grading?.capacityKg ?? '100'} kg`,
-      register: `HR:${savedSettings?.grading?.weightRegister ?? '40001'}`,
       status: 'ONLINE',
     },
     {
@@ -111,10 +102,7 @@ export default function OperatorDashboardHome() {
       stationLabel: 'Packaging',
       scaleRole: 'Bench Scale',
       ip: savedSettings?.packaging?.ip ?? '192.168.1.102',
-      port: savedSettings?.packaging?.port ?? '502',
-      slaveId: savedSettings?.packaging?.slaveId ?? '1',
       capacity: `${savedSettings?.packaging?.capacityKg ?? '30'} kg`,
-      register: `HR:${savedSettings?.packaging?.weightRegister ?? '40001'}`,
       status: 'ONLINE',
     },
   ]
@@ -126,84 +114,67 @@ export default function OperatorDashboardHome() {
         subtitle="Select a physical workstation console to operate."
         actions={
           <Badge tone="success" dot live>
-            3 Scales Online
+            All 3 Scales Ready
           </Badge>
         }
       />
 
-      {/* Hardware Link Banner */}
+      {/* Connected Packhouse Scales Banner */}
       <div className="border border-border bg-card p-4 rounded-none shadow-xs space-y-3">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-3 border-b border-border/80">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-border/80">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 border border-emerald-300 bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold">
-              <Icon name="dashboard" size={20} />
+              <Icon name="scale" size={20} />
             </div>
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
                 <span className="font-bold text-sm text-foreground uppercase tracking-wide">
-                  Hardware Link
+                  Packhouse Scales
                 </span>
                 <span className="bg-emerald-100 text-emerald-800 text-[10px] font-mono px-1.5 py-0.5 font-semibold">
-                  Port 502 · Online
+                  Ready · Online
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Modbus TCP connections to 3 physical scale transmitters.
+                Connected weighing platforms ready for intake, sorting, and packaging.
               </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-3 text-xs font-mono text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <span className="text-muted-foreground">Bus:</span>
-              <span className="font-semibold text-foreground">Modbus TCP</span>
-            </div>
-            <span className="text-border">|</span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-muted-foreground">Poll Rate:</span>
-              <span className="font-semibold text-foreground">250 ms</span>
-            </div>
-          </div>
+          <Link to="/dashboard/settings" className="text-xs font-mono text-primary hover:underline">
+            Manage Settings →
+          </Link>
         </div>
 
-        {/* 3 Physical Modbus TCP Hardware Node Connections */}
+        {/* 3 Physical Scale Indicator Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
           {tcpNodes.map((node) => (
             <div
               key={node.id}
-              className="p-3 bg-muted/20 border border-border/80 flex flex-col justify-between gap-2.5 font-mono text-xs"
+              className="p-3 bg-muted/20 border border-border/80 flex flex-col justify-between gap-2.5 text-xs"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-5 h-5 bg-background border border-border flex items-center justify-center text-[10px] font-bold text-foreground">
+                  <span className="w-5 h-5 bg-background border border-border flex items-center justify-center text-[10px] font-bold text-foreground font-mono">
                     {node.stationNum}
                   </span>
                   <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">
                     {node.stationLabel}
                   </span>
                 </div>
-                <span className="flex items-center gap-1 text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 font-semibold">
+                <span className="flex items-center gap-1 text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 font-semibold font-mono">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                  {node.status}
+                  Ready
                 </span>
               </div>
 
               <div className="space-y-1">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-xs font-bold text-foreground font-mono">
-                    {node.ip}:{node.port}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">Slave ID: {node.slaveId}</span>
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                <div className="flex items-center justify-between text-muted-foreground">
                   <span>{node.scaleRole}</span>
-                  <span className="font-semibold text-foreground">Max {node.capacity}</span>
+                  <span className="font-semibold text-foreground font-mono">Max {node.capacity}</span>
                 </div>
-              </div>
-
-              <div className="pt-2 border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground">
-                <span>Hold Reg: {node.register}</span>
-                <span className="text-emerald-700 font-semibold">Live</span>
+                <div className="text-[11px] font-mono text-muted-foreground">
+                  IP: {node.ip}
+                </div>
               </div>
             </div>
           ))}

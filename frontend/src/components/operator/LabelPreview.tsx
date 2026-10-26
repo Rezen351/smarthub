@@ -1,4 +1,6 @@
 import { formatWeight } from '../../lib/utils'
+import OfflineBarcode from '../shared/OfflineBarcode'
+import OfflineQrCode from '../shared/OfflineQrCode'
 
 export interface LabelPreviewProps {
   type: 'pallet' | 'grade' | 'pouch' | 'receipt' | 'waring' | 'export'
@@ -13,59 +15,6 @@ export interface LabelPreviewProps {
   stationName?: string
   compact?: boolean
   className?: string
-}
-
-/* Simulated crisp barcode bars */
-function BarcodeGraphic({ code, height = 32 }: { code: string; height?: number }) {
-  // Deterministic bar widths based on code characters
-  const bars = [3, 1, 4, 2, 1, 3, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 2, 3, 1, 2, 4, 1, 3, 2]
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="flex gap-[2px] items-center justify-center px-3 py-1 bg-gray-50 rounded border border-gray-200">
-        {bars.map((w, idx) => (
-          <span
-            key={idx}
-            className="bg-black inline-block"
-            style={{ width: `${w * 1.5}px`, height: `${height}px` }}
-          />
-        ))}
-      </div>
-      <span className="text-[10px] font-mono tracking-widest text-gray-700">*{code}*</span>
-    </div>
-  )
-}
-
-/* Simulated crisp QR code pattern */
-function QrGraphic({ size = 64 }: { size?: number }) {
-  return (
-    <div
-      className="bg-white border-2 border-black p-1 flex flex-col justify-between rounded shadow-xs"
-      style={{ width: `${size}px`, height: `${size}px` }}
-      aria-hidden="true"
-    >
-      <div className="flex justify-between">
-        <div className="w-4 h-4 border-2 border-black p-[2px]">
-          <div className="w-full h-full bg-black" />
-        </div>
-        <div className="w-4 h-4 border-2 border-black p-[2px]">
-          <div className="w-full h-full bg-black" />
-        </div>
-      </div>
-      <div className="flex justify-center gap-1">
-        <div className="w-1.5 h-1.5 bg-black" />
-        <div className="w-2 h-1.5 bg-black" />
-        <div className="w-1.5 h-1.5 bg-black" />
-      </div>
-      <div className="flex justify-between items-end">
-        <div className="w-4 h-4 border-2 border-black p-[2px]">
-          <div className="w-full h-full bg-black" />
-        </div>
-        <div className="w-3 h-3 bg-black flex items-center justify-center">
-          <div className="w-1 h-1 bg-white" />
-        </div>
-      </div>
-    </div>
-  )
 }
 
 export default function LabelPreview({
@@ -86,7 +35,7 @@ export default function LabelPreview({
   if (type === 'receipt') {
     return (
       <div
-        className={`bg-white text-black border border-gray-300 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
+        className={`printable-label bg-white text-black border border-gray-300 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
       >
         <div className="text-center pb-2 border-b border-dashed border-gray-400">
           <span className="text-[11px] font-bold tracking-wider uppercase block text-gray-800">
@@ -135,7 +84,7 @@ export default function LabelPreview({
   if (type === 'waring') {
     return (
       <div
-        className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
+        className={`printable-label bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
       >
         <div className="flex items-center justify-between pb-2 border-b border-gray-300">
           <div>
@@ -160,7 +109,7 @@ export default function LabelPreview({
             <span className="text-[10px] text-gray-600 block">{commodity}</span>
           </div>
           <div className="flex flex-col items-center gap-1">
-            <QrGraphic size={compact ? 44 : 52} />
+            <OfflineQrCode value={code || 'WRG-PENDING'} size={compact ? 44 : 52} />
             <span className="text-[8px] text-gray-500 uppercase">Scan to Pair</span>
           </div>
         </div>
@@ -189,7 +138,7 @@ export default function LabelPreview({
   if (type === 'pallet') {
     return (
       <div
-        className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
+        className={`printable-label bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
       >
         <div className="flex items-center justify-between pb-2 border-b border-gray-300">
           <div>
@@ -200,11 +149,11 @@ export default function LabelPreview({
               {code || 'PLT-PENDING'}
             </span>
           </div>
-          <QrGraphic size={compact ? 44 : 52} />
+          <OfflineQrCode value={code || 'PLT-PENDING'} size={compact ? 44 : 52} />
         </div>
 
-        <div className="py-1">
-          <BarcodeGraphic code={code || 'PLT-PENDING'} height={compact ? 24 : 32} />
+        <div className="py-1 flex justify-center">
+          <OfflineBarcode value={code || 'PLT-PENDING'} height={compact ? 24 : 32} width={compact ? 160 : 200} />
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-gray-200">
@@ -229,7 +178,7 @@ export default function LabelPreview({
   if (type === 'grade') {
     return (
       <div
-        className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
+        className={`printable-label bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
       >
         <div className="flex items-center justify-between pb-2 border-b border-gray-300">
           <div>
@@ -246,10 +195,10 @@ export default function LabelPreview({
         </div>
 
         <div className="flex items-center justify-between gap-3 py-1">
-          <div className="flex-1">
-            <BarcodeGraphic code={code} height={compact ? 24 : 30} />
+          <div className="flex-1 flex justify-center">
+            <OfflineBarcode value={code || 'GRD-PENDING'} height={compact ? 24 : 30} width={compact ? 140 : 180} />
           </div>
-          <QrGraphic size={compact ? 44 : 50} />
+          <OfflineQrCode value={code || 'GRD-PENDING'} size={compact ? 44 : 50} />
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-gray-200">
@@ -276,7 +225,7 @@ export default function LabelPreview({
   if (type === 'export') {
     return (
       <div
-        className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
+        className={`printable-label bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
       >
         <div className="flex items-center justify-between pb-2 border-b border-gray-300">
           <div>
@@ -303,13 +252,13 @@ export default function LabelPreview({
             </span>
           </div>
           <div className="flex flex-col items-center gap-1">
-            <QrGraphic size={compact ? 48 : 56} />
+            <OfflineQrCode value={code || 'EXP-BATCH-001'} size={compact ? 48 : 56} />
             <span className="text-[9px] text-gray-500">GS1 Export QR</span>
           </div>
         </div>
 
-        <div className="py-1 border-t border-gray-200">
-          <BarcodeGraphic code="0108990012345678" height={24} />
+        <div className="py-1 border-t border-gray-200 flex justify-center">
+          <OfflineBarcode value={code || '0108990012345678'} height={24} width={compact ? 160 : 200} />
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-gray-200">
@@ -335,7 +284,7 @@ export default function LabelPreview({
   /* ── 6. 1 KG POUCH RETAIL LABEL (GS1 Digital Link) ── */
   return (
     <div
-      className={`bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
+      className={`printable-label bg-white text-black border-2 border-dashed border-gray-400 font-mono rounded-none p-4 shadow-sm space-y-3 ${className}`}
     >
       <div className="flex items-center justify-between pb-2 border-b border-gray-300">
         <div>
@@ -360,13 +309,13 @@ export default function LabelPreview({
           </span>
         </div>
         <div className="flex flex-col items-center gap-1">
-          <QrGraphic size={compact ? 48 : 56} />
+          <OfflineQrCode value={code || 'PCH-20261010-001'} size={compact ? 48 : 56} />
           <span className="text-[9px] text-gray-500">GS1 Digital Link</span>
         </div>
       </div>
 
-      <div className="py-1 border-t border-gray-200">
-        <BarcodeGraphic code="8991234567890" height={20} />
+      <div className="py-1 border-t border-gray-200 flex justify-center">
+        <OfflineBarcode value="8991234567890" height={20} width={compact ? 160 : 200} />
       </div>
 
       <div className="pt-1 text-[9px] text-gray-500 text-center border-t border-gray-200 space-y-0.5">

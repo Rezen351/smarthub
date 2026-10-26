@@ -8,110 +8,19 @@ import PageHeader from '../components/shared/PageHeader'
 import StatCard from '../components/shared/StatCard'
 import { useToast } from '../components/feedback/Toast'
 import { formatWeight } from '../lib/utils'
+import { usePackhouseStore, type BufferWaringItem, type FinishedStockItem } from '../hooks/usePackhouseStore'
 
 type WarehouseZone = 'buffer' | 'finished'
-
-interface BufferWaringItem {
-  id: string
-  code: string
-  farmerName: string
-  grossWeightKg: number
-  intakeTime: string
-  queueHours: number
-  status: 'BUFFER_WAITING'
-}
-
-interface FinishedStockItem {
-  id: string
-  code: string
-  packageType: '1 kg Pouch' | '10 kg Export Crate' | '50 kg Export Carton'
-  grade: 'A' | 'B' | 'C'
-  units: number
-  totalWeightKg: number
-  packedTime: string
-  storageLocation: string
-}
-
-const INITIAL_BUFFER: BufferWaringItem[] = [
-  {
-    id: '1',
-    code: 'WRG-20261025-0001',
-    farmerName: 'Ahmad Santoso',
-    grossWeightKg: 45.5,
-    intakeTime: '10:15',
-    queueHours: 1.2,
-    status: 'BUFFER_WAITING',
-  },
-  {
-    id: '2',
-    code: 'WRG-20261025-0002',
-    farmerName: 'Ahmad Santoso',
-    grossWeightKg: 48.0,
-    intakeTime: '10:20',
-    queueHours: 1.1,
-    status: 'BUFFER_WAITING',
-  },
-  {
-    id: '3',
-    code: 'WRG-20261025-0003',
-    farmerName: 'Budi Prasetyo',
-    grossWeightKg: 52.2,
-    intakeTime: '10:35',
-    queueHours: 0.8,
-    status: 'BUFFER_WAITING',
-  },
-  {
-    id: '4',
-    code: 'WRG-20261025-0004',
-    farmerName: 'Siti Rahayu',
-    grossWeightKg: 41.0,
-    intakeTime: '10:50',
-    queueHours: 0.5,
-    status: 'BUFFER_WAITING',
-  },
-]
-
-const INITIAL_FINISHED: FinishedStockItem[] = [
-  {
-    id: '1',
-    code: 'PCH-20261025-0001',
-    packageType: '1 kg Pouch',
-    grade: 'A',
-    units: 120,
-    totalWeightKg: 120.0,
-    packedTime: '11:05',
-    storageLocation: 'Rack A-01',
-  },
-  {
-    id: '2',
-    code: 'EXP-20261025-0001',
-    packageType: '10 kg Export Crate',
-    grade: 'A',
-    units: 15,
-    totalWeightKg: 150.0,
-    packedTime: '11:15',
-    storageLocation: 'Pallet Bay 03',
-  },
-  {
-    id: '3',
-    code: 'PCH-20261025-0002',
-    packageType: '1 kg Pouch',
-    grade: 'B',
-    units: 85,
-    totalWeightKg: 85.0,
-    packedTime: '11:20',
-    storageLocation: 'Rack B-02',
-  },
-]
 
 export default function WarehousePage() {
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const initialZone = (searchParams.get('zone') as WarehouseZone) || 'buffer'
   const [activeZone, setActiveZone] = useState<WarehouseZone>(initialZone)
+  const { waitingWarings, finishedStock, markWaringSorted } = usePackhouseStore()
 
-  const [bufferItems, setBufferItems] = useState<BufferWaringItem[]>(INITIAL_BUFFER)
-  const [finishedItems] = useState<FinishedStockItem[]>(INITIAL_FINISHED)
+  const bufferItems = waitingWarings
+  const finishedItems = finishedStock
 
   useEffect(() => {
     const qZone = searchParams.get('zone')
@@ -125,13 +34,13 @@ export default function WarehousePage() {
     setSearchParams({ zone })
   }
 
-  const handleDispatchToSorting = (item: BufferWaringItem) => {
-    setBufferItems((curr) => curr.filter((i) => i.id !== item.id))
+  const handleDispatchToSorting = (item: { code: string }) => {
+    markWaringSorted(item.code)
     toast.success(`Waring ${item.code} dispatched to Station 2: Sorting.`)
   }
 
   /* Buffer Metrics */
-  const bufferTotalKg = bufferItems.reduce((sum, i) => sum + i.grossWeightKg, 0)
+  const bufferTotalKg = waitingWarings.reduce((sum, i) => sum + i.grossWeightKg, 0)
   const bufferCapacityKg = 3000
   const bufferPct = Math.round((bufferTotalKg / bufferCapacityKg) * 100)
 
@@ -170,7 +79,7 @@ export default function WarehousePage() {
       render: (row) => (
         <div>
           <span className="font-mono text-xs text-foreground block">{row.intakeTime}</span>
-          <span className="text-[10px] text-muted-foreground">{row.queueHours}h in buffer</span>
+          <span className="text-[10px] text-muted-foreground">{row.date || 'Today'}</span>
         </div>
       ),
     },

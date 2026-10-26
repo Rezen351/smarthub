@@ -22,6 +22,7 @@ import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import LabelPreview from '../components/operator/LabelPreview'
 import { useSessionContext } from '../hooks/useSessionContext'
 import { formatWeight } from '../lib/utils'
+import { usePackhouseStore } from '../hooks/usePackhouseStore'
 
 type WeighingStatus = 'PENDING' | 'BUFFER_WAITING'
 
@@ -66,6 +67,7 @@ const STEPS = [
 export default function WeighingPage() {
   const toast = useToast()
   const { farmer, active, startScan } = useSessionContext()
+  const { addBufferWaring } = usePackhouseStore()
 
   /* ── Mode State ── */
   const [focusMode, setFocusMode] = useState(false)
@@ -352,6 +354,18 @@ export default function WeighingPage() {
       current.map((item) => (item.id === confirmApprove.id ? updatedRecord : item)),
     )
 
+    // Synchronize to cross-station store for Station 02 and Warehouse
+    addBufferWaring({
+      code: assignedCode,
+      farmerId: confirmApprove.farmerId,
+      farmerName: confirmApprove.farmerName,
+      farmerVillage: confirmApprove.farmerVillage,
+      grossWeightKg: confirmApprove.weightKg,
+      intakeTime: confirmApprove.time,
+      date: confirmApprove.depositDate,
+      status: 'BUFFER_WAITING',
+    })
+
     toast.success(`Weight approved. Waring ${assignedCode} queued for Buffer Warehouse.`)
     setConfirmApprove(updatedRecord)
     setApprovedSuccessRecord(updatedRecord)
@@ -390,22 +404,27 @@ export default function WeighingPage() {
     window.setTimeout(() => {
       setIsPrinting(false)
       toast.success(message)
+      try {
+        window.print()
+      } catch {
+        // browser print dialog
+      }
     }, durationMs)
   }
 
   const triggerPrintReceipt = () => {
     if (!printModalRecord) return
-    simulatePrint(`Receipt printed for ${printModalRecord.farmerName}`, 800)
+    simulatePrint(`Receipt printed for ${printModalRecord.farmerName}`, 400)
   }
 
   const triggerPrintWaringLabel = () => {
     if (!printModalRecord) return
-    simulatePrint(`Waring QR label printed: ${printModalRecord.waringCode}`, 800)
+    simulatePrint(`Waring QR label printed: ${printModalRecord.waringCode}`, 400)
   }
 
   const triggerPrintBoth = (record: WeighingRecord | null = printModalRecord) => {
     if (!record) return
-    simulatePrint(`Receipt and waring label ${record.waringCode} printed`, 1100)
+    simulatePrint(`Receipt and waring label ${record.waringCode} printed`, 500)
   }
 
   /* ── Columns for History Table ── */
@@ -568,29 +587,19 @@ export default function WeighingPage() {
                 Scan Farmer Card or Select Farmer
               </h2>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge tone="accent" icon="scan">
-                Awaiting Scan
-              </Badge>
-              <Button
-                variant="primary"
-                size="sm"
-                icon="scan"
-                onClick={openCameraModal}
-              >
-                Scan with Camera
-              </Button>
-            </div>
+            <Badge tone="accent" icon="scan">
+              Awaiting Scan
+            </Badge>
           </div>
 
-          <div className="p-8 border-2 border-dashed border-primary/30 rounded-none bg-primary/5 text-center space-y-4">
-            <div className="w-14 h-14 bg-primary/10 text-primary flex items-center justify-center mx-auto">
-              <Icon name="scan" size={32} />
+          <div className="p-8 border-2 border-dashed border-border rounded-none bg-card text-center space-y-4">
+            <div className="inline-flex p-3 bg-muted border border-border text-muted-foreground mx-auto">
+              <Icon name="scan" size={28} />
             </div>
             <div className="space-y-1">
-              <p className="text-base font-bold text-foreground">
-                Hardware 2D Scanner & Camera Ready
-              </p>
+              <h3 className="text-base font-bold text-foreground">
+                2D Scanner and Camera
+              </h3>
               <p className="text-xs text-muted-foreground max-w-md mx-auto">
                 Scan barcode on the farmer ID card with USB 2D hardware scanner, use device camera, or select from registered farmers.
               </p>
@@ -629,7 +638,7 @@ export default function WeighingPage() {
             )}
 
             {/* Quick Simulation Chips */}
-            <div className="pt-2 border-t border-primary/10 space-y-2">
+            <div className="pt-2 border-t border-border/60 space-y-2">
               <span className="text-[11px] font-mono text-muted-foreground uppercase block">
                 Quick Farmer Select / Simulate Scan:
               </span>
@@ -1036,7 +1045,7 @@ export default function WeighingPage() {
             </div>
             <div className="flex items-center gap-2">
               <Badge tone="success" dot live>
-                Port 502 · Online
+                Scale 01 · Ready
               </Badge>
               <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
                 Open Focus Mode
