@@ -39,9 +39,7 @@ type WeighingRecord = {
 }
 
 const FARMERS = [
-  { id: 'farmer-1', name: 'Ahmad Santoso', village: 'Dieng, Wonosobo' },
-  { id: 'farmer-2', name: 'Budi Prasetyo', village: 'Berastagi, Karo' },
-  { id: 'farmer-3', name: 'Siti Rahayu', village: 'Pangalengan, Bandung' },
+  { id: 'farmer-1', name: 'Ahmad Santoso', village: 'Desa Sumber Brantas' },
 ]
 
 const SCALE_CAPACITY_KG = 150
@@ -151,30 +149,8 @@ export default function WeighingPage() {
   const [printTab, setPrintTab] = useState<'both' | 'receipt' | 'label'>('both')
 
   /* ── Records Ledger ── */
-  const [records, setRecords] = useState<WeighingRecord[]>([
-    {
-      id: '1',
-      farmerId: 'farmer-1',
-      farmerName: 'Ahmad Santoso',
-      farmerVillage: 'Dieng, Wonosobo',
-      weightKg: 45.5,
-      depositDate: today(),
-      time: '10:15',
-      status: 'BUFFER_WAITING',
-      waringCode: 'WRG-20261025-0001',
-    },
-    {
-      id: '2',
-      farmerId: 'farmer-2',
-      farmerName: 'Budi Prasetyo',
-      farmerVillage: 'Berastagi, Karo',
-      weightKg: 38.2,
-      depositDate: today(),
-      time: '09:45',
-      status: 'PENDING',
-    },
-  ])
-  const [waringCounter, setWaringCounter] = useState(2)
+  const [records, setRecords] = useState<WeighingRecord[]>([])
+  const [waringCounter, setWaringCounter] = useState(1)
 
   /* Auto-focus scanner input in Step 1 */
   useEffect(() => {

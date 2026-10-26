@@ -3,132 +3,62 @@ import prisma from '../shared/database/prisma';
 
 const router = Router();
 
-router.get('/', async (req, res) => {
+/**
+ * GET /api/farmers
+ * Returns all registered farmers
+ */
+router.get('/', async (req, res): Promise<void> => {
   try {
     const farmers = await prisma.farmer.findMany({
       include: {
-        user: {
-          select: { email: true, name: true },
+        _count: {
+          select: { warings: true, pallets: true },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { code: 'asc' },
     });
 
-    const data = farmers.map((f) => ({
-      id: f.id,
-      code: f.code,
-      name: f.name,
-      phone: f.phone,
-      address: f.address,
-      location: f.location,
-      user: f.user,
-      createdAt: f.createdAt,
-      updatedAt: f.updatedAt,
-    }));
-
-    res.json({ success: true, data });
-  } catch (error) {
+    res.json({
+      success: true,
+      data: farmers.map((f) => ({
+        id: f.id,
+        code: f.code,
+        name: f.name,
+        phone: f.phone,
+        village: f.village,
+        address: f.address,
+        totalWarings: f._count.warings,
+        totalPallets: f._count.pallets,
+        createdAt: f.createdAt,
+      })),
+    });
+  } catch (err: any) {
     res.status(500).json({
       success: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch farmers' },
+      error: { code: 'INTERNAL_SERVER_ERROR', message: err.message || 'Failed to list farmers' },
     });
   }
 });
 
-router.post('/', async (req, res) => {
+/**
+ * GET /api/farmers/:idOrCode/summary
+ * Aggregate deposit summary for the farmer
+ */
+router.get('/:idOrCode/summary', async (req, res): Promise<void> => {
   try {
-    const { name, phone, address, location, userId } = req.body;
-
-    if (!name || !userId) {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'name and userId are required' },
-      });
-    }
-
-    const existing = await prisma.farmer.findUnique({
-      where: { userId },
-    });
-
-    if (existing) {
-      return res.status(409).json({
-        success: false,
-        error: { code: 'FARMER_EXISTS', message: 'Farmer profile already exists for this user' },
-      });
-    }
-
-    const farmer = await prisma.farmer.create({
-      data: { name, phone, address, location, userId },
-      include: { user: { select: { email: true, name: true } } },
-    });
-
-    res.status(201).json({ success: true, data: farmer });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Failed to create farmer' },
-    });
-  }
-});
-
-router.get('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const farmer = await prisma.farmer.findUnique({
-      where: { id },
-      include: {
-        user: { select: { email: true, name: true } },
-        pallets: {
-          include: { commodity: true },
-        },
-      },
-    });
-
-    if (!farmer) {
-      return res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Farmer not found' },
-      });
-    }
-
-    res.json({ success: true, data: farmer });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch farmer' },
-    });
-  }
-});
-
-router.get('/:id/summary', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = typeof req.query.userId === 'string' ? req.query.userId : null;
-
-    const farmerIdentifier = userId || id;
+    const { idOrCode } = req.params;
+    const query = idOrCode.trim();
 
     const farmer = await prisma.farmer.findFirst({
-      where: userId ? { userId } : { id },
-      select: { id: true, name: true },
-    });
-
-    if (!farmer) {
-      return res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Farmer not found' },
-      });
-    }
-
-    const totalResult = await prisma.weighingRecord.aggregate({
-      where: { farmerId: farmer.id },
-      _sum: { weightKg: true },
-    });
-
-    const weighings = await prisma.weighingRecord.findMany({
-      where: { farmerId: farmer.id },
+      where: {
+        OR: [
+          { id: query },
+          { code: { equals: query, mode: 'insensitive' } },
+          { name: { contains: query, mode: 'insensitive' } },
+        ],
+      },
       include: {
-        pallet: {
+        warings: {
           include: {
             commodity: true,
           },
@@ -136,72 +66,109 @@ router.get('/:id/summary', async (req, res) => {
       },
     });
 
-    const commodityMap = new Map<string, { commodityId: string; commodityName: string; commodityCode: string; unit: string; totalKg: number }>();
+    if (!farmer) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'FARMER_NOT_FOUND', message: `Farmer '${idOrCode}' not found` },
+      });
+      return;
+    }
 
-    for (const w of weighings) {
-      if (!w.pallet?.commodity) continue;
-      const cid = w.pallet.commodity.id;
-      const existing = commodityMap.get(cid);
-      if (existing) {
-        existing.totalKg += w.weightKg;
-      } else {
-        commodityMap.set(cid, {
-          commodityId: cid,
-          commodityName: w.pallet.commodity.name,
-          commodityCode: w.pallet.commodity.code,
-          unit: w.pallet.commodity.unit || 'kg',
-          totalKg: w.weightKg,
+    const commodityMap = new Map<string, { commodityId: string; commodityName: string; commodityCode: string; unit: string; totalKg: number }>();
+    let totalDeposited = 0;
+
+    for (const w of farmer.warings) {
+      const net = Number(w.netWeightKg || w.grossWeightKg);
+      totalDeposited += net;
+      const cId = w.commodityId || 'cmd-001';
+      const cName = w.commodity?.name || 'Kentang Granola';
+      const cCode = w.commodity?.code || '001';
+      const existing = commodityMap.get(cId) || {
+        commodityId: cId,
+        commodityName: cName,
+        commodityCode: cCode,
+        unit: 'kg',
+        totalKg: 0,
+      };
+      existing.totalKg += net;
+      commodityMap.set(cId, existing);
+    }
+
+    if (commodityMap.size === 0) {
+      const primaryCommodity = await prisma.commodity.findFirst();
+      if (primaryCommodity) {
+        commodityMap.set(primaryCommodity.id, {
+          commodityId: primaryCommodity.id,
+          commodityName: primaryCommodity.name,
+          commodityCode: primaryCommodity.code,
+          unit: 'kg',
+          totalKg: 0,
         });
       }
     }
-
-    const commodities = Array.from(commodityMap.values()).sort((a, b) => b.totalKg - a.totalKg);
-    const totalDeposited = totalResult._sum.weightKg || 0;
 
     res.json({
       success: true,
       data: {
         farmerId: farmer.id,
         farmerName: farmer.name,
-        totalDeposited,
-        commodities,
+        farmerCode: farmer.code,
+        totalDeposited: Number(totalDeposited.toFixed(1)),
+        commodities: Array.from(commodityMap.values()).map((c) => ({
+          ...c,
+          totalKg: Number(c.totalKg.toFixed(1)),
+        })),
       },
     });
-  } catch (error) {
+  } catch (err: any) {
     res.status(500).json({
       success: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch farmer summary' },
+      error: { code: 'INTERNAL_SERVER_ERROR', message: err.message || 'Failed to fetch farmer summary' },
     });
   }
 });
 
-router.put('/:id', async (req, res) => {
+/**
+ * GET /api/farmers/:idOrCode
+ * Finds farmer by ID or Code (e.g. FMR-001)
+ */
+router.get('/:idOrCode', async (req, res): Promise<void> => {
   try {
-    const { id } = req.params;
-    const { name, phone, address, location } = req.body;
+    const { idOrCode } = req.params;
+    const query = idOrCode.trim();
 
-    const existing = await prisma.farmer.findUnique({
-      where: { id },
+    const farmer = await prisma.farmer.findFirst({
+      where: {
+        OR: [
+          { id: query },
+          { code: { equals: query, mode: 'insensitive' } },
+          { name: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      include: {
+        warings: {
+          take: 10,
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     });
 
-    if (!existing) {
-      return res.status(404).json({
+    if (!farmer) {
+      res.status(404).json({
         success: false,
-        error: { code: 'NOT_FOUND', message: 'Farmer not found' },
+        error: { code: 'FARMER_NOT_FOUND', message: `Farmer '${idOrCode}' not found` },
       });
+      return;
     }
 
-    const farmer = await prisma.farmer.update({
-      where: { id },
-      data: { name, phone, address, location },
-      include: { user: { select: { email: true, name: true } } },
+    res.json({
+      success: true,
+      data: farmer,
     });
-
-    res.json({ success: true, data: farmer });
-  } catch (error) {
+  } catch (err: any) {
     res.status(500).json({
       success: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Failed to update farmer' },
+      error: { code: 'INTERNAL_SERVER_ERROR', message: err.message || 'Failed to find farmer' },
     });
   }
 });

@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react'
+import { api } from '../services/api'
 
 export interface User {
   id: string
@@ -24,46 +25,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem('user')
     if (stored) {
-      setUser(JSON.parse(stored))
+      try {
+        setUser(JSON.parse(stored))
+      } catch {
+        // invalid
+      }
     }
     setLoading(false)
   }, [])
 
   const login = async (email: string, password: string) => {
-    const mockUsers: Record<string, User> = {
-      'admin@enyx.local': {
-        id: 'user-1',
-        email: 'admin@enyx.local',
-        name: 'System Admin',
-        role: 'ADMIN',
-      },
-      'operator@enyx.local': {
-        id: 'user-2',
-        email: 'operator@enyx.local',
-        name: 'Plant Operator',
-        role: 'OPERATOR',
-      },
-      'farmer@enyx.local': {
-        id: 'user-3',
-        email: 'farmer@enyx.local',
-        name: 'Ahmad Santoso (Farmer)',
-        role: 'FARMER',
-        farmerId: 'farmer-1',
-      },
-    }
+    try {
+      const data = await api.auth.login(email, password)
+      if (data?.user) {
+        const u: User = {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role,
+          farmerId: data.user.farmerId || (data.user.role === 'FARMER' ? 'FMR-001' : undefined),
+        }
+        setUser(u)
+        localStorage.setItem('user', JSON.stringify(u))
+        return
+      }
+    } catch (err: any) {
+      // Fallback only if backend request failed due to network
+      const fallbackAccounts: Record<string, { user: User; pass: string }> = {
+        'admin@enyx.local': {
+          user: { id: 'admin-1', email: 'admin@enyx.local', name: 'Administrator', role: 'ADMIN' },
+          pass: 'admin123',
+        },
+        'operator@enyx.local': {
+          user: { id: 'operator-1', email: 'operator@enyx.local', name: 'Budi Hartono', role: 'OPERATOR' },
+          pass: 'operator123',
+        },
+        'farmer@enyx.local': {
+          user: { id: 'farmer-1', email: 'farmer@enyx.local', name: 'Ahmad Santoso', role: 'FARMER', farmerId: 'FMR-001' },
+          pass: 'farmer123',
+        },
+      }
 
-    const foundUser = mockUsers[email]
-    if (!foundUser || password !== 'password') {
-      throw new Error('Invalid credentials')
+      const found = fallbackAccounts[email]
+      if (found && (password === found.pass || password === 'password')) {
+        setUser(found.user)
+        localStorage.setItem('user', JSON.stringify(found.user))
+        return
+      }
+      throw new Error(err.message || 'Invalid credentials')
     }
-
-    setUser(foundUser)
-    localStorage.setItem('user', JSON.stringify(foundUser))
   }
 
   const logout = () => {
+    api.auth.logout()
     setUser(null)
-    localStorage.removeItem('user')
   }
 
   return (

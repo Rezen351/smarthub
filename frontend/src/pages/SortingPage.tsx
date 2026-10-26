@@ -40,17 +40,17 @@ export default function SortingPage() {
 
   /* ── Step 1: Inflow Waring & Context ── */
   const initialWaring = waitingWarings[0] || {
-    code: 'WRG-20261026-0001',
-    grossWeightKg: 45.5,
-    farmerName: 'Ahmad Santoso',
-    farmerVillage: 'Dieng, Wonosobo',
+    code: '',
+    grossWeightKg: 0,
+    farmerName: '',
+    farmerVillage: '',
   }
   const [waringCode, setWaringCode] = useState(initialWaring.code)
   const [manualWaringSearch, setManualWaringSearch] = useState('')
   const [waringScanError, setWaringScanError] = useState<string | null>(null)
   const [farmerName, setFarmerName] = useState(initialWaring.farmerName)
-  const [farmerVillage, setFarmerVillage] = useState(initialWaring.farmerVillage || 'Dieng, Wonosobo')
-  const [grossIntakeKg, setGrossIntakeKg] = useState(String(initialWaring.grossWeightKg))
+  const [farmerVillage, setFarmerVillage] = useState(initialWaring.farmerVillage || '')
+  const [grossIntakeKg, setGrossIntakeKg] = useState(initialWaring.grossWeightKg ? String(initialWaring.grossWeightKg) : '')
   const nextSeq = String(sortedBatches.length + 1).padStart(2, '0')
   const [palletCode, setPalletCode] = useState(`PLT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(sortedBatches.length + 1).padStart(4, '0')}`)
   const scanInputRef = useRef<HTMLInputElement>(null)
@@ -61,18 +61,18 @@ export default function SortingPage() {
 
   /* ── Step 3: Scale 02 Live Weighing & Pallet QRs (Grade A, B, C) ── */
   const [activeGradeTab, setActiveGradeTab] = useState<'A' | 'B' | 'C'>('A')
-  const [liveScaleWeight, setLiveScaleWeight] = useState('21.0')
+  const [liveScaleWeight, setLiveScaleWeight] = useState('0.0')
 
   /* Grade A */
-  const [gradeAKg, setGradeAKg] = useState('21.0')
+  const [gradeAKg, setGradeAKg] = useState('0.0')
   const [gradeAPalletQr, setGradeAPalletQr] = useState(`PLT-GRD-A-${nextSeq}`)
 
   /* Grade B */
-  const [gradeBKg, setGradeBKg] = useState('15.2')
+  const [gradeBKg, setGradeBKg] = useState('0.0')
   const [gradeBPalletQr, setGradeBPalletQr] = useState(`PLT-GRD-B-${nextSeq}`)
 
   /* Grade C */
-  const [gradeCKg, setGradeCKg] = useState('5.5')
+  const [gradeCKg, setGradeCKg] = useState('0.0')
   const [gradeCPalletQr, setGradeCPalletQr] = useState(`PLT-GRD-C-${nextSeq}`)
 
   /* ── Camera Scanner State ── */

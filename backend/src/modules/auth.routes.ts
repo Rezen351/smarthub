@@ -1,110 +1,127 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import prisma from '../shared/database/prisma';
+import { config } from '../config/env';
+import { authenticate } from '../middlewares/auth.middleware';
+import { AuthenticatedRequest } from '../types';
 
 const router = Router();
 
 /**
- * @swagger
- * /api/auth/register:
- *   post:
- *     tags:
- *       - Auth
- *     summary: Register new user
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - name
- *               - password
- *               - role
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *               name:
- *                 type: string
- *               password:
- *                 type: string
- *                 format: password
- *               role:
- *                 type: string
- *                 enum: [ADMIN, WEIGHING_OPERATOR, SORTING_OPERATOR, PACKAGING_OPERATOR, WAREHOUSE_OPERATOR, DELIVERY_OPERATOR, FARMER]
- *     responses:
- *       201:
- *         description: User created successfully
- *       400:
- *         description: Validation error
- *       401:
- *         description: Unauthorized
+ * POST /api/auth/login
+ * Authenticates user credentials and issues a signed JWT token
  */
-router.post('/register', (req, res) => {
-  res.status(501).json({
-    success: false,
-    error: { code: 'NOT_IMPLEMENTED', message: 'Not implemented yet' },
-  });
+router.post('/login', async (req, res): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Email and password are required' },
+      });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+      include: { farmerProfile: true },
+    });
+
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
+      });
+      return;
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      res.status(401).json({
+        success: false,
+        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
+      });
+      return;
+    }
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+      config.jwt.secret,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          farmerProfile: user.farmerProfile,
+        },
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_SERVER_ERROR', message: err.message || 'Authentication failed' },
+    });
+  }
 });
 
 /**
- * @swagger
- * /api/auth/login:
- *   post:
- *     tags:
- *       - Auth
- *     summary: Login user
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
- *                 format: password
- *     responses:
- *       200:
- *         description: Login successful
- *       401:
- *         description: Invalid credentials
+ * GET /api/auth/me
+ * Retrieves current authenticated user profile
  */
-router.post('/login', (req, res) => {
-  res.status(501).json({
-    success: false,
-    error: { code: 'NOT_IMPLEMENTED', message: 'Not implemented yet' },
-  });
-});
+router.get('/me', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Not authenticated' },
+      });
+      return;
+    }
 
-/**
- * @swagger
- * /api/auth/me:
- *   get:
- *     tags:
- *       - Auth
- *     summary: Get current user profile
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Current user profile
- *       401:
- *         description: Unauthorized
- */
-router.get('/me', (req, res) => {
-  res.status(501).json({
-    success: false,
-    error: { code: 'NOT_IMPLEMENTED', message: 'Not implemented yet' },
-  });
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        farmerProfile: true,
+      },
+    });
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: user,
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_SERVER_ERROR', message: err.message || 'Failed to fetch user profile' },
+    });
+  }
 });
 
 export default router;

@@ -59,9 +59,9 @@ export default function PackagingPage() {
   const [activeStep, setActiveStep] = useState<1 | 2 | 3>(1)
 
   /* ── Step 1: Source Pallet QR & Packaging Specifications ── */
-  const [sourcePalletCode, setSourcePalletCode] = useState('PLT-GRD-A-01')
-  const [sourceFarmer, setSourceFarmer] = useState('Ahmad Santoso')
-  const [sourceWaring, setSourceWaring] = useState('WRG-20261026-0001')
+  const [sourcePalletCode, setSourcePalletCode] = useState('')
+  const [sourceFarmer, setSourceFarmer] = useState('')
+  const [sourceWaring, setSourceWaring] = useState('')
   const [palletSearch, setPalletSearch] = useState('')
   const [palletScanError, setPalletScanError] = useState<string | null>(null)
 
@@ -139,13 +139,6 @@ export default function PackagingPage() {
     }
   })
 
-  if (availablePallets.length === 0) {
-    availablePallets.push(
-      { code: 'PLT-GRD-A-01', grade: 'A', weightKg: 22.5, farmerName: 'Ahmad Santoso', farmerVillage: 'Dieng, Wonosobo', waringCode: 'WRG-20261026-0001' },
-      { code: 'PLT-GRD-B-01', grade: 'B', weightKg: 15.0, farmerName: 'Ahmad Santoso', farmerVillage: 'Dieng, Wonosobo', waringCode: 'WRG-20261026-0001' },
-      { code: 'PLT-GRD-C-01', grade: 'C', weightKg: 8.5, farmerName: 'Ahmad Santoso', farmerVillage: 'Dieng, Wonosobo', waringCode: 'WRG-20261026-0001' },
-    )
-  }
 
   // Filtered pallets by grade tab
   const displayedPallets = availablePallets.filter((p) => {
@@ -240,41 +233,7 @@ export default function PackagingPage() {
   const isWithinTolerance = Math.abs(weightValue - targetKg) <= toleranceKg
 
   /* ── Packaged Output Ledger ── */
-  const [packages, setPackages] = useState<PackageRecord[]>([
-    {
-      id: '1',
-      code: 'PCH-20261025-0001',
-      sourcePallet: 'PLT-GRD-A-01',
-      mode: 'RETAIL_POUCH',
-      grade: 'A',
-      weightKg: 1.002,
-      targetKg: 1.0,
-      time: '11:05',
-      status: 'WAREHOUSE_STORED',
-    },
-    {
-      id: '2',
-      code: 'EXP-20261025-0001',
-      sourcePallet: 'PLT-GRD-A-01',
-      mode: 'BULK_EXPORT',
-      grade: 'A',
-      weightKg: 10.02,
-      targetKg: 10.0,
-      time: '11:15',
-      status: 'WAREHOUSE_STORED',
-    },
-    {
-      id: '3',
-      code: 'PCH-20261025-0002',
-      sourcePallet: 'PLT-GRD-B-01',
-      mode: 'RETAIL_POUCH',
-      grade: 'B',
-      weightKg: 0.998,
-      targetKg: 1.0,
-      time: '11:20',
-      status: 'WAREHOUSE_STORED',
-    },
-  ])
+  const [packages, setPackages] = useState<PackageRecord[]>([])
 
   /* Fullscreen & Esc Listener */
   useEffect(() => {

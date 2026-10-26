@@ -1,154 +1,116 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+import path from 'path';
 
-const prisma = new PrismaClient();
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+const connectionString = process.env.DATABASE_URL || 'postgresql://enyx:enyx123@localhost:5432/enyx_smart_hub?schema=public';
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  // Create default commodities
-  const kentang = await prisma.commodity.upsert({
-    where: { code: '001' },
-    update: {},
-    create: {
-      name: 'Kentang',
+  console.log('🧹 Purging all existing database records...');
+
+  // Delete all existing transactional and master data in dependency order
+  await prisma.packageUnit.deleteMany({});
+  await prisma.pallet.deleteMany({});
+  await prisma.sortingBatch.deleteMany({});
+  await prisma.waring.deleteMany({});
+  await prisma.delivery.deleteMany({});
+  await prisma.grade.deleteMany({});
+  await prisma.commodity.deleteMany({});
+  await prisma.farmer.deleteMany({});
+  await prisma.user.deleteMany({});
+
+  console.log('🌱 Seeding fresh master data (1 Admin, 1 Operator, 1 Farmer, 1 Commodity)...');
+
+  // 1. Commodity: Kentang Granola
+  const potato = await prisma.commodity.create({
+    data: {
       code: '001',
-      description: 'Kentang',
+      name: 'Kentang Granola',
+      description: 'Granola potato suitable for table consumption and processing.',
       unit: 'kg',
     },
   });
 
-  const tomat = await prisma.commodity.upsert({
-    where: { code: '002' },
-    update: {},
-    create: {
-      name: 'Tomat',
-      code: '002',
-      description: 'Tomat',
-      unit: 'kg',
-    },
-  });
+  // 2. Potato Commercial Grades: A, B, C
+  const grades = [
+    { name: 'A', sizeSpec: '>55mm', description: 'Large table potato' },
+    { name: 'B', sizeSpec: '40-55mm', description: 'Medium table potato' },
+    { name: 'C', sizeSpec: '<40mm', description: 'Small baby potato' },
+  ];
 
-  const cabai = await prisma.commodity.upsert({
-    where: { code: '003' },
-    update: {},
-    create: {
-      name: 'Cabai',
-      code: '003',
-      description: 'Cabai',
-      unit: 'kg',
-    },
-  });
+  for (const g of grades) {
+    await prisma.grade.create({
+      data: {
+        name: g.name,
+        sizeSpec: g.sizeSpec,
+        description: g.description,
+        commodityId: potato.id,
+      },
+    });
+  }
 
-  // Create default admin user
-  const hashedPassword = await bcrypt.hash('admin123', 10);
-  await prisma.user.upsert({
-    where: { email: 'admin@enyx.local' },
-    update: {},
-    create: {
+  // 3. User 1: Admin
+  const adminHashed = await bcrypt.hash('admin123', 10);
+  const adminUser = await prisma.user.create({
+    data: {
       email: 'admin@enyx.local',
-      name: 'Admin',
-      password: hashedPassword,
+      name: 'Administrator',
+      password: adminHashed,
       role: 'ADMIN',
     },
   });
 
-  // Create default grades for each commodity
-  const grades = ['A', 'B', 'C'];
-  for (const grade of grades) {
-    await prisma.grade.upsert({
-      where: { name_commodityId: { name: grade, commodityId: kentang.id } },
-      update: {},
-      create: {
-        name: grade,
-        commodityId: kentang.id,
-        description: `Grade ${grade} untuk Kentang`,
-      },
-    });
-  }
+  // 4. User 2: Operator
+  const operatorHashed = await bcrypt.hash('operator123', 10);
+  const operatorUser = await prisma.user.create({
+    data: {
+      email: 'operator@enyx.local',
+      name: 'Budi Hartono',
+      password: operatorHashed,
+      role: 'OPERATOR',
+    },
+  });
 
-  for (const grade of grades) {
-    await prisma.grade.upsert({
-      where: { name_commodityId: { name: grade, commodityId: tomat.id } },
-      update: {},
-      create: {
-        name: grade,
-        commodityId: tomat.id,
-        description: `Grade ${grade} untuk Tomat`,
-      },
-    });
-  }
-
-  for (const grade of grades) {
-    await prisma.grade.upsert({
-      where: { name_commodityId: { name: grade, commodityId: cabai.id } },
-      update: {},
-      create: {
-        name: grade,
-        commodityId: cabai.id,
-        description: `Grade ${grade} untuk Cabai`,
-      },
-    });
-  }
-
-  const farmerPassword = await bcrypt.hash('password', 10);
-  const farmerUser = await prisma.user.upsert({
-    where: { email: 'farmer@enyx.local' },
-    update: {},
-    create: {
+  // 5. User 3 & Profile: Farmer
+  const farmerHashed = await bcrypt.hash('farmer123', 10);
+  const farmerUser = await prisma.user.create({
+    data: {
       email: 'farmer@enyx.local',
-      name: 'Farmer',
-      password: farmerPassword,
+      name: 'Ahmad Santoso',
+      password: farmerHashed,
       role: 'FARMER',
     },
   });
 
-  const farmer = await prisma.farmer.upsert({
-    where: { userId: farmerUser.id },
-    update: {},
-    create: {
-      name: 'Farmer',
-      phone: '081234567890',
-      address: 'Jl. Pertanian No. 1',
-      location: 'Jakarta',
+  const farmer = await prisma.farmer.create({
+    data: {
+      code: 'FMR-001',
+      name: 'Ahmad Santoso',
+      phone: '+62 812-3456-7890',
+      village: 'Desa Sumber Brantas',
+      address: 'Batu, Jawa Timur',
       userId: farmerUser.id,
     },
   });
 
-  const commodities = [kentang, tomat, cabai];
-  const allGrades = await prisma.grade.findMany();
-
-  for (const commodity of commodities) {
-    const pallet = await prisma.pallet.create({
-      data: {
-        code: `PAL-${commodity.code}-${Date.now().toString().slice(-4)}`,
-        farmerId: farmer.id,
-        commodityId: commodity.id,
-        status: 'ACTIVE',
-      },
-    });
-
-    const commodityGrades = allGrades.filter((g) => g.commodityId === commodity.id);
-    const grade = commodityGrades[0];
-
-    if (grade) {
-      await prisma.weighingRecord.create({
-        data: {
-          farmerId: farmer.id,
-          palletId: pallet.id,
-          gradeId: grade.id,
-          weightKg: Math.round(Math.random() * 500 + 100),
-          userId: farmerUser.id,
-          deviceId: 'SCALE-001',
-        },
-      });
-    }
-  }
-
-  console.log('Seed completed successfully');
+  console.log('✅ Seed completed successfully:');
+  console.log(`   - Commodity: ${potato.name} (${potato.code}) with Grades A, B, C`);
+  console.log(`   - Admin: ${adminUser.email} (Administrator)`);
+  console.log(`   - Operator: ${operatorUser.email} (Budi Hartono)`);
+  console.log(`   - Farmer: ${farmerUser.email} / ${farmer.code} (Ahmad Santoso)`);
+  console.log('   - Transactional records: 0 (clean production state)');
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('❌ Error executing seed:', e);
     process.exit(1);
   })
   .finally(async () => {

@@ -14,10 +14,7 @@ export const config = {
   redis: {
     url: process.env.REDIS_URL || 'redis://:redis123@localhost:6379',
   },
-  
-  mqtt: {
-    brokerUrl: process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883',
-  },
+
   
   jwt: {
     secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',

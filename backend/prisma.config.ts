@@ -3,7 +3,7 @@ import { defineConfig } from 'prisma/config';
 
 export default defineConfig({
   // Direct connection for Prisma CLI tools (migrate, db push)
-  database: {
+  datasource: {
     url: process.env.DATABASE_URL,
   },
 });

@@ -8,12 +8,35 @@ datasource db {
 
 enum Role {
   ADMIN
-  WEIGHING_OPERATOR
-  SORTING_OPERATOR
-  PACKAGING_OPERATOR
-  WAREHOUSE_OPERATOR
-  DELIVERY_OPERATOR
+  OPERATOR
   FARMER
+}
+
+enum WaringStatus {
+  PENDING
+  APPROVED
+  SORTED
+}
+
+enum PalletStatus {
+  ACTIVE
+  IN_PACKAGING
+  DEPLETED
+}
+
+enum PackageFormat {
+  RETAIL_POUCH
+  EXPORT_CARTON
+}
+
+enum PackageStatus {
+  STORED
+  DISPATCHED
+}
+
+enum WashDecision {
+  WASHED
+  UNWASHED
 }
 
 model User {
@@ -21,258 +44,164 @@ model User {
   email     String   @unique
   name      String
   password  String
-  role      Role     @default(WEIGHING_OPERATOR)
+  role      Role     @default(OPERATOR)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  farmerProfile Farmer?
-  weighings     WeighingRecord[]
+  farmerProfile  Farmer?
+  warings        Waring[]
+  sortingBatches SortingBatch[]
+  deliveries     Delivery[]
 
   @@map("users")
 }
 
 model Farmer {
   id        String   @id @default(uuid())
+  code      String   @unique // e.g. FMR-001
   name      String
   phone     String?
+  village   String?
   address   String?
-  location  String?
-  code      String   @unique
   userId    String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  user      User             @relation(fields: [userId], references: [id])
-  pallets   Pallet[]
-  weighings WeighingRecord[]
+  user    User     @relation(fields: [userId], references: [id])
+  warings Waring[]
+  pallets Pallet[]
 
   @@map("farmers")
 }
 
 model Commodity {
   id          String   @id @default(uuid())
-  name        String   @unique
-  code        String   @unique // 3 digit code, e.g., 001
+  code        String   @unique // e.g. 001
+  name        String   @unique // e.g. Kentang Granola
   description String?
   unit        String   @default("kg")
   createdAt   DateTime @default(now())
 
   // Relations
-  pallets         Pallet[]
-  grades          Grade[]
-  warehouseStocks WarehouseStock[]
-  packagingUnits  PackagingUnit[]
-  packagingItems  PackagingItem[]
-  pouches         Pouch[]
+  grades  Grade[]
+  warings Waring[]
 
   @@map("commodities")
 }
 
-model Pallet {
-  id          String   @id @default(uuid())
-  code        String   @unique
-  farmerId    String
-  commodityId String
-  location    String?
-  status      String   @default("ACTIVE")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  farmer    Farmer           @relation(fields: [farmerId], references: [id])
-  commodity Commodity        @relation(fields: [commodityId], references: [id])
-  weighings WeighingRecord[]
-  pouches   Pouch[]
-
-  @@map("pallets")
-}
-
 model Grade {
   id          String   @id @default(uuid())
-  name        String
-  commodityId String
+  name        String   // e.g. A, B, C
+  sizeSpec    String?  // e.g. >55mm, 40-55mm, <40mm
   description String?
+  commodityId String
   createdAt   DateTime @default(now())
 
   // Relations
-  commodity Commodity        @relation(fields: [commodityId], references: [id])
-  weighings WeighingRecord[]
-  pouches   Pouch[]
-  stocks    WarehouseStock[]
-  packagingItems PackagingItem[]
+  commodity Commodity @relation(fields: [commodityId], references: [id])
 
   @@unique([name, commodityId])
   @@map("grades")
 }
 
-model WeighingRecord {
-  id          String   @id @default(uuid())
-  farmerId    String
-  palletId    String
-  gradeId     String
-  weightKg    Float
-  userId      String
-  deviceId    String?
-  note        String?
-  timestamp   DateTime @default(now())
+model Waring {
+  id            String       @id @default(uuid())
+  code          String       @unique // e.g. WRG-20261026-0001
+  farmerId      String
+  commodityId   String
+  operatorId    String?
+  grossWeightKg Float
+  tareWeightKg  Float        @default(1.2)
+  netWeightKg   Float
+  status        WaringStatus @default(PENDING)
+  note          String?
+  createdAt     DateTime     @default(now())
+  approvedAt    DateTime?
 
   // Relations
-  farmer Farmer  @relation(fields: [farmerId], references: [id])
-  pallet Pallet  @relation(fields: [palletId], references: [id])
-  grade  Grade   @relation(fields: [gradeId], references: [id])
-  user   User    @relation(fields: [userId], references: [id])
+  farmer       Farmer        @relation(fields: [farmerId], references: [id])
+  commodity    Commodity     @relation(fields: [commodityId], references: [id])
+  operator     User?         @relation(fields: [operatorId], references: [id])
+  sortingBatch SortingBatch?
 
-  @@map("weighing_records")
+  @@map("warings")
 }
 
-model Pouch {
-  id          String   @id @default(uuid())
-  palletId    String
-  gradeId     String
-  qrCode      String   @unique
-  ean13       String   @unique
-  weightKg    Float    @default(1.0)
-  commodityId String
-  createdAt   DateTime @default(now())
+model SortingBatch {
+  id           String       @id @default(uuid())
+  waringId     String       @unique
+  operatorId   String?
+  sizerFed     Boolean      @default(true)
+  washDecision WashDecision @default(UNWASHED)
+  gradeA_Kg    Float        @default(0)
+  gradeB_Kg    Float        @default(0)
+  gradeC_Kg    Float        @default(0)
+  shrinkageKg  Float        @default(0)
+  shrinkagePct Float        @default(0)
+  sortedAt     DateTime     @default(now())
 
   // Relations
-  pallet    Pallet    @relation(fields: [palletId], references: [id])
-  grade     Grade     @relation(fields: [gradeId], references: [id])
-  commodity Commodity @relation(fields: [commodityId], references: [id])
+  waring   Waring   @relation(fields: [waringId], references: [id])
+  operator User?    @relation(fields: [operatorId], references: [id])
+  pallets  Pallet[]
 
-  @@map("pouches")
+  @@map("sorting_batches")
 }
 
-model Warehouse {
-  id          String   @id @default(uuid())
-  name        String
-  location    String?
-  capacity    Float?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  stocks WarehouseStock[]
-
-  @@map("warehouses")
-}
-
-model WarehouseStock {
-  id          String   @id @default(uuid())
-  warehouseId String
-  gradeId     String
-  commodityId String
-  quantity    Int      @default(0)
-  totalWeight Float    @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
-  grade     Grade     @relation(fields: [gradeId], references: [id])
-  commodity Commodity @relation(fields: [commodityId], references: [id])
-
-  @@unique([warehouseId, gradeId, commodityId])
-  @@map("warehouse_stock")
-}
-  id          String   @id @default(uuid())
-  code        String   @unique
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-
-  // Relations
-  sizes PackagingSize[]
-
-  @@map("packaging_types")
-}
-
-model PackagingSize {
-  id          String   @id @default(uuid())
-  typeId      String
-  code        String   @unique
-  name        String
-  capacity    Int
-  unit        String   @default("pouch")
-  createdAt   DateTime @default(now())
-
-  // Relations
-  type    PackagingType    @relation(fields: [typeId], references: [id])
-  units   PackagingUnit[]
-
-  @@map("packaging_sizes")
-}
-
-model PackagingUnit {
-  id          String   @id @default(uuid())
-  sizeId      String
-  commodityId String
-  barcode     String   @unique
-  batchNo     String?
-  totalWeight Float?
-  status      String   @default("ACTIVE")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  size      PackagingSize    @relation(fields: [sizeId], references: [id])
-  commodity Commodity        @relation(fields: [commodityId], references: [id])
-  items     PackagingItem[]
-  deliveries PackagingDelivery[]
-
-  @@map("packaging_units")
-}
-
-model PackagingItem {
-  id             String   @id @default(uuid())
-  packagingUnitId String
-  gradeId        String
-  commodityId    String
+model Pallet {
+  id             String       @id @default(uuid())
+  code           String       @unique // e.g. PLT-GRD-A-01
+  grade          String       // A, B, C
+  farmerId       String
+  sortingBatchId String
   weightKg       Float
-  pouchId        String?
-  createdAt      DateTime @default(now())
+  remainingKg    Float
+  status         PalletStatus @default(ACTIVE)
+  createdAt      DateTime     @default(now())
 
   // Relations
-  packagingUnit PackagingUnit @relation(fields: [packagingUnitId], references: [id])
-  grade         Grade         @relation(fields: [gradeId], references: [id])
-  commodity     Commodity     @relation(fields: [commodityId], references: [id])
+  farmer       Farmer        @relation(fields: [farmerId], references: [id])
+  sortingBatch SortingBatch  @relation(fields: [sortingBatchId], references: [id])
+  packages     PackageUnit[]
 
-  @@map("packaging_items")
+  @@map("pallets")
 }
 
-model PackagingDelivery {
-  id              String   @id @default(uuid())
-  packagingUnitId String
-  deliveryId      String?
-  shippedAt       DateTime?
-  createdAt       DateTime @default(now())
+model PackageUnit {
+  id             String        @id @default(uuid())
+  code           String        @unique // e.g. PCH-20261026-0001 or EXP-20261026-0001
+  format         PackageFormat @default(RETAIL_POUCH)
+  grade          String        // A, B, C
+  weightKg       Float
+  barcode        String        @unique // GS1 Digital Link QR or ITF-14
+  cartonSpec     String?       // 10kg or 50kg
+  sourcePalletId String
+  deliveryId     String?
+  status         PackageStatus @default(STORED)
+  createdAt      DateTime      @default(now())
 
-  @@map("packaging_deliveries")
+  // Relations
+  sourcePallet Pallet    @relation(fields: [sourcePalletId], references: [id])
+  delivery     Delivery? @relation(fields: [deliveryId], references: [id])
+
+  @@map("package_units")
 }
 
 model Delivery {
   id          String   @id @default(uuid())
+  code        String   @unique // e.g. DLV-20261026-0001
   truckPlate  String
   destination String
-  driverName  String?
-  commodityId String?
-  departedAt  DateTime?
+  driverName  String
+  operatorId  String?
+  departedAt  DateTime @default(now())
   createdAt   DateTime @default(now())
 
+  // Relations
+  operator User?         @relation(fields: [operatorId], references: [id])
+  packages PackageUnit[]
+
   @@map("deliveries")
-}
-
-model ScaleReading {
-  time        DateTime   @db.Timestamptz(6)
-  deviceId    String
-  weightKg    Float?
-  palletId    String?
-  commodityId String?
-  raw         String?
-  createdAt   DateTime   @default(now())
-
-  @@id([time, deviceId])
-  @@map("scale_readings")
 }

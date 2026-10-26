@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { api } from '../services/api'
 
 export interface BufferWaringItem {
   id: string
@@ -57,151 +58,7 @@ export interface DeliveryRecord {
   date: string
 }
 
-const STORAGE_KEY = 'enyx_packhouse_store'
-
-const SEED_BUFFER_WARINGS: BufferWaringItem[] = [
-  {
-    id: 'w-1',
-    code: 'WRG-20261026-0001',
-    farmerId: 'farmer-1',
-    farmerName: 'Ahmad Santoso',
-    farmerVillage: 'Dieng, Wonosobo',
-    grossWeightKg: 45.5,
-    intakeTime: '08:15',
-    date: '2026-10-26',
-    status: 'BUFFER_WAITING',
-  },
-  {
-    id: 'w-2',
-    code: 'WRG-20261026-0002',
-    farmerId: 'farmer-1',
-    farmerName: 'Ahmad Santoso',
-    farmerVillage: 'Dieng, Wonosobo',
-    grossWeightKg: 48.0,
-    intakeTime: '08:25',
-    date: '2026-10-26',
-    status: 'BUFFER_WAITING',
-  },
-  {
-    id: 'w-3',
-    code: 'WRG-20261026-0003',
-    farmerId: 'farmer-2',
-    farmerName: 'Budi Prasetyo',
-    farmerVillage: 'Berastagi, Karo',
-    grossWeightKg: 52.2,
-    intakeTime: '08:40',
-    date: '2026-10-26',
-    status: 'BUFFER_WAITING',
-  },
-  {
-    id: 'w-4',
-    code: 'WRG-20261026-0004',
-    farmerId: 'farmer-3',
-    farmerName: 'Siti Rahayu',
-    farmerVillage: 'Pangalengan, Bandung',
-    grossWeightKg: 41.0,
-    intakeTime: '09:05',
-    date: '2026-10-26',
-    status: 'BUFFER_WAITING',
-  },
-]
-
-const SEED_GRADED_BATCHES: GradedBatchRecord[] = [
-  {
-    id: 'b-1',
-    palletCode: 'PLT-20261026-0001',
-    waringCode: 'WRG-20261025-0001',
-    farmerName: 'Ahmad Santoso',
-    farmerVillage: 'Dieng, Wonosobo',
-    grossIntakeKg: 50.0,
-    washingRecord: 'WASHED',
-    gradeAKg: 22.5,
-    gradeAPalletQr: 'PLT-GRD-A-01',
-    gradeBKg: 15.0,
-    gradeBPalletQr: 'PLT-GRD-B-01',
-    gradeCKg: 8.5,
-    gradeCPalletQr: 'PLT-GRD-C-01',
-    totalGradedKg: 46.0,
-    shrinkageKg: 4.0,
-    shrinkagePct: 8.0,
-    timestamp: '09:30',
-  },
-]
-
-const SEED_FINISHED_STOCK: FinishedStockItem[] = [
-  {
-    id: 'f-1',
-    code: 'PCH-20261026-0001',
-    packageType: '1 kg Pouch',
-    mode: 'RETAIL_POUCH',
-    grade: 'A',
-    units: 120,
-    weightKg: 1.0,
-    totalWeightKg: 120.0,
-    packedTime: '10:05',
-    storageLocation: 'Rack A-01',
-  },
-  {
-    id: 'f-2',
-    code: 'EXP-20261026-0001',
-    packageType: '10 kg Export Carton',
-    mode: 'BULK_EXPORT',
-    grade: 'A',
-    units: 15,
-    weightKg: 10.0,
-    totalWeightKg: 150.0,
-    packedTime: '10:20',
-    storageLocation: 'Pallet Bay 03',
-  },
-  {
-    id: 'f-3',
-    code: 'PCH-20261026-0002',
-    packageType: '1 kg Pouch',
-    mode: 'RETAIL_POUCH',
-    grade: 'B',
-    units: 85,
-    weightKg: 1.0,
-    totalWeightKg: 85.0,
-    packedTime: '10:45',
-    storageLocation: 'Rack B-02',
-  },
-]
-
-const SEED_DELIVERIES: DeliveryRecord[] = [
-  {
-    id: 'd-1',
-    truckPlate: 'B 1234 XYZ',
-    destination: 'Jakarta Central Distribution Hub',
-    driver: 'Ahmad Subandi',
-    units: 40,
-    grade: 'A',
-    status: 'LOADING',
-    time: '10:15',
-    date: '2026-10-26',
-  },
-  {
-    id: 'd-2',
-    truckPlate: 'B 5678 ABC',
-    destination: 'Surabaya Wholesale Mart',
-    driver: 'Budi Santoso',
-    units: 20,
-    grade: 'A',
-    status: 'READY',
-    time: '09:40',
-    date: '2026-10-26',
-  },
-  {
-    id: 'd-3',
-    truckPlate: 'B 9012 DEF',
-    destination: 'Semarang Cold Storage',
-    driver: 'Citra Permata',
-    units: 30,
-    grade: 'B',
-    status: 'DEPARTED',
-    time: '08:50',
-    date: '2026-10-26',
-  },
-]
+const STORAGE_KEY = 'enyx_packhouse_store_v2'
 
 interface StoreData {
   bufferWarings: BufferWaringItem[]
@@ -216,20 +73,20 @@ function loadInitialStore(): StoreData {
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<StoreData>
       return {
-        bufferWarings: parsed.bufferWarings?.length ? parsed.bufferWarings : SEED_BUFFER_WARINGS,
-        sortedBatches: parsed.sortedBatches?.length ? parsed.sortedBatches : SEED_GRADED_BATCHES,
-        finishedStock: parsed.finishedStock?.length ? parsed.finishedStock : SEED_FINISHED_STOCK,
-        deliveries: parsed.deliveries?.length ? parsed.deliveries : SEED_DELIVERIES,
+        bufferWarings: parsed.bufferWarings || [],
+        sortedBatches: parsed.sortedBatches || [],
+        finishedStock: parsed.finishedStock || [],
+        deliveries: parsed.deliveries || [],
       }
     }
   } catch {
     // fallback
   }
   return {
-    bufferWarings: SEED_BUFFER_WARINGS,
-    sortedBatches: SEED_GRADED_BATCHES,
-    finishedStock: SEED_FINISHED_STOCK,
-    deliveries: SEED_DELIVERIES,
+    bufferWarings: [],
+    sortedBatches: [],
+    finishedStock: [],
+    deliveries: [],
   }
 }
 
@@ -244,6 +101,98 @@ export function usePackhouseStore() {
       // storage quota or private mode
     }
   }, [])
+
+  // Sync with backend API on mount
+  const syncWithBackend = useCallback(async () => {
+    try {
+      const [waringsRes, batchesRes, packagingRes, deliveriesRes] = await Promise.allSettled([
+        api.weighing.list(),
+        api.sorting.batches(),
+        api.packaging.records(),
+        api.deliveries.list(),
+      ])
+
+      const nextStore: StoreData = {
+        bufferWarings: [],
+        sortedBatches: [],
+        finishedStock: [],
+        deliveries: [],
+      }
+
+      if (waringsRes.status === 'fulfilled' && Array.isArray(waringsRes.value)) {
+        nextStore.bufferWarings = waringsRes.value.map((w: any) => ({
+          id: w.id,
+          code: w.code,
+          farmerId: w.farmer?.id,
+          farmerName: w.farmer?.name || 'Ahmad Santoso',
+          farmerVillage: w.farmer?.village || 'Desa Sumber Brantas',
+          grossWeightKg: Number(w.grossWeightKg),
+          intakeTime: new Date(w.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: new Date(w.createdAt).toISOString().slice(0, 10),
+          status: w.status === 'SORTED' ? 'SORTED' : 'BUFFER_WAITING',
+        }))
+      }
+
+      if (batchesRes.status === 'fulfilled' && Array.isArray(batchesRes.value)) {
+        nextStore.sortedBatches = batchesRes.value.map((b: any) => ({
+          id: b.id,
+          palletCode: b.pallets?.[0]?.code || b.batchCode,
+          waringCode: b.waring?.code || '',
+          farmerName: b.waring?.farmer?.name || 'Ahmad Santoso',
+          farmerVillage: b.waring?.farmer?.village || 'Desa Sumber Brantas',
+          grossIntakeKg: Number(b.grossWeightKg),
+          washingRecord: b.washingRecord,
+          gradeAKg: Number(b.gradeAKg),
+          gradeAPalletQr: b.pallets?.find((p: any) => p.grade?.code === 'A')?.code || 'PLT-GRD-A',
+          gradeBKg: Number(b.gradeBKg),
+          gradeBPalletQr: b.pallets?.find((p: any) => p.grade?.code === 'B')?.code || 'PLT-GRD-B',
+          gradeCKg: Number(b.gradeCKg),
+          gradeCPalletQr: b.pallets?.find((p: any) => p.grade?.code === 'C')?.code || 'PLT-GRD-C',
+          totalGradedKg: Number(b.totalGradedKg),
+          shrinkageKg: Number(b.shrinkageKg),
+          shrinkagePct: Number(b.shrinkagePct),
+          timestamp: new Date(b.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }))
+      }
+
+      if (packagingRes.status === 'fulfilled' && Array.isArray(packagingRes.value)) {
+        nextStore.finishedStock = packagingRes.value.map((p: any) => ({
+          id: p.id,
+          code: p.unitCode,
+          packageType: (p.packageType?.name || '1 kg Pouch') as any,
+          mode: p.packageType?.category === 'BULK' ? 'BULK_EXPORT' : 'RETAIL_POUCH',
+          grade: (p.pallet?.grade?.code || 'A') as any,
+          units: 1,
+          weightKg: Number(p.netWeightKg),
+          totalWeightKg: Number(p.netWeightKg),
+          packedTime: new Date(p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          storageLocation: p.storageLocation || 'Finished Goods Bay',
+        }))
+      }
+
+      if (deliveriesRes.status === 'fulfilled' && Array.isArray(deliveriesRes.value)) {
+        nextStore.deliveries = deliveriesRes.value.map((d: any) => ({
+          id: d.id,
+          truckPlate: d.truckPlate,
+          destination: d.destination,
+          driver: d.driverName,
+          units: d.items?.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0) || 0,
+          grade: 'A',
+          status: d.status,
+          time: new Date(d.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: new Date(d.createdAt).toISOString().slice(0, 10),
+        }))
+      }
+
+      persist(nextStore)
+    } catch {
+      // Backend offline or unreachable: keep local store
+    }
+  }, [persist])
+
+  useEffect(() => {
+    syncWithBackend()
+  }, [syncWithBackend])
 
   // Listen to cross-tab/window storage events
   useEffect(() => {
@@ -271,6 +220,15 @@ export function usePackhouseStore() {
         ...store,
         bufferWarings: [newItem, ...store.bufferWarings],
       })
+
+      // Backend sync
+      api.weighing
+        .create({
+          farmerCode: waring.farmerId || 'FMR-001',
+          grossWeightKg: waring.grossWeightKg,
+        })
+        .catch(() => {})
+
       return newItem
     },
     [persist, store],
@@ -296,7 +254,6 @@ export function usePackhouseStore() {
         ...batch,
         id: `b-${Date.now()}`,
       }
-      // Also mark waring as sorted if code matches
       const updatedWarings = store.bufferWarings.map((item) =>
         item.code === batch.waringCode ? { ...item, status: 'SORTED' as const } : item,
       )
@@ -305,6 +262,20 @@ export function usePackhouseStore() {
         bufferWarings: updatedWarings,
         sortedBatches: [newBatch, ...store.sortedBatches],
       })
+
+      // Backend sync
+      api.sorting
+        .process({
+          waringCode: batch.waringCode,
+          washingRecord: batch.washingRecord,
+          grades: [
+            { gradeCode: 'A', weightKg: batch.gradeAKg, palletCode: batch.gradeAPalletQr },
+            { gradeCode: 'B', weightKg: batch.gradeBKg, palletCode: batch.gradeBPalletQr },
+            { gradeCode: 'C', weightKg: batch.gradeCKg, palletCode: batch.gradeCPalletQr },
+          ].filter((g) => g.weightKg > 0),
+        })
+        .catch(() => {})
+
       return newBatch
     },
     [persist, store],
@@ -321,6 +292,18 @@ export function usePackhouseStore() {
         ...store,
         finishedStock: [newPkg, ...store.finishedStock],
       })
+
+      // Backend sync
+      api.packaging
+        .pack({
+          palletCode: pkg.code,
+          packageTypeCode: pkg.mode === 'BULK_EXPORT' ? 'CARTON-10KG' : 'POUCH-1KG',
+          quantity: pkg.units,
+          totalNetWeightKg: pkg.totalWeightKg,
+          storageLocation: pkg.storageLocation,
+        })
+        .catch(() => {})
+
       return newPkg
     },
     [persist, store],
@@ -351,7 +334,6 @@ export function usePackhouseStore() {
         d.id === deliveryId ? { ...d, status: 'DEPARTED' as const } : d,
       )
 
-      // Deduct target units from first available finished stock matching grade
       let remainingDeduct = target.units
       const updatedStock = store.finishedStock
         .map((stock) => {
@@ -395,10 +377,10 @@ export function usePackhouseStore() {
   /* Reset all to clean defaults */
   const resetToDefaults = useCallback(() => {
     persist({
-      bufferWarings: SEED_BUFFER_WARINGS,
-      sortedBatches: SEED_GRADED_BATCHES,
-      finishedStock: SEED_FINISHED_STOCK,
-      deliveries: SEED_DELIVERIES,
+      bufferWarings: [],
+      sortedBatches: [],
+      finishedStock: [],
+      deliveries: [],
     })
   }, [persist])
 
@@ -416,5 +398,6 @@ export function usePackhouseStore() {
     markDeliveryReady,
     departDelivery,
     resetToDefaults,
+    syncWithBackend,
   }
 }

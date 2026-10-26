@@ -29,13 +29,14 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nodejs
 
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/package.json ./package.json
+COPY --chown=nodejs:nodejs --from=builder /app/dist ./dist
+COPY --chown=nodejs:nodejs --from=builder /app/node_modules ./node_modules
+COPY --chown=nodejs:nodejs --from=builder /app/prisma ./prisma
+COPY --chown=nodejs:nodejs --from=builder /app/prisma.config.ts* ./
+COPY --chown=nodejs:nodejs --from=builder /app/package.json ./package.json
 
 # Create uploads directory for label generation
-RUN mkdir -p /app/uploads/labels && chown -R nodejs:nodejs /app
+RUN mkdir -p /app/uploads/labels && chown -R nodejs:nodejs /app/uploads
 
 USER nodejs
 

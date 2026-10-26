@@ -12,30 +12,17 @@ export interface FarmerSummary {
 }
 
 export const farmerSummary: FarmerSummary = {
-  farmerId: 'farmer-1',
-  farmerName: 'Farmer',
-  totalDeposited: 1245,
+  farmerId: 'FMR-001',
+  farmerName: 'Ahmad Santoso',
+  totalDeposited: 0,
   commodities: [
     {
-      commodityId: 'commodity-1',
-      commodityName: 'Kentang',
+      commodityId: 'cmd-001',
+      commodityName: 'Kentang Granola',
       commodityCode: '001',
       unit: 'kg',
-      totalKg: 780,
-    },
-    {
-      commodityId: 'commodity-2',
-      commodityName: 'Tomat',
-      commodityCode: '002',
-      unit: 'kg',
-      totalKg: 315,
-    },
-    {
-      commodityId: 'commodity-3',
-      commodityName: 'Cabai',
-      commodityCode: '003',
-      unit: 'kg',
-      totalKg: 150,
+      totalKg: 0,
     },
   ],
 }
+

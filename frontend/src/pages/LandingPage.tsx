@@ -7,7 +7,32 @@ export default function LandingPage() {
   /* ── Hero Cycling Frames ── */
   const [currentFrame, setCurrentFrame] = useState(0)
   const [reelProgress, setReelProgress] = useState(0)
-  const [muted, setMuted] = useState(true)
+  const [backendStatus, setBackendStatus] = useState<'ONLINE' | 'OFFLINE' | 'CHECKING'>('CHECKING')
+
+  useEffect(() => {
+    let active = true
+    const checkStatus = async () => {
+      try {
+        const res = await fetch('/health')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.status === 'ok' || data.database === 'connected') {
+            if (active) setBackendStatus('ONLINE')
+            return
+          }
+        }
+        if (active) setBackendStatus('OFFLINE')
+      } catch {
+        if (active) setBackendStatus('OFFLINE')
+      }
+    }
+    checkStatus()
+    const interval = setInterval(checkStatus, 15000)
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
+  }, [])
 
   const reelFrames = [
     {
@@ -428,8 +453,16 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-2 font-mono-custom text-[11px] text-[#666666] border border-[#eaeaea] bg-[#f5f5f5] px-3 py-1.5 rounded-none">
-              <span className="w-2 h-2 rounded-full bg-[#15803d] animate-pulse"></span>
-              <span>LIVE TELEMETRY · 192.168.1.50</span>
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  backendStatus === 'ONLINE'
+                    ? 'bg-[#15803d] animate-pulse'
+                    : backendStatus === 'CHECKING'
+                    ? 'bg-amber-500 animate-pulse'
+                    : 'bg-red-500'
+                }`}
+              ></span>
+              <span className="tracking-wider">BACKEND STATUS · {backendStatus}</span>
             </div>
             <Link
               to="/login"
@@ -474,30 +507,22 @@ export default function LandingPage() {
 
         {/* Hero Content */}
         <div className="relative z-20 h-full max-w-[1600px] mx-auto px-6 lg:px-10 flex flex-col justify-end pb-24 pt-32 text-white">
-          {/* Top Right Live Telemetry Controls */}
-          <div className="absolute top-28 right-6 lg:right-10 flex items-center gap-4 z-30">
-            <div className="hidden sm:flex items-center gap-2 font-mono-custom text-[11px] text-white/80 bg-black/50 border border-white/10 px-3 py-1.5 backdrop-blur-sm">
-              <span className="w-2 h-2 rounded-full bg-[#15803d] animate-ping"></span>
-              <span className="tracking-[0.2em]">MODBUS TCP · STREAM</span>
-            </div>
-
-            <button
-              onClick={() => setMuted(!muted)}
-              className={`flex items-center gap-2.5 px-3.5 py-2 border border-white/20 bg-black/60 backdrop-blur-md transition-colors hover:border-[#229856] ${
-                !muted ? 'unmuted' : ''
-              }`}
-            >
-              <div className="flex items-end gap-[2px] h-3.5">
-                <span className="wave-bar"></span>
-                <span className="wave-bar"></span>
-                <span className="wave-bar"></span>
-                <span className="wave-bar"></span>
-                <span className="wave-bar"></span>
-              </div>
-              <span className="font-mono-custom text-[10px] tracking-[0.2em] uppercase text-white/90">
-                {muted ? 'Telemetry Off' : 'Live Audio'}
+          {/* Top Right Backend Status Indicator */}
+          <div className="absolute top-28 right-6 lg:right-10 flex items-center gap-3 z-30">
+            <div className="flex items-center gap-2.5 font-mono-custom text-[11px] text-white/90 bg-black/60 border border-white/15 px-3.5 py-2 backdrop-blur-md">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  backendStatus === 'ONLINE'
+                    ? 'bg-[#15803d] animate-ping'
+                    : backendStatus === 'CHECKING'
+                    ? 'bg-amber-400 animate-pulse'
+                    : 'bg-red-500'
+                }`}
+              ></span>
+              <span className="tracking-[0.2em] uppercase font-semibold">
+                BACKEND STATUS · {backendStatus}
               </span>
-            </button>
+            </div>
           </div>
 
           {/* Main Headline */}
@@ -1709,8 +1734,16 @@ export default function LandingPage() {
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10 py-3.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center gap-2 font-mono-custom text-[11px] text-[#15803d] tracking-wider font-semibold">
-              <span className="w-2 h-2 rounded-full bg-[#15803d] animate-ping"></span>
-              <span>LIVE PACKHOUSE TELEMETRY</span>
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  backendStatus === 'ONLINE'
+                    ? 'bg-[#15803d] animate-ping'
+                    : backendStatus === 'CHECKING'
+                    ? 'bg-amber-500 animate-pulse'
+                    : 'bg-red-500'
+                }`}
+              ></span>
+              <span>BACKEND STATUS · {backendStatus}</span>
             </div>
             <div>
               <div className="font-display text-xl md:text-2xl leading-none text-[#171717]">
