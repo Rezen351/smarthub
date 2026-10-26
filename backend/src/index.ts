@@ -13,6 +13,8 @@ import packagingRoutes from './modules/packaging.routes';
 import warehouseRoutes from './modules/warehouse.routes';
 import deliveriesRoutes from './modules/deliveries.routes';
 import traceabilityRoutes from './modules/traceability.routes';
+import scalesRoutes from './modules/scales.routes';
+import labelsRoutes from './modules/labels.routes';
 import prisma from './shared/database/prisma';
 import redis from './shared/redis/redis';
 
@@ -65,16 +67,27 @@ if (config.env !== 'production') {
   setupSwagger(app);
 }
 
-// Mount REST API endpoints
-app.use('/api/auth', authRoutes);
-app.use('/api/farmers', farmersRoutes);
-app.use('/api/weighing', weighingRoutes);
-app.use('/api/sorting', sortingRoutes);
-app.use('/api/pallets', palletsRoutes);
-app.use('/api/packaging', packagingRoutes);
-app.use('/api/warehouse', warehouseRoutes);
-app.use('/api/deliveries', deliveriesRoutes);
-app.use('/api/traceability', traceabilityRoutes);
+// Mount REST API endpoints (v1)
+const apiV1Router = express.Router();
+apiV1Router.use('/auth', authRoutes);
+apiV1Router.use('/farmers', farmersRoutes);
+apiV1Router.use('/weighing', weighingRoutes);
+apiV1Router.use('/sorting', sortingRoutes);
+apiV1Router.use('/pallets', palletsRoutes);
+apiV1Router.use('/packaging', packagingRoutes);
+apiV1Router.use('/warehouse', warehouseRoutes);
+apiV1Router.use('/deliveries', deliveriesRoutes);
+apiV1Router.use('/traceability', traceabilityRoutes);
+apiV1Router.use('/scales', scalesRoutes);
+apiV1Router.use('/labels', labelsRoutes);
+apiV1Router.get('/health', async (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Canonical versioned route
+app.use('/api/v1', apiV1Router);
+// Backward compatibility alias
+app.use('/api', apiV1Router);
 
 // 404 handler
 app.use((req, res) => {

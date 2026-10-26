@@ -31,6 +31,7 @@ router.get('/queue', async (req, res): Promise<void> => {
         grossWeightKg: w.grossWeightKg,
         netWeightKg: w.netWeightKg,
         approvedAt: w.approvedAt,
+        createdAt: w.createdAt,
       })),
     });
   } catch (err: any) {
@@ -274,6 +275,7 @@ router.get('/batches', async (req, res): Promise<void> => {
         shrinkagePct: b.shrinkagePct,
         pallets: b.pallets.map((p) => p.code),
         sortedAt: b.sortedAt,
+        createdAt: b.sortedAt,
       })),
     });
   } catch (err: any) {

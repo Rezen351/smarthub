@@ -35,6 +35,30 @@ export const config = {
   logging: {
     level: process.env.LOG_LEVEL || 'info',
   },
+
+  scales: {
+    station01: {
+      id: '01',
+      name: 'Station 01 Reception Floor Scale',
+      capacityKg: 150,
+      host: process.env.SCALE_STATION_01_HOST || '192.168.1.100',
+      port: parseInt(process.env.SCALE_STATION_01_PORT || '502', 10),
+    },
+    station02: {
+      id: '02',
+      name: 'Station 02 Sorting Floor Scale',
+      capacityKg: 100,
+      host: process.env.SCALE_STATION_02_HOST || '192.168.1.101',
+      port: parseInt(process.env.SCALE_STATION_02_PORT || '502', 10),
+    },
+    station03: {
+      id: '03',
+      name: 'Station 03 Packaging Bench Scale',
+      capacityKg: 30,
+      host: process.env.SCALE_STATION_03_HOST || '192.168.1.102',
+      port: parseInt(process.env.SCALE_STATION_03_PORT || '502', 10),
+    },
+  },
 };
 
 export const isDevelopment = config.env === 'development';

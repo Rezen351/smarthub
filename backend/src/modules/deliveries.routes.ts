@@ -49,6 +49,7 @@ router.get('/', async (req, res): Promise<void> => {
         packageCount: d.packages.length,
         totalWeightKg: parseFloat(d.packages.reduce((sum, p) => sum + p.weightKg, 0).toFixed(2)),
         departedAt: d.departedAt,
+        createdAt: d.createdAt,
         packages: d.packages,
       })),
     });

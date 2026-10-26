@@ -71,6 +71,7 @@ router.get('/overview', async (req, res): Promise<void> => {
             grossWeightKg: w.grossWeightKg,
             netWeightKg: w.netWeightKg,
             approvedAt: w.approvedAt,
+            createdAt: w.createdAt,
           })),
         },
         palletStaging,
