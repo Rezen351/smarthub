@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../services/api'
+import { formatSafeDate, formatSafeTime } from '../lib/utils'
 
 export interface BufferWaringItem {
   id: string
@@ -123,49 +124,56 @@ export function usePackhouseStore() {
         nextStore.bufferWarings = waringsRes.value.map((w: any) => ({
           id: w.id,
           code: w.code,
-          farmerId: w.farmer?.id,
-          farmerName: w.farmer?.name || 'Ahmad Santoso',
-          farmerVillage: w.farmer?.village || 'Desa Sumber Brantas',
+          farmerId: w.farmerId || w.farmer?.id,
+          farmerName: w.farmerName || w.farmer?.name || 'Farmer',
+          farmerVillage: w.farmerVillage || w.farmer?.village || '',
           grossWeightKg: Number(w.grossWeightKg),
-          intakeTime: new Date(w.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          date: new Date(w.createdAt).toISOString().slice(0, 10),
+          intakeTime: formatSafeTime(w.createdAt || w.approvedAt),
+          date: formatSafeDate(w.createdAt || w.approvedAt),
           status: w.status === 'SORTED' ? 'SORTED' : 'BUFFER_WAITING',
         }))
       }
 
       if (batchesRes.status === 'fulfilled' && Array.isArray(batchesRes.value)) {
-        nextStore.sortedBatches = batchesRes.value.map((b: any) => ({
-          id: b.id,
-          palletCode: b.pallets?.[0]?.code || b.batchCode,
-          waringCode: b.waring?.code || '',
-          farmerName: b.waring?.farmer?.name || 'Ahmad Santoso',
-          farmerVillage: b.waring?.farmer?.village || 'Desa Sumber Brantas',
-          grossIntakeKg: Number(b.grossWeightKg),
-          washingRecord: b.washingRecord,
-          gradeAKg: Number(b.gradeAKg),
-          gradeAPalletQr: b.pallets?.find((p: any) => p.grade?.code === 'A')?.code || 'PLT-GRD-A',
-          gradeBKg: Number(b.gradeBKg),
-          gradeBPalletQr: b.pallets?.find((p: any) => p.grade?.code === 'B')?.code || 'PLT-GRD-B',
-          gradeCKg: Number(b.gradeCKg),
-          gradeCPalletQr: b.pallets?.find((p: any) => p.grade?.code === 'C')?.code || 'PLT-GRD-C',
-          totalGradedKg: Number(b.totalGradedKg),
-          shrinkageKg: Number(b.shrinkageKg),
-          shrinkagePct: Number(b.shrinkagePct),
-          timestamp: new Date(b.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        }))
+        nextStore.sortedBatches = batchesRes.value.map((b: any) => {
+          const gA = Number(b.gradeA_Kg ?? b.gradeAKg ?? 0)
+          const gB = Number(b.gradeB_Kg ?? b.gradeBKg ?? 0)
+          const gC = Number(b.gradeC_Kg ?? b.gradeCKg ?? 0)
+          const totalGraded = b.totalGradedKg ? Number(b.totalGradedKg) : gA + gB + gC
+
+          return {
+            id: b.id,
+            palletCode: (Array.isArray(b.pallets) ? b.pallets[0] : b.batchCode) || 'PLT-BATCH',
+            waringCode: b.waringCode || b.waring?.code || '',
+            farmerName: b.farmerName || b.waring?.farmer?.name || 'Farmer',
+            farmerVillage: b.farmerVillage || b.waring?.farmer?.village || '',
+            grossIntakeKg: Number(b.grossWeightKg),
+            washingRecord: b.washDecision || b.washingRecord || 'WASHED',
+            gradeAKg: gA,
+            gradeAPalletQr: (Array.isArray(b.pallets) && b.pallets[0]) || 'PLT-GRD-A',
+            gradeBKg: gB,
+            gradeBPalletQr: (Array.isArray(b.pallets) && b.pallets[1]) || 'PLT-GRD-B',
+            gradeCKg: gC,
+            gradeCPalletQr: (Array.isArray(b.pallets) && b.pallets[2]) || 'PLT-GRD-C',
+            totalGradedKg: totalGraded,
+            shrinkageKg: Number(b.shrinkageKg ?? 0),
+            shrinkagePct: Number(b.shrinkagePct ?? 0),
+            timestamp: formatSafeTime(b.createdAt || b.sortedAt),
+          }
+        })
       }
 
       if (packagingRes.status === 'fulfilled' && Array.isArray(packagingRes.value)) {
         nextStore.finishedStock = packagingRes.value.map((p: any) => ({
           id: p.id,
-          code: p.unitCode,
-          packageType: (p.packageType?.name || '1 kg Pouch') as any,
-          mode: p.packageType?.category === 'BULK' ? 'BULK_EXPORT' : 'RETAIL_POUCH',
-          grade: (p.pallet?.grade?.code || 'A') as any,
+          code: p.code || p.unitCode,
+          packageType: (p.format?.includes('Carton') || p.format === 'EXPORT_CARTON' ? '10 kg Export Carton' : '1 kg Pouch') as any,
+          mode: p.format?.includes('Carton') || p.format === 'EXPORT_CARTON' ? 'BULK_EXPORT' : 'RETAIL_POUCH',
+          grade: (p.grade || 'A') as any,
           units: 1,
-          weightKg: Number(p.netWeightKg),
-          totalWeightKg: Number(p.netWeightKg),
-          packedTime: new Date(p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          weightKg: Number(p.weightKg || p.netWeightKg || 1),
+          totalWeightKg: Number(p.weightKg || p.netWeightKg || 1),
+          packedTime: formatSafeTime(p.createdAt),
           storageLocation: p.storageLocation || 'Finished Goods Bay',
         }))
       }
@@ -176,11 +184,11 @@ export function usePackhouseStore() {
           truckPlate: d.truckPlate,
           destination: d.destination,
           driver: d.driverName,
-          units: d.items?.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0) || 0,
+          units: d.items?.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0) || (d.packageCount || 0),
           grade: 'A',
           status: d.status,
-          time: new Date(d.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          date: new Date(d.createdAt).toISOString().slice(0, 10),
+          time: formatSafeTime(d.createdAt || d.departedAt),
+          date: formatSafeDate(d.createdAt || d.departedAt),
         }))
       }
 

@@ -736,6 +736,7 @@ export default function PackagingPage() {
             {/* Left: Scale 03 Live Terminal (7 cols) */}
             <div className="lg:col-span-7 space-y-4">
               <ScaleWeightInput
+                stationId="03"
                 value={currentWeight}
                 onChange={setCurrentWeight}
                 capacityKg={packagingMode === 'RETAIL_POUCH' ? 5 : 60}
@@ -765,21 +766,6 @@ export default function PackagingPage() {
                     {isWithinTolerance ? 'In Tolerance' : 'Outside Tolerance'}
                   </Badge>
                 </div>
-              </div>
-
-              {/* Quick simulation buttons */}
-              <div className="flex gap-2">
-                <span className="text-xs text-muted-foreground self-center mr-1">Quick Test:</span>
-                {(packagingMode === 'RETAIL_POUCH' ? ['0.998', '1.000', '1.002', '1.020'] : ['9.98', '10.00', '10.02', '10.20']).map((sw) => (
-                  <button
-                    key={sw}
-                    type="button"
-                    onClick={() => setCurrentWeight(sw)}
-                    className="px-2 py-0.5 text-xs font-mono border border-border bg-card hover:bg-muted cursor-pointer"
-                  >
-                    {sw} kg
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -1204,10 +1190,10 @@ export default function PackagingPage() {
               </div>
             </div>
 
-            {/* Quick Test Pallets in Modal */}
+            {/* Active Pallet Shortcuts */}
             <div className="pt-2 border-t border-border space-y-1.5">
               <p className="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">
-                Select Pallet to Simulate Scan:
+                Active Staged Pallets:
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {availablePallets.map((p) => (

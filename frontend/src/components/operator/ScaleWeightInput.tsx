@@ -1,34 +1,29 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Badge from '../shared/Badge'
 import Button from '../shared/Button'
 import { Field, Input } from '../shared/Form'
 import Icon from '../shared/Icon'
 import { useToast } from '../feedback/Toast'
 import { formatWeight } from '../../lib/utils'
+import { api } from '../../services/api'
 
 /**
- * Weight input with Auto (live scale) and Manual modes — laporan.pdf §9.6.
+ * Weight input with Auto (live Modbus TCP scale) and Manual modes.
  *
- * Auto mode renders a large live readout (refresh ±250 ms), detects stability
- * (±20 g held for ±2 s), shows the scale address and connection state, and
- * falls back to manual input when the reading times out. Manual mode is a
- * plain numeric field with a numeric keypad.
- *
- * Backend Modbus TCP polling is out of scope for the UI; the live reading is
- * simulated locally until the scale API is connected.
+ * Auto mode queries live telemetry via Express gateway /api/scales/:stationId/weight,
+ * which reads the actual holding registers (40001-40031) from the Modbus TCP transmitter.
+ * Stability bit 0x0010 and hardware Tare/Zero are fully supported.
  */
 
 const MODE_KEY = 'enyx.scale-mode'
-const POLL_MS = 250
-const STABILITY_THRESHOLD_KG = 0.02
-const STABILITY_WINDOW_MS = 2000
-const SCALE_ADDRESS = '192.168.1.50:502'
+const POLL_MS = 600
 
 type Mode = 'auto' | 'manual'
 type Connection = 'connected' | 'reconnecting' | 'disconnected'
 
 interface ScaleWeightInputProps {
   id?: string
+  stationId?: '01' | '02' | '03' | string
   label?: string
   hint?: string
   error?: string
@@ -55,6 +50,7 @@ function formatKg(value: number) {
 
 export default function ScaleWeightInput({
   id = 'weight',
+  stationId = '01',
   label = 'Weight (kg)',
   hint,
   error,
@@ -67,10 +63,15 @@ export default function ScaleWeightInput({
   const [mode, setMode] = useState<Mode>(readMode)
   const [connection, setConnection] = useState<Connection>('connected')
   const [reading, setReading] = useState(0)
-  const [stableSince, setStableSince] = useState<number | null>(null)
+  const [scaleAddress, setScaleAddress] = useState(() => {
+    if (stationId === '02') return '192.168.1.101:502'
+    if (stationId === '03') return '192.168.1.102:502'
+    return '192.168.1.100:502'
+  })
+  const [isStable, setIsStable] = useState(false)
   const [lastReadingAt, setLastReadingAt] = useState(() => new Date())
   const [flash, setFlash] = useState(false)
-  const simulatedTarget = useRef(0)
+  const [tarePending, setTarePending] = useState(false)
   const toast = useToast()
 
   /* Persist the chosen mode per station (session-level preference). */
@@ -83,46 +84,57 @@ export default function ScaleWeightInput({
     if (mode === 'manual') setConnection('disconnected')
   }, [mode])
 
-  /* Simulated live scale reading: converges toward a weight on the platform. */
+  /* Live Modbus TCP Telemetry Polling */
   useEffect(() => {
     if (mode !== 'auto') return
-    setConnection('connected')
-    if (simulatedTarget.current === 0) {
-      simulatedTarget.current = Number((Math.random() * 12 + 1).toFixed(3))
+
+    let isSubscribed = true
+    let isPolling = false
+    let timerId: number
+
+    const pollScale = async (): Promise<boolean> => {
+      if (isPolling || !isSubscribed) return false
+      isPolling = true
+      try {
+        const res = await api.scales.getWeight(stationId)
+        if (!isSubscribed) return false
+
+        if (res && res.data) {
+          const telemetry = res.data
+          setReading(telemetry.weightKg ?? 0)
+          setIsStable(Boolean(telemetry.isStable))
+          setScaleAddress(`${telemetry.ip}:${telemetry.port}`)
+          setConnection(telemetry.online ? 'connected' : 'reconnecting')
+          setLastReadingAt(new Date(telemetry.timestamp || Date.now()))
+          return true
+        }
+        return false
+      } catch {
+        if (isSubscribed) {
+          setConnection('reconnecting')
+        }
+        return false
+      } finally {
+        isPolling = false
+      }
     }
 
-    const timer = window.setInterval(() => {
-      const drift = (Math.random() - 0.5) * 0.06
-      setReading((current) => {
-        const next = Math.max(0, current + (simulatedTarget.current - current) * 0.08 + drift)
-        return Number(next.toFixed(3))
-      })
-      setLastReadingAt(new Date())
-    }, POLL_MS)
+    const scheduleNext = (delayMs: number) => {
+      if (!isSubscribed) return
+      timerId = window.setTimeout(async () => {
+        const ok = await pollScale()
+        scheduleNext(ok ? POLL_MS : 1500)
+      }, delayMs)
+    }
+
+    // Immediate first poll, then schedule
+    pollScale().then((ok) => scheduleNext(ok ? POLL_MS : 1500))
 
     return () => {
-      window.clearInterval(timer)
+      isSubscribed = false
+      window.clearTimeout(timerId)
     }
-  }, [mode])
-
-  /* Stability detection */
-  useEffect(() => {
-    if (mode !== 'auto') return
-    const stable = Math.abs(reading - simulatedTarget.current) < STABILITY_THRESHOLD_KG
-    if (!stable) {
-      setStableSince(null)
-      return
-    }
-    const started = stableSince ?? Date.now()
-    if (started !== stableSince) setStableSince(started)
-    if (Date.now() - started >= STABILITY_WINDOW_MS) setFlash(true)
-  }, [reading, mode, stableSince])
-
-  const isStable =
-    mode === 'auto' &&
-    connection === 'connected' &&
-    stableSince !== null &&
-    Date.now() - stableSince >= STABILITY_WINDOW_MS
+  }, [mode, stationId])
 
   const numericValue = Number(value)
   const withinTarget =
@@ -133,7 +145,8 @@ export default function ScaleWeightInput({
   const useReading = useCallback(() => {
     onChange(formatKg(reading))
     toast.success(`Weight locked at ${formatKg(reading)} kg`)
-    setFlash(false)
+    setFlash(true)
+    setTimeout(() => setFlash(false), 500)
   }, [onChange, reading, toast])
 
   const remaining = useMemo(() => {
@@ -141,12 +154,28 @@ export default function ScaleWeightInput({
     return Number((targetKg - numericValue).toFixed(3))
   }, [numericValue, targetKg])
 
-  const setPlatformWeight = useCallback(() => {
-    simulatedTarget.current = Number((Math.random() * 40 + 5).toFixed(3))
-    setReading(simulatedTarget.current)
-    setStableSince(null)
-    setFlash(false)
-  }, [])
+  /* Hardware Tare via Modbus TCP */
+  const handleTare = useCallback(async () => {
+    setTarePending(true)
+    try {
+      await api.scales.tare(stationId)
+      toast.success('Scale tared via Modbus TCP (offset zeroed)')
+    } catch (err: any) {
+      toast.error('Tare command failed: ' + (err.message || 'Scale unreachable'))
+    } finally {
+      setTarePending(false)
+    }
+  }, [stationId, toast])
+
+  /* Hardware Zero via Modbus TCP */
+  const handleZero = useCallback(async () => {
+    try {
+      await api.scales.zero(stationId)
+      toast.success('Scale zeroed via Modbus TCP')
+    } catch (err: any) {
+      toast.error('Zero command failed: ' + (err.message || 'Scale unreachable'))
+    }
+  }, [stationId, toast])
 
   return (
     <div className="stack-md">
@@ -160,7 +189,7 @@ export default function ScaleWeightInput({
             onChange={() => setMode('auto')}
           />
           <Icon name="flash" size={15} />
-          Auto
+          Auto (Modbus TCP)
         </label>
         <label className={`radio-card ${mode === 'manual' ? 'is-active' : ''}`}>
           <input
@@ -171,7 +200,7 @@ export default function ScaleWeightInput({
             onChange={() => setMode('manual')}
           />
           <Icon name="edit" size={15} />
-          Manual
+          Manual Keypad
         </label>
       </div>
 
@@ -181,7 +210,7 @@ export default function ScaleWeightInput({
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
                 <p className="t-caption" style={{ opacity: 0.75 }}>
-                  Live reading
+                  Modbus TCP Telemetry · Station {stationId}
                 </p>
                 <p className="scale-value">
                   {formatKg(reading)}
@@ -189,11 +218,15 @@ export default function ScaleWeightInput({
                 </p>
               </div>
               <div className="stack stack-xs" style={{ alignItems: 'flex-end' }}>
-                <Badge tone={connection === 'connected' ? 'success' : connection === 'reconnecting' ? 'warning' : 'neutral'} dot live={connection === 'connected'}>
-                  {connection === 'connected' ? 'Live' : connection === 'reconnecting' ? 'Reconnecting' : 'No signal'}
+                <Badge
+                  tone={connection === 'connected' ? 'success' : connection === 'reconnecting' ? 'warning' : 'neutral'}
+                  dot
+                  live={connection === 'connected'}
+                >
+                  {connection === 'connected' ? 'Modbus Online' : connection === 'reconnecting' ? 'Reconnecting' : 'Offline'}
                 </Badge>
-                <span className="t-caption mono" style={{ opacity: 0.7 }}>
-                  {SCALE_ADDRESS}
+                <span className="t-caption mono font-bold" style={{ opacity: 0.85 }}>
+                  {scaleAddress}
                 </span>
                 <span className="t-caption" style={{ opacity: 0.7 }}>
                   Updated {lastReadingAt.toLocaleTimeString('en-GB')}
@@ -203,9 +236,9 @@ export default function ScaleWeightInput({
             <div className="scale-meta">
               <span className="flex items-center gap-1">
                 <Icon name={isStable ? 'check-circle' : 'refresh'} size={13} />
-                {isStable ? 'Stable value' : 'Waiting for stable value…'}
+                {isStable ? 'Weight Stable (Bit 0x0010)' : 'Reading settling…'}
               </span>
-              <span>±{STABILITY_THRESHOLD_KG * 1000} g / {STABILITY_WINDOW_MS / 1000} s</span>
+              <span>Max Capacity {capacityKg} kg</span>
             </div>
           </div>
 
@@ -230,12 +263,25 @@ export default function ScaleWeightInput({
               </div>
             )}
 
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
               <Button variant="primary" icon="check" disabled={!isStable} onClick={useReading}>
-                Use This Value
+                Lock & Use Value
               </Button>
-              <Button variant="outline" icon="refresh" onClick={setPlatformWeight}>
-                Simulate Load
+              <Button
+                variant="outline"
+                icon="scale"
+                disabled={tarePending || connection !== 'connected'}
+                onClick={handleTare}
+              >
+                Tare (Offset)
+              </Button>
+              <Button
+                variant="ghost"
+                icon="refresh"
+                disabled={connection !== 'connected'}
+                onClick={handleZero}
+              >
+                Zero
               </Button>
             </div>
           </div>
@@ -268,7 +314,7 @@ export default function ScaleWeightInput({
         <Field
           label={label}
           htmlFor={id}
-          hint={hint ?? 'Locked from the live scale reading, or edit manually.'}
+          hint={hint ?? 'Locked from the live Modbus TCP scale reading, or edit manually.'}
           error={error ?? (overCapacity ? `Weight exceeds scale capacity of ${capacityKg} kg.` : undefined)}
         >
           <Input

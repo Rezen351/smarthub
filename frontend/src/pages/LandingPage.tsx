@@ -1401,7 +1401,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="font-display text-4xl mb-2 text-[#171717]">SCHEDULE A SMART HUB DEMO</h3>
                 <p className="text-[#666666] text-sm mb-8 font-body">
-                  Schedule an on-site evaluation, scale transmitter configuration test, and simulated GS1 packaging workflow.
+                  Schedule an on-site evaluation, scale transmitter configuration test, and live GS1 packaging workflow.
                 </p>
 
                 <form onSubmit={handleBookingSubmit} className="space-y-6">

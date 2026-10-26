@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Card from '../components/shared/Card'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
@@ -7,6 +7,7 @@ import PageHeader from '../components/shared/PageHeader'
 import StatCard from '../components/shared/StatCard'
 import { useToast } from '../components/feedback/Toast'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
+import { api } from '../services/api'
 
 interface Stat {
   label: string
@@ -16,35 +17,73 @@ interface Stat {
   icon: IconName
 }
 
-const stats: Stat[] = [
-  { label: 'Total Farmers', value: '128', sub: '+6 this week', trend: 'up', icon: 'users' },
-  { label: 'Total Warings', value: '1,245', sub: 'Since go-live', trend: 'up', icon: 'box' },
-  { label: 'Total Weighing (kg)', value: '45,670', sub: 'Approved records', trend: 'up', icon: 'scale' },
-  { label: 'Total Deliveries', value: '89', sub: '12 in transit', trend: 'neutral', icon: 'truck' },
-]
-
-const weekly = [
-  { day: 'Mon', kg: 420 },
-  { day: 'Tue', kg: 610 },
-  { day: 'Wed', kg: 380 },
-  { day: 'Thu', kg: 720 },
-  { day: 'Fri', kg: 540 },
-  { day: 'Sat', kg: 260 },
-  { day: 'Sun', kg: 180 },
-]
-
-const maxKg = Math.max(...weekly.map((item) => item.kg))
-
-const grades = [
-  { grade: 'A', kg: 19800, share: 43 },
-  { grade: 'B', kg: 16200, share: 36 },
-  { grade: 'C', kg: 9670, share: 21 },
-]
-
 export default function ReportsPage() {
   const toast = useToast()
   const [range, setRange] = useState('7d')
+  const [farmerCount, setFarmerCount] = useState<number>(1)
   const { bufferWarings, sortedBatches, finishedStock, deliveries } = usePackhouseStore()
+
+  useEffect(() => {
+    let active = true
+    api.farmers.list()
+      .then((data) => {
+        if (active && Array.isArray(data)) {
+          setFarmerCount(data.length)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
+
+  /* Dynamic Aggregate Statistics */
+  const totalWaringsCount = bufferWarings.length
+  const totalWeighedKg = bufferWarings.reduce((sum, w) => sum + (Number(w.grossWeightKg) || 0), 0)
+  const totalDeliveriesCount = deliveries.length
+
+  const stats: Stat[] = useMemo(() => [
+    { label: 'Total Farmers', value: farmerCount.toLocaleString('en-US'), sub: 'Registered farmers', trend: 'up', icon: 'users' },
+    { label: 'Total Warings', value: totalWaringsCount.toLocaleString('en-US'), sub: 'Intake sacks recorded', trend: 'up', icon: 'box' },
+    { label: 'Total Weighing (kg)', value: totalWeighedKg.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), sub: 'Live platform scales', trend: 'up', icon: 'scale' },
+    { label: 'Total Deliveries', value: totalDeliveriesCount.toLocaleString('en-US'), sub: 'Outbound dispatches', trend: 'neutral', icon: 'truck' },
+  ], [farmerCount, totalWaringsCount, totalWeighedKg, totalDeliveriesCount])
+
+  /* Dynamic Weekly Intake by Day */
+  const weekly = useMemo(() => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const dayMap: Record<string, number> = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 }
+    bufferWarings.forEach((w) => {
+      if (w.date) {
+        const d = new Date(w.date)
+        if (!isNaN(d.getTime())) {
+          const dayName = days[d.getDay()]
+          if (dayName && dayMap[dayName] !== undefined) {
+            dayMap[dayName] += Number(w.grossWeightKg) || 0
+          }
+        }
+      }
+    })
+    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => ({
+      day,
+      kg: Math.round(dayMap[day] || 0),
+    }))
+  }, [bufferWarings])
+
+  const maxKg = Math.max(1, ...weekly.map((item) => item.kg))
+
+  /* Dynamic Grade Distribution */
+  const grades = useMemo(() => {
+    const totalA = sortedBatches.reduce((sum, b) => sum + (Number(b.gradeAKg) || 0), 0)
+    const totalB = sortedBatches.reduce((sum, b) => sum + (Number(b.gradeBKg) || 0), 0)
+    const totalC = sortedBatches.reduce((sum, b) => sum + (Number(b.gradeCKg) || 0), 0)
+    const totalGraded = totalA + totalB + totalC
+    return [
+      { grade: 'A', kg: Math.round(totalA), share: totalGraded > 0 ? Math.round((totalA / totalGraded) * 100) : 0 },
+      { grade: 'B', kg: Math.round(totalB), share: totalGraded > 0 ? Math.round((totalB / totalGraded) * 100) : 0 },
+      { grade: 'C', kg: Math.round(totalC), share: totalGraded > 0 ? Math.round((totalC / totalGraded) * 100) : 0 },
+    ]
+  }, [sortedBatches])
 
   const handleExportCsv = () => {
     const rows = [
@@ -184,10 +223,10 @@ export default function ReportsPage() {
       <Card title="Operations summary" subtitle="Volume per station">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md">
           {[
-            { label: 'Receiving', value: '214 weighings', icon: 'scale' as IconName },
-            { label: 'Sorting', value: '186 grade groups', icon: 'sortir' as IconName },
-            { label: 'Packing', value: '1,120 pouches', icon: 'package' as IconName },
-            { label: 'Warehouse', value: '78% capacity', icon: 'box' as IconName },
+            { label: 'Receiving', value: `${bufferWarings.length} weighings`, icon: 'scale' as IconName },
+            { label: 'Sorting', value: `${sortedBatches.length} batches`, icon: 'sortir' as IconName },
+            { label: 'Packing', value: `${finishedStock.length} units`, icon: 'package' as IconName },
+            { label: 'Warehouse', value: `${Math.min(100, Math.round((totalWeighedKg / 3000) * 100))}% capacity`, icon: 'box' as IconName },
           ].map((item) => (
             <div key={item.label} className="row gap-md">
               <span className="icon-tile icon-tile-accent">

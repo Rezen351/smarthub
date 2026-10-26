@@ -5,7 +5,7 @@ import Card from '../components/shared/Card'
 import Icon, { type IconName } from '../components/shared/Icon'
 import EmptyState from '../components/shared/EmptyState'
 import { Skeleton } from '../components/ui/skeleton'
-import { farmerSummary as mockFarmerSummary } from '../mock/farmerSummary'
+import { api } from '../services/api'
 
 interface CommodityStat {
   commodityId: string
@@ -46,19 +46,26 @@ export default function FarmerDashboardHome() {
     const fetchSummary = async () => {
       try {
         setLoading(true)
-        const farmerId = user.farmerId || user.id
-        const res = await fetch(`/api/farmers/${farmerId}/summary`, { signal: controller.signal })
-        if (res.ok) {
-          const result = await res.json()
-          if (result.success) {
-            setSummary(result.data)
-            return
-          }
+        const farmerId = user.farmerId || user.id || 'FMR-001'
+        const data = await api.farmers.summary(farmerId)
+        if (data) {
+          setSummary(data)
+          return
         }
-        setSummary(mockFarmerSummary)
+        setSummary({
+          farmerId: user.id || 'farmer-1',
+          farmerName: user.name || 'Ahmad Santoso',
+          totalDeposited: 0,
+          commodities: [],
+        })
       } catch (err) {
         if ((err as Error).name === 'AbortError') return
-        setSummary(mockFarmerSummary)
+        setSummary({
+          farmerId: user.id || 'farmer-1',
+          farmerName: user.name || 'Ahmad Santoso',
+          totalDeposited: 0,
+          commodities: [],
+        })
       } finally {
         if (!controller.signal.aborted) setLoading(false)
       }

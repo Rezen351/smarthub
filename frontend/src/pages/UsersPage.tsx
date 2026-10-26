@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import Card from '../components/shared/Card'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
@@ -8,6 +8,7 @@ import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
 import ConfirmDialog from '../components/feedback/ConfirmDialog'
 import { useToast } from '../components/feedback/Toast'
+import { api } from '../services/api'
 
 type Role = 'ADMIN' | 'OPERATOR' | 'FARMER'
 
@@ -31,19 +32,29 @@ const ROLE_TONE: Record<Role, 'neutral' | 'accent' | 'success' | 'warning'> = {
   FARMER: 'success',
 }
 
-const INITIAL_USERS: User[] = [
-  { id: '1', name: 'System Admin', email: 'admin@enyx.local', role: 'ADMIN', status: 'ACTIVE' },
-  { id: '2', name: 'Plant Operator', email: 'operator@enyx.local', role: 'OPERATOR', status: 'ACTIVE' },
-  { id: '3', name: 'Ahmad Santoso (Farmer)', email: 'farmer@enyx.local', role: 'FARMER', status: 'ACTIVE' },
-]
-
 export default function UsersPage() {
   const toast = useToast()
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS)
+  const [users, setUsers] = useState<User[]>([])
   const [search, setSearch] = useState('')
   const [form, setForm] = useState({ name: '', email: '', role: 'OPERATOR' as Role })
   const [formOpen, setFormOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<User | null>(null)
+
+  useEffect(() => {
+    let active = true
+    api.auth.users()
+      .then((data) => {
+        if (active && Array.isArray(data)) {
+          setUsers(data)
+        }
+      })
+      .catch(() => {
+        // Fallback or offline
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -56,7 +67,7 @@ export default function UsersPage() {
     )
   }, [search, users])
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim() || !form.email.trim()) {
       toast.error('Name and email are required.')
@@ -66,26 +77,31 @@ export default function UsersPage() {
       toast.error('That email is already registered.')
       return
     }
-    setUsers([
-      ...users,
-      {
-        id: String(Date.now()),
+    try {
+      const created = await api.auth.createUser({
         name: form.name.trim(),
         email: form.email.trim(),
         role: form.role,
-        status: 'ACTIVE',
-      },
-    ])
-    setForm({ name: '', email: '', role: form.role })
-    setFormOpen(false)
-    toast.success('User account created.')
+      })
+      setUsers((prev) => [...prev, created])
+      setForm({ name: '', email: '', role: form.role })
+      setFormOpen(false)
+      toast.success('User account created in database.')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create user account.')
+    }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!confirmDelete) return
-    setUsers((current) => current.filter((user) => user.id !== confirmDelete.id))
-    toast.success(`User ${confirmDelete.name} deleted — sessions invalidated.`)
-    setConfirmDelete(null)
+    try {
+      await api.auth.deleteUser(confirmDelete.id)
+      setUsers((current) => current.filter((user) => user.id !== confirmDelete.id))
+      toast.success(`User ${confirmDelete.name} deleted — sessions invalidated.`)
+      setConfirmDelete(null)
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete user.')
+    }
   }
 
   const columns: Column<User>[] = [

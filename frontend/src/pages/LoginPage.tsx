@@ -5,9 +5,9 @@ import Logo from '../components/shared/Logo'
 import Icon, { type IconName } from '../components/shared/Icon'
 
 const demoAccounts = [
-  { email: 'admin@enyx.local', role: 'System Admin', desc: 'Master Ledger & Admin' },
-  { email: 'operator@enyx.local', role: 'Plant Operator', desc: 'Workstation Hub & Operations' },
-  { email: 'farmer@enyx.local', role: 'Farmer', desc: 'Deposits & Farmer QR' },
+  { email: 'admin@enyx.local', role: 'System Admin', desc: 'Master Ledger & Admin', password: 'admin123' },
+  { email: 'operator@enyx.local', role: 'Plant Operator', desc: 'Workstation Hub & Operations', password: 'operator123' },
+  { email: 'farmer@enyx.local', role: 'Farmer', desc: 'Deposits & Farmer QR', password: 'farmer123' },
 ]
 
 const getRoleIcon = (role: string): IconName => {
@@ -227,7 +227,7 @@ export default function LoginPage() {
               <div className="flex items-center justify-between mb-3">
                 <span className="font-mono-custom text-[11px] text-[#15803d] tracking-[0.2em] uppercase font-semibold flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 bg-[#229856]"></span>
-                  AUTHORIZED STATIONS (PW: PASSWORD)
+                  AUTHORIZED STATIONS (AUTO-FILL CREDENTIALS)
                 </span>
                 <span className="font-mono-custom text-[10px] text-[#999999] uppercase tracking-wider">
                   CLICK TO AUTO-FILL
@@ -241,7 +241,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => {
                       setEmail(account.email)
-                      setPassword('password')
+                      setPassword(account.password)
                     }}
                     className="p-3 rounded-none border border-[#eaeaea] bg-[#fafafa] hover:border-[#229856] hover:bg-[#f0fdf4] text-left transition-all cursor-pointer group flex items-start gap-3"
                   >

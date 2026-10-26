@@ -53,6 +53,7 @@ function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/traceability" element={<PublicTraceabilityPage />} />
+      <Route path="/traceability/:code" element={<PublicTraceabilityPage />} />
       <Route
         path="/dashboard"
         element={

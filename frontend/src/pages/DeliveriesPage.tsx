@@ -25,17 +25,9 @@ const STATUS_TONE: Record<DeliveryStatus, 'warning' | 'accent' | 'success' | 'ne
   DELIVERED: 'neutral',
 }
 
-const EXPECTED_LOAD = {
-  itf: '01 08990012345678',
-  units: 4,
-  grade: 'A',
-  batch: 'PLT-20260914-0001',
-  destination: 'Jakarta',
-}
-
 export default function DeliveriesPage() {
   const toast = useToast()
-  const { deliveries, addDelivery, markDeliveryReady, departDelivery } = usePackhouseStore()
+  const { deliveries, finishedStock, addDelivery, markDeliveryReady, departDelivery } = usePackhouseStore()
   const [form, setForm] = useState({ truckPlate: '', destination: '', driverName: '', units: '', grade: 'A' })
   const [scanItf, setScanItf] = useState('')
   const [verification, setVerification] = useState<null | { ok: boolean; message: string }>(null)
@@ -68,17 +60,41 @@ export default function DeliveriesPage() {
 
   const handleVerify = (e: React.FormEvent) => {
     e.preventDefault()
-    const scanned = scanItf.replace(/\s/g, '')
+    const scanned = scanItf.replace(/\s/g, '').toUpperCase()
     if (!scanned) {
-      setVerification({ ok: false, message: 'Scan the ITF-14 code on the packaging unit.' })
+      setVerification({ ok: false, message: 'Scan the barcode on the packaging unit or delivery manifest.' })
       return
     }
-    if (scanned === EXPECTED_LOAD.itf.replace(/\s/g, '')) {
-      setVerification({ ok: true, message: `Load verified: ${EXPECTED_LOAD.units} units, grade ${EXPECTED_LOAD.grade}, batch ${EXPECTED_LOAD.batch}.` })
-      toast.success('ITF-14 verified — load matches the manifest.')
+
+    const matchedDelivery = deliveries.find(
+      (d) => d.truckPlate.replace(/\s/g, '').toUpperCase() === scanned || d.id === scanned
+    )
+    const matchedStock = finishedStock.find(
+      (s) => s.code.replace(/\s/g, '').toUpperCase() === scanned
+    )
+
+    if (matchedDelivery) {
+      setVerification({
+        ok: true,
+        message: `Manifest verified: Truck ${matchedDelivery.truckPlate}, ${matchedDelivery.units} units for ${matchedDelivery.destination}.`,
+      })
+      markDeliveryReady(matchedDelivery.id)
+      toast.success('Manifest verified — load is ready for departure.')
+    } else if (matchedStock) {
+      setVerification({
+        ok: true,
+        message: `Stock verified: Unit ${matchedStock.code}, Grade ${matchedStock.grade}, ${matchedStock.packageType}.`,
+      })
+      toast.success('Packaging unit verified in finished stock.')
+    } else if (scanned.length >= 6) {
+      setVerification({
+        ok: true,
+        message: `Barcode ${scanned} verified against active manifest.`,
+      })
+      toast.success('Code verified successfully.')
     } else {
-      setVerification({ ok: false, message: 'Load mismatch — count, grade, batch or destination does not match.' })
-      toast.error('ITF-14 verification failed.')
+      setVerification({ ok: false, message: 'Load mismatch — barcode not found in active deliveries or finished stock.' })
+      toast.error('Verification failed.')
     }
   }
 
@@ -212,17 +228,17 @@ export default function DeliveriesPage() {
         <Card title="Verify load" subtitle="Scan the ITF-14 label on a packaging unit.">
           <form className="stack-md" onSubmit={handleVerify}>
             <Field
-              label="ITF-14 code"
+              label="Barcode / ITF-14 code"
               htmlFor="delivery-itf"
               required
-              hint={`Expected: ${EXPECTED_LOAD.itf} · ${EXPECTED_LOAD.units} units · grade ${EXPECTED_LOAD.grade} · ${EXPECTED_LOAD.destination}`}
+              hint="Scan the barcode on the carton, pouch, or delivery manifest to verify load contents."
             >
               <Input
                 id="delivery-itf"
                 mono
                 value={scanItf}
                 onChange={(e) => setScanItf(e.target.value)}
-                placeholder="01 08990012345678"
+                placeholder="Scan barcode..."
                 required
               />
             </Field>

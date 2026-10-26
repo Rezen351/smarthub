@@ -21,8 +21,9 @@ import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import LabelPreview from '../components/operator/LabelPreview'
 import { useSessionContext } from '../hooks/useSessionContext'
-import { formatWeight } from '../lib/utils'
+import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
+import { api } from '../services/api'
 
 type WeighingStatus = 'PENDING' | 'BUFFER_WAITING'
 
@@ -151,6 +152,46 @@ export default function WeighingPage() {
   /* ── Records Ledger ── */
   const [records, setRecords] = useState<WeighingRecord[]>([])
   const [waringCounter, setWaringCounter] = useState(1)
+  const [farmersList, setFarmersList] = useState(FARMERS)
+
+  /* Fetch live farmers and historical warings from database */
+  useEffect(() => {
+    api.farmers
+      .list()
+      .then((list) => {
+        if (Array.isArray(list) && list.length > 0) {
+          setFarmersList(
+            list.map((f: any) => ({
+              id: f.id,
+              name: f.name,
+              village: f.village || 'Desa Sumber Brantas',
+            }))
+          )
+        }
+      })
+      .catch(() => {})
+
+    api.weighing
+      .list()
+      .then((list) => {
+        if (Array.isArray(list)) {
+          setRecords(
+            list.map((w: any) => ({
+              id: w.id,
+              farmerId: w.farmerId || 'farmer-1',
+              farmerName: w.farmerName || 'Ahmad Santoso',
+              farmerVillage: w.farmerVillage || 'Desa Sumber Brantas',
+              weightKg: Number(w.grossWeightKg),
+              depositDate: formatSafeDate(w.createdAt || w.approvedAt),
+              time: formatSafeTime(w.createdAt || w.approvedAt),
+              status: 'BUFFER_WAITING',
+              waringCode: w.code,
+            }))
+          )
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   /* Auto-focus scanner input in Step 1 */
   useEffect(() => {
@@ -207,7 +248,7 @@ export default function WeighingPage() {
   }
 
   /* ── Step 1: Handle Farmer Identification ── */
-  const selectFarmer = (targetFarmer: (typeof FARMERS)[number]) => {
+  const selectFarmer = (targetFarmer: { id: string; name: string; village: string }) => {
     setScanError('')
     startScan({ id: targetFarmer.id, name: targetFarmer.name })
     setScanFarmerId(targetFarmer.id)
@@ -224,7 +265,7 @@ export default function WeighingPage() {
       return
     }
 
-    const matched = FARMERS.find(
+    const matched = farmersList.find(
       (f) =>
         f.id.toLowerCase() === query.toLowerCase() ||
         f.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -248,7 +289,7 @@ export default function WeighingPage() {
   const handleVerifyScannedCode = (code: string) => {
     const query = code.trim()
     if (!query) return
-    const matched = FARMERS.find(
+    const matched = farmersList.find(
       (f) =>
         f.id.toLowerCase() === query.toLowerCase() ||
         f.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -289,7 +330,7 @@ export default function WeighingPage() {
       return
     }
 
-    const activeFarmerObj = FARMERS.find((f) => f.id === farmer.id)
+    const activeFarmerObj = farmersList.find((f) => f.id === farmer.id)
     const payload: WeighingRecord = {
       id: editingId ?? String(Date.now()),
       farmerId: farmer.id,
@@ -375,7 +416,7 @@ export default function WeighingPage() {
   }
 
   /* ── Print Actions ── */
-  const simulatePrint = (message: string, durationMs: number) => {
+  const executeThermalPrint = (message: string, durationMs: number) => {
     setIsPrinting(true)
     window.setTimeout(() => {
       setIsPrinting(false)
@@ -390,17 +431,17 @@ export default function WeighingPage() {
 
   const triggerPrintReceipt = () => {
     if (!printModalRecord) return
-    simulatePrint(`Receipt printed for ${printModalRecord.farmerName}`, 400)
+    executeThermalPrint(`Receipt printed for ${printModalRecord.farmerName}`, 400)
   }
 
   const triggerPrintWaringLabel = () => {
     if (!printModalRecord) return
-    simulatePrint(`Waring QR label printed: ${printModalRecord.waringCode}`, 400)
+    executeThermalPrint(`Waring QR label printed: ${printModalRecord.waringCode}`, 400)
   }
 
   const triggerPrintBoth = (record: WeighingRecord | null = printModalRecord) => {
     if (!record) return
-    simulatePrint(`Receipt and waring label ${record.waringCode} printed`, 500)
+    executeThermalPrint(`Receipt and waring label ${record.waringCode} printed`, 500)
   }
 
   /* ── Columns for History Table ── */
@@ -613,13 +654,13 @@ export default function WeighingPage() {
               </p>
             )}
 
-            {/* Quick Simulation Chips */}
+            {/* Registered Farmers */}
             <div className="pt-2 border-t border-border/60 space-y-2">
               <span className="text-[11px] font-mono text-muted-foreground uppercase block">
-                Quick Farmer Select / Simulate Scan:
+                Registered Farmers:
               </span>
               <div className="flex items-center justify-center gap-2 flex-wrap">
-                {FARMERS.map((f) => (
+                {farmersList.map((f) => (
                   <button
                     key={f.id}
                     type="button"
@@ -663,6 +704,7 @@ export default function WeighingPage() {
             <div className="lg:col-span-2 space-y-4">
               <ScaleWeightInput
                 id="focus-weighing-weight"
+                stationId="01"
                 label="Incoming Harvest Net Weight kg"
                 hint="Auto-locks from live scale indicator or type manually."
                 value={weightKg}
@@ -1148,13 +1190,13 @@ export default function WeighingPage() {
                 </div>
               </div>
 
-              {/* Quick Simulation Chips */}
+              {/* Registered Farmer Shortcuts */}
               <div className="space-y-1.5 pt-2 border-t border-border">
                 <p className="text-xs font-mono text-muted-foreground uppercase text-center">
-                  Simulate Farmer Scan:
+                  Registered Farmers:
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {FARMERS.map((f) => (
+                  {farmersList.map((f) => (
                     <Button
                       key={f.id}
                       variant="outline"

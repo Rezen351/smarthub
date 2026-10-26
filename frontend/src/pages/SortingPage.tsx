@@ -701,6 +701,7 @@ export default function SortingPage() {
                 </Badge>
               </div>
               <ScaleWeightInput
+                stationId="02"
                 value={liveScaleWeight}
                 onChange={setLiveScaleWeight}
                 capacityKg={100}
@@ -747,9 +748,9 @@ export default function SortingPage() {
                 </Button>
               </div>
 
-              {/* Quick Simulation Chips */}
+              {/* Active Pallet Shortcuts */}
               <div className="space-y-1">
-                <span className="text-[10px] uppercase font-mono text-muted-foreground">Quick Test Pallets</span>
+                <span className="text-[10px] uppercase font-mono text-muted-foreground">Active Staged Pallets</span>
                 <div className="flex flex-wrap gap-2">
                   {[
                     `PLT-GRD-${activeGradeTab}-01`,

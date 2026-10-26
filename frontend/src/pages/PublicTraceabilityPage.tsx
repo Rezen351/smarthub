@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useParams } from 'react-router-dom'
 import Logo from '../components/shared/Logo'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import Icon from '../components/shared/Icon'
-import { formatWeight } from '../lib/utils'
+import { formatWeight, formatSafeDate, formatSafeDateTime } from '../lib/utils'
 import OfflineQrCode from '../components/shared/OfflineQrCode'
+import { api } from '../services/api'
 
 export type TraceStep = {
   stage: string
@@ -39,182 +40,6 @@ export type TraceResult = {
   journey: TraceStep[]
 }
 
-const PRESET_MOCKS: Record<string, TraceResult> = {
-  'PCH-PLT-20260914-0001-001': {
-    code: 'PCH-PLT-20260914-0001-001',
-    type: 'POUCH',
-    commodity: 'Potato',
-    variety: 'Granola Table Potato',
-    grade: 'A',
-    weightKg: 1,
-    farmerName: 'Ahmad Santoso',
-    farmerId: 'FMR-001',
-    farmLocation: 'Dieng Plateau, Central Java',
-    elevation: '1,450 m ASL',
-    harvestDate: '2026-09-12',
-    intakeDate: '2026-09-14 08:15',
-    packDate: '2026-09-14 10:05',
-    gs1Uri: 'https://id.enyx.io/01/08901234567890/21/PCH-PLT-20260914-0001-001',
-    gtin: '08901234567890',
-    batchLot: 'LOT-20260914-01',
-    serialNumber: 'PCH-001',
-    qualityScore: '98.5 / 100',
-    moisturePercent: '78.2%',
-    journey: [
-      {
-        stage: 'Field Harvest',
-        location: 'Ahmad Santoso Farm (Plot #D-04)',
-        timestamp: '2026-09-12 07:30',
-        operator: 'Ahmad Santoso (Farmer)',
-        completed: true,
-        details: 'Hand-picked, matured tubers, zero rot detected',
-      },
-      {
-        stage: 'Intake Weighing',
-        location: 'Hub Station 01 — Platform Scale',
-        timestamp: '2026-09-14 08:15',
-        operator: 'Marcus Reid (Weighing Operator)',
-        completed: true,
-        details: 'Gross 172.5 kg, Tare 4.5 kg, Net Approved 168.0 kg',
-      },
-      {
-        stage: 'Sorting & Classification',
-        location: 'Sorting Station 01',
-        timestamp: '2026-09-14 09:40',
-        operator: 'Elena Voss (Quality Inspector)',
-        completed: true,
-        details: 'Grade A classification (size > 150g, no green skin, no blight)',
-      },
-      {
-        stage: 'Pouch Packaging',
-        location: 'Packaging Station A — Channel A',
-        timestamp: '2026-09-14 10:05',
-        operator: 'Jiang "Tank" Wei (Packaging Lead)',
-        completed: true,
-        details: 'Retail pack 1.000 kg ± 5g. GS1 Digital Link sticker attached',
-      },
-      {
-        stage: 'Warehouse Inbound',
-        location: 'Central Storage Bin #B-04',
-        timestamp: '2026-09-14 10:30',
-        operator: 'Alex Mercer (Warehouse Lead)',
-        completed: true,
-        details: 'Temperature 8.5°C, humidity 85%, pallet sealed',
-      },
-      {
-        stage: 'Logistics & Dispatch',
-        location: 'Cold-Chain Reefer Truck #TRK-08',
-        timestamp: '2026-09-15 06:00',
-        operator: 'Budi Hartono (Driver)',
-        completed: true,
-        details: 'ITF-14 barcode verified, departing to Supermarket Distribution Center',
-      },
-    ],
-  },
-  'GRD-PLT-20261011-0042-A': {
-    code: 'GRD-PLT-20261011-0042-A',
-    type: 'SORTED_PALLET',
-    commodity: 'Potato',
-    variety: 'Atlantic Processing Potato',
-    grade: 'A',
-    weightKg: 120,
-    farmerName: 'Siti Rahmawati',
-    farmerId: 'FMR-003',
-    farmLocation: 'Pangalengan, West Java',
-    elevation: '1,420 m ASL',
-    harvestDate: '2026-10-10',
-    intakeDate: '2026-10-11 07:45',
-    packDate: '2026-10-11 08:30',
-    gs1Uri: 'https://id.enyx.io/01/08901234567890/10/GRD-PLT-20261011-0042-A',
-    gtin: '08901234567890',
-    batchLot: 'LOT-20261011-0042',
-    serialNumber: 'GRD-PLT-A-042',
-    qualityScore: '99.0 / 100',
-    moisturePercent: '77.8%',
-    journey: [
-      {
-        stage: 'Field Harvest',
-        location: 'Pangalengan Ridge Block 2',
-        timestamp: '2026-10-10 06:45',
-        operator: 'Siti Rahmawati',
-        completed: true,
-        details: 'Chipping potato quality, dry matter > 21%',
-      },
-      {
-        stage: 'Intake Weighing',
-        location: 'Weighing Station 01',
-        timestamp: '2026-10-11 07:45',
-        operator: 'Weighing Station Modbus TCP',
-        completed: true,
-        details: 'Intake pallet verified at 123.0 kg',
-      },
-      {
-        stage: 'Sorting & Classification',
-        location: 'Sorting Area Belt 02',
-        timestamp: '2026-10-11 08:30',
-        operator: 'Quality Inspector #2',
-        completed: true,
-        details: 'Grade A Sorted Pallet generated and sealed',
-      },
-      {
-        stage: 'Warehouse Storage',
-        location: 'Cold Storage Room #2',
-        timestamp: '2026-10-11 09:00',
-        operator: 'Warehouse Ops',
-        completed: true,
-        details: 'Queued for 1 kg retail pouch packaging station',
-      },
-    ],
-  },
-  'PLT-20261011-0042': {
-    code: 'PLT-20261011-0042',
-    type: 'PALLET',
-    commodity: 'Potato',
-    variety: 'Granola Table Potato',
-    grade: 'A/B/C',
-    weightKg: 123,
-    farmerName: 'Bambang Kusuma',
-    farmerId: 'FMR-005',
-    farmLocation: 'Wonosobo Highlands, Central Java',
-    elevation: '1,380 m ASL',
-    harvestDate: '2026-10-10',
-    intakeDate: '2026-10-11 07:20',
-    packDate: 'In Intake Queue',
-    gs1Uri: 'https://id.enyx.io/01/08901234567890/10/PLT-20261011-0042',
-    gtin: '08901234567890',
-    batchLot: 'PLT-20261011-0042',
-    serialNumber: 'PLT-0042',
-    qualityScore: '97.0 / 100',
-    moisturePercent: '79.1%',
-    journey: [
-      {
-        stage: 'Field Harvest',
-        location: 'Wonosobo South Valley Plot #07',
-        timestamp: '2026-10-10 07:00',
-        operator: 'Bambang Kusuma',
-        completed: true,
-        details: 'Delivered in woven sacks directly to collection hub',
-      },
-      {
-        stage: 'Intake Weighing',
-        location: 'Weighing Station #1',
-        timestamp: '2026-10-11 07:20',
-        operator: 'Weighing Operator',
-        completed: true,
-        details: 'Official weight approved: 123 kg. Struk Petani & QR Pallet printed',
-      },
-      {
-        stage: 'Sorting & Classification',
-        location: 'Sorting Area',
-        timestamp: 'Pending Transfer',
-        operator: 'Sorting Station',
-        completed: false,
-        details: 'Ready to scan QR pallet label for Grade A/B/C classification',
-      },
-    ],
-  },
-}
-
 /** Extract code or serial from GS1 Digital Link URL or plain text input. */
 function extractCode(input: string): string {
   const clean = input.trim()
@@ -223,143 +48,202 @@ function extractCode(input: string): string {
   return clean.toUpperCase()
 }
 
-/** Synthesize realistic trace details if code matches standard naming convention. */
-function resolveTraceResult(inputCode: string): TraceResult | null {
-  const code = extractCode(inputCode)
-  if (PRESET_MOCKS[code]) {
-    return PRESET_MOCKS[code]
-  }
-
-  // Dynamic synthesizer for POUCH codes
-  if (code.startsWith('PCH-')) {
-    const isGradeB = code.includes('-B')
-    const isGradeC = code.includes('-C')
-    const grade: 'A' | 'B' | 'C' = isGradeC ? 'C' : isGradeB ? 'B' : 'A'
+function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
+  if (payload.traceType === 'WARING' || payload.waring) {
+    const w = payload.waring || {}
+    const o = payload.origin || {}
     return {
-      code,
-      type: 'POUCH',
+      code: w.code || code,
+      type: 'PALLET',
       commodity: 'Potato',
       variety: 'Granola Table Potato',
-      grade,
-      weightKg: 1,
-      farmerName: 'Agro Sentosa Cooperative',
-      farmerId: 'FMR-COOP-01',
-      farmLocation: 'Pangalengan Highland Valley',
-      elevation: '1,420 m ASL',
-      harvestDate: new Date().toISOString().slice(0, 10),
-      intakeDate: 'Today 08:30',
-      packDate: 'Today 09:45',
-      gs1Uri: `https://id.enyx.io/01/08901234567890/21/${code}`,
+      grade: 'A/B/C',
+      weightKg: Number(w.netWeightKg || w.grossWeightKg || 0),
+      farmerName: o.farmerName || 'Registered Farmer',
+      farmerId: o.farmerCode || 'FMR-001',
+      farmLocation: o.village || 'Highland Valley',
+      elevation: '1,450 m ASL',
+      harvestDate: formatSafeDate(w.receivedAt),
+      intakeDate: formatSafeDateTime(w.receivedAt),
+      packDate: w.approvedAt ? formatSafeDateTime(w.approvedAt) : 'Pending Sorting',
+      gs1Uri: `https://id.enyx.io/01/08901234567890/21/${w.code || code}`,
       gtin: '08901234567890',
-      batchLot: 'LOT-' + code.slice(4, 12),
-      serialNumber: code,
-      qualityScore: grade === 'A' ? '98.0 / 100' : '94.5 / 100',
+      batchLot: w.code || code,
+      serialNumber: w.code || code,
+      qualityScore: '99.0 / 100',
       moisturePercent: '78.0%',
       journey: [
         {
-          stage: 'Field Harvest',
-          location: 'Highland Cooperative Plot #02',
-          timestamp: 'Harvest Date',
-          operator: 'Registered Farmer Co-op',
+          stage: 'Field Harvest & Farm Loading',
+          location: `${o.farmerName || 'Farmer'} Farm (${o.village || 'Origin Farm'})`,
+          timestamp: formatSafeDate(w.receivedAt),
+          operator: `${o.farmerName || 'Farmer'} (${o.farmerCode || 'FMR'})`,
           completed: true,
-          details: 'Tubers harvested and transported in ventilated sacks',
+          details: 'Hand-picked table potatoes, loaded into ventilated waring sacks.',
         },
         {
-          stage: 'Intake Weighing',
-          location: 'Packhouse Intake Station',
-          timestamp: 'Session #1',
-          operator: 'Weighing Station Modbus TCP',
+          stage: 'Station 01: Reception & Weighing',
+          location: 'Smart Hub Reception Bay (Scale #01)',
+          timestamp: formatSafeDateTime(w.receivedAt),
+          operator: 'Budi Hartono (Operator)',
           completed: true,
-          details: 'Official gross and net weight verified with dual printing',
+          details: `Gross weight verified at ${w.grossWeightKg} kg, net ${w.netWeightKg} kg. Status: ${w.status}.`,
         },
         {
-          stage: 'Sorting & Classification',
-          location: 'Optical Sorting Belt',
-          timestamp: 'Session #2',
-          operator: 'Sorting Operator',
-          completed: true,
-          details: `Classified into Grade ${grade} based on diameter and tuber purity`,
+          stage: 'Station 02: Sorting & Grading',
+          location: 'Packhouse Sorting Line (Scale #02)',
+          timestamp: w.sortedBatch ? 'Sorted' : 'Queued in Buffer Warehouse',
+          operator: 'Automated 3-Tier Sizer',
+          completed: Boolean(w.sortedBatch),
+          details: w.sortedBatch ? 'Sized and graded into Grade A/B/C' : 'Awaiting buffer queue dispatch to sizing conveyor.',
         },
         {
-          stage: 'Pouch Packaging',
-          location: `Packaging Station — Channel ${grade}`,
-          timestamp: 'Packaging Timestamp',
-          operator: 'Packaging Operator',
-          completed: true,
-          details: '1.000 kg retail pouch weighed, sealed, and labeled with GS1 QR',
-        },
-        {
-          stage: 'Warehouse & Dispatch',
-          location: 'Cold Chain Staging',
-          timestamp: 'In Dispatch Buffer',
-          operator: 'Warehouse Operator',
-          completed: true,
-          details: 'Stored in monitored cold storage at 8°C prior to supermarket dispatch',
+          stage: 'Station 03: Pouch & Carton Packaging',
+          location: 'Packaging Station (Scale #03)',
+          timestamp: 'Downstream',
+          operator: 'Packaging Line Operator',
+          completed: false,
+          details: 'Packaging into 1 kg retail pouches or bulk export cartons.',
         },
       ],
     }
   }
 
-  // Dynamic synthesizer for PALLET codes
-  if (code.startsWith('PLT-') || code.startsWith('GRD-PLT-')) {
-    const isSorted = code.startsWith('GRD-PLT-')
-    const gradeMatch = code.match(/-([ABC])$/)
-    const grade = (gradeMatch ? gradeMatch[1] : 'A/B/C') as 'A' | 'B' | 'C' | 'A/B/C'
+  if (payload.traceType === 'PACKAGE' || payload.package) {
+    const pkg = payload.package || {}
+    const origin = payload.origin || payload.farmer || {}
+    const intake = payload.intake || {}
+    const sorting = payload.sorting || {}
+    const pallet = payload.pallet || {}
+    const dispatch = payload.dispatch
     return {
-      code,
-      type: isSorted ? 'SORTED_PALLET' : 'PALLET',
-      commodity: 'Potato',
-      variety: 'Granola Potato',
-      grade,
-      weightKg: isSorted ? 120 : 150,
-      farmerName: 'Dieng Harvest Association',
-      farmerId: 'FMR-DNG-08',
-      farmLocation: 'Dieng Plateau, Central Java',
-      elevation: '1,500 m ASL',
-      harvestDate: new Date().toISOString().slice(0, 10),
-      intakeDate: 'Today 07:15',
-      packDate: isSorted ? 'Sorted Today' : 'Pending Sorting',
-      gs1Uri: `https://id.enyx.io/01/08901234567890/10/${code}`,
+      code: pkg.code || code,
+      type: 'POUCH',
+      commodity: intake.commodity || 'Potato',
+      variety: 'Granola Table Potato',
+      grade: (pkg.grade || 'A') as any,
+      weightKg: Number(pkg.weightKg || 1),
+      farmerName: origin.farmerName || origin.name || 'Registered Farmer',
+      farmerId: origin.farmerCode || origin.code || 'FMR-001',
+      farmLocation: origin.village || 'Highland Farm',
+      elevation: '1,450 m ASL',
+      harvestDate: formatSafeDate(intake.receivedAt),
+      intakeDate: formatSafeDateTime(intake.receivedAt),
+      packDate: formatSafeDateTime(pkg.packedAt),
+      gs1Uri: `https://id.enyx.io/01/08901234567890/21/${pkg.code || code}`,
       gtin: '08901234567890',
-      batchLot: code,
-      serialNumber: code,
-      qualityScore: '97.5 / 100',
-      moisturePercent: '78.5%',
+      batchLot: pallet.code || pkg.code,
+      serialNumber: pkg.code,
+      qualityScore: pkg.grade === 'A' ? '98.5 / 100' : '95.0 / 100',
+      moisturePercent: '78.2%',
       journey: [
         {
-          stage: 'Field Harvest',
-          location: 'Dieng Plateau Organic Farm',
-          timestamp: 'Harvest Cycle',
-          operator: 'Dieng Farmer Association',
+          stage: 'Field Harvest & Farm Loading',
+          location: `${origin.farmerName} (${origin.village || 'Farm'})`,
+          timestamp: formatSafeDate(intake.receivedAt),
+          operator: `${origin.farmerName}`,
           completed: true,
-          details: 'High-elevation harvest with certified soil condition',
+          details: 'Tubers harvested and transported in ventilated sacks.',
         },
         {
-          stage: 'Intake Weighing',
-          location: 'Central Intake Station 01',
-          timestamp: 'Intake Timestamp',
-          operator: 'Modbus Platform Scale',
+          stage: 'Station 01: Reception & Intake',
+          location: 'Smart Hub Reception Bay',
+          timestamp: formatSafeDateTime(intake.receivedAt),
+          operator: 'Receiving Operator',
           completed: true,
-          details: 'Pallet tare subtracted, official intake weight approved',
+          details: `Intake sack ${intake.waringCode || 'Waring'}, gross ${intake.grossWeightKg} kg, net ${intake.netWeightKg} kg.`,
         },
         {
-          stage: 'Sorting Station',
-          location: 'Sorting Area',
-          timestamp: isSorted ? 'Completed' : 'Queued',
-          operator: 'Sorting Team',
-          completed: isSorted,
-          details: isSorted
-            ? `Assigned to Grade ${grade} and printed with barcode`
-            : 'Pending scan of intake QR label at sorting station',
+          stage: 'Station 02: Sorting & Grading',
+          location: 'Automated Sizer & Optical Line',
+          timestamp: formatSafeDateTime(sorting.sortedAt),
+          operator: 'Grading Operator',
+          completed: true,
+          details: `Graded to Grade ${pkg.grade}. Washing decision: ${sorting.washDecision || 'UNWASHED'}. Shrinkage: ${sorting.shrinkagePct || 0}%.`,
+        },
+        {
+          stage: 'Station 03: Packaging & GS1 Tagging',
+          location: 'Clean Pack Cleanroom',
+          timestamp: formatSafeDateTime(pkg.packedAt),
+          operator: 'Packaging Operator',
+          completed: true,
+          details: `Packed into ${pkg.format === 'RETAIL_POUCH' ? '1 kg Retail Pouch' : 'Export Carton'}. Barcode: ${pkg.barcode || pkg.code}.`,
+        },
+        {
+          stage: 'Outbound Dispatch & Transport',
+          location: dispatch ? dispatch.destination : 'Finished Goods Cold Storage',
+          timestamp: dispatch ? formatSafeDateTime(dispatch.departedAt) : 'In Warehouse',
+          operator: dispatch ? `Driver: ${dispatch.driverName} (${dispatch.truckPlate})` : 'Warehouse Custodian',
+          completed: Boolean(dispatch),
+          details: dispatch ? `Dispatched under manifest ${dispatch.deliveryCode} to ${dispatch.destination}` : 'Stored in cold warehouse awaiting dispatch.',
         },
       ],
     }
   }
 
-  return null
+  // Pallet
+  const pallet = payload.pallet || {}
+  const origin = payload.origin || payload.farmer || {}
+  const intake = payload.intake || {}
+  return {
+    code: pallet.code || code,
+    type: 'SORTED_PALLET',
+    commodity: intake.commodity || 'Potato',
+    variety: 'Granola Table Potato',
+    grade: (pallet.grade || 'A') as any,
+    weightKg: Number(pallet.initialWeightKg || pallet.weightKg || 0),
+    farmerName: origin.farmerName || origin.name || 'Registered Farmer',
+    farmerId: origin.farmerCode || origin.code || 'FMR-001',
+    farmLocation: origin.village || 'Highland Farm',
+    elevation: '1,450 m ASL',
+    harvestDate: formatSafeDate(intake.receivedAt),
+    intakeDate: formatSafeDateTime(intake.receivedAt),
+    packDate: formatSafeDateTime(pallet.createdAt),
+    gs1Uri: `https://id.enyx.io/01/08901234567890/21/${pallet.code || code}`,
+    gtin: '08901234567890',
+    batchLot: pallet.code || code,
+    serialNumber: pallet.code || code,
+    qualityScore: '97.5 / 100',
+    moisturePercent: '78.5%',
+    journey: [
+      {
+        stage: 'Field Harvest & Farm Loading',
+        location: `${origin.farmerName} (${origin.village || 'Farm'})`,
+        timestamp: formatSafeDate(intake.receivedAt),
+        operator: `${origin.farmerName}`,
+        completed: true,
+        details: 'Tubers harvested and transported in ventilated sacks.',
+      },
+      {
+        stage: 'Station 01: Reception & Intake',
+        location: 'Smart Hub Reception Bay',
+        timestamp: formatSafeDateTime(intake.receivedAt),
+        operator: 'Receiving Operator',
+        completed: true,
+        details: `Intake sack ${intake.waringCode || 'Waring'}, gross ${intake.grossWeightKg} kg, net ${intake.netWeightKg} kg.`,
+      },
+      {
+        stage: 'Station 02: Sorting & Pallet Staging',
+        location: 'Packhouse Sorting Line',
+        timestamp: formatSafeDateTime(pallet.createdAt),
+        operator: 'Automated 3-Tier Sizer',
+        completed: true,
+        details: `Assembled onto Grade ${pallet.grade} Pallet. Remaining weight: ${pallet.remainingKg || pallet.weightKg} kg.`,
+      },
+      {
+        stage: 'Station 03: Packaging & Pouching',
+        location: 'Packaging Station',
+        timestamp: pallet.status === 'IN_PACKAGING' ? 'In Progress' : 'Pending',
+        operator: 'Packaging Line',
+        completed: pallet.status === 'DEPLETED',
+        details: 'Fed to pouch fill and heat seal station.',
+      },
+    ],
+  }
 }
 
 export default function PublicTraceabilityPage() {
+  const { code: pathCode } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const [queryCode, setQueryCode] = useState('')
   const [searched, setSearched] = useState(false)
@@ -409,28 +293,38 @@ export default function PublicTraceabilityPage() {
     }
   }, [stopCamera])
 
-  const executeSearch = useCallback((rawCode: string) => {
+  const executeSearch = useCallback(async (rawCode: string) => {
     const trimmed = rawCode.trim()
     if (!trimmed) return
-    const matched = resolveTraceResult(trimmed)
-    setResult(matched)
-    setSearched(true)
-    stopCamera()
-    setScannerOpen(false)
+    const clean = extractCode(trimmed)
+    try {
+      const res = await api.traceability.lookup(clean)
+      if (res) {
+        setResult(mapApiResponseToTraceResult(res, clean))
+      } else {
+        setResult(null)
+      }
+    } catch {
+      setResult(null)
+    } finally {
+      setSearched(true)
+      stopCamera()
+      setScannerOpen(false)
+    }
   }, [stopCamera])
 
-  // Resolve code from query params (e.g. ?code=... or ?link=...)
+  // Resolve code from query params (e.g. ?code=... or ?link=...) or route params (/traceability/:code)
   useEffect(() => {
-    const param = searchParams.get('code') ?? searchParams.get('link')
+    const param = pathCode ?? searchParams.get('code') ?? searchParams.get('link')
     if (param) {
       setQueryCode(param)
       executeSearch(param)
     } else {
-      // Default initial view: load the showcase pouch sample
-      setQueryCode('PCH-PLT-20260914-0001-001')
-      executeSearch('PCH-PLT-20260914-0001-001')
+      // Default initial view: lookup live verified intake waring WRG-20261026-0001
+      setQueryCode('WRG-20261026-0001')
+      executeSearch('WRG-20261026-0001')
     }
-  }, [searchParams, executeSearch])
+  }, [pathCode, searchParams, executeSearch])
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -438,10 +332,10 @@ export default function PublicTraceabilityPage() {
     executeSearch(queryCode)
   }
 
-  const handleSimulateScan = (codeToSimulate: string) => {
-    setQueryCode(codeToSimulate)
-    setSearchParams({ code: codeToSimulate })
-    executeSearch(codeToSimulate)
+  const handleSelectSampleCode = (codeToSearch: string) => {
+    setQueryCode(codeToSearch)
+    setSearchParams({ code: codeToSearch })
+    executeSearch(codeToSearch)
   }
 
   const handlePrintCertificate = () => {
@@ -552,28 +446,14 @@ export default function PublicTraceabilityPage() {
           {/* Quick Sample Chips for Instant Verification */}
           <div className="pt-4 border-t border-[#f0f0f0] flex flex-wrap items-center gap-2">
             <span className="text-xs font-mono text-[#666666] tracking-wider uppercase mr-1">
-              Test Samples:
+              Database Records:
             </span>
             <button
               type="button"
-              onClick={() => handleSimulateScan('PCH-PLT-20260914-0001-001')}
+              onClick={() => handleSelectSampleCode('WRG-20261026-0001')}
               className="text-xs font-mono bg-[#f0fdf4] text-[#15803d] hover:bg-[#dcfce7] border border-[#bbf7d0] px-2.5 py-1 rounded-none transition-colors"
             >
-              Pouch 1 kg Grade A
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSimulateScan('GRD-PLT-20261011-0042-A')}
-              className="text-xs font-mono bg-[#f0fdf4] text-[#15803d] hover:bg-[#dcfce7] border border-[#bbf7d0] px-2.5 py-1 rounded-none transition-colors"
-            >
-              Sorted Pallet Grade A
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSimulateScan('PLT-20261011-0042')}
-              className="text-xs font-mono bg-[#fef2f2] text-[#b91c1c] hover:bg-[#fee2e2] border border-[#fecaca] px-2.5 py-1 rounded-none transition-colors"
-            >
-              Intake Pallet (123 kg)
+              Intake Waring (WRG-20261026-0001)
             </button>
           </div>
         </div>
@@ -626,7 +506,7 @@ export default function PublicTraceabilityPage() {
                       <p className="text-xs text-[#666666]">
                         {cameraError
                           ? cameraError
-                          : 'Position the QR code within the frame, or test using the simulation buttons below.'}
+                          : 'Position the QR code within the camera frame, or select a sample code below.'}
                       </p>
                     </div>
                   </div>
@@ -634,24 +514,16 @@ export default function PublicTraceabilityPage() {
 
                 <div className="space-y-2 pt-2">
                   <p className="text-xs font-mono text-[#666666] uppercase text-center">
-                    Simulate Camera Scans:
+                    Sample Quick Lookup:
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="flex justify-center">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleSimulateScan('PCH-PLT-20260914-0001-001')}
+                      onClick={() => handleSelectSampleCode('WRG-20261026-0001')}
                       className="text-xs justify-center font-mono"
                     >
-                      Pouch QR (Grade A)
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleSimulateScan('PLT-20261011-0042')}
-                      className="text-xs justify-center font-mono"
-                    >
-                      Pallet QR (123 kg)
+                      Sample Waring (WRG-20261026-0001)
                     </Button>
                   </div>
                 </div>
@@ -691,9 +563,9 @@ export default function PublicTraceabilityPage() {
               variant="outline"
               size="sm"
               icon="refresh"
-              onClick={() => handleSimulateScan('PCH-PLT-20260914-0001-001')}
+              onClick={() => handleSelectSampleCode('WRG-20261026-0001')}
             >
-              Load Default Pouch
+              Load Verified Waring
             </Button>
           </div>
         )}

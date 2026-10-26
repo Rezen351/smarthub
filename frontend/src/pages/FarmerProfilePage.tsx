@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import Card from '../components/shared/Card'
 import Button from '../components/shared/Button'
@@ -18,12 +18,24 @@ export default function FarmerProfilePage() {
   const { user } = useAuth()
   const toast = useToast()
   const [name, setName] = useState(user?.name || '')
-  const [phone, setPhone] = useState('081234567890')
-  const [address, setAddress] = useState('Jl. Pertanian No. 1')
-  const [location, setLocation] = useState('Jakarta')
+  const [phone, setPhone] = useState('')
+  const [address, setAddress] = useState('')
+  const [location, setLocation] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '')
+      const fp = (user as any).farmerProfile
+      if (fp) {
+        if (fp.phone) setPhone(fp.phone)
+        if (fp.address) setAddress(fp.address)
+        if (fp.village) setLocation(fp.village)
+      }
+    }
+  }, [user])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

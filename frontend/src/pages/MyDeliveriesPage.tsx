@@ -4,7 +4,8 @@ import Badge from '../components/shared/Badge'
 import Icon from '../components/shared/Icon'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
-import { myDeliveries as mockDeliveries } from '../mock/deliveries'
+import { api } from '../services/api'
+import { formatSafeDate } from '../lib/utils'
 
 interface Delivery {
   id: string
@@ -21,17 +22,22 @@ export default function MyDeliveriesPage() {
   useEffect(() => {
     const fetchDeliveries = async () => {
       try {
-        const res = await fetch('/api/deliveries')
-        if (res.ok) {
-          const result = await res.json()
-          if (result.success && Array.isArray(result.data)) {
-            setDeliveries(result.data)
-            return
-          }
+        const data = await api.deliveries.list()
+        if (Array.isArray(data)) {
+          setDeliveries(
+            data.map((d: any) => ({
+              id: d.id,
+              date: formatSafeDate(d.createdAt || d.departedAt),
+              truckPlate: d.truckPlate,
+              destination: d.destination,
+              status: d.status === 'DELIVERED' ? 'Delivered' : 'In Transit',
+            }))
+          )
+          return
         }
-        setDeliveries(mockDeliveries)
+        setDeliveries([])
       } catch {
-        setDeliveries(mockDeliveries)
+        setDeliveries([])
       } finally {
         setLoading(false)
       }

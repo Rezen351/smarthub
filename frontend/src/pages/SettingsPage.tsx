@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import { Field, Input } from '../components/shared/Form'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
+import { api } from '../services/api'
 
 export interface ScaleConfig {
   ip: string
@@ -74,16 +75,73 @@ export default function SettingsPage() {
     return INITIAL_SETTINGS
   })
   const [testingTarget, setTestingTarget] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
-  const handleTestConnection = (stationId: string, stationLabel: string, ip: string, port: string) => {
+  // Fetch live scale hardware configuration from backend on mount
+  useEffect(() => {
+    let isMounted = true
+    api.scales
+      .list()
+      .then((stations) => {
+        if (!isMounted || !Array.isArray(stations)) return
+        setForm((prev) => {
+          const next = { ...prev }
+          const s1 = stations.find((s: any) => s.stationId === '01')
+          const s2 = stations.find((s: any) => s.stationId === '02')
+          const s3 = stations.find((s: any) => s.stationId === '03')
+          if (s1) {
+            next.intake = {
+              ...next.intake,
+              ip: s1.ip || next.intake.ip,
+              port: String(s1.port || next.intake.port),
+              capacityKg: String(s1.capacityKg || next.intake.capacityKg),
+            }
+          }
+          if (s2) {
+            next.grading = {
+              ...next.grading,
+              ip: s2.ip || next.grading.ip,
+              port: String(s2.port || next.grading.port),
+              capacityKg: String(s2.capacityKg || next.grading.capacityKg),
+            }
+          }
+          if (s3) {
+            next.packaging = {
+              ...next.packaging,
+              ip: s3.ip || next.packaging.ip,
+              port: String(s3.port || next.packaging.port),
+              capacityKg: String(s3.capacityKg || next.packaging.capacityKg),
+            }
+          }
+          return next
+        })
+      })
+      .catch(() => {
+        // Backend scales list unavailable, keep local state
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const handleTestConnection = async (stationId: string, stationLabel: string, ip: string, port: string) => {
     setTestingTarget(stationId)
-    window.setTimeout(() => {
+    try {
+      // Test direct physical Modbus TCP socket connection via backend
+      const res = await api.scales.testConnection(stationId)
+      if (res && res.online) {
+        toast.success(res.message || `${stationLabel} verified at ${ip}:${port}`)
+      } else {
+        toast.warning(res?.message || `Could not connect to ${stationLabel} at ${ip}:${port}`)
+      }
+    } catch (err: any) {
+      toast.error(`Connection test failed: ${err.message || 'Host unreachable'}`)
+    } finally {
       setTestingTarget(null)
-      toast.success(`${stationLabel} verified at ${ip}:${port}`)
-    }, 600)
+    }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!form.intake.ip.trim() || !form.grading.ip.trim() || !form.packaging.ip.trim()) {
@@ -100,13 +158,27 @@ export default function SettingsPage() {
       return
     }
 
+    setSaving(true)
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(form))
-    } catch {
-      // storage unavailable
-    }
+      // Update backend Modbus TCP configuration for each station
+      await Promise.allSettled([
+        api.scales.updateConfig('01', form.intake.ip.trim(), Number(form.intake.port)),
+        api.scales.updateConfig('02', form.grading.ip.trim(), Number(form.grading.port)),
+        api.scales.updateConfig('03', form.packaging.ip.trim(), Number(form.packaging.port)),
+      ])
 
-    toast.success('Settings saved.')
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(form))
+      } catch {
+        // storage unavailable
+      }
+
+      toast.success('Scale network settings saved & applied to Modbus TCP service.')
+    } catch (err: any) {
+      toast.error('Failed to update scale settings: ' + (err.message || 'Network error'))
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleResetDefaults = () => {
@@ -587,7 +659,7 @@ export default function SettingsPage() {
 
         {/* Form Actions */}
         <div className="flex items-center gap-3 pt-2">
-          <Button type="submit" variant="primary" icon="check" touch>
+          <Button type="submit" variant="primary" icon="check" loading={saving} touch>
             Save Settings
           </Button>
           <Button type="button" variant="ghost" icon="refresh" onClick={handleResetDefaults}>

@@ -1,9 +1,9 @@
 /**
  * E-Tani SmartHub Centralized API Client
- * Connects Frontend directly to Express REST Backend at /api
+ * Connects Frontend directly to Express REST Backend at /api/v1
  */
 
-const BASE_URL = '/api'
+const BASE_URL = '/api/v1'
 
 function getAuthHeader(): Record<string, string> {
   const token = localStorage.getItem('auth_token')
@@ -25,6 +25,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const payload = await response.json().catch(() => ({}))
 
   if (!response.ok) {
+    if (response.status === 401 && !endpoint.includes('/auth/login')) {
+      // Clear stale token on 401 to prevent repeated authentication failure loops
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user')
+    }
     const errorMsg = payload?.error?.message || `Request failed with status ${response.status}`
     throw new Error(errorMsg)
   }
@@ -56,6 +61,23 @@ export const api = {
     },
     me: async () => {
       const res = await request<ApiResponse<any>>('/auth/me')
+      return res.data
+    },
+    users: async () => {
+      const res = await request<ApiResponse<any[]>>('/auth/users')
+      return res.data
+    },
+    createUser: async (data: { name: string; email: string; role: string; password?: string }) => {
+      const res = await request<ApiResponse<any>>('/auth/users', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+      return res.data
+    },
+    deleteUser: async (id: string) => {
+      const res = await request<ApiResponse<any>>(`/auth/users/${id}`, {
+        method: 'DELETE',
+      })
       return res.data
     },
     logout: () => {
@@ -211,6 +233,43 @@ export const api = {
   traceability: {
     lookup: async (code: string) => {
       const res = await request<ApiResponse<any>>(`/traceability/${encodeURIComponent(code)}`)
+      return res.data
+    },
+  },
+
+  // Modbus TCP Scales
+  scales: {
+    list: async () => {
+      const res = await request<ApiResponse<any[]>>('/scales')
+      return res.data
+    },
+    getWeight: async (stationId: string) => {
+      const res = await request<ApiResponse<any>>(`/scales/${encodeURIComponent(stationId)}/weight`)
+      return res.data
+    },
+    tare: async (stationId: string) => {
+      const res = await request<ApiResponse<any>>(`/scales/${encodeURIComponent(stationId)}/tare`, {
+        method: 'POST',
+      })
+      return res.data
+    },
+    zero: async (stationId: string) => {
+      const res = await request<ApiResponse<any>>(`/scales/${encodeURIComponent(stationId)}/zero`, {
+        method: 'POST',
+      })
+      return res.data
+    },
+    updateConfig: async (stationId: string, host: string, port: number) => {
+      const res = await request<ApiResponse<any>>(`/scales/${encodeURIComponent(stationId)}/config`, {
+        method: 'PUT',
+        body: JSON.stringify({ host, port }),
+      })
+      return res.data
+    },
+    testConnection: async (stationId: string) => {
+      const res = await request<ApiResponse<any>>(`/scales/${encodeURIComponent(stationId)}/test`, {
+        method: 'POST',
+      })
       return res.data
     },
   },
