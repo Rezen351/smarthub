@@ -69,6 +69,9 @@ export default function PackagingPage() {
   /* Camera Scanner State */
   const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([])
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('')
   const [modalScannerInput, setModalScannerInput] = useState('')
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -189,44 +192,164 @@ export default function PackagingPage() {
     }
   }
 
-  const openCameraModal = async () => {
-    setIsCameraOpen(true)
-    setCameraError(null)
-    setModalScannerInput('')
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-        })
-        streamRef.current = stream
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-          videoRef.current.play()
-        }
-      } else {
-        setCameraError('Camera API not supported on this browser.')
-      }
-    } catch {
-      setCameraError('Camera access denied or unavailable.')
-    }
-  }
-
-  const closeCameraModal = useCallback(() => {
+  const stopCamera = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
     }
+    setCameraStream(null)
     setIsCameraOpen(false)
     setCameraError(null)
   }, [])
 
+  const startCamera = async (deviceId?: string) => {
+    setCameraError(null)
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera access is not supported by your browser.')
+      }
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+      }
+
+      let stream: MediaStream
+      const constraints: MediaStreamConstraints = deviceId
+        ? { video: { deviceId: { exact: deviceId } } }
+        : {
+            video: {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          }
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints)
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      }
+
+      streamRef.current = stream
+      setCameraStream(stream)
+
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        const videoDevices = devices.filter((d) => d.kind === 'videoinput')
+        setAvailableCameras(videoDevices)
+        if (deviceId) {
+          setSelectedCameraId(deviceId)
+        } else if (videoDevices.length > 0) {
+          setSelectedCameraId(videoDevices[0].deviceId)
+        }
+      } catch {
+        // Enumerate not permitted
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Camera access denied or unavailable.'
+      setCameraError(errMsg)
+    }
+  }
+
+  const openCameraModal = () => {
+    setIsCameraOpen(true)
+    setCameraError(null)
+    setModalScannerInput('')
+    startCamera()
+    setTimeout(() => modalInputRef.current?.focus(), 150)
+  }
+
+  const closeCameraModal = useCallback(() => {
+    stopCamera()
+  }, [stopCamera])
+
   useEffect(() => {
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop())
+      stopCamera()
+    }
+  }, [stopCamera])
+
+  // Bind camera stream to video element on mount or update
+  useEffect(() => {
+    if (isCameraOpen && cameraStream && videoRef.current) {
+      if (videoRef.current.srcObject !== cameraStream) {
+        videoRef.current.srcObject = cameraStream
+        videoRef.current.play().catch(() => {})
       }
     }
-  }, [])
+  }, [isCameraOpen, cameraStream])
+
+  const handleVerifyModalScan = useCallback(
+    (scannedVal: string) => {
+      const val = scannedVal.trim()
+      if (!val) return
+      const matched = availablePallets.find(
+        (p) => p.code.toLowerCase() === val.toLowerCase(),
+      )
+      if (matched) {
+        handleSelectPallet(matched)
+        closeCameraModal()
+      } else {
+        setPalletSearch(val)
+        handlePalletScanSubmit()
+        closeCameraModal()
+      }
+    },
+    [availablePallets, handleSelectPallet, handlePalletScanSubmit, closeCameraModal],
+  )
+
+  // Real-time Barcode/QR scanning loop for Pallet tags
+  useEffect(() => {
+    if (!isCameraOpen || !cameraStream) return
+    let isCancelled = false
+    let animationId: number
+
+    const scanLoop = async () => {
+      if (isCancelled) return
+      if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+        try {
+          const detector = new (window as any).BarcodeDetector({
+            formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8'],
+          })
+          const video = videoRef.current
+          if (video && video.readyState >= 2 && !video.paused && !video.ended) {
+            const barcodes = await detector.detect(video)
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              const code = barcodes[0].rawValue.trim()
+              if (code) {
+                try {
+                  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+                  const osc = ctx.createOscillator()
+                  const gain = ctx.createGain()
+                  osc.frequency.setValueAtTime(1200, ctx.currentTime)
+                  gain.gain.setValueAtTime(0.1, ctx.currentTime)
+                  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1)
+                  osc.connect(gain)
+                  gain.connect(ctx.destination)
+                  osc.start()
+                  osc.stop(ctx.currentTime + 0.1)
+                } catch {}
+                toast.success(`Scanned: ${code}`)
+                handleVerifyModalScan(code)
+                return
+              }
+            }
+          }
+        } catch {
+          // Frame read exception
+        }
+      }
+      animationId = requestAnimationFrame(scanLoop)
+    }
+
+    animationId = requestAnimationFrame(scanLoop)
+
+    return () => {
+      isCancelled = true
+      if (animationId) cancelAnimationFrame(animationId)
+    }
+  }, [isCameraOpen, cameraStream, handleVerifyModalScan])
 
   const targetKg = packagingMode === 'RETAIL_POUCH' ? 1.0 : exportTargetKg
   const toleranceKg = packagingMode === 'RETAIL_POUCH' ? 0.005 : 0.05
@@ -1161,9 +1284,15 @@ export default function PackagingPage() {
 
             {/* Video Viewfinder Area */}
             {!cameraError ? (
-              <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden border border-border">
+              <div className="relative aspect-square bg-black flex items-center justify-center overflow-hidden border border-border">
                 <video
-                  ref={videoRef}
+                  ref={(el) => {
+                    videoRef.current = el
+                    if (el && cameraStream && el.srcObject !== cameraStream) {
+                      el.srcObject = cameraStream
+                      el.play().catch(() => {})
+                    }
+                  }}
                   autoPlay
                   playsInline
                   muted
@@ -1171,14 +1300,34 @@ export default function PackagingPage() {
                 />
                 {/* Laser scan animation & reticle */}
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                  <div className="w-48 h-48 border-2 border-primary/70 relative">
-                    <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-primary" />
-                    <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-primary" />
-                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-primary" />
-                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-primary" />
-                    <div className="w-full h-0.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse mt-24" />
+                  <div className="w-48 h-48 border-2 border-emerald-500 rounded-none relative">
+                    <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-emerald-500" />
+                    <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-emerald-500" />
+                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-emerald-500" />
+                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-emerald-500" />
+                    <div className="w-full h-0.5 bg-emerald-500 shadow-[0_0_8px_#10b981] animate-bounce mt-24" />
                   </div>
                 </div>
+                {/* Live Scanner Status Badge */}
+                <div className="absolute bottom-3 left-3 bg-black/80 px-2 py-1 text-[11px] font-mono text-emerald-400 flex items-center gap-1.5 backdrop-blur-xs border border-emerald-500/40">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span>Live Scanner Active</span>
+                </div>
+                {/* Multi-camera switcher */}
+                {availableCameras.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const idx = availableCameras.findIndex((c) => c.deviceId === selectedCameraId)
+                      const next = availableCameras[(idx + 1) % availableCameras.length]
+                      startCamera(next.deviceId)
+                    }}
+                    className="absolute top-3 right-3 bg-black/80 hover:bg-black text-white px-2.5 py-1 text-xs font-mono flex items-center gap-1 border border-border cursor-pointer backdrop-blur-xs"
+                  >
+                    <Icon name="scan" size={13} />
+                    Switch Camera
+                  </button>
+                )}
               </div>
             ) : (
               <div className="bg-muted/30 border border-dashed border-border p-6 text-center space-y-3">
@@ -1191,6 +1340,14 @@ export default function PackagingPage() {
                     Align the QR code on the physical Grade Pallet within the viewfinder, or use direct input below.
                   </p>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon="scan"
+                  onClick={() => startCamera()}
+                >
+                  Activate Camera
+                </Button>
                 {cameraError && <p className="text-xs text-destructive">{cameraError}</p>}
               </div>
             )}
@@ -1210,18 +1367,7 @@ export default function PackagingPage() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
-                      if (!modalScannerInput.trim()) return
-                      const matched = availablePallets.find(
-                        (p) => p.code.toLowerCase() === modalScannerInput.trim().toLowerCase(),
-                      )
-                      if (matched) {
-                        handleSelectPallet(matched)
-                        closeCameraModal()
-                      } else {
-                        setPalletSearch(modalScannerInput)
-                        handlePalletScanSubmit()
-                        closeCameraModal()
-                      }
+                      handleVerifyModalScan(modalScannerInput)
                     }
                   }}
                   className="flex-1 px-3 py-1.5 text-xs font-mono font-bold uppercase border border-border bg-background"
@@ -1231,20 +1377,7 @@ export default function PackagingPage() {
                   variant="primary"
                   size="sm"
                   icon="check"
-                  onClick={() => {
-                    if (!modalScannerInput.trim()) return
-                    const matched = availablePallets.find(
-                      (p) => p.code.toLowerCase() === modalScannerInput.trim().toLowerCase(),
-                    )
-                    if (matched) {
-                      handleSelectPallet(matched)
-                      closeCameraModal()
-                    } else {
-                      setPalletSearch(modalScannerInput)
-                      handlePalletScanSubmit()
-                      closeCameraModal()
-                    }
-                  }}
+                  onClick={() => handleVerifyModalScan(modalScannerInput)}
                 >
                   Verify
                 </Button>

@@ -253,6 +253,9 @@ export default function PublicTraceabilityPage() {
   const [scannerOpen, setScannerOpen] = useState(false)
   const [cameraActive, setCameraActive] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([])
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('')
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
@@ -261,25 +264,56 @@ export default function PublicTraceabilityPage() {
       streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
     }
+    setCameraStream(null)
     setCameraActive(false)
   }, [])
 
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (deviceId?: string) => {
     setCameraError(null)
     setScannerOpen(true)
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('Camera access is not supported by your browser.')
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        videoRef.current.play()
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
       }
+
+      let stream: MediaStream
+      const constraints: MediaStreamConstraints = deviceId
+        ? { video: { deviceId: { exact: deviceId } } }
+        : {
+            video: {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          }
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints)
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      }
+
+      streamRef.current = stream
+      setCameraStream(stream)
       setCameraActive(true)
+
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        const videoDevices = devices.filter((d) => d.kind === 'videoinput')
+        setAvailableCameras(videoDevices)
+        if (deviceId) {
+          setSelectedCameraId(deviceId)
+        } else if (videoDevices.length > 0) {
+          setSelectedCameraId(videoDevices[0].deviceId)
+        }
+      } catch {
+        // Enumerate not permitted
+      }
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Unable to access camera.'
       setCameraError(errMsg)
@@ -292,6 +326,16 @@ export default function PublicTraceabilityPage() {
       stopCamera()
     }
   }, [stopCamera])
+
+  // Bind camera stream to video element when mounted or changed
+  useEffect(() => {
+    if (cameraActive && cameraStream && videoRef.current) {
+      if (videoRef.current.srcObject !== cameraStream) {
+        videoRef.current.srcObject = cameraStream
+        videoRef.current.play().catch(() => {})
+      }
+    }
+  }, [cameraActive, cameraStream])
 
   const executeSearch = useCallback(async (rawCode: string) => {
     const trimmed = rawCode.trim()
@@ -312,6 +356,59 @@ export default function PublicTraceabilityPage() {
       setScannerOpen(false)
     }
   }, [stopCamera])
+
+  // Live Barcode/QR detection loop for public scanner
+  useEffect(() => {
+    if (!cameraActive || !cameraStream) return
+    let isCancelled = false
+    let animationId: number
+
+    const scanLoop = async () => {
+      if (isCancelled) return
+      if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+        try {
+          const detector = new (window as any).BarcodeDetector({
+            formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8'],
+          })
+          const video = videoRef.current
+          if (video && video.readyState >= 2 && !video.paused && !video.ended) {
+            const barcodes = await detector.detect(video)
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              const code = barcodes[0].rawValue.trim()
+              if (code) {
+                try {
+                  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+                  const osc = ctx.createOscillator()
+                  const gain = ctx.createGain()
+                  osc.frequency.setValueAtTime(1200, ctx.currentTime)
+                  gain.gain.setValueAtTime(0.1, ctx.currentTime)
+                  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1)
+                  osc.connect(gain)
+                  gain.connect(ctx.destination)
+                  osc.start()
+                  osc.stop(ctx.currentTime + 0.1)
+                } catch {}
+                setQueryCode(code)
+                setSearchParams({ code })
+                executeSearch(code)
+                return
+              }
+            }
+          }
+        } catch {
+          // Frame read exception
+        }
+      }
+      animationId = requestAnimationFrame(scanLoop)
+    }
+
+    animationId = requestAnimationFrame(scanLoop)
+
+    return () => {
+      isCancelled = true
+      if (animationId) cancelAnimationFrame(animationId)
+    }
+  }, [cameraActive, cameraStream, executeSearch, setSearchParams])
 
   // Resolve code from query params (e.g. ?code=... or ?link=...) or route params (/traceability/:code)
   useEffect(() => {
@@ -434,7 +531,7 @@ export default function PublicTraceabilityPage() {
                   type="button"
                   variant="outline"
                   icon="scan"
-                  onClick={startCamera}
+                  onClick={() => startCamera()}
                   className="px-4 py-3 text-sm font-semibold justify-center flex-1 sm:flex-none"
                 >
                   Scan QR
@@ -473,7 +570,7 @@ export default function PublicTraceabilityPage() {
                     stopCamera()
                     setScannerOpen(false)
                   }}
-                  className="text-[#666666] hover:text-[#171717] p-1"
+                  className="text-[#666666] hover:text-[#171717] p-1 cursor-pointer"
                 >
                   <Icon name="close" size={18} />
                 </button>
@@ -483,7 +580,13 @@ export default function PublicTraceabilityPage() {
                 {cameraActive ? (
                   <div className="relative rounded-none overflow-hidden aspect-square bg-black flex items-center justify-center">
                     <video
-                      ref={videoRef}
+                      ref={(el) => {
+                        videoRef.current = el
+                        if (el && cameraStream && el.srcObject !== cameraStream) {
+                          el.srcObject = cameraStream
+                          el.play().catch(() => {})
+                        }
+                      }}
                       className="w-full h-full object-cover"
                       playsInline
                       muted
@@ -493,6 +596,26 @@ export default function PublicTraceabilityPage() {
                     <div className="absolute inset-8 border-2 border-[#229856] rounded-none pointer-events-none">
                       <div className="w-full h-0.5 bg-[#229856] shadow-[0_0_8px_#229856] animate-bounce" />
                     </div>
+                    {/* Live Scanner Status Badge */}
+                    <div className="absolute bottom-3 left-3 bg-black/80 px-2 py-1 text-[11px] font-mono text-emerald-400 flex items-center gap-1.5 backdrop-blur-xs border border-emerald-500/40">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                      <span>Live Scanner Active</span>
+                    </div>
+                    {/* Multi-camera switcher */}
+                    {availableCameras.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const idx = availableCameras.findIndex((c) => c.deviceId === selectedCameraId)
+                          const next = availableCameras[(idx + 1) % availableCameras.length]
+                          startCamera(next.deviceId)
+                        }}
+                        className="absolute top-3 right-3 bg-black/80 hover:bg-black text-white px-2.5 py-1 text-xs font-mono flex items-center gap-1 border border-border cursor-pointer backdrop-blur-xs"
+                      >
+                        <Icon name="scan" size={13} />
+                        Switch Camera
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="bg-[#fafafa] border border-dashed border-[#d1d5db] rounded-none p-6 text-center space-y-3">
