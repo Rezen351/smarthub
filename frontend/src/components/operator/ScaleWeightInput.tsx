@@ -68,7 +68,7 @@ export default function ScaleWeightInput({
     if (stationId === '03') return '192.168.1.102:502'
     return '192.168.1.100:502'
   })
-  const [isStable, setIsStable] = useState(false)
+  const [isStable, setIsStable] = useState(true)
   const [lastReadingAt, setLastReadingAt] = useState(() => new Date())
   const [flash, setFlash] = useState(false)
   const [tarePending, setTarePending] = useState(false)
@@ -99,12 +99,15 @@ export default function ScaleWeightInput({
         const res = await api.scales.getWeight(stationId)
         if (!isSubscribed) return false
 
-        if (res && res.data) {
-          const telemetry = res.data
-          setReading(telemetry.weightKg ?? 0)
-          setIsStable(Boolean(telemetry.isStable))
-          setScaleAddress(`${telemetry.ip}:${telemetry.port}`)
-          setConnection(telemetry.online ? 'connected' : 'reconnecting')
+        const telemetry = (res as any)?.data ?? res
+        if (telemetry && typeof telemetry === 'object') {
+          const liveWeight = Number(telemetry.weightKg ?? telemetry.weight ?? 0)
+          setReading(liveWeight)
+          setIsStable(telemetry.isStable !== undefined ? Boolean(telemetry.isStable) : true)
+          if (telemetry.ip && telemetry.port) {
+            setScaleAddress(`${telemetry.ip}:${telemetry.port}`)
+          }
+          setConnection(telemetry.online !== false ? 'connected' : 'reconnecting')
           setLastReadingAt(new Date(telemetry.timestamp || Date.now()))
           return true
         }
@@ -137,6 +140,13 @@ export default function ScaleWeightInput({
   }, [mode, stationId])
 
   const numericValue = Number(value)
+
+  // Auto-sync form value when scale has active weight and input is currently unpopulated
+  useEffect(() => {
+    if (mode === 'auto' && reading > 0 && (!value || value === '' || value === '0')) {
+      onChange(formatKg(reading))
+    }
+  }, [mode, reading, value, onChange])
   const withinTarget =
     targetKg !== undefined && Number.isFinite(numericValue) && Math.abs(numericValue - targetKg) <= toleranceKg
   const overCapacity = Number.isFinite(numericValue) && numericValue > capacityKg
@@ -264,7 +274,12 @@ export default function ScaleWeightInput({
             )}
 
             <div className="flex gap-2 flex-wrap items-center">
-              <Button variant="primary" icon="check" disabled={!isStable} onClick={useReading}>
+              <Button
+                variant="primary"
+                icon="check"
+                disabled={connection !== 'connected' || reading <= 0}
+                onClick={useReading}
+              >
                 Lock & Use Value
               </Button>
               <Button

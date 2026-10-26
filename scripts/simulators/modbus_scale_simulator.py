@@ -84,6 +84,7 @@ class SimulatedScale:
         self.name = name
         self.port = port
         self.capacity_kg = capacity_kg
+        self.default_target_kg = default_target_kg
         self.target_weight_kg = default_target_kg
         self.current_weight_kg = default_target_kg
         self.tare_offset_kg = 0.0
@@ -118,22 +119,29 @@ class SimulatedScale:
         logger.info(f"[{self.station_id}] New target weight set: {self.target_weight_kg:.3f} kg")
 
     def tare(self):
-        # Current gross weight becomes offset, net becomes 0
+        # Current gross weight becomes offset, net momentarily becomes 0
         self.tare_offset_kg = self.current_weight_kg
         self.last_target_change = time.time()
         logger.info(f"[{self.station_id}] Tare executed. Offset: {self.tare_offset_kg:.3f} kg")
 
     def zero(self):
         self.tare_offset_kg = 0.0
-        self.target_weight_kg = 0.0
-        self.current_weight_kg = 0.0
+        self.target_weight_kg = self.default_target_kg
+        self.current_weight_kg = self.default_target_kg
         self.last_target_change = time.time()
-        logger.info(f"[{self.station_id}] Zero executed.")
+        logger.info(f"[{self.station_id}] Zero executed. Restored nominal weight {self.default_target_kg:.3f} kg")
 
     def update_tick(self):
         now = time.time()
         elapsed_since_target = now - self.last_target_change
         
+        # Auto-reload platform if tared or empty for more than 3.0 seconds
+        if (self.current_weight_kg - self.tare_offset_kg) <= 0.02 and elapsed_since_target > 3.0:
+            self.tare_offset_kg = 0.0
+            self.target_weight_kg = self.default_target_kg
+            self.last_target_change = now
+            logger.info(f"[{self.station_id}] Platform reloaded with harvest: {self.default_target_kg:.3f} kg")
+
         # Converge toward target weight
         diff = self.target_weight_kg - self.current_weight_kg
         if abs(diff) > 0.005:
@@ -149,8 +157,8 @@ class SimulatedScale:
         net_kg = max(0.0, (self.current_weight_kg - self.tare_offset_kg) + jitter)
         net_grams = net_kg * 1000.0
 
-        # Stability: settled if within target for >= 1.2 seconds
-        is_stable = (elapsed_since_target >= 1.2) and (abs(diff) <= 0.01)
+        # Stability: settled if within target for >= 0.8 seconds
+        is_stable = (elapsed_since_target >= 0.8) and (abs(diff) <= 0.02)
         stable_grams = net_grams if is_stable else max(0.0, (self.target_weight_kg - self.tare_offset_kg) * 1000.0)
 
         # Update holding registers
