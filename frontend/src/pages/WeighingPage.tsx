@@ -25,6 +25,7 @@ import { useSessionContext } from '../hooks/useSessionContext'
 import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
 import { api } from '../services/api'
+import CameraScannerModal from '../components/shared/CameraScannerModal'
 
 type WeighingStatus = 'PENDING' | 'BUFFER_WAITING'
 
@@ -81,106 +82,9 @@ export default function WeighingPage() {
   const scanInputRef = useRef<HTMLInputElement>(null)
 
   /* ── Camera Scanner State ── */
-  const [cameraActive, setCameraActive] = useState(false)
   const [cameraModalOpen, setCameraModalOpen] = useState(false)
-  const [cameraError, setCameraError] = useState<string | null>(null)
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
-  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([])
-  const [selectedCameraId, setSelectedCameraId] = useState<string>('')
-  const [modalBarcodeQuery, setModalBarcodeQuery] = useState('')
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const modalInputRef = useRef<HTMLInputElement>(null)
-
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop())
-      streamRef.current = null
-    }
-    setCameraStream(null)
-    setCameraActive(false)
-  }, [])
-
-  const startCamera = async (deviceId?: string) => {
-    setCameraError(null)
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera access is not supported by your browser.')
-      }
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop())
-        streamRef.current = null
-      }
-
-      let stream: MediaStream
-      const constraints: MediaStreamConstraints = deviceId
-        ? { video: { deviceId: { exact: deviceId } } }
-        : {
-            video: {
-              facingMode: { ideal: 'environment' },
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
-          }
-
-      try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints)
-      } catch {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true })
-      }
-
-      streamRef.current = stream
-      setCameraStream(stream)
-      setCameraActive(true)
-
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices()
-        const videoDevices = devices.filter((d) => d.kind === 'videoinput')
-        setAvailableCameras(videoDevices)
-        if (deviceId) {
-          setSelectedCameraId(deviceId)
-        } else if (videoDevices.length > 0) {
-          setSelectedCameraId(videoDevices[0].deviceId)
-        }
-      } catch {
-        // Device enumeration not granted
-      }
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : 'Unable to access camera.'
-      setCameraError(errMsg)
-      toast.error(errMsg)
-    }
-  }
-
-  const openCameraModal = () => {
-    setCameraModalOpen(true)
-    setModalBarcodeQuery('')
-    setCameraError(null)
-    startCamera()
-    setTimeout(() => modalInputRef.current?.focus(), 150)
-  }
-
-  const closeCameraModal = useCallback(() => {
-    stopCamera()
-    setCameraModalOpen(false)
-  }, [stopCamera])
-
-  useEffect(() => {
-    return () => {
-      stopCamera()
-    }
-  }, [stopCamera])
-
-  // Bind camera stream to video element on mount or update
-  useEffect(() => {
-    if (cameraActive && cameraStream && videoRef.current) {
-      if (videoRef.current.srcObject !== cameraStream) {
-        videoRef.current.srcObject = cameraStream
-        videoRef.current.play().catch(() => {})
-      }
-    }
-  }, [cameraActive, cameraStream])
+  const openCameraModal = () => setCameraModalOpen(true)
+  const closeCameraModal = useCallback(() => setCameraModalOpen(false), [])
 
   /* ── Step 2: Weighing Form ── */
   const [weightKg, setWeightKg] = useState('')
@@ -354,57 +258,6 @@ export default function WeighingPage() {
     }
   }
 
-  // Live Barcode/QR detection loop on video stream
-  useEffect(() => {
-    if (!cameraActive || !cameraStream) return
-    let isCancelled = false
-    let animationId: number
-
-    const scanLoop = async () => {
-      if (isCancelled) return
-      if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
-        try {
-          const detector = new (window as any).BarcodeDetector({
-            formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8'],
-          })
-          const video = videoRef.current
-          if (video && video.readyState >= 2 && !video.paused && !video.ended) {
-            const barcodes = await detector.detect(video)
-            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-              const code = barcodes[0].rawValue.trim()
-              if (code) {
-                try {
-                  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-                  const osc = ctx.createOscillator()
-                  const gain = ctx.createGain()
-                  osc.frequency.setValueAtTime(1200, ctx.currentTime)
-                  gain.gain.setValueAtTime(0.1, ctx.currentTime)
-                  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1)
-                  osc.connect(gain)
-                  gain.connect(ctx.destination)
-                  osc.start()
-                  osc.stop(ctx.currentTime + 0.1)
-                } catch {}
-                toast.success(`Scanned: ${code}`)
-                handleVerifyScannedCode(code)
-                return
-              }
-            }
-          }
-        } catch {
-          // ignore detection frame error
-        }
-      }
-      animationId = requestAnimationFrame(scanLoop)
-    }
-
-    animationId = requestAnimationFrame(scanLoop)
-
-    return () => {
-      isCancelled = true
-      if (animationId) cancelAnimationFrame(animationId)
-    }
-  }, [cameraActive, cameraStream])
 
   /* ── Step 2: Handle Weight Commitment ── */
   const handleProceedToApproval = (e?: React.FormEvent) => {
@@ -1259,160 +1112,16 @@ export default function WeighingPage() {
         </div>
       </div>
 
-      {/* ── Camera Scanner Viewfinder Modal for Farmer ID ── */}
-      {cameraModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card rounded-none max-w-md w-full overflow-hidden shadow-2xl border border-border">
-            <div className="p-4 border-b border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Icon name="scan" size={18} className="text-primary" />
-                <span className="font-bold text-sm text-foreground">
-                  Scan Farmer ID Card · Station 01 Reception
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={closeCameraModal}
-                className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"
-              >
-                <Icon name="close" size={18} />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              {cameraActive ? (
-                <div className="relative rounded-none overflow-hidden aspect-square bg-black flex items-center justify-center">
-                  <video
-                    ref={(el) => {
-                      videoRef.current = el
-                      if (el && cameraStream && el.srcObject !== cameraStream) {
-                        el.srcObject = cameraStream
-                        el.play().catch(() => {})
-                      }
-                    }}
-                    className="w-full h-full object-cover"
-                    playsInline
-                    muted
-                    autoPlay
-                  />
-                  {/* Viewfinder Reticle & Laser */}
-                  <div className="absolute inset-8 border-2 border-emerald-500 rounded-none pointer-events-none">
-                    <div className="w-full h-0.5 bg-emerald-500 shadow-[0_0_8px_#10b981] animate-bounce" />
-                  </div>
-                  {/* Live Scanner Status Badge */}
-                  <div className="absolute bottom-3 left-3 bg-black/80 px-2 py-1 text-[11px] font-mono text-emerald-400 flex items-center gap-1.5 backdrop-blur-xs border border-emerald-500/40">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                    <span>Live Scanner Active</span>
-                  </div>
-                  {/* Multi-camera switcher */}
-                  {availableCameras.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const idx = availableCameras.findIndex((c) => c.deviceId === selectedCameraId)
-                        const next = availableCameras[(idx + 1) % availableCameras.length]
-                        startCamera(next.deviceId)
-                      }}
-                      className="absolute top-3 right-3 bg-black/80 hover:bg-black text-white px-2.5 py-1 text-xs font-mono flex items-center gap-1 border border-border cursor-pointer backdrop-blur-xs"
-                    >
-                      <Icon name="scan" size={13} />
-                      Switch Camera
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="bg-muted/30 border border-dashed border-border p-6 text-center space-y-3">
-                  <div className="w-12 h-12 bg-primary/10 text-primary flex items-center justify-center mx-auto">
-                    <Icon name="scan" size={24} />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-foreground">
-                      Ready to Scan Farmer ID
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Align the barcode or QR code on the farmer ID card within the camera viewport.
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    icon="scan"
-                    onClick={() => startCamera()}
-                  >
-                    Activate Camera
-                  </Button>
-                  {cameraError && (
-                    <p className="text-xs text-destructive">{cameraError}</p>
-                  )}
-                </div>
-              )}
-
-              {/* USB 2D Scanner Wedge Input in Modal */}
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground font-mono uppercase block">
-                  Or USB 2D Scanner Input:
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    ref={modalInputRef}
-                    type="text"
-                    placeholder="Scan barcode or enter farmer ID / name..."
-                    value={modalBarcodeQuery}
-                    onChange={(e) => setModalBarcodeQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleVerifyScannedCode(modalBarcodeQuery)
-                      }
-                    }}
-                    className="flex-1 px-3 py-1.5 text-xs font-mono font-bold uppercase border border-border bg-background"
-                    autoFocus
-                  />
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    icon="check"
-                    onClick={() => handleVerifyScannedCode(modalBarcodeQuery)}
-                  >
-                    Verify
-                  </Button>
-                </div>
-              </div>
-
-              {/* Registered Farmer Shortcuts */}
-              <div className="space-y-1.5 pt-2 border-t border-border">
-                <p className="text-xs font-mono text-muted-foreground uppercase text-center">
-                  Registered Farmers:
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {farmersList.map((f) => (
-                    <Button
-                      key={f.id}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleVerifyScannedCode(f.id)}
-                      className="text-xs justify-center font-mono"
-                    >
-                      {f.id}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="p-3 bg-muted/30 border-t border-border text-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={closeCameraModal}
-                className="text-xs"
-              >
-                Close Scanner
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Universal Camera Barcode/QR Scanner Modal ── */}
+      <CameraScannerModal
+        isOpen={cameraModalOpen}
+        onClose={closeCameraModal}
+        onScan={handleVerifyScannedCode}
+        title="Scan Farmer ID Card · Station 01 Reception"
+        subtitle="Align the QR code or 1D barcode on the farmer ID card within the camera viewport."
+        manualPlaceholder="Scan barcode or enter farmer ID / name..."
+        quickOptions={farmersList.map((f) => ({ label: `${f.name} (${f.id})`, value: f.id }))}
+      />
     </>
   )
 }

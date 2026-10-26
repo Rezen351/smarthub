@@ -21,6 +21,7 @@ import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import { formatWeight } from '../lib/utils'
 import { usePackhouseStore, type GradedBatchRecord, type BufferWaringItem } from '../hooks/usePackhouseStore'
+import CameraScannerModal from '../components/shared/CameraScannerModal'
 
 const STEPS = [
   { id: 1, label: 'Scan Waring' },
@@ -77,110 +78,12 @@ export default function SortingPage() {
 
   /* ── Camera Scanner State ── */
   const [cameraModalMode, setCameraModalMode] = useState<'WARING' | 'PALLET' | null>(null)
-  /* ── Camera Scanner State ── */
-  const [cameraActive, setCameraActive] = useState(false)
-  const [cameraError, setCameraError] = useState<string | null>(null)
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
-  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([])
-  const [selectedCameraId, setSelectedCameraId] = useState<string>('')
-  const [modalScannerInput, setModalScannerInput] = useState('')
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const modalInputRef = useRef<HTMLInputElement>(null)
-
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop())
-      streamRef.current = null
-    }
-    setCameraStream(null)
-    setCameraActive(false)
-  }, [])
-
-  const startCamera = async (deviceId?: string) => {
-    setCameraError(null)
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera access is not supported by your browser.')
-      }
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop())
-        streamRef.current = null
-      }
-
-      let stream: MediaStream
-      const constraints: MediaStreamConstraints = deviceId
-        ? { video: { deviceId: { exact: deviceId } } }
-        : {
-            video: {
-              facingMode: { ideal: 'environment' },
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
-          }
-
-      try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints)
-      } catch {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true })
-      }
-
-      streamRef.current = stream
-      setCameraStream(stream)
-      setCameraActive(true)
-
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices()
-        const videoDevices = devices.filter((d) => d.kind === 'videoinput')
-        setAvailableCameras(videoDevices)
-        if (deviceId) {
-          setSelectedCameraId(deviceId)
-        } else if (videoDevices.length > 0) {
-          setSelectedCameraId(videoDevices[0].deviceId)
-        }
-      } catch {
-        // Enumerate not permitted
-      }
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : 'Unable to access camera.'
-      setCameraError(errMsg)
-      setCameraActive(false)
-    }
-  }
-
-  const openWaringCameraModal = () => {
-    setCameraModalMode('WARING')
-    setModalScannerInput('')
-    setCameraError(null)
-    startCamera()
-    setTimeout(() => modalInputRef.current?.focus(), 150)
-  }
-
+  const openWaringCameraModal = () => setCameraModalMode('WARING')
   const openPalletCameraModal = (grade: 'A' | 'B' | 'C') => {
     setActiveGradeTab(grade)
     setCameraModalMode('PALLET')
-    setModalScannerInput('')
-    setCameraError(null)
-    startCamera()
-    setTimeout(() => modalInputRef.current?.focus(), 150)
   }
-
-  const closeCameraModal = useCallback(() => {
-    stopCamera()
-    setCameraModalMode(null)
-    setModalScannerInput('')
-  }, [stopCamera])
-
-  // Bind camera stream to video element when mounted or changed
-  useEffect(() => {
-    if (cameraActive && cameraStream && videoRef.current) {
-      if (videoRef.current.srcObject !== cameraStream) {
-        videoRef.current.srcObject = cameraStream
-        videoRef.current.play().catch(() => {})
-      }
-    }
-  }, [cameraActive, cameraStream])
+  const closeCameraModal = useCallback(() => setCameraModalMode(null), [])
 
   /* ── Step 4: Batch Summary & Local Ledger ── */
   const [savedSuccessBatch, setSavedSuccessBatch] = useState<GradedBatchRecord | null>(null)
@@ -204,9 +107,8 @@ export default function SortingPage() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
-      stopCamera()
     }
-  }, [focusMode, cameraModalMode, stopCamera])
+  }, [focusMode, cameraModalMode])
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -335,57 +237,6 @@ export default function SortingPage() {
     [cameraModalMode, waitingWarings, handleSelectWaring, closeCameraModal, activeGradeTab],
   )
 
-  // Real-time Barcode/QR scanning loop for Waring and Pallet tags
-  useEffect(() => {
-    if (!cameraActive || !cameraStream || !cameraModalMode) return
-    let isCancelled = false
-    let animationId: number
-
-    const scanLoop = async () => {
-      if (isCancelled) return
-      if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
-        try {
-          const detector = new (window as any).BarcodeDetector({
-            formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8'],
-          })
-          const video = videoRef.current
-          if (video && video.readyState >= 2 && !video.paused && !video.ended) {
-            const barcodes = await detector.detect(video)
-            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-              const code = barcodes[0].rawValue.trim()
-              if (code) {
-                try {
-                  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-                  const osc = ctx.createOscillator()
-                  const gain = ctx.createGain()
-                  osc.frequency.setValueAtTime(1200, ctx.currentTime)
-                  gain.gain.setValueAtTime(0.1, ctx.currentTime)
-                  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1)
-                  osc.connect(gain)
-                  gain.connect(ctx.destination)
-                  osc.start()
-                  osc.stop(ctx.currentTime + 0.1)
-                } catch {}
-                toast.success(`Scanned: ${code}`)
-                handleVerifyModalScan(code)
-                return
-              }
-            }
-          }
-        } catch {
-          // Frame read exception
-        }
-      }
-      animationId = requestAnimationFrame(scanLoop)
-    }
-
-    animationId = requestAnimationFrame(scanLoop)
-
-    return () => {
-      isCancelled = true
-      if (animationId) cancelAnimationFrame(animationId)
-    }
-  }, [cameraActive, cameraStream, cameraModalMode, handleVerifyModalScan])
 
   /* Commit Batch & Save */
   const handleSaveSortingRun = () => {
@@ -1197,134 +1048,33 @@ export default function SortingPage() {
       </div>
 
       {/* ── Universal Camera Scanner Viewfinder Modal ── */}
-      {cameraModalMode && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card rounded-none max-w-md w-full overflow-hidden shadow-2xl border border-border">
-            <div className="p-4 border-b border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Icon name="scan" size={18} className="text-primary" />
-                <span className="font-bold text-sm text-foreground">
-                  {cameraModalMode === 'WARING'
-                    ? 'Scan Waring Sack QR Code · Station 02'
-                    : `Scan Pallet QR for Grade ${activeGradeTab}`}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={closeCameraModal}
-                className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"
-              >
-                <Icon name="close" size={18} />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              {cameraActive ? (
-                <div className="relative rounded-none overflow-hidden aspect-square bg-black flex items-center justify-center">
-                  <video
-                    ref={(el) => {
-                      videoRef.current = el
-                      if (el && cameraStream && el.srcObject !== cameraStream) {
-                        el.srcObject = cameraStream
-                        el.play().catch(() => {})
-                      }
-                    }}
-                    className="w-full h-full object-cover"
-                    playsInline
-                    muted
-                    autoPlay
-                  />
-                  {/* Viewfinder Reticle & Laser */}
-                  <div className="absolute inset-8 border-2 border-emerald-500 rounded-none pointer-events-none">
-                    <div className="w-full h-0.5 bg-emerald-500 shadow-[0_0_8px_#10b981] animate-bounce" />
-                  </div>
-                  {/* Live Scanner Status Badge */}
-                  <div className="absolute bottom-3 left-3 bg-black/80 px-2 py-1 text-[11px] font-mono text-emerald-400 flex items-center gap-1.5 backdrop-blur-xs border border-emerald-500/40">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                    <span>Live Scanner Active</span>
-                  </div>
-                  {/* Multi-camera switcher */}
-                  {availableCameras.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const idx = availableCameras.findIndex((c) => c.deviceId === selectedCameraId)
-                        const next = availableCameras[(idx + 1) % availableCameras.length]
-                        startCamera(next.deviceId)
-                      }}
-                      className="absolute top-3 right-3 bg-black/80 hover:bg-black text-white px-2.5 py-1 text-xs font-mono flex items-center gap-1 border border-border cursor-pointer backdrop-blur-xs"
-                    >
-                      <Icon name="scan" size={13} />
-                      Switch Camera
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="bg-muted/30 border border-dashed border-border p-6 text-center space-y-3">
-                  <div className="w-12 h-12 bg-primary/10 text-primary flex items-center justify-center mx-auto">
-                    <Icon name="scan" size={24} />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-foreground">
-                      {cameraModalMode === 'WARING' ? 'Ready to Scan Waring QR' : `Ready to Scan Grade ${activeGradeTab} Pallet QR`}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Align the barcode or QR code on the physical sack or pallet tag within the camera viewfinder.
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    icon="scan"
-                    onClick={() => startCamera()}
-                  >
-                    Activate Camera
-                  </Button>
-                  {cameraError && (
-                    <p className="text-xs text-destructive">{cameraError}</p>
-                  )}
-                </div>
-              )}
-
-              {/* USB 2D Scanner Input in Modal */}
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground font-mono uppercase block">
-                  Or USB 2D Scanner Input:
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    ref={modalInputRef}
-                    type="text"
-                    placeholder={
-                      cameraModalMode === 'WARING'
-                        ? 'Scan waring QR (e.g. WRG-...)'
-                        : `Scan pallet QR (e.g. PLT-GRD-${activeGradeTab}-01)`
-                    }
-                    value={modalScannerInput}
-                    onChange={(e) => setModalScannerInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleVerifyModalScan(modalScannerInput)
-                      }
-                    }}
-                    className="flex-1 px-3 py-1.5 text-xs font-mono font-bold uppercase border border-border bg-background"
-                    autoFocus
-                  />
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    icon="check"
-                    onClick={() => handleVerifyModalScan(modalScannerInput)}
-                  >
-                    Verify
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Universal Camera Barcode/QR Scanner Modal ── */}
+      <CameraScannerModal
+        isOpen={cameraModalMode !== null}
+        onClose={closeCameraModal}
+        onScan={handleVerifyModalScan}
+        title={
+          cameraModalMode === 'WARING'
+            ? 'Scan Waring Sack QR Code · Station 02'
+            : `Scan Pallet QR for Grade ${activeGradeTab}`
+        }
+        subtitle={
+          cameraModalMode === 'WARING'
+            ? 'Align the WRG QR code within the camera frame.'
+            : `Align the pre-attached PLT QR code for Grade ${activeGradeTab}.`
+        }
+        manualPlaceholder={
+          cameraModalMode === 'WARING' ? 'Enter Waring Code (WRG-...)' : `Enter Pallet Tag (PLT-GRD-${activeGradeTab}-01)`
+        }
+        quickOptions={
+          cameraModalMode === 'WARING'
+            ? waitingWarings.map((w) => ({ label: `${w.code} (${w.farmerName})`, value: w.code }))
+            : [
+                { label: `PLT-GRD-${activeGradeTab}-01`, value: `PLT-GRD-${activeGradeTab}-01` },
+                { label: `PLT-GRD-${activeGradeTab}-02`, value: `PLT-GRD-${activeGradeTab}-02` },
+              ]
+        }
+      />
     </>
   )
 }
