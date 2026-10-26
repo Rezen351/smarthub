@@ -92,13 +92,27 @@ router.post('/', async (req, res): Promise<void> => {
       return;
     }
 
-    // Resolve farmer by ID or Code
+    // Resolve farmer by ID or Code strictly (disallow empty match)
+    const farmerConditions: any[] = [];
+    if (farmerId && typeof farmerId === 'string' && farmerId.trim()) {
+      farmerConditions.push({ id: farmerId.trim() });
+      farmerConditions.push({ code: { equals: farmerId.trim(), mode: 'insensitive' } });
+    }
+    if (farmerCode && typeof farmerCode === 'string' && farmerCode.trim()) {
+      farmerConditions.push({ code: { equals: farmerCode.trim(), mode: 'insensitive' } });
+    }
+
+    if (farmerConditions.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Valid farmerId or farmerCode is required' },
+      });
+      return;
+    }
+
     const farmer = await prisma.farmer.findFirst({
       where: {
-        OR: [
-          farmerId ? { id: farmerId } : {},
-          farmerCode ? { code: farmerCode } : {},
-        ],
+        OR: farmerConditions,
       },
     });
 

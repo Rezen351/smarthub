@@ -195,19 +195,19 @@ export default function CameraScannerModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-2 sm:p-4 backdrop-blur-xs animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
     >
       <div className="bg-card border border-border rounded-none shadow-2xl max-w-lg w-full overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-border flex items-center justify-between bg-muted/20">
+        <div className="p-3 sm:p-4 border-b border-border flex items-center justify-between bg-muted/20">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <Icon name="scan" size={18} />
             </div>
             <div>
-              <h3 className="font-bold text-base text-foreground leading-tight">{title}</h3>
+              <h3 className="font-bold text-sm sm:text-base text-foreground leading-tight">{title}</h3>
               <p className="text-xs text-muted-foreground">{subtitle}</p>
             </div>
           </div>
@@ -216,7 +216,7 @@ export default function CameraScannerModal({
 
         {/* Camera Switcher (If multiple cameras detected) */}
         {cameras.length > 1 && (
-          <div className="px-4 py-2 border-b border-border bg-muted/10 flex items-center justify-between text-xs font-mono">
+          <div className="px-3 sm:px-4 py-2 border-b border-border bg-muted/10 flex items-center justify-between text-xs font-mono">
             <span className="text-muted-foreground flex items-center gap-1.5">
               <Icon name="refresh" size={12} />
               Switch Camera:
@@ -236,7 +236,7 @@ export default function CameraScannerModal({
         )}
 
         {/* Viewfinder Area */}
-        <div className="p-4 space-y-4">
+        <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
           <div className="relative aspect-video sm:aspect-square bg-black border border-border overflow-hidden flex items-center justify-center">
             {/* Target Container for Html5Qrcode */}
             <div id="enyx-universal-qr-reader" className="w-full h-full object-cover" />

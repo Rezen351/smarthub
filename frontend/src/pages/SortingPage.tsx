@@ -374,6 +374,7 @@ export default function SortingPage() {
       {STEPS.map((step, idx) => {
         const isCurrent = activeStep === step.id
         const isDone = activeStep > step.id || (step.id === 4 && savedSuccessBatch !== null)
+        const compactLabel = step.id === 1 ? 'Waring' : step.id === 2 ? 'Sizer' : step.id === 3 ? 'Grades' : 'Done'
 
         return (
           <div key={step.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -403,9 +404,10 @@ export default function SortingPage() {
               >
                 {isDone ? '✓' : step.id}
               </span>
+              <span className="sm:hidden">{compactLabel}</span>
               <span className="hidden sm:inline">{step.label}</span>
             </button>
-            {idx < STEPS.length - 1 && <span className="text-muted-foreground/40 text-xs mx-1">/</span>}
+            {idx < STEPS.length - 1 && <span className="text-muted-foreground/40 text-xs mx-0.5 sm:mx-1">/</span>}
           </div>
         )
       })}
@@ -449,7 +451,7 @@ export default function SortingPage() {
             </div>
 
             {/* Direct Barcode / QR Input Field */}
-            <form onSubmit={handleWaringScanSubmit} className="flex gap-2 max-w-md mx-auto">
+            <form onSubmit={handleWaringScanSubmit} className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto">
               <Input
                 ref={scanInputRef}
                 value={manualWaringSearch}
@@ -458,14 +460,16 @@ export default function SortingPage() {
                   setWaringScanError(null)
                 }}
                 placeholder="Scan 2D barcode or enter waring code..."
-                className="font-mono text-sm"
+                className="font-mono text-sm flex-1 min-w-0"
               />
-              <Button type="submit" variant="primary" icon="check">
-                Verify
-              </Button>
-              <Button type="button" variant="outline" icon="scan" onClick={openWaringCameraModal}>
-                Camera
-              </Button>
+              <div className="flex gap-2">
+                <Button type="submit" variant="primary" icon="check" className="flex-1 sm:flex-initial">
+                  Verify
+                </Button>
+                <Button type="button" variant="outline" icon="scan" onClick={openWaringCameraModal} className="flex-1 sm:flex-initial">
+                  Camera
+                </Button>
+              </div>
             </form>
             {waringScanError && <p className="text-xs text-destructive font-mono">{waringScanError}</p>}
 
@@ -502,20 +506,20 @@ export default function SortingPage() {
           </div>
 
           {/* Active Selected Waring Confirmation Strip */}
-          <div className="p-4 bg-card border border-border flex flex-wrap items-center justify-between gap-4">
+          <div className="p-3 sm:p-4 bg-card border border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="space-y-0.5">
               <span className="text-xs text-muted-foreground uppercase font-mono block">Selected Intake Waring</span>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-bold font-mono">{waringCode}</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-base sm:text-lg font-bold font-mono">{waringCode}</span>
                 <span className="text-xs text-muted-foreground">({farmerName} · {farmerVillage})</span>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-mono font-bold text-emerald-700 bg-card px-2.5 py-1 border border-emerald-300 dark:border-emerald-800">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs sm:text-sm font-mono font-bold text-emerald-700 bg-card px-2 py-1 border border-emerald-300 dark:border-emerald-800">
                 {formatWeight(Number(grossIntakeKg))} kg Gross
               </span>
-              <Button variant="primary" icon="check" touch onClick={() => setActiveStep(2)}>
-                Proceed to Sizing & Wash
+              <Button variant="primary" icon="check" touch onClick={() => setActiveStep(2)} className="flex-1 sm:flex-initial">
+                Proceed to Sizing
               </Button>
             </div>
           </div>
@@ -629,7 +633,7 @@ export default function SortingPage() {
           </div>
 
           {/* Grade Switcher Tabs */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {(['A', 'B', 'C'] as const).map((grade) => {
               const isActive = activeGradeTab === grade
               const weight = grade === 'A' ? gradeAKg : grade === 'B' ? gradeBKg : gradeCKg

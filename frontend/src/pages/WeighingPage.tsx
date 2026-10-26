@@ -42,7 +42,7 @@ type WeighingRecord = {
 }
 
 const FARMERS = [
-  { id: 'farmer-1', name: 'Ahmad Santoso', village: 'Desa Sumber Brantas' },
+  { id: 'FMR-001', code: 'FMR-001', name: 'Ahmad Santoso', village: 'Desa Sumber Brantas' },
 ]
 
 const SCALE_CAPACITY_KG = 150
@@ -112,6 +112,7 @@ export default function WeighingPage() {
           setFarmersList(
             list.map((f: any) => ({
               id: f.id,
+              code: f.code || f.id,
               name: f.name,
               village: f.village || 'Desa Sumber Brantas',
             }))
@@ -197,11 +198,11 @@ export default function WeighingPage() {
   }
 
   /* ── Step 1: Handle Farmer Identification ── */
-  const selectFarmer = (targetFarmer: { id: string; name: string; village: string }) => {
+  const selectFarmer = (targetFarmer: { id: string; code?: string; name: string; village: string }) => {
     setScanError('')
     startScan({ id: targetFarmer.id, name: targetFarmer.name })
-    setScanFarmerId(targetFarmer.id)
-    toast.success(`Farmer verified: ${targetFarmer.name}`)
+    setScanFarmerId(targetFarmer.code || targetFarmer.id)
+    toast.success(`Farmer verified: ${targetFarmer.name} (${targetFarmer.code || targetFarmer.id})`)
     setActiveStep(2)
   }
 
@@ -216,45 +217,50 @@ export default function WeighingPage() {
 
     const matched = farmersList.find(
       (f) =>
-        f.id.toLowerCase() === query.toLowerCase() ||
+        (f.code && f.code.toLowerCase() === query.toLowerCase()) ||
+        (f.id && f.id.toLowerCase() === query.toLowerCase()) ||
         f.name.toLowerCase().includes(query.toLowerCase()) ||
-        f.village.toLowerCase().includes(query.toLowerCase()),
+        (f.village && f.village.toLowerCase().includes(query.toLowerCase())),
     )
 
     if (matched) {
       selectFarmer(matched)
       setManualSearch('')
+      setScanFarmerId('')
     } else {
-      const customFarmer = {
-        id: `FRM-${String(Math.floor(Math.random() * 9000) + 1000)}`,
-        name: query,
-        village: 'Dieng, Wonosobo',
-      }
-      selectFarmer(customFarmer)
+      setScanError('Unregistered Farmer: ID or Barcode not found in packhouse directory.')
+      toast.error(`Unregistered Farmer: "${query}". Please select an authorized farmer or register them first.`)
       setManualSearch('')
+      setScanFarmerId('')
+      if (scanInputRef.current) {
+        scanInputRef.current.focus()
+      }
     }
   }
 
   const handleVerifyScannedCode = (code: string) => {
     const query = code.trim()
     if (!query) return
+    setScanError('')
     const matched = farmersList.find(
       (f) =>
-        f.id.toLowerCase() === query.toLowerCase() ||
+        (f.code && f.code.toLowerCase() === query.toLowerCase()) ||
+        (f.id && f.id.toLowerCase() === query.toLowerCase()) ||
         f.name.toLowerCase().includes(query.toLowerCase()) ||
-        f.village.toLowerCase().includes(query.toLowerCase()),
+        (f.village && f.village.toLowerCase().includes(query.toLowerCase())),
     )
     if (matched) {
       selectFarmer(matched)
       closeCameraModal()
     } else {
-      const customFarmer = {
-        id: `FRM-${String(Math.floor(Math.random() * 9000) + 1000)}`,
-        name: query,
-        village: 'Dieng, Wonosobo',
-      }
-      selectFarmer(customFarmer)
+      setScanError('Unregistered Farmer: ID or Barcode not found in packhouse directory.')
+      toast.error(`Unregistered Farmer: "${query}". Please select an authorized farmer or register them first.`)
+      setScanFarmerId('')
+      setManualSearch('')
       closeCameraModal()
+      if (activeStep === 1 && scanInputRef.current) {
+        scanInputRef.current.focus()
+      }
     }
   }
 
@@ -332,6 +338,20 @@ export default function WeighingPage() {
       date: confirmApprove.depositDate,
       status: 'BUFFER_WAITING',
     })
+
+    // Persist to backend database via REST API
+    const activeFarmer = farmersList.find(
+      (f) => f.id === confirmApprove.farmerId || (f.code && f.code === confirmApprove.farmerId)
+    )
+    api.weighing
+      .create({
+        farmerCode: activeFarmer?.code || confirmApprove.farmerId,
+        grossWeightKg: confirmApprove.weightKg,
+        tareWeightKg: 1.2,
+        netWeightKg: Math.max(0, confirmApprove.weightKg - 1.2),
+        notes: 'Station 01 Reception weighing',
+      })
+      .catch(() => {})
 
     toast.success(`Weight approved. Waring ${assignedCode} queued for Buffer Warehouse.`)
     setConfirmApprove(updatedRecord)
@@ -557,10 +577,11 @@ export default function WeighingPage() {
      STEPPER PROGRESS BAR COMPONENT
   ───────────────────────────────────────────────────────────── */
   const renderStepperBar = () => (
-    <nav className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto" aria-label="Weighing steps">
+    <nav className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto scrollbar-none" aria-label="Weighing steps">
       {STEPS.map((step, idx) => {
         const isCurrent = activeStep === step.id
         const isDone = activeStep > step.id || (step.id === 3 && approvedSuccessRecord !== null)
+        const compactLabel = step.id === 1 ? 'Farmer' : step.id === 2 ? 'Weigh' : 'Print'
 
         return (
           <div key={step.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -590,9 +611,10 @@ export default function WeighingPage() {
               >
                 {isDone ? '✓' : step.id}
               </span>
+              <span className="sm:hidden">{compactLabel}</span>
               <span className="hidden sm:inline">{step.label}</span>
             </button>
-            {idx < STEPS.length - 1 && <span className="text-muted-foreground/40 text-xs mx-1">/</span>}
+            {idx < STEPS.length - 1 && <span className="text-muted-foreground/40 text-xs mx-0.5 sm:mx-1">/</span>}
           </div>
         )
       })}
@@ -634,7 +656,7 @@ export default function WeighingPage() {
               </p>
             </div>
 
-            <form onSubmit={handleScanSubmit} className="max-w-md mx-auto flex gap-2">
+            <form onSubmit={handleScanSubmit} className="max-w-md mx-auto flex flex-col sm:flex-row gap-2">
               <Input
                 ref={scanInputRef}
                 value={manualSearch}
@@ -643,27 +665,34 @@ export default function WeighingPage() {
                   setScanError('')
                 }}
                 placeholder="Scan 2D barcode or enter name / ID..."
-                className="font-mono text-sm py-2.5 flex-1"
+                className="font-mono text-sm py-2.5 flex-1 min-w-0"
                 autoFocus
               />
-              <Button type="submit" variant="primary" icon="check">
-                Verify
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                icon="scan"
-                onClick={openCameraModal}
-                title="Open Camera Scanner"
-              >
-                Camera
-              </Button>
+              <div className="flex gap-2">
+                <Button type="submit" variant="primary" icon="check" className="flex-1 sm:flex-initial">
+                  Verify
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  icon="scan"
+                  onClick={openCameraModal}
+                  title="Open Camera Scanner"
+                  className="flex-1 sm:flex-initial"
+                >
+                  Camera
+                </Button>
+              </div>
             </form>
 
             {scanError && (
-              <p className="text-xs text-destructive font-medium mt-2">
-                {scanError}
-              </p>
+              <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-left flex items-start gap-2.5 max-w-md mx-auto animate-in fade-in">
+                <Icon name="alert-triangle" size={16} className="text-destructive shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="text-xs font-semibold text-destructive">Verification Rejected</p>
+                  <p className="text-xs text-destructive/90">{scanError}</p>
+                </div>
+              </div>
             )}
 
             {/* Registered Farmers */}

@@ -420,6 +420,7 @@ export default function PackagingPage() {
       {STEPS.map((step, idx) => {
         const isCurrent = activeStep === step.id
         const isDone = activeStep > step.id || (step.id === 3 && savedSuccessRecord !== null)
+        const compactLabel = step.id === 1 ? 'Pallet' : step.id === 2 ? 'Weigh' : 'Pack'
 
         return (
           <div key={step.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -449,9 +450,10 @@ export default function PackagingPage() {
               >
                 {isDone ? '✓' : step.id}
               </span>
+              <span className="sm:hidden">{compactLabel}</span>
               <span className="hidden sm:inline">{step.label}</span>
             </button>
-            {idx < STEPS.length - 1 && <span className="text-muted-foreground/40 text-xs mx-1">/</span>}
+            {idx < STEPS.length - 1 && <span className="text-muted-foreground/40 text-xs mx-0.5 sm:mx-1">/</span>}
           </div>
         )
       })}
@@ -493,7 +495,7 @@ export default function PackagingPage() {
             </div>
 
             {/* Manual Scan Input Form */}
-            <form onSubmit={handlePalletScanSubmit} className="flex max-w-md mx-auto items-center gap-2">
+            <form onSubmit={handlePalletScanSubmit} className="flex flex-col sm:flex-row max-w-md mx-auto items-stretch sm:items-center gap-2">
               <Input
                 type="text"
                 value={palletSearch}
@@ -502,14 +504,16 @@ export default function PackagingPage() {
                   setPalletScanError(null)
                 }}
                 placeholder="Scan or enter Pallet QR (e.g. PLT-GRD-A-01)..."
-                className="font-mono text-xs uppercase"
+                className="font-mono text-xs uppercase flex-1 min-w-0"
               />
-              <Button type="submit" variant="primary" icon="check">
-                Verify
-              </Button>
-              <Button type="button" variant="outline" icon="scan" onClick={openCameraModal}>
-                Camera
-              </Button>
+              <div className="flex gap-2">
+                <Button type="submit" variant="primary" icon="check" className="flex-1 sm:flex-initial">
+                  Verify
+                </Button>
+                <Button type="button" variant="outline" icon="scan" onClick={openCameraModal} className="flex-1 sm:flex-initial">
+                  Camera
+                </Button>
+              </div>
             </form>
             {palletScanError && <p className="text-xs text-destructive font-mono">{palletScanError}</p>}
 

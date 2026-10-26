@@ -85,12 +85,26 @@ router.post('/process', async (req, res): Promise<void> => {
 
     const wash = (washDecision || washingRecord || 'UNWASHED').toUpperCase() === 'WASHED' ? 'WASHED' : 'UNWASHED';
 
+    // Resolve waring strictly (disallow empty match)
+    const waringConditions: any[] = [];
+    if (waringId && typeof waringId === 'string' && waringId.trim()) {
+      waringConditions.push({ id: waringId.trim() });
+    }
+    if (waringCode && typeof waringCode === 'string' && waringCode.trim()) {
+      waringConditions.push({ code: { equals: waringCode.trim(), mode: 'insensitive' } });
+    }
+
+    if (waringConditions.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Valid waringId or waringCode is required' },
+      });
+      return;
+    }
+
     const waring = await prisma.waring.findFirst({
       where: {
-        OR: [
-          waringId ? { id: waringId } : {},
-          waringCode ? { code: waringCode } : {},
-        ],
+        OR: waringConditions,
       },
       include: { farmer: true },
     });

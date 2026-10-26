@@ -44,12 +44,26 @@ router.post('/pack', async (req, res): Promise<void> => {
       return;
     }
 
+    // Resolve pallet strictly (disallow empty match)
+    const palletConditions: any[] = [];
+    if (targetPalletCode && typeof targetPalletCode === 'string' && targetPalletCode.trim()) {
+      palletConditions.push({ code: { equals: targetPalletCode.trim(), mode: 'insensitive' } });
+    }
+    if (targetPalletId && typeof targetPalletId === 'string' && targetPalletId.trim()) {
+      palletConditions.push({ id: targetPalletId.trim() });
+    }
+
+    if (palletConditions.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Valid targetPalletCode or targetPalletId is required' },
+      });
+      return;
+    }
+
     const pallet = await prisma.pallet.findFirst({
       where: {
-        OR: [
-          targetPalletCode ? { code: targetPalletCode } : {},
-          targetPalletId ? { id: targetPalletId } : {},
-        ],
+        OR: palletConditions,
       },
       include: {
         farmer: true,

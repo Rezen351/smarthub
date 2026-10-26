@@ -159,12 +159,13 @@ export default function DashboardLayout() {
             aria-label="ENYX-ENTERPRISE home"
           >
             <Logo className="h-8 w-auto" markOnly />
-            <div>
+            <div className="min-w-0">
               <div className="font-display text-xl leading-none tracking-wider text-text flex items-center gap-1.5">
                 ENYX-ENTERPRISE
               </div>
-              <div className="font-mono-custom text-[9px] text-text-light tracking-[0.22em] uppercase mt-0.5">
-                TRACEABILITY SYSTEM
+              <div className="font-mono-custom text-[9px] text-text-light tracking-[0.22em] uppercase mt-0.5 hidden xs:block sm:block">
+                <span className="hidden sm:inline">TRACEABILITY SYSTEM</span>
+                <span className="sm:hidden">TRACE</span>
               </div>
             </div>
           </Link>
@@ -198,17 +199,17 @@ export default function DashboardLayout() {
           {/* On mobile: show product brand in navbar because sidebar is off-canvas */}
           <Link
             to="/dashboard"
-            className="hide-desktop flex items-center gap-2.5 text-inherit group"
+            className="hide-desktop flex items-center gap-2 text-inherit group min-w-0"
             style={{ textDecoration: 'none' }}
             aria-label="ENYX-ENTERPRISE home"
           >
-            <Logo className="h-7 w-auto" markOnly />
-            <div>
-              <div className="font-display text-base leading-none tracking-wider text-text">
+            <Logo className="h-6 w-auto shrink-0" markOnly />
+            <div className="min-w-0">
+              <div className="font-display text-sm leading-none tracking-wider text-text truncate">
                 ENYX-ENTERPRISE
               </div>
-              <div className="font-mono-custom text-[8px] text-text-light tracking-[0.2em] uppercase">
-                TRACEABILITY SYSTEM
+              <div className="font-mono-custom text-[7.5px] text-text-light tracking-[0.16em] uppercase truncate">
+                TRACEABILITY
               </div>
             </div>
           </Link>
