@@ -496,43 +496,33 @@
   border-top: none;
 }
 
-/* ── Thermal Print Portal (Screen vs Print) ── */
-#thermal-print-portal {
-  display: none !important;
+/* ── Thermal Print Isolation (Screen vs Print) ── */
+#thermal-print-portal,
+#thermal-print-iframe {
+  display: block;
 }
 
 /* ── Thermal Receipt & Label Print Styles ── */
 @media print {
   @page {
     margin: 0;
-    size: auto;
+    size: 80mm auto;
   }
 
-  /* When isolated thermal print portal is active, suppress main application entirely */
-  body.thermal-printing {
+  /* Unconditional print reset: pure white background and thermal black foreground */
+  html,
+  body {
     background: #ffffff !important;
     color: #000000 !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
-  }
-
-  body.thermal-printing #root {
-    display: none !important;
-  }
-
-  body.thermal-printing #thermal-print-portal {
-    display: block !important;
-    position: static !important;
-    width: 100% !important;
     max-width: 80mm !important;
-    margin: 0 auto !important;
-    padding: 0 !important;
-    background: #ffffff !important;
-    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  /* Hide app chrome, navigation, buttons, background backdrops, toasts, alerts, and steppers */
+  /* Suppress all web application shell chrome, navigation, headers, footers, sidebars, steppers, stats, and tables */
   nav,
   aside,
   header,
@@ -549,27 +539,28 @@
   .step-progress-bar,
   .step-verification-card,
   .action-footer-bar,
-  .status-banner-card {
+  .status-banner-card,
+  .stat-card-grid,
+  #weighing-records,
+  table,
+  .table-container {
     display: none !important;
   }
 
-  /* Hide modal backdrop styling during print */
-  [role="dialog"] {
-    position: static !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border: none !important;
+  /* When thermal print mode is triggered on main window, suppress #root entirely */
+  body.thermal-printing #root {
+    display: none !important;
   }
 
-  body {
+  /* Thermal print container inside iframe or portal */
+  .thermal-print-container {
+    display: block !important;
+    width: 100% !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 3mm !important;
     background: #ffffff !important;
     color: #000000 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
   }
 
   /* Printable label container */
@@ -592,6 +583,7 @@
   .print-page-break {
     page-break-after: always !important;
     break-after: page !important;
+    margin-bottom: 5mm !important;
   }
 }
 
