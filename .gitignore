@@ -40,3 +40,7 @@ docker-data/
 # Uploads
 backend/uploads/*
 !backend/uploads/.gitkeep
+
+# Temporary scratch and audit artifacts
+scratch/
+
