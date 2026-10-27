@@ -46,14 +46,14 @@ export default function FarmerDashboardHome() {
     const fetchSummary = async () => {
       try {
         setLoading(true)
-        const farmerId = user.farmerId || user.id || 'FMR-001'
+        const farmerId = user.farmerId || 'FMR-001'
         const data = await api.farmers.summary(farmerId)
         if (data) {
           setSummary(data)
           return
         }
         setSummary({
-          farmerId: user.id || 'farmer-1',
+          farmerId: user.farmerId || 'FMR-001',
           farmerName: user.name || 'Ahmad Santoso',
           totalDeposited: 0,
           commodities: [],
@@ -61,7 +61,7 @@ export default function FarmerDashboardHome() {
       } catch (err) {
         if ((err as Error).name === 'AbortError') return
         setSummary({
-          farmerId: user.id || 'farmer-1',
+          farmerId: user.farmerId || 'FMR-001',
           farmerName: user.name || 'Ahmad Santoso',
           totalDeposited: 0,
           commodities: [],

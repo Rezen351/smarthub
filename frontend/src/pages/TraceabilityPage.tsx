@@ -13,7 +13,7 @@ export default function TraceabilityPage() {
   const toast = useToast()
   const [copied, setCopied] = useState(false)
 
-  const farmerId = (user as { farmerId?: string })?.farmerId || user?.id || 'unknown'
+  const farmerId = user?.farmerId || 'unknown'
   const farmerName = user?.name || 'Farmer'
   const farmerEmail = user?.email || ''
 

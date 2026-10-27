@@ -111,7 +111,7 @@ export default function WeighingPage() {
         if (Array.isArray(list) && list.length > 0) {
           setFarmersList(
             list.map((f: any) => ({
-              id: f.id,
+              id: f.code || f.id,
               code: f.code || f.id,
               name: f.name,
               village: f.village || 'Desa Sumber Brantas',
@@ -128,7 +128,7 @@ export default function WeighingPage() {
           setRecords(
             list.map((w: any) => ({
               id: w.id,
-              farmerId: w.farmerId || 'farmer-1',
+              farmerId: w.farmerCode || w.farmerId || 'FMR-001',
               farmerName: w.farmerName || 'Ahmad Santoso',
               farmerVillage: w.farmerVillage || 'Desa Sumber Brantas',
               weightKg: Number(w.grossWeightKg),
@@ -215,13 +215,15 @@ export default function WeighingPage() {
       return
     }
 
-    const matched = farmersList.find(
-      (f) =>
-        (f.code && f.code.toLowerCase() === query.toLowerCase()) ||
-        (f.id && f.id.toLowerCase() === query.toLowerCase()) ||
-        f.name.toLowerCase().includes(query.toLowerCase()) ||
-        (f.village && f.village.toLowerCase().includes(query.toLowerCase())),
-    )
+    const normalize = (s: string) => s.replace(/[\r\n\t\s]/g, '').toLowerCase()
+    const queryNorm = normalize(query)
+    const matched = farmersList.find((f) => {
+      const candidates = [f.code, f.id, f.name, f.village].filter(Boolean).map((v) => normalize(String(v)))
+      if (candidates.includes(queryNorm)) return true
+      if ((f.code || f.id) && queryNorm.includes(normalize(f.code || f.id))) return true
+      if (normalize(f.name).includes(queryNorm) || queryNorm.includes(normalize(f.name))) return true
+      return false
+    })
 
     if (matched) {
       selectFarmer(matched)
@@ -230,36 +232,42 @@ export default function WeighingPage() {
     } else {
       setScanError('Unregistered Farmer: ID or Barcode not found in packhouse directory.')
       toast.error(`Unregistered Farmer: "${query}". Please select an authorized farmer or register them first.`)
-      setManualSearch('')
-      setScanFarmerId('')
+      setManualSearch(query)
+      setScanFarmerId(query)
       if (scanInputRef.current) {
         scanInputRef.current.focus()
+        scanInputRef.current.select?.()
       }
     }
   }
 
   const handleVerifyScannedCode = (code: string) => {
-    const query = code.trim()
-    if (!query) return
+    const rawText = code.trim()
+    if (!rawText) return
+    // Extract farmer code pattern
+    const m = rawText.match(/(FMR|FRM)-?\d{3,}/i)
+    const query = m ? m[0].toUpperCase().replace(/FRM/i, 'FMR').replace(/FMR(\d)/, 'FMR-$1') : rawText.replace(/[\r\n\t\s]/g, '')
     setScanError('')
-    const matched = farmersList.find(
-      (f) =>
-        (f.code && f.code.toLowerCase() === query.toLowerCase()) ||
-        (f.id && f.id.toLowerCase() === query.toLowerCase()) ||
-        f.name.toLowerCase().includes(query.toLowerCase()) ||
-        (f.village && f.village.toLowerCase().includes(query.toLowerCase())),
-    )
+    const normalize = (s: string) => s.replace(/[\r\n\t\s]/g, '').toLowerCase()
+    const queryNorm = normalize(query)
+    const matched = farmersList.find((f) => {
+      const candidates = [f.code, f.id, f.name].filter(Boolean).map((v) => normalize(String(v)))
+      if (candidates.includes(queryNorm)) return true
+      if ((f.code || f.id) && queryNorm.includes(normalize(f.code || f.id))) return true
+      return false
+    })
     if (matched) {
       selectFarmer(matched)
       closeCameraModal()
     } else {
       setScanError('Unregistered Farmer: ID or Barcode not found in packhouse directory.')
       toast.error(`Unregistered Farmer: "${query}". Please select an authorized farmer or register them first.`)
-      setScanFarmerId('')
-      setManualSearch('')
+      setScanFarmerId(query)
+      setManualSearch(query)
       closeCameraModal()
       if (activeStep === 1 && scanInputRef.current) {
         scanInputRef.current.focus()
+        scanInputRef.current.select?.()
       }
     }
   }

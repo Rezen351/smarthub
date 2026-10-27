@@ -124,7 +124,7 @@ export function usePackhouseStore() {
         nextStore.bufferWarings = waringsRes.value.map((w: any) => ({
           id: w.id,
           code: w.code,
-          farmerId: w.farmerId || w.farmer?.id,
+          farmerId: w.farmerCode || w.farmer?.code || w.farmerId,
           farmerName: w.farmerName || w.farmer?.name || 'Farmer',
           farmerVillage: w.farmerVillage || w.farmer?.village || '',
           grossWeightKg: Number(w.grossWeightKg),
