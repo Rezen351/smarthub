@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import {
   Table,
   TableHeader,
@@ -21,6 +21,8 @@ export interface Column<T> {
   width?: string
 }
 
+const DEFAULT_PAGE_SIZE_OPTIONS = [10, 25, 50]
+
 interface DataTableProps<T> {
   columns: Column<T>[]
   data: T[]
@@ -33,6 +35,9 @@ interface DataTableProps<T> {
   /** Rendered as the row headline in the mobile card layout. Defaults to first priority column. */
   mobileTitle?: (row: T, index: number) => ReactNode
   caption?: string
+  /** Client-side pagination settings. */
+  pageSize?: number
+  pageSizeOptions?: number[]
 }
 
 export default function DataTable<T>({
@@ -45,7 +50,27 @@ export default function DataTable<T>({
   mobileActions,
   mobileTitle,
   caption,
+  pageSize: defaultPageSize = 10,
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
 }: DataTableProps<T>) {
+  const pageSizeId = useId()
+  const availablePageSizes = useMemo(
+    () => Array.from(new Set([defaultPageSize, ...pageSizeOptions])).filter((size) => size > 0),
+    [defaultPageSize, pageSizeOptions],
+  )
+  const [currentPage, setCurrentPage] = useState(1)
+  const [rowsPerPage, setRowsPerPage] = useState(defaultPageSize)
+  const totalPages = Math.max(1, Math.ceil(data.length / rowsPerPage))
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages))
+  }, [totalPages])
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage
+    return data.slice(start, start + rowsPerPage)
+  }, [currentPage, data, rowsPerPage])
+
   if (data.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -55,6 +80,13 @@ export default function DataTable<T>({
   }
 
   const mobileColumns = columns.filter((c) => c.priority)
+  const firstRow = (currentPage - 1) * rowsPerPage + 1
+  const lastRow = Math.min(currentPage * rowsPerPage, data.length)
+
+  const handleRowsPerPageChange = (nextRowsPerPage: number) => {
+    setRowsPerPage(nextRowsPerPage)
+    setCurrentPage(1)
+  }
 
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -75,7 +107,7 @@ export default function DataTable<T>({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((row, index) => (
+            {paginatedData.map((row, index) => (
               <TableRow key={rowKey(row, index)}>
                 {columns.map((col) => (
                   <TableCell
@@ -93,7 +125,7 @@ export default function DataTable<T>({
 
       {/* Mobile: rows become cards */}
       <div className="flex flex-col md:hidden divide-y divide-border">
-        {data.map((row, index) => (
+        {paginatedData.map((row, index) => (
           <div className="p-3.5 flex flex-col gap-2" key={rowKey(row, index)}>
             <div className="flex items-center justify-between gap-2">
               <span className="text-sm font-semibold">
@@ -122,6 +154,51 @@ export default function DataTable<T>({
             {mobileActions && <div className="flex items-center gap-2 flex-wrap mt-1">{mobileActions(row, index)}</div>}
           </div>
         ))}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-xs text-muted-foreground">
+        <span>
+          Showing {firstRow}-{lastRow} of {data.length}
+        </span>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5" htmlFor="data-table-page-size">
+            Rows per page
+            <select
+              id={`data-table-page-size-${pageSizeId}`}
+              value={rowsPerPage}
+              onChange={(event) => handleRowsPerPageChange(Number(event.target.value))}
+              className="h-8 border border-border bg-card px-2 text-xs text-foreground"
+            >
+              {availablePageSizes.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <span className="px-1 text-foreground">
+            Page {currentPage} of {totalPages}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            disabled={currentPage === 1}
+            className="min-h-8 border border-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            disabled={currentPage === totalPages}
+            className="min-h-8 border border-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
       </div>
 
       {caption && <p className="text-xs text-muted-foreground px-4 py-3 border-t border-border">{caption}</p>}
