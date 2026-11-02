@@ -20,8 +20,8 @@ export interface LabelPreviewProps {
 export default function LabelPreview({
   type,
   code,
-  farmerName = 'Ahmad Santoso',
-  farmerId = 'FRM-2026-0001',
+  farmerName = '',
+  farmerId = '',
   grade = 'A',
   weightKg,
   commodity = 'Kentang (Potatoes)',
@@ -41,7 +41,7 @@ export default function LabelPreview({
           <span className="text-[11px] font-bold tracking-wider uppercase block text-gray-800 print:text-black">
             ENYX-ENTERPRISE · RECEIVING INTAKE SLIP
           </span>
-          <span className="text-[10px] text-gray-500 print:text-gray-700 block">OFFICIAL WEIGHING RECEIPT</span>
+          <span className="text-[10px] text-gray-500 print:text-gray-700 block">RECEIVING RECEIPT</span>
           <span className="text-xs font-semibold text-gray-700 print:text-black block mt-1">
             {date} · {time}
           </span>
@@ -65,7 +65,7 @@ export default function LabelPreview({
           </div>
         </div>
         <div className="py-3 border-b border-dashed border-gray-400 text-center">
-          <span className="text-[10px] uppercase text-gray-500 print:text-gray-700 block">OFFICIAL GROSS INTAKE WEIGHT</span>
+          <span className="text-[10px] uppercase text-gray-500 print:text-gray-700 block">GROSS INTAKE WEIGHT</span>
           <span className="text-2xl font-black text-emerald-800 print:text-black block">
             {weightKg !== undefined ? formatWeight(weightKg) : '0'} kg
           </span>
@@ -110,7 +110,7 @@ export default function LabelPreview({
           </div>
           <div className="flex flex-col items-center gap-1">
             <OfflineQrCode value={code || 'WRG-PENDING'} size={compact ? 44 : 52} />
-            <span className="text-[8px] text-gray-500 print:text-gray-700 uppercase">Scan to Pair</span>
+            <span className="text-[8px] text-gray-500 print:text-gray-700 uppercase">Scan to Identify</span>
           </div>
         </div>
 
@@ -163,7 +163,7 @@ export default function LabelPreview({
           </div>
           <div>
             <span className="text-gray-500 block text-[10px]">Sorting Status</span>
-            <span className="font-bold text-emerald-800 block">MANUAL SORTED</span>
+            <span className="font-bold text-emerald-800 block">SORTED</span>
           </div>
         </div>
 
@@ -253,7 +253,7 @@ export default function LabelPreview({
           </div>
           <div className="flex flex-col items-center gap-1">
             <OfflineQrCode value={code || 'EXP-BATCH-001'} size={compact ? 48 : 56} />
-            <span className="text-[9px] text-gray-500 print:text-gray-700">GS1 Export QR</span>
+            <span className="text-[9px] text-gray-500 print:text-gray-700">Export QR</span>
           </div>
         </div>
 
@@ -263,7 +263,7 @@ export default function LabelPreview({
 
         <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-gray-200">
           <div>
-            <span className="text-gray-500 print:text-gray-700 block text-[10px]">Carton Spec</span>
+            <span className="text-gray-500 print:text-gray-700 block text-[10px]">Carton Size</span>
             <span className="font-semibold text-gray-900 print:text-black block">
               {weightKg && weightKg >= 30 ? '50 kg Export Carton' : '10 kg Export Carton'}
             </span>
@@ -275,7 +275,7 @@ export default function LabelPreview({
         </div>
 
         <div className="pt-1 text-[9px] text-gray-500 print:text-gray-700 text-center border-t border-gray-200">
-          Pack Date: {date} · Standard export packaging specification.
+          Pack Date: {date} · Export package.
         </div>
       </div>
     )
@@ -310,7 +310,7 @@ export default function LabelPreview({
         </div>
         <div className="flex flex-col items-center gap-1">
           <OfflineQrCode value={code || 'PCH-20261010-001'} size={compact ? 48 : 56} />
-          <span className="text-[9px] text-gray-500 print:text-gray-700">GS1 Digital Link</span>
+          <span className="text-[9px] text-gray-500 print:text-gray-700">Product QR</span>
         </div>
       </div>
 

@@ -130,12 +130,12 @@ export default function SettingsPage() {
       // Test direct physical Modbus TCP socket connection via backend
       const res = await api.scales.testConnection(stationId)
       if (res && res.online) {
-        toast.success(res.message || `${stationLabel} verified at ${ip}:${port}`)
+      toast.success(res.message || `${stationLabel} is ready at ${ip}:${port}`)
       } else {
-        toast.warning(res?.message || `Could not connect to ${stationLabel} at ${ip}:${port}`)
+      toast.warning(res?.message || `Could not reach ${stationLabel} at ${ip}:${port}`)
       }
     } catch (err: any) {
-      toast.error(`Connection test failed: ${err.message || 'Host unreachable'}`)
+      toast.error(`Scale check failed: ${err.message || 'Scale unavailable'}`)
     } finally {
       setTestingTarget(null)
     }
@@ -145,7 +145,7 @@ export default function SettingsPage() {
     e.preventDefault()
 
     if (!form.intake.ip.trim() || !form.grading.ip.trim() || !form.packaging.ip.trim()) {
-      toast.error('All 3 scale IP addresses are required.')
+      toast.error('All 3 scale addresses are required.')
       return
     }
 
@@ -154,7 +154,7 @@ export default function SettingsPage() {
       Number(form.grading.capacityKg) <= 0 ||
       Number(form.packaging.capacityKg) <= 0
     ) {
-      toast.error('Capacity must be greater than zero.')
+      toast.error('Maximum load must be greater than zero.')
       return
     }
 
@@ -173,9 +173,9 @@ export default function SettingsPage() {
         // storage unavailable
       }
 
-      toast.success('Scale network settings saved & applied to Modbus TCP service.')
+      toast.success('Scale settings saved and applied.')
     } catch (err: any) {
-      toast.error('Failed to update scale settings: ' + (err.message || 'Network error'))
+      toast.error('Failed to update scale settings: ' + (err.message || 'Connection error'))
     } finally {
       setSaving(false)
     }
@@ -194,11 +194,11 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Scale Settings"
-        subtitle="Modbus TCP parameters for Stations 01, 02, and 03."
+        title="Scale Setup"
+        subtitle="Connection and capacity settings for Stations 01, 02, and 03."
         actions={
           <Badge tone="success" dot live>
-            Port 502 · Active
+            All Stations · Online
           </Badge>
         }
       />
@@ -224,9 +224,9 @@ export default function SettingsPage() {
         </div>
 
         <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Polling</p>
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Update Speed</p>
           <p className="text-xl font-bold font-mono tracking-tight text-foreground">{form.pollIntervalMs} ms</p>
-          <p className="text-xs text-muted-foreground">{form.timeoutMs} ms Timeout</p>
+          <p className="text-xs text-muted-foreground">{form.timeoutMs} ms response limit</p>
         </div>
       </div>
 
@@ -239,7 +239,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Field label="IP Address" htmlFor="intake-ip" required>
+            <Field label="Scale Address" htmlFor="intake-ip" required>
               <Input
                 id="intake-ip"
                 mono
@@ -253,7 +253,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Port" htmlFor="intake-port" required>
+            <Field label="Connection Port" htmlFor="intake-port" required>
               <Input
                 id="intake-port"
                 type="number"
@@ -268,7 +268,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Slave ID" htmlFor="intake-slave">
+            <Field label="Device Number" htmlFor="intake-slave">
               <Input
                 id="intake-slave"
                 type="number"
@@ -283,7 +283,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Weight Register" htmlFor="intake-reg-weight" required>
+            <Field label="Weight Reading" htmlFor="intake-reg-weight" required>
               <Input
                 id="intake-reg-weight"
                 type="number"
@@ -298,7 +298,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Status Register" htmlFor="intake-reg-status">
+            <Field label="Status Reading" htmlFor="intake-reg-status">
               <Input
                 id="intake-reg-status"
                 type="number"
@@ -313,7 +313,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Capacity (kg)" htmlFor="intake-cap" required>
+            <Field label="Maximum Load (kg)" htmlFor="intake-cap" required>
               <Input
                 id="intake-cap"
                 type="number"
@@ -328,7 +328,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Stability (g)" htmlFor="intake-stab">
+            <Field label="Stable Reading (g)" htmlFor="intake-stab">
               <Input
                 id="intake-stab"
                 type="number"
@@ -352,7 +352,7 @@ export default function SettingsPage() {
               loading={testingTarget === 'st-01'}
               onClick={() => handleTestConnection('st-01', 'Station 01', form.intake.ip, form.intake.port)}
             >
-              Test Connection
+                Check Scale
             </Button>
           </div>
         </div>
@@ -365,7 +365,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Field label="IP Address" htmlFor="grading-ip" required>
+            <Field label="Scale Address" htmlFor="grading-ip" required>
               <Input
                 id="grading-ip"
                 mono
@@ -379,7 +379,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Port" htmlFor="grading-port" required>
+            <Field label="Connection Port" htmlFor="grading-port" required>
               <Input
                 id="grading-port"
                 type="number"
@@ -394,7 +394,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Slave ID" htmlFor="grading-slave">
+            <Field label="Device Number" htmlFor="grading-slave">
               <Input
                 id="grading-slave"
                 type="number"
@@ -409,7 +409,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Weight Register" htmlFor="grading-reg-weight" required>
+            <Field label="Weight Reading" htmlFor="grading-reg-weight" required>
               <Input
                 id="grading-reg-weight"
                 type="number"
@@ -424,7 +424,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Status Register" htmlFor="grading-reg-status">
+            <Field label="Status Reading" htmlFor="grading-reg-status">
               <Input
                 id="grading-reg-status"
                 type="number"
@@ -439,7 +439,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Capacity (kg)" htmlFor="grading-cap" required>
+            <Field label="Maximum Load (kg)" htmlFor="grading-cap" required>
               <Input
                 id="grading-cap"
                 type="number"
@@ -454,7 +454,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Stability (g)" htmlFor="grading-stab">
+            <Field label="Stable Reading (g)" htmlFor="grading-stab">
               <Input
                 id="grading-stab"
                 type="number"
@@ -478,7 +478,7 @@ export default function SettingsPage() {
               loading={testingTarget === 'st-02'}
               onClick={() => handleTestConnection('st-02', 'Station 02', form.grading.ip, form.grading.port)}
             >
-              Test Connection
+                Check Scale
             </Button>
           </div>
         </div>
@@ -491,7 +491,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Field label="IP Address" htmlFor="pkg-ip" required>
+            <Field label="Scale Address" htmlFor="pkg-ip" required>
               <Input
                 id="pkg-ip"
                 mono
@@ -505,7 +505,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Port" htmlFor="pkg-port" required>
+            <Field label="Connection Port" htmlFor="pkg-port" required>
               <Input
                 id="pkg-port"
                 type="number"
@@ -520,7 +520,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Slave ID" htmlFor="pkg-slave">
+            <Field label="Device Number" htmlFor="pkg-slave">
               <Input
                 id="pkg-slave"
                 type="number"
@@ -535,7 +535,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Weight Register" htmlFor="pkg-reg-weight" required>
+            <Field label="Weight Reading" htmlFor="pkg-reg-weight" required>
               <Input
                 id="pkg-reg-weight"
                 type="number"
@@ -550,7 +550,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Status Register" htmlFor="pkg-reg-status">
+            <Field label="Status Reading" htmlFor="pkg-reg-status">
               <Input
                 id="pkg-reg-status"
                 type="number"
@@ -565,7 +565,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Capacity (kg)" htmlFor="pkg-cap" required>
+            <Field label="Maximum Load (kg)" htmlFor="pkg-cap" required>
               <Input
                 id="pkg-cap"
                 type="number"
@@ -580,7 +580,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Stability (g)" htmlFor="pkg-stab">
+            <Field label="Stable Reading (g)" htmlFor="pkg-stab">
               <Input
                 id="pkg-stab"
                 type="number"
@@ -595,7 +595,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Pouch Tolerance (g)" htmlFor="pkg-tol" required>
+            <Field label="Pouch Allowance (g)" htmlFor="pkg-tol" required>
               <Input
                 id="pkg-tol"
                 type="number"
@@ -619,7 +619,7 @@ export default function SettingsPage() {
               loading={testingTarget === 'st-03'}
               onClick={() => handleTestConnection('st-03', 'Station 03', form.packaging.ip, form.packaging.port)}
             >
-              Test Connection
+                Check Scale
             </Button>
           </div>
         </div>
@@ -627,11 +627,11 @@ export default function SettingsPage() {
         {/* Global Settings */}
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="border-b border-border pb-4">
-            <span className="font-semibold text-base text-foreground">Global Settings</span>
+            <span className="font-semibold text-base text-foreground">General Settings</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Polling (ms)" htmlFor="global-poll">
+            <Field label="Update Speed (ms)" htmlFor="global-poll">
               <Input
                 id="global-poll"
                 type="number"
@@ -643,7 +643,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Timeout (ms)" htmlFor="global-timeout">
+            <Field label="Response Limit (ms)" htmlFor="global-timeout">
               <Input
                 id="global-timeout"
                 type="number"

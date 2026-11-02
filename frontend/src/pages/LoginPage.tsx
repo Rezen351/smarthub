@@ -123,7 +123,7 @@ export default function LoginPage() {
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center gap-2 font-mono-custom text-[11px] text-[#666666] border border-[#eaeaea] bg-[#f5f5f5] px-3 py-1.5 rounded-none">
               <span className="w-2 h-2 rounded-full bg-[#15803d] animate-pulse"></span>
-              <span>MODBUS TELEMETRY · ACTIVE</span>
+              <span>SYSTEM ONLINE</span>
             </div>
             <Link
               to="/"

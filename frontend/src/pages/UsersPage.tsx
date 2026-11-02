@@ -146,7 +146,7 @@ export default function UsersPage() {
         <div className="stat-card">
           <p className="stat-label">Total users</p>
           <p className="stat-value">{users.length}</p>
-          <p className="stat-sub">Across 6 roles</p>
+          <p className="stat-sub">Across 3 roles</p>
         </div>
         <div className="stat-card">
           <p className="stat-label">Operators</p>

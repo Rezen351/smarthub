@@ -27,7 +27,7 @@ const BAR_COLORS = ['bg-accent', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-50
 
 const quickActions: { label: string; path: string; icon: IconName; desc: string }[] = [
   { label: 'My Deposits', path: '/dashboard/my-deliveries', icon: 'clipboard', desc: 'History per pallet' },
-  { label: 'My QR', path: '/dashboard/traceability', icon: 'qr', desc: 'Show at the weighing station' },
+  { label: 'My QR', path: '/dashboard/farmer-qr', icon: 'qr', desc: 'Show at the weighing station' },
   { label: 'Track Product', path: '/traceability', icon: 'search', desc: 'Public traceability' },
   { label: 'Profile', path: '/dashboard/profile', icon: 'user', desc: 'Farm & contact data' },
 ]
@@ -112,7 +112,7 @@ export default function FarmerDashboardHome() {
           </span>
         </div>
         <Link
-          to="/dashboard/traceability"
+          to="/dashboard/farmer-qr"
           className="pulse-btn inline-flex items-center justify-center gap-2 rounded-none bg-[#15803d] text-white font-heading tracking-wider uppercase text-xs px-5 min-h-[44px] hover:bg-[#16a34a] transition-all font-semibold"
         >
           <Icon name="qr" size={16} />

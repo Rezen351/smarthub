@@ -48,7 +48,7 @@ export default function LandingPage() {
     {
       url: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1920&q=80',
       title: '1 kg Pouch Packaging Line',
-      subtitle: 'GS1 Digital Link Pouch Barcodes',
+      subtitle: 'Product QR Pouch Labels',
     },
     {
       url: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=1920&q=80',
@@ -438,13 +438,13 @@ export default function LandingPage() {
               Pipelines
             </a>
             <a href="#hardware" className="hover:text-[#171717] transition-colors">
-              Hardware
+              Stations
             </a>
             <a href="#stories" className="hover:text-[#171717] transition-colors">
               Cases
             </a>
             <a href="#booking" className="hover:text-[#171717] transition-colors">
-              Deployment
+              Get Started
             </a>
             <Link to="/traceability" className="hover:text-[#15803d] text-[#15803d] font-semibold transition-colors">
               Public Trace
@@ -462,7 +462,7 @@ export default function LandingPage() {
                     : 'bg-red-500'
                 }`}
               ></span>
-              <span className="tracking-wider">BACKEND STATUS · {backendStatus}</span>
+              <span className="tracking-wider">SYSTEM STATUS · {backendStatus}</span>
             </div>
             <Link
               to="/login"
@@ -520,7 +520,7 @@ export default function LandingPage() {
                 }`}
               ></span>
               <span className="tracking-[0.2em] uppercase font-semibold">
-                BACKEND STATUS · {backendStatus}
+                SYSTEM STATUS · {backendStatus}
               </span>
             </div>
           </div>
@@ -529,7 +529,7 @@ export default function LandingPage() {
           <div className="max-w-5xl">
             <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#15803d] tracking-[0.25em] uppercase mb-4">
               <span className="w-8 h-[2px] bg-[#15803d]"></span>
-              <span>EST. 2024 · IOT SMART PACKHOUSE</span>
+              <span>EST. 2024 · SMART PACKHOUSE</span>
             </div>
 
             <h1 className="font-display text-[13vw] md:text-[9.5vw] lg:text-[7.5vw] leading-[0.85] mb-6 tracking-tight">
@@ -541,9 +541,8 @@ export default function LandingPage() {
             </h1>
 
             <p className="max-w-2xl text-white/80 text-base md:text-lg leading-relaxed font-body">
-              Enterprise potato traceability system linking farm intake, 3-tier grading, and 1 kg pouch
-              packaging directly to GS1 Digital Link barcodes. Hardware-integrated, tamper-resistant, and verified
-              end-to-end.
+              Potato traceability from farm intake through sorting and 1 kg packaging. Clear records, secure labels,
+              and verified handoffs from field to buyer.
             </p>
           </div>
 
@@ -570,7 +569,7 @@ export default function LandingPage() {
                   ACTIVE PACKHOUSE STATIONS
                 </div>
                 <div className="font-heading text-sm text-white tracking-wider">
-                  3 Modbus Isolated Channels · FreeRTOS Firmware
+                  3 Connected Stations · Ready for Daily Work
                 </div>
               </div>
             </div>
@@ -598,13 +597,13 @@ export default function LandingPage() {
           <div className="marquee-track font-heading text-xs tracking-[0.25em] uppercase text-white/70">
             <span className="px-8">WEIGHED & APPROVED</span>
             <span className="text-[#15803d]">/</span>
-            <span className="px-8">GS1 DIGITAL LINK</span>
+            <span className="px-8">PRODUCT QR LABELS</span>
             <span className="text-[#15803d]">/</span>
-            <span className="px-8">MODBUS TCP INTEGRATION</span>
+            <span className="px-8">CONNECTED SCALES</span>
             <span className="text-[#15803d]">/</span>
-            <span className="px-8">SINGLE CANONICAL SORTING</span>
+            <span className="px-8">CLEAR SORTING</span>
             <span className="text-[#15803d]">/</span>
-            <span className="px-8">ZERO WEIGHT CONFLICT</span>
+            <span className="px-8">VERIFIED WEIGHT</span>
             <span className="text-[#15803d]">/</span>
             <span className="px-8">PUBLIC QR TRACEABILITY</span>
             <span className="text-[#15803d]">/</span>
@@ -612,13 +611,13 @@ export default function LandingPage() {
             <span className="text-[#15803d]">/</span>
             <span className="px-8">WEIGHED & APPROVED</span>
             <span className="text-[#15803d]">/</span>
-            <span className="px-8">GS1 DIGITAL LINK</span>
+            <span className="px-8">PRODUCT QR LABELS</span>
             <span className="text-[#15803d]">/</span>
-            <span className="px-8">MODBUS TCP INTEGRATION</span>
+            <span className="px-8">CONNECTED SCALES</span>
             <span className="text-[#15803d]">/</span>
-            <span className="px-8">SINGLE CANONICAL SORTING</span>
+            <span className="px-8">CLEAR SORTING</span>
             <span className="text-[#15803d]">/</span>
-            <span className="px-8">ZERO WEIGHT CONFLICT</span>
+            <span className="px-8">VERIFIED WEIGHT</span>
             <span className="text-[#15803d]">/</span>
           </div>
         </div>
@@ -660,7 +659,7 @@ export default function LandingPage() {
                 {counters.stations}
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
-                Connected IoT Scales
+                Connected Scales
               </div>
             </div>
           </div>
@@ -685,8 +684,8 @@ export default function LandingPage() {
 
             <div className="lg:col-span-6 flex flex-col justify-end">
               <p className="text-[#666666] text-lg leading-relaxed mb-6 font-body">
-                Every workstation in ENYX-Smart Hub is engineered to eliminate data leakage and manual
-                tampering. Choose a station workflow below to inspect hardware specs and protocol standards.
+                Every station keeps the daily work clear and accountable. Explore how receiving, sorting, and
+                packaging work together from one place.
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -749,23 +748,22 @@ export default function LandingPage() {
                     01 / INTAKE WEIGHING
                   </div>
                   <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#15803d] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
-                    DUAL PRINT OUTPUT
+                    RECEIPT + LABEL
                   </div>
                 </div>
 
                 <div className="p-7">
                   <h3 className="font-display text-4xl mb-3 text-[#171717]">INTAKE WEIGHING</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Farmer ID identification, tare subtraction, live scale stability detection, and automated
-                    dual print: Farmer Receipt Slip & Waring QR Label (WRG-...).
+                    Verify the farmer, record the harvest weight, and print a receipt and Waring label.
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Connection
+                        Process
                       </div>
-                      <div className="font-heading text-base text-[#171717]">DIRECT SCALE I/O</div>
+                      <div className="font-heading text-base text-[#171717]">RECEIVING RECORD</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
@@ -775,15 +773,15 @@ export default function LandingPage() {
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Precision
+                        Reading
                       </div>
-                      <div className="font-heading text-base text-[#171717]">±20 G STABILITY</div>
+                      <div className="font-heading text-base text-[#171717]">STABLE WEIGHT</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Workflow
+                        Output
                       </div>
-                      <div className="font-heading text-base text-[#171717]">FAST 4-STEP INTAKE</div>
+                      <div className="font-heading text-base text-[#171717]">RECEIPT + WARING LABEL</div>
                     </div>
                   </div>
 
@@ -812,15 +810,14 @@ export default function LandingPage() {
                     02 / CLASSIFICATION
                   </div>
                   <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#15803d] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
-                    CANONICAL SORTING
+                    SORTING FLOW
                   </div>
                 </div>
 
                 <div className="p-7">
                   <h3 className="font-display text-4xl mb-3 text-[#171717]">SORTING STATION</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Canonical sorting workflow: scan the intake waring code (WRG-...), inspect produce into Grade A, B, or C,
-                    and link pre-attached pallet QR tags.
+                    Scan the intake Waring, sort produce into Grade A, B, or C, and link each grade to its pallet.
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
@@ -844,9 +841,9 @@ export default function LandingPage() {
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Standard
+                        Handoff
                       </div>
-                      <div className="font-heading text-base text-[#171717]">SEAMLESS BUFFER LINK</div>
+                      <div className="font-heading text-base text-[#171717]">READY FOR PACKAGING</div>
                     </div>
                   </div>
 
@@ -882,8 +879,7 @@ export default function LandingPage() {
                 <div className="p-7">
                   <h3 className="font-display text-4xl mb-3 text-[#171717]">PACKAGING STATION</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Three parallel live scale channels for Grade A, B, and C operators. Real-time 1 kg target progress,
-                    instant approval, and GS1 Digital Link pouch sticker printing.
+                    Pack Grade A, B, and C produce with clear weight checks, instant approval, and product labels.
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
@@ -901,15 +897,15 @@ export default function LandingPage() {
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Format
+                        Label
                       </div>
-                      <div className="font-heading text-base text-[#171717]">GS1 QR / EAN-13</div>
+                      <div className="font-heading text-base text-[#171717]">QR / BARCODE</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Concurrency
+                        Team Size
                       </div>
-                      <div className="font-heading text-base text-[#171717]">3 OPERATORS LIVE</div>
+                      <div className="font-heading text-base text-[#171717]">3 OPERATORS</div>
                     </div>
                   </div>
 
@@ -934,7 +930,7 @@ export default function LandingPage() {
             <div className="lg:col-span-7">
               <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#15803d] tracking-[0.25em] uppercase mb-4">
                 <span className="w-8 h-[2px] bg-[#15803d]"></span>
-                <span>03 — Hardware & Stations</span>
+                <span>03 — Stations</span>
               </div>
               <h2 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9]">
                 Systems that <span className="text-[#15803d]">verify</span>,<br />
@@ -943,8 +939,8 @@ export default function LandingPage() {
             </div>
             <div className="lg:col-span-5 flex flex-col justify-end">
               <p className="text-[#666666] text-base leading-relaxed font-body">
-                Each packhouse station is designed for rapid operator workflows with clear visual feedback,
-                automatic calibration, and instant printing. Hover or tap any unit to view operational features.
+                Each station is designed for fast work with clear feedback, reliable weight checks, and instant
+                printing. Hover or tap any unit to view its daily features.
               </p>
             </div>
           </div>
@@ -962,7 +958,7 @@ export default function LandingPage() {
                   <div className="relative h-64 overflow-hidden bg-black">
                     <img
                       src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80"
-                      alt="Precision Digital Scales"
+                      alt="Digital Scales"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
                     <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#93c749] tracking-[0.2em]">
@@ -976,7 +972,7 @@ export default function LandingPage() {
                     <div>
                       <h3 className="font-display text-3xl leading-none text-[#171717]">PRECISION SCALES</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        Floor Scale & Bench Units
+                        Receiving & Packaging Scales
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
@@ -1000,26 +996,26 @@ export default function LandingPage() {
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Automatic vibration & motion damping</span>
+                        <span>Stable readings during weighing</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>One-touch Tare subtraction & zero reset</span>
+                        <span>One-touch clear and zero controls</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Visual lock indicator for stable readings</span>
+                        <span>Clear ready indicator</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Local Ethernet & wireless connectivity</span>
+                        <span>Connected for daily work</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Stability Threshold</div>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Ready to Record</div>
                     <div className="font-display text-xl text-[#15803d]">READY IN 2 SEC</div>
-                    <p className="text-[11px] text-[#666666] mt-1">±20 g precision held automatically before approval.</p>
+                    <p className="text-[11px] text-[#666666] mt-1">The reading is confirmed before approval.</p>
                   </div>
                 </div>
               </div>
@@ -1043,7 +1039,7 @@ export default function LandingPage() {
                       / 02
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
-                      QR + THERMAL
+                      QR + RECEIPT
                     </div>
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
@@ -1055,7 +1051,7 @@ export default function LandingPage() {
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        AUTO-GENERATION
+                        READY TO PRINT
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
                         DETAILS →
@@ -1074,7 +1070,7 @@ export default function LandingPage() {
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Farmer Receipt: 58 mm / 80 mm thermal slip</span>
+                        <span>Farmer receipt</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
@@ -1086,14 +1082,14 @@ export default function LandingPage() {
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>100% offline generation with zero network lag</span>
+                        <span>Works without internet delays</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Standard Prefixes</div>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Record Codes</div>
                     <div className="font-display text-xl text-[#15803d]">WRG & PLT CODES</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Single atomic commit per intake & sorting session.</p>
+                    <p className="text-[11px] text-[#666666] mt-1">Each intake and sorting record stays linked.</p>
                   </div>
                 </div>
               </div>
@@ -1129,7 +1125,7 @@ export default function LandingPage() {
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        1 KG POUCH SPEC
+                        1 KG POUCH
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
                         DETAILS →
@@ -1165,9 +1161,9 @@ export default function LandingPage() {
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Target Calibration</div>
-                    <div className="font-display text-xl text-[#15803d]">1.000 KG ± 5 G</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Locks green when weight falls within target tolerance.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Target Weight</div>
+                    <div className="font-display text-xl text-[#15803d]">1.000 KG TARGET</div>
+                    <p className="text-[11px] text-[#666666] mt-1">Shows ready when the weight is right.</p>
                   </div>
                 </div>
               </div>

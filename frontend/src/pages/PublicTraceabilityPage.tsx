@@ -60,9 +60,9 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
       variety: 'Granola Table Potato',
       grade: 'A/B/C',
       weightKg: Number(w.netWeightKg || w.grossWeightKg || 0),
-      farmerName: o.farmerName || 'Registered Farmer',
-      farmerId: o.farmerCode || 'FMR-001',
-      farmLocation: o.village || 'Highland Valley',
+      farmerName: o.farmerName || '-',
+      farmerId: o.farmerCode || '-',
+      farmLocation: o.village || '-',
       elevation: '1,450 m ASL',
       harvestDate: formatSafeDate(w.receivedAt),
       intakeDate: formatSafeDateTime(w.receivedAt),
@@ -76,9 +76,9 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
       journey: [
         {
           stage: 'Field Harvest & Farm Loading',
-          location: `${o.farmerName || 'Farmer'} Farm (${o.village || 'Origin Farm'})`,
+          location: `${o.farmerName || '-'} Farm (${o.village || '-'})`,
           timestamp: formatSafeDate(w.receivedAt),
-          operator: `${o.farmerName || 'Farmer'} (${o.farmerCode || 'FMR'})`,
+          operator: `${o.farmerName || '-'}`,
           completed: true,
           details: 'Hand-picked table potatoes, loaded into ventilated waring sacks.',
         },
@@ -86,7 +86,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
           stage: 'Station 01: Reception & Weighing',
           location: 'Smart Hub Reception Bay (Scale #01)',
           timestamp: formatSafeDateTime(w.receivedAt),
-          operator: 'Budi Hartono (Operator)',
+          operator: 'Operator',
           completed: true,
           details: `Gross weight verified at ${w.grossWeightKg} kg, net ${w.netWeightKg} kg. Status: ${w.status}.`,
         },
@@ -125,7 +125,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
       grade: (pkg.grade || 'A') as any,
       weightKg: Number(pkg.weightKg || 1),
       farmerName: origin.farmerName || origin.name || 'Registered Farmer',
-      farmerId: origin.farmerCode || origin.code || 'FMR-001',
+      farmerId: origin.farmerCode || origin.code || '-',
       farmLocation: origin.village || 'Highland Farm',
       elevation: '1,450 m ASL',
       harvestDate: formatSafeDate(intake.receivedAt),
@@ -194,7 +194,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
     grade: (pallet.grade || 'A') as any,
     weightKg: Number(pallet.initialWeightKg || pallet.weightKg || 0),
     farmerName: origin.farmerName || origin.name || 'Registered Farmer',
-    farmerId: origin.farmerCode || origin.code || 'FMR-001',
+    farmerId: origin.farmerCode || origin.code || '-',
     farmLocation: origin.village || 'Highland Farm',
     elevation: '1,450 m ASL',
     harvestDate: formatSafeDate(intake.receivedAt),
@@ -309,14 +309,14 @@ export default function PublicTraceabilityPage() {
     <div className="min-h-screen bg-[#fafafa] text-[#171717] font-['Archivo',sans-serif] selection:bg-[#f0fdf4] selection:text-[#15803d] flex flex-col">
       {/* ── Top Header Bar ── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#eaeaea]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group" aria-label="ENYX-ENTERPRISE home">
+        <div className="public-trace-header max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <Link to="/" className="public-trace-brand flex items-center gap-3 group min-w-0" aria-label="ENYX-ENTERPRISE home">
             <Logo className="h-8 w-auto" markOnly />
-            <div>
-              <div className="font-display text-2xl leading-none tracking-wider text-[#171717] flex items-center gap-2">
+            <div className="public-trace-brand-copy min-w-0">
+              <div className="public-trace-brand-title font-display text-2xl leading-none tracking-wider text-[#171717] flex items-center gap-2">
                 ENYX-ENTERPRISE
               </div>
-              <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
+              <div className="public-trace-brand-subtitle font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
                 TRACEABILITY SYSTEM
               </div>
             </div>
@@ -332,7 +332,7 @@ export default function PublicTraceabilityPage() {
             </Link>
             <Link
               to="/login"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider bg-[#000000] text-white hover:bg-[#333333] px-4 py-2 rounded-sm transition-colors"
+              className="public-trace-login inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider bg-[#000000] text-white hover:bg-[#333333] px-4 py-2 rounded-sm transition-colors shrink-0"
             >
               <span>Operator Login</span>
             </Link>
@@ -345,14 +345,13 @@ export default function PublicTraceabilityPage() {
         {/* Page Title & Mission Banner */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
           <Badge tone="accent" icon="qr" className="px-3 py-1 text-xs">
-            GS1 Digital Link · End-to-End Verification
+            Product Verification
           </Badge>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#171717]">
             Product Traceability
           </h1>
           <p className="text-sm sm:text-base text-[#666666] leading-relaxed">
-            Scan the QR code on your potato pouch label (1 kg), pallet tag, or enter the code manually to verify
-            authenticity, farm origin, and lab quality standards.
+            Scan the QR code on your potato pouch or pallet, or enter the code manually to confirm product origin and quality.
           </p>
         </div>
 
@@ -360,7 +359,7 @@ export default function PublicTraceabilityPage() {
         <div className="bg-white border border-[#eaeaea] rounded-none p-5 sm:p-7 shadow-xs space-y-5">
           <form onSubmit={handleFormSubmit} className="space-y-4">
             <label className="block text-xs font-mono font-semibold uppercase tracking-wider text-[#666666]">
-              Enter Pouch / Pallet Code or GS1 URL
+              Enter Pouch or Pallet Code
             </label>
 
             <div className="flex flex-col sm:flex-row gap-3">
@@ -384,12 +383,12 @@ export default function PublicTraceabilityPage() {
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="trace-actions flex gap-2">
                 <Button
                   type="submit"
                   variant="primary"
                   icon="search"
-                  className="px-6 py-3 text-sm font-semibold justify-center flex-1 sm:flex-none"
+                  className="min-w-0 px-6 py-3 text-sm font-semibold justify-center flex-1 sm:flex-none"
                 >
                   Trace Product
                 </Button>
@@ -398,7 +397,7 @@ export default function PublicTraceabilityPage() {
                   variant="outline"
                   icon="scan"
                   onClick={() => startCamera()}
-                  className="px-4 py-3 text-sm font-semibold justify-center flex-1 sm:flex-none"
+                  className="min-w-0 px-4 py-3 text-sm font-semibold justify-center flex-1 sm:flex-none"
                 >
                   Scan QR
                 </Button>
@@ -409,7 +408,7 @@ export default function PublicTraceabilityPage() {
           {/* Quick Sample Chips for Instant Verification */}
           <div className="pt-4 border-t border-[#f0f0f0] flex flex-wrap items-center gap-2">
             <span className="text-xs font-mono text-[#666666] tracking-wider uppercase mr-1">
-              Database Records:
+              Sample Records:
             </span>
             <button
               type="button"
@@ -482,7 +481,7 @@ export default function PublicTraceabilityPage() {
                     {result.code}
                   </h2>
                   <p className="text-xs text-[#666666] font-mono mt-1">
-                    GS1 Digital Link URI: <a href={result.gs1Uri} target="_blank" rel="noreferrer" className="text-[#15803d] hover:underline">{result.gs1Uri}</a>
+                    Product Link: <a href={result.gs1Uri} target="_blank" rel="noreferrer" className="text-[#15803d] hover:underline">Open link</a>
                   </p>
                 </div>
 
@@ -498,15 +497,15 @@ export default function PublicTraceabilityPage() {
                 </div>
               </div>
 
-              {/* Product Specifications Grid */}
+              {/* Product Details Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
-                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Commodity & Variety</span>
+                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Product & Variety</span>
                   <span className="text-base font-bold text-[#171717] mt-1 block">{result.variety}</span>
                 </div>
 
                 <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
-                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Official Grade</span>
+                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Grade</span>
                   <div className="mt-1 flex items-center gap-1.5">
                     <Badge
                       tone={result.grade === 'A' ? 'success' : result.grade === 'B' ? 'accent' : 'warning'}
@@ -525,7 +524,7 @@ export default function PublicTraceabilityPage() {
                 </div>
 
                 <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
-                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Quality Score</span>
+                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Quality</span>
                   <span className="text-base font-bold text-[#171717] mt-1 block">{result.qualityScore}</span>
                 </div>
               </div>
@@ -534,7 +533,7 @@ export default function PublicTraceabilityPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                 <div className="space-y-3">
                   <h3 className="text-xs font-mono uppercase tracking-wider text-[#666666] font-semibold">
-                    Farm Origin & Elevation
+                    Farm Origin
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
@@ -554,11 +553,11 @@ export default function PublicTraceabilityPage() {
 
                 <div className="space-y-3">
                   <h3 className="text-xs font-mono uppercase tracking-wider text-[#666666] font-semibold">
-                    GS1 Batch & Standard Identifiers
+                    Batch Details
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
-                      <span className="text-[#666666]">Global Trade Item No (GTIN)</span>
+                      <span className="text-[#666666]">Product Number</span>
                       <span className="font-mono font-semibold text-[#171717]">{result.gtin}</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
@@ -581,7 +580,7 @@ export default function PublicTraceabilityPage() {
                   Verified Harvest & Processing Journey
                 </h3>
                 <p className="text-xs text-[#666666]">
-                  Every stage is immutably timestamped and verified by IoT platform scales and authorized packhouse operators.
+                  Each stage is time-stamped and confirmed by the packhouse team.
                 </p>
               </div>
 
@@ -622,11 +621,11 @@ export default function PublicTraceabilityPage() {
               </div>
             </div>
 
-            {/* GS1 Digital Link Label Visual Representation */}
+            {/* Product QR Visual Representation */}
             <div className="bg-white border border-[#eaeaea] rounded-none p-6 sm:p-8 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="space-y-2 max-w-lg">
                 <Badge tone="accent" className="font-mono text-[10px]">
-                  GS1 STANDARD DIGITAL LINK EMBED
+                  PRODUCT QR
                 </Badge>
                 <h4 className="text-lg font-bold text-[#171717]">
                   Scannable Product Verification QR

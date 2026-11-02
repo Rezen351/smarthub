@@ -3,7 +3,7 @@
  *
  * Implements the revised pure intake weighing workflow with Focus Mode (Full Screen):
  *   Sequential 3-step workflow:
- *     1. Step 1: Farmer Identification (Scan barcode or select from directory)
+ *     1. Step 1: Farmer Identification (Scan barcode)
  *     2. Step 2: Harvest Weighing (Live gross scale reading via Modbus TCP RS485 indicator)
  *     3. Step 3: Approve & Bag into Waring (WRG-... generation, thermal receipt & waring QR label)
  *
@@ -13,7 +13,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import Icon from '../components/shared/Icon'
-import Logo from '../components/shared/Logo'
 import { Input } from '../components/shared/Form'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
@@ -41,9 +40,7 @@ type WeighingRecord = {
   waringCode?: string
 }
 
-const FARMERS = [
-  { id: 'FMR-001', code: 'FMR-001', name: 'Ahmad Santoso', village: 'Desa Sumber Brantas' },
-]
+const FARMERS: any[] = []
 
 const SCALE_CAPACITY_KG = 150
 
@@ -72,7 +69,6 @@ export default function WeighingPage() {
 
   /* ── Mode State ── */
   const [focusMode, setFocusMode] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const [activeStep, setActiveStep] = useState<1 | 2 | 3>(1)
 
   /* ── Step 1: Scan & Farmer Identification ── */
@@ -163,25 +159,11 @@ export default function WeighingPage() {
         }
       }
     }
-    const handleFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement))
-    }
-
     window.addEventListener('keydown', handleKeyDown)
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
-      document.removeEventListener('fullscreenchange', handleFullscreenChange)
     }
   }, [focusMode])
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().catch(() => {})
-    } else {
-      document.exitFullscreen?.().catch(() => {})
-    }
-  }
 
   const enterFocusMode = () => {
     setFocusMode(true)
@@ -298,8 +280,8 @@ export default function WeighingPage() {
     const payload: WeighingRecord = {
       id: editingId ?? String(Date.now()),
       farmerId: farmer.id,
-      farmerName: farmer.name,
-      farmerVillage: activeFarmerObj?.village ?? 'Dieng, Wonosobo',
+      farmerName: farmer.name || '',
+      farmerVillage: activeFarmerObj?.village || '',
       weightKg: Number(numericWeight.toFixed(3)),
       depositDate: today(),
       time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
@@ -489,6 +471,7 @@ export default function WeighingPage() {
     {
       key: 'farmerName',
       label: 'Farmer',
+      priority: true,
       render: (row) => (
         <div>
           <span className="font-semibold block text-foreground">{row.farmerName}</span>
@@ -499,6 +482,7 @@ export default function WeighingPage() {
     {
       key: 'weightKg',
       label: 'Weight kg',
+      priority: true,
       align: 'right',
       render: (row) => (
         <span className="font-mono font-bold text-base text-foreground">
@@ -509,6 +493,7 @@ export default function WeighingPage() {
     {
       key: 'depositDate',
       label: 'Deposit Date',
+      priority: true,
       render: (row) => (
         <div>
           <span className="font-mono text-xs block text-foreground">{row.depositDate}</span>
@@ -519,6 +504,7 @@ export default function WeighingPage() {
     {
       key: 'status',
       label: 'Status',
+      priority: true,
       render: (row) => (
         <Badge tone={statusTone[row.status]} dot>
           {row.status}
@@ -528,6 +514,7 @@ export default function WeighingPage() {
     {
       key: 'waringCode',
       label: 'Waring Code',
+      priority: true,
       render: (row) =>
         row.waringCode ? (
           <span className="font-mono font-medium tabular-nums text-foreground">{row.waringCode}</span>
@@ -643,7 +630,7 @@ export default function WeighingPage() {
                 Step 1 of 3 · Intake Identification
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Scan Farmer Card or Select Farmer
+                Scan Farmer Card
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
@@ -660,7 +647,7 @@ export default function WeighingPage() {
                 2D Scanner and Camera
               </h3>
               <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                Scan barcode on the farmer ID card with USB 2D hardware scanner, use device camera, or select from registered farmers.
+                Scan the barcode on the farmer ID card with a USB 2D hardware scanner or device camera.
               </p>
             </div>
 
@@ -676,8 +663,8 @@ export default function WeighingPage() {
                 className="font-mono text-sm py-2.5 flex-1 min-w-0"
                 autoFocus
               />
-              <div className="flex gap-2">
-                <Button type="submit" variant="primary" icon="check" className="flex-1 sm:flex-initial">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <Button type="submit" variant="primary" icon="check" className="w-full sm:w-auto">
                   Verify
                 </Button>
                 <Button
@@ -686,7 +673,7 @@ export default function WeighingPage() {
                   icon="scan"
                   onClick={openCameraModal}
                   title="Open Camera Scanner"
-                  className="flex-1 sm:flex-initial"
+                  className="w-full sm:w-auto"
                 >
                   Camera
                 </Button>
@@ -703,26 +690,6 @@ export default function WeighingPage() {
               </div>
             )}
 
-            {/* Registered Farmers */}
-            <div className="pt-2 border-t border-border/60 space-y-2">
-              <span className="text-[11px] font-mono text-muted-foreground uppercase block">
-                Registered Farmers:
-              </span>
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                {farmersList.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => selectFarmer(f)}
-                    className="px-3 py-1 text-xs font-mono border border-border bg-card hover:bg-primary/10 hover:border-primary transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Icon name="scan" size={12} className="text-primary" />
-                    <span className="font-bold text-foreground">{f.name}</span>
-                    <span className="text-muted-foreground text-[10px]">({f.id})</span>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -1009,17 +976,9 @@ export default function WeighingPage() {
          ═══════════════════════════════════════════════════════════════════ */}
       {focusMode && (
         <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto" role="dialog" aria-modal="true" aria-label="Weighing Focus Mode">
-          <header className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
-            <div className="flex items-center gap-3">
-              <Logo className="h-7 w-auto" markOnly />
-              <div>
-                <div className="font-display text-lg leading-none tracking-wider text-foreground">
-                  ENYX-ENTERPRISE
-                </div>
-                <div className="font-mono text-[9px] text-muted-foreground tracking-[0.2em] uppercase mt-0.5">
-                  STATION 01 · RECEPTION · FOCUS MODE
-                </div>
-              </div>
+          <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
+            <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
+              STATION 01 · RECEPTION · FOCUS MODE
             </div>
 
             {/* Stepper Progress */}
@@ -1028,18 +987,9 @@ export default function WeighingPage() {
             </div>
 
             {/* Controls */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={isFullscreen ? 'compress' : 'expand'}
-                onClick={toggleFullscreen}
-                title="Toggle Fullscreen"
-              >
-                {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-              </Button>
-              <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode}>
-                Exit Focus
+            <div className="flex shrink-0 items-center gap-2">
+              <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode} className="whitespace-nowrap">
+                Exit Focus Mode
               </Button>
             </div>
           </header>
@@ -1094,14 +1044,14 @@ export default function WeighingPage() {
             </p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale Capacity</p>
-            <p className="text-2xl font-bold tracking-tight text-foreground">{SCALE_CAPACITY_KG} kg</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale Status</p>
+            <p className="text-2xl font-bold tracking-tight text-emerald-600">Online</p>
             <p className="text-xs text-muted-foreground">Scale 01</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Workflow Mode</p>
-            <p className="text-lg font-bold tracking-tight text-foreground">Sequential</p>
-            <p className="text-xs text-muted-foreground">Step 1 to 3</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Next Waring ID</p>
+            <p className="text-lg font-bold tracking-tight text-foreground font-mono">{nextWaringCode(waringCounter)}</p>
+            <p className="text-xs text-muted-foreground">Assigned on approval</p>
           </div>
         </div>
 
@@ -1157,7 +1107,6 @@ export default function WeighingPage() {
         title="Scan Farmer ID Card · Station 01 Reception"
         subtitle="Align the QR code or 1D barcode on the farmer ID card within the camera viewport."
         manualPlaceholder="Scan barcode or enter farmer ID / name..."
-        quickOptions={farmersList.map((f) => ({ label: `${f.name} (${f.id})`, value: f.id }))}
       />
     </>
   )

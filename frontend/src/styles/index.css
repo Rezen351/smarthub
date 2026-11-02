@@ -395,6 +395,35 @@
   .section-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
   .section-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
 
+  /* ── Compact tab controls ── */
+  .tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    flex-wrap: wrap;
+  }
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 6px 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  }
+  .tab:hover { color: var(--color-text); background: var(--color-surface); }
+  .tab.is-active { color: var(--color-text); background: var(--color-surface); border-color: var(--color-border); box-shadow: var(--shadow-xs); }
+
   .card-pad-lg { padding: 28px; }
   .input-lg { font-size: 18px; }
   .skeleton-block { height: 96px; }
@@ -605,5 +634,35 @@
   }
   .scale-value {
     font-size: 26px !important;
+  }
+  .trace-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .trace-actions > button {
+    width: 100%;
+  }
+  .public-trace-header {
+    gap: 8px;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  .public-trace-brand {
+    gap: 8px;
+  }
+  .public-trace-brand-title {
+    font-size: 15px;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .public-trace-brand-subtitle {
+    font-size: 8px;
+    letter-spacing: 0.14em;
+    white-space: nowrap;
+  }
+  .public-trace-login {
+    padding: 8px 10px !important;
+    font-size: 10px;
+    white-space: nowrap;
   }
 }

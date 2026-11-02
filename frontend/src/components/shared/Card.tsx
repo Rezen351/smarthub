@@ -40,12 +40,12 @@ export default function Card({
   return (
     <UICard className={cn('overflow-hidden', className)} {...rest}>
       {hasHeader && (
-        <CardHeader className="flex flex-row items-start justify-between gap-3 p-5 pb-3 space-y-0">
+        <CardHeader className="flex flex-col items-stretch justify-between gap-3 p-5 pb-3 space-y-0 sm:flex-row sm:items-start">
           <div className="min-w-0">
             {title && <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>}
             {subtitle && <CardDescription className="text-sm mt-1">{subtitle}</CardDescription>}
           </div>
-          {action && <div className="shrink-0 flex items-center gap-2">{action}</div>}
+          {action && <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:shrink-0">{action}</div>}
         </CardHeader>
       )}
       <CardContent className={cn(padClasses[padding], hasHeader && 'pt-0')}>

@@ -10,7 +10,6 @@ import { useState, useEffect, useCallback } from 'react'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import Icon from '../components/shared/Icon'
-import Logo from '../components/shared/Logo'
 import { Input } from '../components/shared/Form'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
@@ -21,6 +20,7 @@ import { printThermal } from '../lib/thermalPrint'
 import { formatWeight } from '../lib/utils'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
 import CameraScannerModal from '../components/shared/CameraScannerModal'
+import { api } from '../services/api'
 
 type PackagingMode = 'RETAIL_POUCH' | 'BULK_EXPORT'
 
@@ -46,6 +46,7 @@ interface AvailablePallet {
   code: string
   grade: 'A' | 'B' | 'C'
   weightKg: number
+  remainingKg: number
   farmerName: string
   farmerVillage?: string
   waringCode: string
@@ -57,13 +58,13 @@ export default function PackagingPage() {
 
   /* ── Mode & Stepper State ── */
   const [focusMode, setFocusMode] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const [activeStep, setActiveStep] = useState<1 | 2 | 3>(1)
 
   /* ── Step 1: Source Pallet QR & Packaging Specifications ── */
   const [sourcePalletCode, setSourcePalletCode] = useState('')
   const [sourceFarmer, setSourceFarmer] = useState('')
   const [sourceWaring, setSourceWaring] = useState('')
+  const [sourcePalletRemainingKg, setSourcePalletRemainingKg] = useState<number | null>(null)
   const [palletSearch, setPalletSearch] = useState('')
   const [palletScanError, setPalletScanError] = useState<string | null>(null)
 
@@ -80,9 +81,36 @@ export default function PackagingPage() {
   const [currentWeight, setCurrentWeight] = useState('1.002')
   const [isPrinting, setIsPrinting] = useState(false)
   const [savedSuccessRecord, setSavedSuccessRecord] = useState<PackageRecord | null>(null)
+  const [palletsFromApi, setPalletsFromApi] = useState<AvailablePallet[] | null>(null)
 
-  /* Pallet Grade Filter Tab */
-  const [palletGradeFilter, setPalletGradeFilter] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL')
+  useEffect(() => {
+    let cancelled = false
+
+    api.pallets
+      .list()
+      .then((pallets) => {
+        if (cancelled) return
+        const mapped = pallets
+          .map((p: any): AvailablePallet => ({
+            code: String(p.code || '').trim().toUpperCase(),
+            grade: p.grade === 'B' || p.grade === 'C' ? p.grade : 'A',
+            weightKg: Number(p.weightKg || 0),
+            remainingKg: Number(p.remainingKg || 0),
+            farmerName: p.farmerName || 'Farmer',
+            farmerVillage: p.farmerVillage,
+            waringCode: p.waringCode || '',
+          }))
+          .filter((p) => p.code && p.remainingKg > 0)
+        setPalletsFromApi(mapped)
+      })
+      .catch(() => {
+        if (!cancelled) setPalletsFromApi(null)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   /* Available sorted pallets list from store (guaranteed 100% unique pallet codes) */
   const seenPalletCodes = new Set<string>()
@@ -111,6 +139,7 @@ export default function PackagingPage() {
         code: getUniquePalletCode(b.gradeAPalletQr, 'A'),
         grade: 'A',
         weightKg: b.gradeAKg,
+        remainingKg: b.gradeAKg,
         farmerName: b.farmerName,
         farmerVillage: b.farmerVillage,
         waringCode: b.waringCode,
@@ -121,6 +150,7 @@ export default function PackagingPage() {
         code: getUniquePalletCode(b.gradeBPalletQr, 'B'),
         grade: 'B',
         weightKg: b.gradeBKg,
+        remainingKg: b.gradeBKg,
         farmerName: b.farmerName,
         farmerVillage: b.farmerVillage,
         waringCode: b.waringCode,
@@ -131,37 +161,33 @@ export default function PackagingPage() {
         code: getUniquePalletCode(b.gradeCPalletQr, 'C'),
         grade: 'C',
         weightKg: b.gradeCKg,
+        remainingKg: b.gradeCKg,
         farmerName: b.farmerName,
         farmerVillage: b.farmerVillage,
         waringCode: b.waringCode,
       })
     }
   })
-
-
-  // Filtered pallets by grade tab
-  const displayedPallets = availablePallets.filter((p) => {
-    if (palletGradeFilter === 'ALL') return true
-    return p.grade === palletGradeFilter
-  })
+  const effectivePallets = palletsFromApi ?? availablePallets
 
   const handleSelectPallet = (p: AvailablePallet) => {
     setSourcePalletCode(p.code)
     setSelectedGrade(p.grade)
     setSourceFarmer(p.farmerName)
     setSourceWaring(p.waringCode)
+    setSourcePalletRemainingKg(p.remainingKg)
     setPalletScanError(null)
     setSavedSuccessRecord(null)
     toast.success(`Pallet ${p.code} selected (Grade ${p.grade})`)
   }
 
-  const handlePalletScanSubmit = (e?: React.FormEvent) => {
+  const handlePalletScanSubmit = async (e?: React.FormEvent, scannedCode?: string) => {
     if (e) e.preventDefault()
-    const query = palletSearch.trim()
+    const query = (scannedCode ?? palletSearch).trim()
     if (!query) return
 
-    const matched = availablePallets.find(
-      (p) => p.code.toLowerCase() === query.toLowerCase() || p.code.toLowerCase().includes(query.toLowerCase()),
+    const matched = effectivePallets.find(
+      (p) => p.code.toLowerCase() === query.toLowerCase(),
     )
 
     if (matched) {
@@ -169,21 +195,29 @@ export default function PackagingPage() {
       setPalletSearch('')
       setPalletScanError(null)
     } else {
-      let inferredGrade: 'A' | 'B' | 'C' = selectedGrade
-      const upper = query.toUpperCase()
-      if (upper.includes('-A') || upper.includes('GRADE-A') || upper.endsWith('A')) {
-        inferredGrade = 'A'
-      } else if (upper.includes('-B') || upper.includes('GRADE-B') || upper.endsWith('B')) {
-        inferredGrade = 'B'
-      } else if (upper.includes('-C') || upper.includes('GRADE-C') || upper.endsWith('C')) {
-        inferredGrade = 'C'
-      }
+      try {
+        const pallet = await api.pallets.get(query)
+        const remainingKg = Number(pallet.remainingKg)
+        if (!Number.isFinite(remainingKg) || remainingKg <= 0) {
+          throw new Error(`Pallet ${query.toUpperCase()} has no remaining weight`)
+        }
 
-      setSourcePalletCode(upper)
-      setSelectedGrade(inferredGrade)
-      setPalletSearch('')
-      setPalletScanError(null)
-      toast.success(`Pallet ${upper} linked (Grade ${inferredGrade})`)
+        handleSelectPallet({
+          code: String(pallet.code).toUpperCase(),
+          grade: pallet.grade === 'B' || pallet.grade === 'C' ? pallet.grade : 'A',
+          weightKg: Number(pallet.weightKg || remainingKg),
+          remainingKg,
+          farmerName: pallet.farmerName || 'Farmer',
+          farmerVillage: pallet.farmerVillage,
+          waringCode: pallet.waringCode || '',
+        })
+        setPalletSearch('')
+        setPalletScanError(null)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Pallet could not be verified'
+        setPalletScanError(message)
+        toast.error(message)
+      }
     }
   }
 
@@ -193,19 +227,18 @@ export default function PackagingPage() {
     (scannedVal: string) => {
       const val = scannedVal.trim()
       if (!val) return
-      const matched = availablePallets.find(
+      const matched = effectivePallets.find(
         (p) => p.code.toLowerCase() === val.toLowerCase(),
       )
       if (matched) {
         handleSelectPallet(matched)
         closeCameraModal()
       } else {
-        setPalletSearch(val)
-        handlePalletScanSubmit()
+        void handlePalletScanSubmit(undefined, val)
         closeCameraModal()
       }
     },
-    [availablePallets, handleSelectPallet, handlePalletScanSubmit, closeCameraModal],
+    [effectivePallets, handleSelectPallet, handlePalletScanSubmit, closeCameraModal],
   )
 
 
@@ -216,36 +249,33 @@ export default function PackagingPage() {
 
   /* ── Packaged Output Ledger ── */
   const [packages, setPackages] = useState<PackageRecord[]>([])
+  const packagedWeightForSelectedPallet = packages
+    .filter((record) => record.sourcePallet?.toLowerCase() === sourcePalletCode.toLowerCase())
+    .reduce((total, record) => total + record.weightKg, 0)
+  const remainingPalletKg = sourcePalletRemainingKg === null
+    ? 0
+    : Math.max(0, Number((sourcePalletRemainingKg - packagedWeightForSelectedPallet).toFixed(3)))
+
+  const exitFocusMode = () => {
+    setFocusMode(false)
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {})
+    }
+  }
 
   /* Fullscreen & Esc Listener */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && focusMode) {
-        setFocusMode(false)
-        if (document.fullscreenElement) {
-          document.exitFullscreen?.().catch(() => {})
-        }
+        exitFocusMode()
       }
-    }
-    const handleFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement))
     }
 
     window.addEventListener('keydown', handleKeyDown)
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
-      document.removeEventListener('fullscreenchange', handleFullscreenChange)
     }
   }, [focusMode])
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().catch(() => {})
-    } else {
-      document.exitFullscreen?.().catch(() => {})
-    }
-  }
 
   const enterFocusMode = () => {
     setFocusMode(true)
@@ -261,6 +291,18 @@ export default function PackagingPage() {
 
   /* Step 3: Print & Dispatch Commitment */
   const handlePrintAndLabel = () => {
+    if (!sourcePalletCode || sourcePalletRemainingKg === null) {
+      toast.error('Select and verify a source pallet before packaging')
+      return
+    }
+
+    if (weightValue > remainingPalletKg + 0.0005) {
+      toast.error(
+        `Package weight ${weightValue.toFixed(3)} kg exceeds pallet ${sourcePalletCode} remaining weight of ${remainingPalletKg.toFixed(3)} kg`,
+      )
+      return
+    }
+
     if (!isWithinTolerance) {
       toast.warning(
         `Weight ${currentWeight} kg is outside tolerance for ${
@@ -294,6 +336,7 @@ export default function PackagingPage() {
       // Synchronize to warehouse finished goods store
       addFinishedPackage({
         code: newCode,
+        sourcePalletCode,
         packageType:
           packagingMode === 'RETAIL_POUCH'
             ? '1 kg Pouch'
@@ -345,6 +388,16 @@ export default function PackagingPage() {
 
   const handleNextUnit = () => {
     setSavedSuccessRecord(null)
+    if (remainingPalletKg <= 0.0005) {
+      setSourcePalletCode('')
+      setSourceFarmer('')
+      setSourceWaring('')
+      setSourcePalletRemainingKg(null)
+      setActiveStep(1)
+      toast.info('Source pallet is depleted. Select another pallet.')
+      return
+    }
+
     if (packagingMode === 'RETAIL_POUCH') {
       setCurrentWeight('1.001')
     } else {
@@ -465,13 +518,13 @@ export default function PackagingPage() {
   ───────────────────────────────────────────────────────────── */
   const renderSequentialContent = () => (
     <div className="space-y-6">
-      {/* ── STEP 1: Package Spec & Source Pallet ── */}
+      {/* ── STEP 1: Package Type & Source Pallet ── */}
       {activeStep === 1 && (
         <div className="bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 1 of 3 · Source Pallet & Package Spec
+                Step 1 of 3 · Source Pallet & Package Type
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
                 Scan Source Pallet & Select Packaging Format
@@ -488,9 +541,9 @@ export default function PackagingPage() {
               <div className="inline-flex p-3 bg-muted border border-border text-muted-foreground mb-1">
                 <Icon name="scan" size={28} />
               </div>
-              <h3 className="text-base font-bold text-foreground">2D Scanner and Camera</h3>
+              <h3 className="text-base font-bold text-foreground">QR Scanner and Camera</h3>
               <p className="text-xs text-muted-foreground max-w-md">
-                Scan pre-attached Pallet QR (<code className="font-mono text-primary font-bold">PLT-GRD-...</code>) from Station 02 Sorting staging to verify grade & lot lineage.
+                Scan the pallet QR from Station 02 Sorting to confirm the grade and source.
               </p>
             </div>
 
@@ -506,90 +559,26 @@ export default function PackagingPage() {
                 placeholder="Scan or enter Pallet QR (e.g. PLT-GRD-A-01)..."
                 className="font-mono text-xs uppercase flex-1 min-w-0"
               />
-              <div className="flex gap-2">
-                <Button type="submit" variant="primary" icon="check" className="flex-1 sm:flex-initial">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <Button type="submit" variant="primary" icon="check" className="w-full sm:w-auto">
                   Verify
                 </Button>
-                <Button type="button" variant="outline" icon="scan" onClick={openCameraModal} className="flex-1 sm:flex-initial">
+                <Button type="button" variant="outline" icon="scan" onClick={openCameraModal} className="w-full sm:w-auto">
                   Camera
                 </Button>
               </div>
             </form>
             {palletScanError && <p className="text-xs text-destructive font-mono">{palletScanError}</p>}
 
-            {/* Quick Available Pallets Select Chips */}
-            <div className="pt-2 border-t border-border/60 max-w-2xl mx-auto space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <p className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">
-                  Available Sorted Pallets from Station 02:
-                </p>
-                {/* Grade Filter Pills */}
-                <div className="flex items-center gap-1">
-                  {(['ALL', 'A', 'B', 'C'] as const).map((g) => {
-                    const count = g === 'ALL' ? availablePallets.length : availablePallets.filter((p) => p.grade === g).length
-                    const isActive = palletGradeFilter === g
-                    return (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => setPalletGradeFilter(g)}
-                        className={`px-2 py-0.5 text-[11px] font-mono border transition-colors cursor-pointer ${
-                          isActive
-                            ? 'border-primary bg-primary text-primary-foreground font-bold'
-                            : 'border-border bg-card text-muted-foreground hover:bg-muted/30'
-                        }`}
-                      >
-                        {g === 'ALL' ? 'All' : `Grade ${g}`} ({count})
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {displayedPallets.map((p) => {
-                  const isSelected = p.code === sourcePalletCode
-                  return (
-                    <button
-                      key={p.code}
-                      type="button"
-                      onClick={() => handleSelectPallet(p)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono border transition-colors cursor-pointer ${
-                        isSelected
-                          ? 'border-primary bg-primary/10 text-primary font-bold ring-1 ring-primary shadow-xs'
-                          : 'border-border bg-card hover:bg-muted/30 hover:border-primary text-foreground'
-                      }`}
-                    >
-                      <Icon name="scan" size={13} className="text-muted-foreground" />
-                      <span className="font-bold">{p.code}</span>
-                      <span
-                        className={`px-1.5 py-0.2 text-[10px] font-bold ${
-                          p.grade === 'A'
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                            : p.grade === 'B'
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                        }`}
-                      >
-                        Grade {p.grade}
-                      </span>
-                      <span className="text-muted-foreground text-[11px]">
-                        ({formatWeight(p.weightKg)} kg · {p.farmerName})
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
           </div>
 
           {/* Active Verified Pallet Confirmation Strip */}
           <div className="p-4 bg-card border border-border flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-0.5">
-              <span className="text-xs text-muted-foreground uppercase font-mono block">Verified Source Pallet</span>
+              <span className="text-xs text-muted-foreground uppercase font-mono block">Source Pallet</span>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-lg font-bold font-mono text-primary">{sourcePalletCode}</span>
-                <span
+                <span className="text-lg font-bold font-mono text-primary">{sourcePalletCode || 'Not selected'}</span>
+                {sourcePalletCode && <span
                   className={`text-xs font-semibold px-2 py-0.5 border ${
                     selectedGrade === 'A'
                       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300'
@@ -599,13 +588,18 @@ export default function PackagingPage() {
                   }`}
                 >
                   Grade {selectedGrade}
-                </span>
-                <span className="text-xs text-muted-foreground">({sourceFarmer} · Origin: {sourceWaring})</span>
+                </span>}
+                {sourcePalletCode && <span className="text-xs text-muted-foreground">({sourceFarmer} · Origin: {sourceWaring})</span>}
               </div>
+              {sourcePalletCode && sourcePalletRemainingKg !== null && (
+                <span className="text-xs font-mono text-muted-foreground block">
+                  Remaining: {remainingPalletKg.toFixed(3)} kg
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
-              <Badge tone="success" dot live>
-                Lineage Locked
+              <Badge tone={sourcePalletCode ? 'success' : 'warning'} dot live={Boolean(sourcePalletCode)}>
+                {sourcePalletCode ? 'Source Confirmed' : 'Source Required'}
               </Badge>
             </div>
           </div>
@@ -635,11 +629,11 @@ export default function PackagingPage() {
                     <span className="font-bold text-sm text-foreground">Retail 1 kg Pouch</span>
                   </div>
                   <Badge tone={packagingMode === 'RETAIL_POUCH' ? 'success' : 'neutral'}>
-                    GS1 QR
+                    Product QR
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                  1 kg consumer pouch with GS1 QR code. Target weight 1.000 kg (tolerance ±5 g).
+                  1 kg consumer pouch with a product QR code. Target weight 1.000 kg (allowed range ±5 g).
                 </p>
               </button>
 
@@ -662,11 +656,11 @@ export default function PackagingPage() {
                     <span className="font-bold text-sm text-foreground">Export Carton</span>
                   </div>
                   <Badge tone={packagingMode === 'BULK_EXPORT' ? 'accent' : 'neutral'}>
-                    ITF-14
+                    Barcode
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                  Bulk master carton with GS1 ITF-14 barcode. Target weight 10 kg or 50 kg (±50 g).
+                  Bulk master carton with a barcode. Target weight 10 kg or 50 kg (allowed range ±50 g).
                 </p>
               </button>
             </div>
@@ -709,6 +703,7 @@ export default function PackagingPage() {
               variant="primary"
               icon="check"
               touch
+              disabled={!sourcePalletCode || sourcePalletRemainingKg === null || remainingPalletKg <= 0}
               onClick={() => setActiveStep(2)}
             >
               Continue to Weighing
@@ -717,13 +712,13 @@ export default function PackagingPage() {
         </div>
       )}
 
-      {/* ── STEP 2: Weigh & Check ── */}
+      {/* ── STEP 2: Weigh Package ── */}
       {activeStep === 2 && (
         <div className="bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 2 of 3 · Weigh & Check
+                Step 2 of 3 · Weigh Package
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
                 Weigh Package
@@ -746,7 +741,7 @@ export default function PackagingPage() {
                 value={currentWeight}
                 onChange={setCurrentWeight}
                 capacityKg={packagingMode === 'RETAIL_POUCH' ? 5 : 60}
-                label={`Scale 03 — Weight`}
+                label="Package Weight"
               />
 
               {/* Target & Tolerance Metric Card */}
@@ -758,7 +753,7 @@ export default function PackagingPage() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground block">Deviation</span>
+                  <span className="text-xs text-muted-foreground block">Difference</span>
                   <span
                     className={`font-mono font-bold text-base ${
                       isWithinTolerance ? 'text-emerald-700' : 'text-red-700'
@@ -769,7 +764,7 @@ export default function PackagingPage() {
                 </div>
                 <div>
                   <Badge tone={isWithinTolerance ? 'success' : 'warning'} dot live={isWithinTolerance}>
-                    {isWithinTolerance ? 'In Tolerance' : 'Outside Tolerance'}
+                    {isWithinTolerance ? 'Within Range' : 'Outside Range'}
                   </Badge>
                 </div>
               </div>
@@ -817,7 +812,7 @@ export default function PackagingPage() {
               variant="primary"
               icon="check"
               touch
-              disabled={weightValue <= 0}
+              disabled={weightValue <= 0 || !sourcePalletCode || sourcePalletRemainingKg === null || weightValue > remainingPalletKg + 0.0005}
               onClick={() => setActiveStep(3)}
             >
               Continue to Label
@@ -852,7 +847,7 @@ export default function PackagingPage() {
           {/* Summary Details Grid */}
           <div className="p-4 bg-muted/30 border border-border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 no-print">
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Unit Code</span>
+              <span className="text-xs text-muted-foreground block font-medium">Package Code</span>
               <span className="font-mono font-bold text-base text-foreground block">
                 {savedSuccessRecord?.code ?? nextCodePreview}
               </span>
@@ -876,7 +871,7 @@ export default function PackagingPage() {
               <span className="text-xs text-muted-foreground">Target: {targetKg.toFixed(3)} kg</span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Format</span>
+              <span className="text-xs text-muted-foreground block font-medium">Package Type</span>
               <span className="font-semibold text-base text-foreground block">
                 {packagingMode === 'RETAIL_POUCH' ? '1 kg Retail Pouch' : `${exportTargetKg} kg Export Carton`}
               </span>
@@ -989,17 +984,9 @@ export default function PackagingPage() {
           aria-modal="true"
           aria-label="Packaging Focus Mode"
         >
-          <header className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
-            <div className="flex items-center gap-3">
-              <Logo className="h-7 w-auto" markOnly />
-              <div>
-                <div className="font-display text-lg leading-none tracking-wider text-foreground">
-                  ENYX-ENTERPRISE
-                </div>
-                <div className="font-mono text-[9px] text-muted-foreground tracking-[0.2em] uppercase mt-0.5">
-                  STATION 03 · PACKAGING · FOCUS MODE
-                </div>
-              </div>
+          <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
+            <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
+              STATION 03 · PACKAGING · FOCUS MODE
             </div>
 
             {/* Stepper Progress Bar in Focus Header */}
@@ -1007,18 +994,9 @@ export default function PackagingPage() {
               {renderStepperBar()}
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={isFullscreen ? 'compress' : 'expand'}
-                onClick={toggleFullscreen}
-                title="Toggle Fullscreen"
-              >
-                {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-              </Button>
-              <Button variant="outline" size="sm" icon="close" onClick={() => setFocusMode(false)}>
-                Exit Focus
+            <div className="flex shrink-0 items-center gap-2">
+              <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode} className="whitespace-nowrap">
+                Exit Focus Mode
               </Button>
             </div>
           </header>
@@ -1071,14 +1049,14 @@ export default function PackagingPage() {
             </p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale Capacity</p>
-            <p className="text-2xl font-bold tracking-tight text-foreground">30 kg</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale Status</p>
+            <p className="text-2xl font-bold tracking-tight text-emerald-600">Online</p>
             <p className="text-xs text-muted-foreground">Scale 03</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Workflow Mode</p>
-            <p className="text-lg font-bold tracking-tight text-foreground">Sequential</p>
-            <p className="text-xs text-muted-foreground">Step 1 to 3</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pallets Available</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">{effectivePallets.length}</p>
+            <p className="text-xs text-muted-foreground">From Station 02</p>
           </div>
         </div>
 
@@ -1128,12 +1106,8 @@ export default function PackagingPage() {
         onClose={closeCameraModal}
         onScan={handleVerifyModalScan}
         title="Scan Pallet QR Code · Station 03 Packaging"
-        subtitle="Align the pre-attached PLT QR code on the staged pallet within the camera viewport."
-        manualPlaceholder="Scan pallet QR (e.g. PLT-GRD-A-01)..."
-        quickOptions={availablePallets.map((p) => ({
-          label: `${p.code} (Grade ${p.grade})`,
-          value: p.code,
-        }))}
+        subtitle="Align the QR code on the staged pallet within the camera view."
+        manualPlaceholder="Scan or enter pallet code..."
       />
     </>
   )

@@ -37,6 +37,7 @@ export interface GradedBatchRecord {
 export interface FinishedStockItem {
   id: string
   code: string
+  sourcePalletCode?: string
   packageType: '1 kg Pouch' | '10 kg Export Carton' | '50 kg Export Carton'
   mode: 'RETAIL_POUCH' | 'BULK_EXPORT'
   grade: 'A' | 'B' | 'C'
@@ -230,12 +231,14 @@ export function usePackhouseStore() {
       })
 
       // Backend sync
-      api.weighing
-        .create({
-          farmerCode: waring.farmerId || 'FMR-001',
-          grossWeightKg: waring.grossWeightKg,
-        })
-        .catch(() => {})
+      if (waring.farmerId) {
+        api.weighing
+          .create({
+            farmerCode: waring.farmerId,
+            grossWeightKg: waring.grossWeightKg,
+          })
+          .catch(() => {})
+      }
 
       return newItem
     },
@@ -304,8 +307,13 @@ export function usePackhouseStore() {
       // Backend sync
       api.packaging
         .pack({
-          palletCode: pkg.code,
-          packageTypeCode: pkg.mode === 'BULK_EXPORT' ? 'CARTON-10KG' : 'POUCH-1KG',
+          palletCode: pkg.sourcePalletCode || pkg.code,
+          packageTypeCode:
+            pkg.mode === 'BULK_EXPORT'
+              ? pkg.packageType.includes('50')
+                ? 'CARTON-50KG'
+                : 'CARTON-10KG'
+              : 'POUCH-1KG',
           quantity: pkg.units,
           totalNetWeightKg: pkg.totalWeightKg,
           storageLocation: pkg.storageLocation,

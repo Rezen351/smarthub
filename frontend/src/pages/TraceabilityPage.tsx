@@ -71,8 +71,8 @@ export default function TraceabilityPage() {
           <div className="divider" />
 
           <div className="stack-sm">
-            <p className="field-label">QR payload</p>
-            <div className="code-block">{qrData}</div>
+            <p className="field-label">Your QR code</p>
+            <div className="code-block">{farmerId}</div>
             <p className="field-hint">
               The operator scans this code to link your session before weighing your harvest.
             </p>

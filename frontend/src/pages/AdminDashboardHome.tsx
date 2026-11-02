@@ -33,7 +33,7 @@ const quickActions: QuickAction[] = [
   { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box', desc: 'Buffer & finished goods storage' },
   { label: 'Deliveries & Dispatch', path: '/dashboard/deliveries', icon: 'truck', desc: 'Manifest scan & truck departure' },
   { label: 'User Admin', path: '/dashboard/users', icon: 'users', desc: '3-role RBAC accounts' },
-  { label: 'Scale Settings', path: '/dashboard/settings', icon: 'settings', desc: 'Transmitter IP & scale setup' },
+      { label: 'Scale Setup', path: '/dashboard/settings', icon: 'settings', desc: 'Station scale setup' },
 ]
 
 export default function AdminDashboardHome() {
@@ -44,17 +44,20 @@ export default function AdminDashboardHome() {
     yieldPct: 0,
     shrinkagePct: 0,
     hasBatches: false,
-    scalesOnline: 3,
+    scalesOnline: 0,
+    scalesTotal: 0,
+    userCount: 0,
     activities: [] as Activity[],
   })
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [weighingRes, sortingRes, scalesRes] = await Promise.allSettled([
+        const [weighingRes, sortingRes, scalesRes, usersRes] = await Promise.allSettled([
           api.weighing.list(),
           api.sorting.batches(),
           api.scales.list(),
+          api.auth.users(),
         ])
 
         let intakeKg = 0
@@ -96,18 +99,14 @@ export default function AdminDashboardHome() {
         }
 
         let scalesOnline = 0
+        let scalesTotal = 0
         if (scalesRes.status === 'fulfilled' && Array.isArray(scalesRes.value)) {
           scalesOnline = scalesRes.value.filter((s: any) => s.online).length
-        } else {
-          scalesOnline = 3 // default configured
+          scalesTotal = scalesRes.value.length
         }
 
-        if (activities.length === 0) {
-          activities.push(
-            { time: 'System Ready', action: 'ENYX-Smart Hub database initialized with master data', icon: 'shield', badge: 'System', tone: 'success' },
-            { time: '08:00', action: 'Shift started: Modbus TCP scales ready for intake operations', icon: 'scale', badge: 'Station', tone: 'neutral' }
-          )
-        }
+        const userCount =
+          usersRes.status === 'fulfilled' && Array.isArray(usersRes.value) ? usersRes.value.length : 0
 
         setMetrics({
           intakeKg: parseFloat(intakeKg.toFixed(2)),
@@ -116,6 +115,8 @@ export default function AdminDashboardHome() {
           shrinkagePct: parseFloat(shrinkagePct.toFixed(1)),
           hasBatches,
           scalesOnline,
+          scalesTotal,
+          userCount,
           activities,
         })
       } catch {
@@ -130,14 +131,14 @@ export default function AdminDashboardHome() {
     <div className="stack stack-lg">
       <PageHeader
         title={`Welcome back, ${user?.name ?? 'Admin'}`}
-        subtitle="System overview — users, master data and reports."
+        subtitle="Overview of users, operations, and reports."
       />
 
       <div className="grid-stats">
         <StatCard
           label="System Users"
-          value="3"
-          sub="3-Role RBAC (Admin, Operator, Farmer)"
+          value={String(metrics.userCount)}
+          sub="Admin, Operator, Farmer"
           trend="neutral"
           icon={<Icon name="users" size={16} />}
         />
@@ -157,7 +158,7 @@ export default function AdminDashboardHome() {
         />
         <StatCard
           label="Scales Status"
-          value={`${metrics.scalesOnline} Ready`}
+          value={`${metrics.scalesOnline}/${metrics.scalesTotal} Online`}
           sub="Reception, Sorting, Packaging"
           trend="neutral"
           icon={<Icon name="shield" size={16} />}
@@ -181,8 +182,11 @@ export default function AdminDashboardHome() {
         </div>
       </section>
 
-      <Card title="Recent Activity" subtitle="Live system events from database">
+      <Card title="Recent Activity" subtitle="Latest activity across the packhouse.">
         <div className="stack">
+          {metrics.activities.length === 0 && (
+            <p className="t-small text-text-secondary py-3">No recent activity.</p>
+          )}
           {metrics.activities.map((activity, index) => (
             <div key={index} className="row gap-md between py-3 border-b border-border last:border-0">
               <div className="row gap-md min-w-0">
@@ -201,8 +205,8 @@ export default function AdminDashboardHome() {
       </Card>
 
       <Card
-        title="Master data"
-        subtitle="Single active commodity: Kentang (grade A/B/C)."
+        title="Product Setup"
+        subtitle="Active product and quality grades."
         action={
           <Link to="/dashboard/settings">
             <Button variant="outline" size="sm" icon="settings">
@@ -218,7 +222,7 @@ export default function AdminDashboardHome() {
           <Badge tone="neutral">Tomat · disabled</Badge>
           <Badge tone="neutral">Cabai · disabled</Badge>
           <span className="t-caption text-text-secondary">
-            Multi-commodity schema is ready; only Kentang is enabled in this scope.
+            Only Kentang is active for this packhouse.
           </span>
         </div>
       </Card>

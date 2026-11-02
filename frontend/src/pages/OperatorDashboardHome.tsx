@@ -216,7 +216,7 @@ export default function OperatorDashboardHome() {
         subtitle="Select a physical workstation console to operate."
         actions={
           <Badge tone={allScalesOnline ? 'success' : 'warning'} dot live>
-            {allScalesOnline ? 'All 3 Scales Ready' : 'Scale Gateway Connecting'}
+            {allScalesOnline ? 'All 3 Scales Ready' : 'Connecting to Scales'}
           </Badge>
         }
       />
@@ -244,12 +244,12 @@ export default function OperatorDashboardHome() {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Connected weighing platforms ready for intake, sorting, and packaging.
+                Scales ready for receiving, sorting, and packaging.
               </p>
             </div>
           </div>
           <Link to="/dashboard/settings" className="text-xs font-mono text-primary hover:underline">
-            Manage Settings →
+            Scale Setup →
           </Link>
         </div>
 
@@ -293,7 +293,7 @@ export default function OperatorDashboardHome() {
                     <span className="font-semibold text-foreground font-mono">Max {node.capacity}</span>
                   </div>
                   <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                    <span>Port: {node.ip}</span>
+                    <span>Station {node.stationNum}</span>
                     {node.liveWeightKg !== undefined && (
                       <span className="font-bold text-emerald-800">
                         {node.liveWeightKg.toFixed(2)} kg
@@ -387,7 +387,7 @@ export default function OperatorDashboardHome() {
 
                 <div className="p-3 bg-muted/20 border border-border/80 text-xs space-y-1.5 font-mono">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Hardware:</span>
+                    <span className="text-muted-foreground">Scale:</span>
                     <span className="font-semibold text-foreground">{ws.scaleName}</span>
                   </div>
                   <div className="flex items-center justify-between">

@@ -88,7 +88,7 @@ export default function WarehousePage() {
       label: 'Queue Status',
       render: () => (
         <Badge tone="warning" dot>
-          FIFO Awaiting Sort
+          Waiting for Sorting
         </Badge>
       ),
     },
@@ -163,7 +163,7 @@ export default function WarehousePage() {
     <div className="space-y-6">
       <PageHeader
         title="Warehouse Inventory"
-        subtitle="Dual zone storage for harvest buffer and finished goods."
+        subtitle="Harvest buffer and finished goods storage."
         actions={
           <div className="flex items-center gap-2">
             <Badge tone="accent">2 Zones Active</Badge>
@@ -280,7 +280,7 @@ export default function WarehousePage() {
               icon={<Icon name="stack" size={16} />}
             />
             <StatCard
-              label="FIFO Queue Order"
+              label="Queue Order"
               value="Active"
               sub="Oldest sack: 1.2 hrs"
               trend="neutral"
@@ -292,7 +292,7 @@ export default function WarehousePage() {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <h3 className="font-bold text-base text-foreground">
-                  Raw Harvest Buffer Queue (FIFO Management)
+                  Harvest Buffer Queue
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   Warings from intake weighing waiting for manual sorting and pallet association.

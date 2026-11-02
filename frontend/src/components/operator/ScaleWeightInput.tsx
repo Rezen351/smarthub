@@ -63,11 +63,6 @@ export default function ScaleWeightInput({
   const [mode, setMode] = useState<Mode>(readMode)
   const [connection, setConnection] = useState<Connection>('connected')
   const [reading, setReading] = useState(0)
-  const [scaleAddress, setScaleAddress] = useState(() => {
-    if (stationId === '02') return '192.168.1.101:502'
-    if (stationId === '03') return '192.168.1.102:502'
-    return '192.168.1.100:502'
-  })
   const [isStable, setIsStable] = useState(true)
   const [lastReadingAt, setLastReadingAt] = useState(() => new Date())
   const [flash, setFlash] = useState(false)
@@ -104,9 +99,6 @@ export default function ScaleWeightInput({
           const liveWeight = Number(telemetry.weightKg ?? telemetry.weight ?? 0)
           setReading(liveWeight)
           setIsStable(telemetry.isStable !== undefined ? Boolean(telemetry.isStable) : true)
-          if (telemetry.ip && telemetry.port) {
-            setScaleAddress(`${telemetry.ip}:${telemetry.port}`)
-          }
           setConnection(telemetry.online !== false ? 'connected' : 'reconnecting')
           setLastReadingAt(new Date(telemetry.timestamp || Date.now()))
           return true
@@ -169,9 +161,9 @@ export default function ScaleWeightInput({
     setTarePending(true)
     try {
       await api.scales.tare(stationId)
-      toast.success('Scale tared via Modbus TCP (offset zeroed)')
+      toast.success('Scale cleared and ready.')
     } catch (err: any) {
-      toast.error('Tare command failed: ' + (err.message || 'Scale unreachable'))
+      toast.error('Could not clear the scale: ' + (err.message || 'Scale unavailable'))
     } finally {
       setTarePending(false)
     }
@@ -181,9 +173,9 @@ export default function ScaleWeightInput({
   const handleZero = useCallback(async () => {
     try {
       await api.scales.zero(stationId)
-      toast.success('Scale zeroed via Modbus TCP')
+      toast.success('Scale set to zero.')
     } catch (err: any) {
-      toast.error('Zero command failed: ' + (err.message || 'Scale unreachable'))
+      toast.error('Could not set the scale to zero: ' + (err.message || 'Scale unavailable'))
     }
   }, [stationId, toast])
 
@@ -199,7 +191,7 @@ export default function ScaleWeightInput({
             onChange={() => setMode('auto')}
           />
           <Icon name="flash" size={15} />
-          Auto (Modbus TCP)
+          Live Scale
         </label>
         <label className={`radio-card ${mode === 'manual' ? 'is-active' : ''}`}>
           <input
@@ -220,7 +212,7 @@ export default function ScaleWeightInput({
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
                 <p className="t-caption" style={{ opacity: 0.75 }}>
-                  Modbus TCP Telemetry · Station {stationId}
+                  Live Scale · Station {stationId}
                 </p>
                 <p className="scale-value">
                   {formatKg(reading)}
@@ -233,10 +225,10 @@ export default function ScaleWeightInput({
                   dot
                   live={connection === 'connected'}
                 >
-                  {connection === 'connected' ? 'Modbus Online' : connection === 'reconnecting' ? 'Reconnecting' : 'Offline'}
+                  {connection === 'connected' ? 'Scale Online' : connection === 'reconnecting' ? 'Reconnecting' : 'Offline'}
                 </Badge>
                 <span className="t-caption mono font-bold" style={{ opacity: 0.85 }}>
-                  {scaleAddress}
+                  Station {stationId}
                 </span>
                 <span className="t-caption" style={{ opacity: 0.7 }}>
                   Updated {lastReadingAt.toLocaleTimeString('en-GB')}
@@ -246,9 +238,9 @@ export default function ScaleWeightInput({
             <div className="scale-meta">
               <span className="flex items-center gap-1">
                 <Icon name={isStable ? 'check-circle' : 'refresh'} size={13} />
-                {isStable ? 'Weight Stable (Bit 0x0010)' : 'Reading settling…'}
+                {isStable ? 'Weight Stable' : 'Reading settling…'}
               </span>
-              <span>Max Capacity {capacityKg} kg</span>
+              <span>Maximum Load {capacityKg} kg</span>
             </div>
           </div>
 
@@ -329,8 +321,8 @@ export default function ScaleWeightInput({
         <Field
           label={label}
           htmlFor={id}
-          hint={hint ?? 'Locked from the live Modbus TCP scale reading, or edit manually.'}
-          error={error ?? (overCapacity ? `Weight exceeds scale capacity of ${capacityKg} kg.` : undefined)}
+          hint={hint ?? 'Taken from the live scale reading, or edit manually.'}
+          error={error ?? (overCapacity ? `Weight exceeds the maximum load of ${capacityKg} kg.` : undefined)}
         >
           <Input
             id={id}

@@ -2,7 +2,7 @@
  * Station 02: Sorting Console
  *
  * Implements the 4-step sequential workflow:
- *   Step 1: Scan Waring (Select intake waring from buffer queue or scan WRG-... QR)
+ *   Step 1: Scan Waring (Scan WRG-... QR)
  *   Step 2: Sizing & Wash (Prepare sizing machine & select washed vs unwashed protocol)
  *   Step 3: Weigh Grades (Weigh Grade A, B, C on Scale 02 and link pre-attached Pallet QRs)
  *   Step 4: Review & Save (Review yield breakdown bar, automated loss calculation, and commit batch)
@@ -13,7 +13,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import Icon from '../components/shared/Icon'
-import Logo from '../components/shared/Logo'
 import { Input } from '../components/shared/Form'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
@@ -36,11 +35,10 @@ export default function SortingPage() {
 
   /* ── Mode & Stepper State ── */
   const [focusMode, setFocusMode] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4>(1)
 
   /* ── Step 1: Inflow Waring & Context ── */
-  const initialWaring = waitingWarings[0] || {
+  const initialWaring = {
     code: '',
     grossWeightKg: 0,
     farmerName: '',
@@ -99,24 +97,11 @@ export default function SortingPage() {
         }
       }
     }
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement)
-    }
     window.addEventListener('keydown', handleKeyDown)
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
-      document.removeEventListener('fullscreenchange', handleFullscreenChange)
     }
   }, [focusMode, cameraModalMode])
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().catch(() => {})
-    } else {
-      document.exitFullscreen?.().catch(() => {})
-    }
-  }
 
   const enterFocusMode = () => {
     setFocusMode(true)
@@ -428,7 +413,7 @@ export default function SortingPage() {
                 Step 1 of 4 · Intake Identification
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Scan Waring Sack or Select from Buffer
+                Scan Waring Sack
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
@@ -446,7 +431,7 @@ export default function SortingPage() {
                 2D Scanner and Camera
               </h3>
               <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                Scan QR code on the intake waring sack with USB 2D hardware scanner, use device camera, or select from buffer queue.
+                Scan the QR code on the intake waring sack with a USB 2D hardware scanner or device camera.
               </p>
             </div>
 
@@ -462,47 +447,17 @@ export default function SortingPage() {
                 placeholder="Scan 2D barcode or enter waring code..."
                 className="font-mono text-sm flex-1 min-w-0"
               />
-              <div className="flex gap-2">
-                <Button type="submit" variant="primary" icon="check" className="flex-1 sm:flex-initial">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <Button type="submit" variant="primary" icon="check" className="w-full sm:w-auto">
                   Verify
                 </Button>
-                <Button type="button" variant="outline" icon="scan" onClick={openWaringCameraModal} className="flex-1 sm:flex-initial">
+                <Button type="button" variant="outline" icon="scan" onClick={openWaringCameraModal} className="w-full sm:w-auto">
                   Camera
                 </Button>
               </div>
             </form>
             {waringScanError && <p className="text-xs text-destructive font-mono">{waringScanError}</p>}
 
-            {/* Quick Select Chips */}
-            <div className="pt-2 border-t border-border/60 max-w-2xl mx-auto space-y-2">
-              <p className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">
-                Quick Waring Select / Buffer Queue:
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {waitingWarings.map((w) => {
-                  const isSelected = w.code === waringCode
-                  return (
-                    <button
-                      key={w.id}
-                      type="button"
-                      onClick={() => handleSelectWaring(w)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono border transition-colors cursor-pointer ${
-                        isSelected
-                          ? 'border-primary bg-primary/10 text-primary font-bold ring-1 ring-primary'
-                          : 'border-border bg-card hover:bg-muted/30 hover:border-primary text-foreground'
-                      }`}
-                    >
-                      <Icon name="scan" size={13} className="text-muted-foreground" />
-                      <span>{w.code}</span>
-                      <span className="text-muted-foreground text-[11px]">({formatWeight(w.grossWeightKg)} kg · {w.farmerName})</span>
-                    </button>
-                  )
-                })}
-                {waitingWarings.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic">Buffer queue is currently empty.</p>
-                )}
-              </div>
-            </div>
           </div>
 
           {/* Active Selected Waring Confirmation Strip */}
@@ -532,10 +487,10 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 2 of 4 · Sizing & Washing Protocol
+                Step 2 of 4 · Sizing & Washing
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Mechanical Sizer & Post-Sizer Wash Decision
+                Size Produce & Choose Washing
               </h2>
             </div>
             <Badge tone="accent">
@@ -569,7 +524,7 @@ export default function SortingPage() {
             {/* Washing Decision */}
             <div className="border border-border p-5 bg-card space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold">2. Post-Sizer Washing Protocol</h4>
+                <h4 className="text-sm font-bold">2. Washing Decision</h4>
                 <Badge tone={washingRecord === 'WASHED' ? 'accent' : 'neutral'}>
                   {washingRecord}
                 </Badge>
@@ -668,7 +623,7 @@ export default function SortingPage() {
             {/* Left Column: Scale 02 Input */}
             <div className="border border-border p-4 bg-card space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">Scale 02 Reading (Grade {activeGradeTab})</h4>
+                <h4 className="text-sm font-semibold">Weight Reading (Grade {activeGradeTab})</h4>
                 <Badge tone="accent">
                   Floor Scale · 100 kg
                 </Badge>
@@ -692,7 +647,7 @@ export default function SortingPage() {
             {/* Right Column: Pre-attached Pallet QR Linkage */}
             <div className="border border-border p-4 bg-card space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">Pallet QR Linkage (Grade {activeGradeTab})</h4>
+                <h4 className="text-sm font-semibold">Pallet Link (Grade {activeGradeTab})</h4>
                 <Badge tone="neutral">
                   Pre-attached QR
                 </Badge>
@@ -703,7 +658,7 @@ export default function SortingPage() {
 
               <div className="p-3 bg-muted/20 border border-border flex items-center justify-between">
                 <div>
-                  <span className="text-[11px] text-muted-foreground uppercase font-mono block">Linked Pallet QR</span>
+                  <span className="text-[11px] text-muted-foreground uppercase font-mono block">Linked Pallet</span>
                   <span className="font-mono font-bold text-sm">
                     {activeGradeTab === 'A'
                       ? gradeAPalletQr
@@ -909,17 +864,9 @@ export default function SortingPage() {
           aria-modal="true"
           aria-label="Sorting Focus Mode"
         >
-          <header className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
-            <div className="flex items-center gap-3">
-              <Logo className="h-7 w-auto" markOnly />
-              <div>
-                <div className="font-display text-lg leading-none tracking-wider text-foreground">
-                  ENYX-ENTERPRISE
-                </div>
-                <div className="font-mono text-[9px] text-muted-foreground tracking-[0.2em] uppercase mt-0.5">
-                  STATION 02 · SORTING · FOCUS MODE
-                </div>
-              </div>
+          <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
+            <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
+              STATION 02 · SORTING · FOCUS MODE
             </div>
 
             {/* Stepper Progress inside Focus Mode! */}
@@ -928,18 +875,9 @@ export default function SortingPage() {
             </div>
 
             {/* Controls */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={isFullscreen ? 'compress' : 'expand'}
-                onClick={toggleFullscreen}
-                title="Toggle Fullscreen"
-              >
-                {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-              </Button>
-              <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode}>
-                Exit Focus
+            <div className="flex shrink-0 items-center gap-2">
+              <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode} className="whitespace-nowrap">
+                Exit Focus Mode
               </Button>
             </div>
           </header>
@@ -1035,7 +973,7 @@ export default function SortingPage() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-semibold">Sorting History Ledger</h3>
-              <p className="text-xs text-muted-foreground">Log of all completed sorting batches and commercial yield ratios</p>
+              <p className="text-xs text-muted-foreground">Completed sorting batches and yield results</p>
             </div>
             <Badge tone="neutral">
               {sortedBatches.length} Batches
@@ -1071,12 +1009,12 @@ export default function SortingPage() {
           cameraModalMode === 'WARING' ? 'Enter Waring Code (WRG-...)' : `Enter Pallet Tag (PLT-GRD-${activeGradeTab}-01)`
         }
         quickOptions={
-          cameraModalMode === 'WARING'
-            ? waitingWarings.map((w) => ({ label: `${w.code} (${w.farmerName})`, value: w.code }))
-            : [
+          cameraModalMode === 'PALLET'
+            ? [
                 { label: `PLT-GRD-${activeGradeTab}-01`, value: `PLT-GRD-${activeGradeTab}-01` },
                 { label: `PLT-GRD-${activeGradeTab}-02`, value: `PLT-GRD-${activeGradeTab}-02` },
               ]
+            : []
         }
       />
     </>
