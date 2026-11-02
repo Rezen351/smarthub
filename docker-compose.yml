@@ -19,23 +19,6 @@ services:
     networks:
       - enyx-network
 
-  redis:
-    image: redis:7-alpine
-    container_name: enyx-redis
-    restart: unless-stopped
-    command: redis-server --requirepass ${REDIS_PASSWORD:-redis123} --maxmemory 256mb --maxmemory-policy allkeys-lru
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - enyx-network
-
   backend:
     build:
       context: ./backend
@@ -45,25 +28,21 @@ services:
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: postgresql://${POSTGRES_USER:-enyx}:${POSTGRES_PASSWORD:-enyx123}@postgres:5432/${POSTGRES_DB:-enyx_smart_hub}?schema=public
-      REDIS_URL: redis://:${REDIS_PASSWORD:-redis123}@redis:6379
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
       PORT: 3000
-      SCALE_STATION_01_HOST: ${SCALE_STATION_01_HOST:-192.168.1.100}
-      SCALE_STATION_01_PORT: ${SCALE_STATION_01_PORT:-502}
-      SCALE_STATION_02_HOST: ${SCALE_STATION_02_HOST:-192.168.1.101}
-      SCALE_STATION_02_PORT: ${SCALE_STATION_02_PORT:-502}
-      SCALE_STATION_03_HOST: ${SCALE_STATION_03_HOST:-192.168.1.102}
-      SCALE_STATION_03_PORT: ${SCALE_STATION_03_PORT:-502}
+      THERMAL_PRINTER_RECEPTION_IP: ${THERMAL_PRINTER_RECEPTION_IP:-}
+      THERMAL_PRINTER_RECEPTION_PORT: ${THERMAL_PRINTER_RECEPTION_PORT:-9100}
+      THERMAL_PRINTER_PACKAGING_IP: ${THERMAL_PRINTER_PACKAGING_IP:-}
+      THERMAL_PRINTER_PACKAGING_PORT: ${THERMAL_PRINTER_PACKAGING_PORT:-9100}
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
       db-migrate:
         condition: service_completed_successfully
+      scale-simulator:
+        condition: service_started
     networks:
       - enyx-network
 
@@ -140,7 +119,6 @@ services:
 
 volumes:
   postgres_data:
-  redis_data:
   pgadmin_data:
 
 networks:

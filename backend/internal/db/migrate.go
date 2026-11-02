@@ -38,9 +38,10 @@ func Migrate(ctx context.Context) error {
 			return err
 		}
 		if count == 0 {
-			_, err = p.Exec(ctx, `INSERT INTO schema_migrations(version) VALUES ('0001_initial') ON CONFLICT DO NOTHING`)
+			if _, err = p.Exec(ctx, `INSERT INTO schema_migrations(version) VALUES ('0001_initial') ON CONFLICT DO NOTHING`); err != nil {
+				return err
+			}
 		}
-		return err
 	}
 	dir := os.Getenv("MIGRATIONS_DIR")
 	if dir == "" {
