@@ -33,7 +33,7 @@ ENYX-Smart Hub transforms traditional agricultural packaging and warehouse opera
 
 ### Prerequisites
 
-- Node.js 20 LTS
+- Go 1.23+
 - Docker & Docker Compose
 - PostgreSQL 17 (or use Docker)
 - Mosquitto 2.x MQTT Broker (or use Docker)
@@ -43,19 +43,9 @@ ENYX-Smart Hub transforms traditional agricultural packaging and warehouse opera
 
 ```bash
 # Start infrastructure
-docker-compose up -d postgres mosquitto redis
-
-# Install backend
-cd backend && npm install
-
-# Configure environment
-cp .env.example .env
-
-# Initialize database
-npm run prisma:migrate && npm run prisma:seed
-
-# Start development
-npm run dev
+docker-compose up -d postgres redis
+docker-compose run --rm db-migrate
+docker-compose up -d backend
 ```
 
 ```bash
@@ -86,7 +76,7 @@ backend/src/
 │   ├── mqtt/         # Mosquitto client (real-time IoT)
 │   ├── socket/       # Socket.io (live dashboard)
 │   ├── barcode/      # GS1 barcode utilities
-│   └── database/     # Prisma + TimescaleDB
+│   └── database/     # Go PostgreSQL access and migrations
 ```
 
 ---
@@ -190,7 +180,7 @@ Menambah commodity baru di masa depan (Tomat, Cabai, dll.) hanya memerlukan data
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Node.js + Express + TypeScript |
+| Backend | Go REST API |
 | Database | PostgreSQL 17 + TimescaleDB (time-series) |
 | Cache | Redis (session context) |
 | IoT Broker | Mosquitto 2.x (MQTT) |
@@ -215,13 +205,7 @@ Menambah commodity baru di masa depan (Tomat, Cabai, dll.) hanya memerlukan data
 npm test
 
 # Unit tests only
-npm run test:unit
-
-# Integration tests
-npm run test:integration
-
-# Coverage report
-npm run test:coverage
+cd backend && go test ./...
 ```
 
 ---

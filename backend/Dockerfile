@@ -1,48 +1,16 @@
-FROM node:20-alpine AS base
-
-# Install dependencies only when needed
-FROM base AS deps
-WORKDIR /app
-
-# Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
-RUN npm install
-
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+FROM golang:1.23-alpine AS builder
+WORKDIR /src
+RUN apk add --no-cache git
+COPY go.mod go.sum* ./
+RUN go mod download
 COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/smarthub ./cmd/server
 
-# Generate Prisma client
-RUN npx prisma generate
-
-# Build the application
-RUN npm run build
-
-# Production image, copy all the files and run the app
-FROM base AS runner
+FROM alpine:3.20
 WORKDIR /app
-
-ENV NODE_ENV=production
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nodejs
-
-COPY --chown=nodejs:nodejs --from=builder /app/dist ./dist
-COPY --chown=nodejs:nodejs --from=builder /app/node_modules ./node_modules
-COPY --chown=nodejs:nodejs --from=builder /app/prisma ./prisma
-COPY --chown=nodejs:nodejs --from=builder /app/prisma.config.ts* ./
-COPY --chown=nodejs:nodejs --from=builder /app/package.json ./package.json
-COPY --chown=nodejs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
-
-# Create uploads directory for label generation
-RUN mkdir -p /app/uploads/labels && chown -R nodejs:nodejs /app/uploads
-
-USER nodejs
-
+RUN addgroup -S app && adduser -S app -G app
+COPY --from=builder /out/smarthub /app/smarthub
+COPY --from=builder /src/migrations /app/migrations
+USER app
 EXPOSE 3000
-
-ENV PORT=3000
-
-ENTRYPOINT ["./docker-entrypoint.sh"]
+ENTRYPOINT ["/app/smarthub"]

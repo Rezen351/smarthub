@@ -1,6 +1,6 @@
 /**
  * E-Tani SmartHub Centralized API Client
- * Connects Frontend directly to Express REST Backend at /api/v1
+ * Connects the frontend to the Go REST backend at /api/v1
  */
 
 const BASE_URL = '/api/v1'

@@ -10,7 +10,7 @@ import { api } from '../../services/api'
 /**
  * Weight input with Auto (live Modbus TCP scale) and Manual modes.
  *
- * Auto mode queries live telemetry via Express gateway /api/scales/:stationId/weight,
+ * Auto mode queries live telemetry via the Go gateway /api/scales/:stationId/weight,
  * which reads the actual holding registers (40001-40031) from the Modbus TCP transmitter.
  * Stability bit 0x0010 and hardware Tare/Zero are fully supported.
  */

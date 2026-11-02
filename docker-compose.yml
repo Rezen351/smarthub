@@ -51,19 +51,34 @@ services:
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
       PORT: 3000
-      SCALE_STATION_01_HOST: ${SCALE_STATION_01_HOST:-scale-simulator}
-      SCALE_STATION_01_PORT: ${SCALE_STATION_01_PORT:-5020}
-      SCALE_STATION_02_HOST: ${SCALE_STATION_02_HOST:-scale-simulator}
-      SCALE_STATION_02_PORT: ${SCALE_STATION_02_PORT:-5021}
-      SCALE_STATION_03_HOST: ${SCALE_STATION_03_HOST:-scale-simulator}
-      SCALE_STATION_03_PORT: ${SCALE_STATION_03_PORT:-5022}
+      SCALE_STATION_01_HOST: ${SCALE_STATION_01_HOST:-192.168.1.100}
+      SCALE_STATION_01_PORT: ${SCALE_STATION_01_PORT:-502}
+      SCALE_STATION_02_HOST: ${SCALE_STATION_02_HOST:-192.168.1.101}
+      SCALE_STATION_02_PORT: ${SCALE_STATION_02_PORT:-502}
+      SCALE_STATION_03_HOST: ${SCALE_STATION_03_HOST:-192.168.1.102}
+      SCALE_STATION_03_PORT: ${SCALE_STATION_03_PORT:-502}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      scale-simulator:
-        condition: service_started
+      db-migrate:
+        condition: service_completed_successfully
+    networks:
+      - enyx-network
+
+  db-migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: enyx-db-migrate
+    command: ["migrate"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-enyx}:${POSTGRES_PASSWORD:-enyx123}@postgres:5432/${POSTGRES_DB:-enyx_smart_hub}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
     networks:
       - enyx-network
 
