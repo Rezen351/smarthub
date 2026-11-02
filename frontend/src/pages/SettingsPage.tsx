@@ -30,7 +30,7 @@ export interface SystemScaleSettings {
 
 export const INITIAL_SETTINGS: SystemScaleSettings = {
   intake: {
-    ip: '192.168.1.100',
+    ip: '',
     port: '502',
     slaveId: '1',
     weightRegister: '40001',
@@ -39,7 +39,7 @@ export const INITIAL_SETTINGS: SystemScaleSettings = {
     stabilityGrams: '20',
   },
   grading: {
-    ip: '192.168.1.101',
+    ip: '',
     port: '502',
     slaveId: '1',
     weightRegister: '40001',
@@ -48,7 +48,7 @@ export const INITIAL_SETTINGS: SystemScaleSettings = {
     stabilityGrams: '10',
   },
   packaging: {
-    ip: '192.168.1.102',
+    ip: '',
     port: '502',
     slaveId: '1',
     weightRegister: '40001',
@@ -161,7 +161,7 @@ export default function SettingsPage() {
     setSaving(true)
     try {
       // Update backend Modbus TCP configuration for each station
-      await Promise.allSettled([
+      await Promise.all([
         api.scales.updateConfig('01', form.intake.ip.trim(), Number(form.intake.port)),
         api.scales.updateConfig('02', form.grading.ip.trim(), Number(form.grading.port)),
         api.scales.updateConfig('03', form.packaging.ip.trim(), Number(form.packaging.port)),

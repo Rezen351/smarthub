@@ -34,6 +34,7 @@ COPY --chown=nodejs:nodejs --from=builder /app/node_modules ./node_modules
 COPY --chown=nodejs:nodejs --from=builder /app/prisma ./prisma
 COPY --chown=nodejs:nodejs --from=builder /app/prisma.config.ts* ./
 COPY --chown=nodejs:nodejs --from=builder /app/package.json ./package.json
+COPY --chown=nodejs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
 
 # Create uploads directory for label generation
 RUN mkdir -p /app/uploads/labels && chown -R nodejs:nodejs /app/uploads
@@ -44,4 +45,4 @@ EXPOSE 3000
 
 ENV PORT=3000
 
-CMD ["node", "dist/index.js"]
+ENTRYPOINT ["./docker-entrypoint.sh"]

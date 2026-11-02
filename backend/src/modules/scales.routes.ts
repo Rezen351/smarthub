@@ -7,6 +7,7 @@ import {
   updateStationConfig,
   testStationConnection,
 } from '../services/modbus.service';
+import { normalizeScaleEndpoint } from './scales.validation';
 
 const router = Router();
 
@@ -57,16 +58,17 @@ router.put('/:stationId/config', async (req, res): Promise<void> => {
   try {
     const { stationId } = req.params;
     const { host, port } = req.body;
+    const endpoint = normalizeScaleEndpoint(host, port);
 
-    if (!host || !port || isNaN(Number(port))) {
+    if (!endpoint) {
       res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Valid host IP and port are required' },
+        error: { code: 'VALIDATION_ERROR', message: 'A valid scale host and TCP port from 1 to 65535 are required' },
       });
       return;
     }
 
-    const updated = updateStationConfig(stationId, String(host), Number(port));
+    const updated = updateStationConfig(stationId, endpoint.host, endpoint.port);
     if (!updated) {
       res.status(404).json({
         success: false,
@@ -81,8 +83,8 @@ router.put('/:stationId/config', async (req, res): Promise<void> => {
       success: true,
       data: {
         stationId,
-        host: String(host).trim(),
-        port: Number(port),
+        host: endpoint.host,
+        port: endpoint.port,
         online: testResult.online,
         message: testResult.message,
       },
