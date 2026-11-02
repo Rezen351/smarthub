@@ -12,7 +12,7 @@ ENYX-Smart Hub transforms traditional agricultural packaging and warehouse opera
 
 | Stage | What Happens | Tech |
 |-------|--------------|------|
-| 🚚 **Receive** | Farmer arrives → scan ID → weigh & approve → weigh pallet | MQTT + RS485 Scales |
+| 🚚 **Receive** | Farmer arrives → scan ID → weigh & approve → weigh pallet | Modbus TCP + RS485 Scales |
 | 🧼 **Process** | Wash/dry (optional) → grade sorting → re-weighing per grade | IoT Edge Devices |
 | 📦 **Package** | 1 kg pouches → QR + EAN-13 labels → carton bundling → ITF-14 | GS1 Barcodes |
 | 🚛 **Deliver & Trace** | Truck loading → barcode verification → end-to-end traceability | Real-time Dashboard |
@@ -36,14 +36,13 @@ ENYX-Smart Hub transforms traditional agricultural packaging and warehouse opera
 - Go 1.23+
 - Docker & Docker Compose
 - PostgreSQL 17 (or use Docker)
-- Mosquitto 2.x MQTT Broker (or use Docker)
-- Redis (or use Docker)
+- Scale simulator for development or physical Modbus TCP scales
 
 ### One-Command Setup
 
 ```bash
 # Start infrastructure
-docker-compose up -d postgres redis
+docker-compose up -d postgres scale-simulator
 docker-compose run --rm db-migrate
 docker-compose up -d backend
 ```
@@ -53,7 +52,7 @@ docker-compose up -d backend
 cd frontend && npm install && npm run dev
 ```
 
-🌐 Open http://localhost:5173 (frontend) and http://localhost:3000/api/docs (API)
+🌐 Open http://localhost:5173 (frontend) and http://localhost:3000/health (API)
 
 ---
 
@@ -62,21 +61,11 @@ cd frontend && npm install && npm run dev
 **Modular Monolith** — Single-server deployment with 8 business modules + shared infrastructure. Easy to deploy, easy to scale later.
 
 ```
-backend/src/
-├── modules/          # Business logic
-│   ├── auth/         # JWT + RBAC (6 roles)
-│   ├── farmers/      # Farmer profiles & codes
-│   ├── pallets/      # Pallet management
-│   ├── weighing/     # IoT scale integration + grading
-│   ├── warehouse/    # Stock in/out + capacity tracking
-│   ├── labels/       # QR, EAN-13, ITF-14 generation
-│   ├── packaging/    # Bundle pouches into cartons/pallets
-│   └── deliveries/   # Truck dispatch + verification
-├── shared/           # Cross-cutting infrastructure
-│   ├── mqtt/         # Mosquitto client (real-time IoT)
-│   ├── socket/       # Socket.io (live dashboard)
-│   ├── barcode/      # GS1 barcode utilities
-│   └── database/     # Go PostgreSQL access and migrations
+backend/
+├── cmd/server/       # Go API and migration entrypoint
+├── internal/db/      # PostgreSQL migration runner
+├── internal/httpapi/ # REST handlers
+└── migrations/       # Versioned SQL migrations
 ```
 
 ---
@@ -92,7 +81,7 @@ backend/src/
 ├─────────────────────────────────────────────────────────────┤
 │  Current Context:                                           │
 │  👤 Farmer: Ahmad Santoso (FRM-2026-0001)                  │
-│  🥔 Commodity: Kentang (fixed)                             │
+│  🥔 Commodity: Potatoes (fixed)                            │
 │  📦 Pallet: PLT-20260914-0001                              │
 │  [Reset Context]                                            │
 ├─────────────────────────────────────────────────────────────┤
@@ -118,31 +107,18 @@ Real-time data from your field to your dashboard:
 
 | Device | Protocol | What It Does |
 |--------|----------|--------------|
-| RS485 Weighing Scales | MQTT (QoS 1) | Auto-record weights with timestamp |
-| QR/Barcode Scanners | USB/LAN → MQTT | Instant ID verification |
-| Label Printers | MQTT Commands | Auto-print QR/EAN-13/ITF-14 |
+| Weighing Scales | Modbus TCP over Ethernet | Live weight readings |
+| QR/Barcode Scanners | USB/LAN | Instant ID verification |
+| Thermal Printers | Ethernet | Two 80 mm IW-J300H printers for Reception and Packaging |
 | Smartphones | HTTPS + Socket.io | Farmer traceability + driver dispatch |
-
-**MQTT Topics** (Kentang sekarang; multi-commodity-ready):
-
-```
-enyx/kentang/penerimaan/scale/big    → Weighing
-enyx/kentang/sortir/scale/grade-a    → Grading
-enyx/warehouse/scan/in                 → Stock In
-enyx/warehouse/scan/out                → Stock Out
-enyx/kentang/pengemasan/print          → Labels
-enyx/delivery/truck/status             → Delivery
-```
-
-*Segment `kentang` akan menjadi placeholder `<commodity>` saat multi-commodity diaktifkan.*
 
 ---
 
-## 🥔 Kentang Dulu, Multi-Commodity Nanti
+## 🥔 Potatoes First, Multi-Commodity Later
 
-Sistem ini saat ini beroperasi untuk **satu komoditas: Kentang**, dengan arsitektur yang sudah multi-commodity-ready:
+Sistem ini saat ini beroperasi untuk **satu komoditas: Potatoes**, dengan arsitektur yang sudah multi-commodity-ready:
 
-- **Per-grade tracking** — Kentang Grade A/B/C
+- **Per-grade tracking** — Potatoes Grade A/B/C
 - **Per-grade packaging** — berbagai ukuran box dan barcode
 - **Real-time warehouse stock** — per grade
 - **Delivery logs** — dokumentasi ekspor per pengiriman
@@ -181,13 +157,24 @@ Menambah commodity baru di masa depan (Tomat, Cabai, dll.) hanya memerlukan data
 | Layer | Technology |
 |-------|-----------|
 | Backend | Go REST API |
-| Database | PostgreSQL 17 + TimescaleDB (time-series) |
-| Cache | Redis (session context) |
-| IoT Broker | Mosquitto 2.x (MQTT) |
-| Real-time | Socket.io |
-| Barcode | bwip-js (GS1 standards) |
+| Database | PostgreSQL 17 |
+| Scale Transport | Modbus TCP over Ethernet |
+| Thermal Printers | Two IW-J300H units, 80 mm, Ethernet |
+| Barcode | Offline QR and GS1-compatible generators |
 | Frontend | React + Vite |
 | DevOps | Docker Compose |
+
+### Runtime Configuration Ownership
+
+Operational hardware values are backend-owned and exposed through the API:
+
+- Scale host, port, capacity, Online/Offline status, and live weight come from the Go backend and Modbus connection.
+- Reception and Packaging printer addresses, ports, and Online/Offline status come from PostgreSQL-backed printer settings.
+- Thermal receipts and labels are sent by the Go backend to the configured station printer; operational printing does not use the browser print dialog.
+- Scale host, port, and capacity are stored in the database and edited through Settings; simulator ports are fixed test fixtures.
+- UI labels, station names, barcode formats, and the mandated IW-J300H 80 mm format are fixed product constants.
+
+Frontend pages must not define physical IP addresses, operational ports, capacities, live weights, or device status as fallback values.
 
 ---
 

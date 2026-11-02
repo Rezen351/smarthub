@@ -123,7 +123,7 @@ stop
 Sistem tata kelola pengemasan kentang ENYX-Smart Hub menyederhanakan alur operasional ke dalam **3 Konsol Stasiun Fisik** yang masing-masing terhubung langsung (*1:1 hardware mapping*) dengan unit timbangan digital:
 
 ### 1. Konsol 01: Penerimaan & Waring Intake — *Area Intake (Timbangan 01)*
-- **Perangkat Keras**: Timbangan Lantai RS485 kapasitas 150 kg, barcode scanner, dan printer thermal.
+- **Perangkat Keras**: Timbangan Lantai RS485 kapasitas 150 kg, barcode scanner, dan printer thermal IW-J300H 80 mm Ethernet untuk Reception.
 - **Fungsi**: Operator memindai ID Petani (`FRM-...`), menimbang bruto hasil panen kentang, dan memasukkan panen ke karung waring. Operator memeriksa bobot stabil dan menekan persetujuan (*Approval*).
 - **Otomasi Sistem**:
   1. Menerbitkan kode waring unik (`WRG-...`) dan otomatis memasukkan waring ke dalam antrean Gudang Penyangga FIFO (*Buffer Waiting Queue*).
@@ -143,7 +143,7 @@ Sistem tata kelola pengemasan kentang ENYX-Smart Hub menyederhanakan alur operas
 - **Keunggulan**: Mengadopsi workflow sekuensial terarah seperti Konsol 01 yang mencegah kesalahan tahapan operator di lapangan (*poka-yoke*), tanpa kerumitan kontrol mesin di aplikasi web, dan tanpa pencetakan stiker palet baru.
 
 ### 3. Konsol 03: Pengepakan, Gudang Jadi & Dispatch — *Area Pengepakan & Pengiriman (Timbangan 03)*
-- **Perangkat Keras**: Timbangan Meja Presisi RS485 kapasitas 30 kg, printer barcode GS1, dan wireless barcode scanner pengiriman.
+- **Perangkat Keras**: Timbangan Meja Presisi RS485 kapasitas 30 kg, printer thermal IW-J300H 80 mm Ethernet untuk Packaging, dan wireless barcode scanner pengiriman.
 - **Fungsi Terpadu**:
   1. *Pengepakan Retail Pouch 1 kg*: Ditimbang presisi dengan toleransi ketat $\pm$5 g pada target 1.000 g, lalu dicetak **Label Produksi: QR GS1 Digital Link + Barcode EAN-13**.
   2. *Pengepakan Ekspor / Bulk*: Ditimbang pada target 10 kg atau 50 kg, lalu dicetak **Label Ekspor: Barcode GS1 ITF-14 & QR Ekspor**.
@@ -657,14 +657,14 @@ Semua entitas fisik lapangan menggunakan standar identifier berikut:
 
 | Kategori | Rincian Fitur & Komponen |
 |----------|--------------------------|
-| **In-Scope (Fitur Inti MVP)** | 1. **Penerimaan Waring**: Scan ID petani (`FRM`), timbang bruto RS485, approve berat, cetak struk nota tanda terima thermal, dan cetak label QR waring (`WRG`).<br>2. **Gudang Penyangga (Waiting Buffer)**: Kontrol antrean waring FIFO di zona penyangga gudang.<br>3. **Sortir Manual & Pairing**: Pembersihan fisik kasar & scan pairing QR Waring $\leftrightarrow$ QR Palet (`PLT`) untuk menjaga silsilah asal petani.<br>4. **Mesin Sortir & Cuci**: Pencatatan parameter operasional sortir mekanis dan opsi pencucian/pengeringan kondisional.<br>5. **Grading & Timbang Susut**: Timbangan IoT RS485 per grade dan kalkulasi penyusutan otomatis ($\text{Susut} = \text{Bruto Waring} - \sum \text{Net Grade}$).<br>6. **Pengepakan Retail & Ekspor**: Timbangan presisi pouch 1 kg dengan cetak label QR GS1 Digital Link + EAN-13, serta kemasan ekspor 10/50 kg dengan barcode ITF-14.<br>7. **Gudang Barang Jadi & Dispatch**: Kontrol stok per grade dan scan verifikasi manifest pengiriman truk.<br>8. **RBAC 3-Role Terpadu**: Akun `ADMIN`, akun `OPERATOR` dengan menu modular pemilih stasiun kerja (*workstation selector*), akun `FARMER`, dan akses publik `KONSUMEN`.<br>9. **Infrastruktur Local-First**: Server Ubuntu lokal (Go REST API, PostgreSQL, Mosquitto, Redis) dengan ketahanan jaringan saat internet padam. |
+| **In-Scope (Fitur Inti MVP)** | 1. **Penerimaan Waring**: Scan ID petani (`FRM`), timbang bruto RS485, approve berat, cetak struk nota tanda terima thermal, dan cetak label QR waring (`WRG`).<br>2. **Gudang Penyangga (Waiting Buffer)**: Kontrol antrean waring FIFO di zona penyangga gudang.<br>3. **Sortir Manual & Pairing**: Pembersihan fisik kasar & scan pairing QR Waring $\leftrightarrow$ QR Palet (`PLT`) untuk menjaga silsilah asal petani.<br>4. **Mesin Sortir & Cuci**: Pencatatan parameter operasional sortir mekanis dan opsi pencucian/pengeringan kondisional.<br>5. **Grading & Timbang Susut**: Timbangan IoT RS485 per grade dan kalkulasi penyusutan otomatis ($\text{Susut} = \text{Bruto Waring} - \sum \text{Net Grade}$).<br>6. **Pengepakan Retail & Ekspor**: Timbangan presisi pouch 1 kg dengan cetak label QR GS1 Digital Link + EAN-13, serta kemasan ekspor 10/50 kg dengan barcode ITF-14.<br>7. **Gudang Barang Jadi & Dispatch**: Kontrol stok per grade dan scan verifikasi manifest pengiriman truk.<br>8. **RBAC 3-Role Terpadu**: Akun `ADMIN`, akun `OPERATOR` dengan menu modular pemilih stasiun kerja (*workstation selector*), akun `FARMER`, dan akses publik `KONSUMEN`.<br>9. **Infrastruktur Local-First**: Server Ubuntu lokal (Go REST API, PostgreSQL, dan Modbus TCP over Ethernet) dengan ketahanan jaringan saat internet padam. |
 | **Out-of-Scope (Fase Lanjutan)** | 1. Komoditas multi-varietas (Tomat, Cabai) — skema DB ready, implementasi MVP fokus pada Kentang.<br>2. Pembayaran digital / e-wallet petani langsung dari aplikasi.<br>3. Computer Vision / AI automatic optical grading.<br>4. Aplikasi mobile native toko aplikasi (Play Store / App Store) — antarmuka berjalan responsif via peramban web/PWA.<br>5. Konveyor PLC otomatisasi robotik. |
 
 ### C. Milestone 6 Fase Implementasi
 
 1. **Fase 0 (Minggu 1)**: Setup server lokal, Docker Compose, migrasi SQL Go (`Waring`, `PalletWaring`, `GradingRecord`, dual warehouse zone), seed master data.
 2. **Fase 1 (Minggu 1--2)**: Autentikasi JWT, middleware RBAC 3-role (Admin, Operator, Farmer), CRUD Petani & cetak kartu QR `FRM`.
-3. **Fase 2 (Minggu 2--3)**: Layanan Waring Intake, driver Modbus RS485 timbangan penerimaan, cetak struk nota thermal & label waring `WRG`, kontrol FIFO antrean buffer.
+3. **Fase 2 (Minggu 2--3)**: Layanan Waring Intake, driver Modbus RS485 timbangan penerimaan, dua printer thermal IW-J300H 80 mm melalui Ethernet untuk Reception dan Packaging, cetak struk nota thermal & label waring `WRG`, kontrol FIFO antrean buffer.
 4. **Fase 3 (Minggu 3--4)**: Antarmuka scan pairing Waring $\leftrightarrow$ Palet `PLT`, form parameter mesin sortir & cuci kondisional, validasi upstream traceability.
 5. **Fase 4 (Minggu 4)**: Driver timbangan IoT Area Grading, modul GradingRecord & Shrinkage Engine, dashboard visualisasi rendemen susut real-time.
 6. **Fase 5 (Minggu 4--5)**: Timbangan meja pouch 1 kg, generator QR GS1 Digital Link & barcode ekspor ITF-14, resolver publik `/traceability`.
