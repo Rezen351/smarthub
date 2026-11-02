@@ -617,6 +617,87 @@
   }
 }
 
+/* ── Mobile Viewport Support (<= 480px) ── */
+@media (max-width: 480px) {
+  :is(.app-main, .fixed[role="dialog"]) .p-6,
+  :is(.app-main, .fixed[role="dialog"]) .p-8 {
+    padding: 16px;
+  }
+  :is(.app-main, .fixed[role="dialog"]) .p-5 {
+    padding: 14px;
+  }
+  :is(.app-main, .fixed[role="dialog"]) .grid.grid-cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mobile-page-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mobile-page-actions > div {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mobile-page-actions button,
+  .mobile-page-actions a {
+    width: 100%;
+    min-height: 44px;
+    white-space: normal;
+  }
+  .mobile-table-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mobile-table-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .mobile-table-actions > button,
+  .mobile-table-actions > a {
+    width: 100%;
+    min-height: 44px;
+  }
+  .mobile-table-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mobile-table-pagination > div {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mobile-table-pagination label {
+    justify-content: space-between;
+  }
+  .mobile-table-pagination button,
+  .mobile-table-pagination select {
+    min-height: 44px;
+  }
+  :is(.app-main, .fixed[role="dialog"]) .flex.justify-between.border-t,
+  :is(.app-main, .fixed[role="dialog"]) .flex.justify-end.border-t,
+  .app-main form > .flex.items-center.gap-3.pt-2 {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  :is(.app-main, .fixed[role="dialog"]) .flex.justify-between.border-t > div {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  :is(.app-main, .fixed[role="dialog"]) .flex.justify-between.border-t button,
+  :is(.app-main, .fixed[role="dialog"]) .flex.justify-end.border-t button,
+  .app-main form > .flex.items-center.gap-3.pt-2 button {
+    width: 100%;
+    min-height: 44px;
+    white-space: normal;
+  }
+}
+
 /* ── Compact Mobile Viewport Support (<= 360px) ── */
 @media (max-width: 360px) {
   .navbar {

@@ -148,9 +148,9 @@ export default function LoginPage() {
           {/* Industrial Sharp Card with Corner Brackets */}
           <div className="notch-corner border border-[#eaeaea] bg-white p-6 sm:p-10 shadow-sm rounded-none">
             {/* Station Authentication Tag */}
-            <div className="inline-flex items-center gap-2.5 font-mono-custom text-xs text-[#15803d] tracking-[0.25em] uppercase mb-2">
-              <span className="w-6 h-[2px] bg-[#229856]"></span>
-              <span>STATION AUTHENTICATION · PACKHOUSE NETWORK</span>
+            <div className="flex items-start gap-2.5 font-mono-custom text-[10px] sm:text-xs text-[#15803d] tracking-[0.08em] sm:tracking-[0.25em] uppercase mb-2">
+              <span className="w-6 h-[2px] bg-[#229856] shrink-0 mt-2"></span>
+              <span className="min-w-0">STATION AUTHENTICATION · PACKHOUSE NETWORK</span>
             </div>
 
             <h1 className="font-display text-4xl sm:text-5xl tracking-tight text-[#171717] leading-none mb-2">
@@ -224,7 +224,7 @@ export default function LoginPage() {
 
             {/* Quick Demo Accounts Selection */}
             <div className="mt-8 pt-6 border-t border-[#eaeaea]">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between mb-3">
                 <span className="font-mono-custom text-[11px] text-[#15803d] tracking-[0.2em] uppercase font-semibold flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 bg-[#229856]"></span>
                   AUTHORIZED STATIONS (AUTO-FILL CREDENTIALS)
@@ -268,7 +268,7 @@ export default function LoginPage() {
       <footer className="border-t border-[#eaeaea] bg-white py-5 text-xs text-[#666666]">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>© {new Date().getFullYear()} ENYX-ENTERPRISE. All rights reserved.</p>
-          <div className="flex items-center gap-3 font-mono-custom text-[11px]">
+          <div className="flex flex-wrap items-center justify-center gap-3 font-mono-custom text-[11px]">
             <span className="bg-[#f5f5f5] px-2 py-0.5 border border-[#eaeaea] text-[#171717]">
               Type: enyx-enterprise
             </span>

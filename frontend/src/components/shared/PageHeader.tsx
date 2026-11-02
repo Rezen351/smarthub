@@ -17,7 +17,7 @@ export default function PageHeader({ title, subtitle, actions, children, classNa
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
           {subtitle && <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{subtitle}</p>}
         </div>
-        {actions && <div className="flex items-center flex-wrap gap-2">{actions}</div>}
+        {actions && <div className="mobile-page-actions flex items-center flex-wrap gap-2">{actions}</div>}
       </div>
       {children}
     </header>
