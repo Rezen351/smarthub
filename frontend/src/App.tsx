@@ -10,6 +10,7 @@ import PackagingPage from './pages/PackagingPage'
 import DeliveriesPage from './pages/DeliveriesPage'
 import MyDeliveriesPage from './pages/MyDeliveriesPage'
 import FarmerProfilePage from './pages/FarmerProfilePage'
+import FarmerQRPage from './pages/FarmerQRPage'
 import TraceabilityPage from './pages/TraceabilityPage'
 import PublicTraceabilityPage from './pages/PublicTraceabilityPage'
 import UsersPage from './pages/UsersPage'
@@ -110,6 +111,7 @@ function App() {
         />
         <Route path="my-deliveries" element={<MyDeliveriesPage />} />
         <Route path="profile" element={<FarmerProfilePage />} />
+        <Route path="farmer-qr" element={<FarmerQRPage />} />
         <Route path="traceability" element={<TraceabilityPage />} />
         <Route
           path="users"
