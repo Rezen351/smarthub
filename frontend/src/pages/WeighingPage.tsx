@@ -7,7 +7,7 @@
  *     2. Step 2: Harvest Weighing (Live gross scale reading via Modbus TCP RS485 indicator)
  *     3. Step 3: Approve & Bag into Waring (WRG-... generation, thermal receipt & waring QR label)
  *
- * Weight transmitter network configuration is managed in Configuration (Settings).
+ * Weight transmitter network settings are managed in Settings.
  */
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Badge from '../components/shared/Badge'
@@ -41,8 +41,6 @@ type WeighingRecord = {
 }
 
 const FARMERS: any[] = []
-
-const SCALE_CAPACITY_KG = 150
 
 const nextWaringCode = (index: number) => {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
@@ -84,6 +82,11 @@ export default function WeighingPage() {
 
   /* ── Step 2: Weighing Form ── */
   const [weightKg, setWeightKg] = useState('')
+  const [scaleCapacityKg, setScaleCapacityKg] = useState<number | null>(null)
+  const [scaleOnline, setScaleOnline] = useState(false)
+  const [scaleEndpoint, setScaleEndpoint] = useState('Not configured')
+  const [printerOnline, setPrinterOnline] = useState(false)
+  const [printerEndpoint, setPrinterEndpoint] = useState('Not configured')
   const [formError, setFormError] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -92,12 +95,51 @@ export default function WeighingPage() {
   const [printModalRecord, setPrintModalRecord] = useState<WeighingRecord | null>(null)
   const [approvedSuccessRecord, setApprovedSuccessRecord] = useState<WeighingRecord | null>(null)
   const [isPrinting, setIsPrinting] = useState(false)
-  const [printTab, setPrintTab] = useState<'both' | 'receipt' | 'label'>('both')
 
   /* ── Records Ledger ── */
   const [records, setRecords] = useState<WeighingRecord[]>([])
   const [waringCounter, setWaringCounter] = useState(1)
   const [farmersList, setFarmersList] = useState(FARMERS)
+
+  useEffect(() => {
+    api.scales
+      .getWeight('01')
+      .then((scale) => {
+        setScaleCapacityKg(Number(scale?.capacityKg) || null)
+        setScaleOnline(scale?.online === true)
+        setScaleEndpoint(scale?.ip && scale?.port ? `${scale.ip}:${scale.port}` : 'Not configured')
+      })
+      .catch(() => {
+        setScaleCapacityKg(null)
+        setScaleOnline(false)
+      })
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    const checkPrinter = () => {
+      api.printers
+        .test('reception')
+        .then((result) => active && setPrinterOnline(result?.online === true))
+        .catch(() => active && setPrinterOnline(false))
+    }
+    checkPrinter()
+    const timer = window.setInterval(checkPrinter, 5000)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [])
+
+  useEffect(() => {
+    api.printers
+      .get()
+      .then((printers) => {
+        const printer = Array.isArray(printers) ? printers.find((item: any) => item.station === 'RECEPTION') : null
+        if (printer?.ip && printer?.port) setPrinterEndpoint(`${printer.ip}:${printer.port}`)
+      })
+      .catch(() => setPrinterEndpoint('Not configured'))
+  }, [])
 
   /* Fetch live farmers and historical warings from database */
   useEffect(() => {
@@ -271,8 +313,8 @@ export default function WeighingPage() {
       setFormError('Weight must be greater than 0 kg.')
       return
     }
-    if (numericWeight > SCALE_CAPACITY_KG) {
-      setFormError(`Weight exceeds scale capacity of ${SCALE_CAPACITY_KG} kg.`)
+    if (scaleCapacityKg !== null && numericWeight > scaleCapacityKg) {
+      setFormError(`Weight exceeds scale capacity of ${scaleCapacityKg} kg.`)
       return
     }
 
@@ -385,18 +427,20 @@ export default function WeighingPage() {
     if (!rec) return
     setIsPrinting(true)
     printThermal(
-      <LabelPreview
-        type="receipt"
-        code={rec.waringCode || nextWaringCode(waringCounter)}
-        farmerName={rec.farmerName}
-        farmerId={rec.farmerId}
-        weightKg={rec.weightKg}
-        time={rec.time ?? 'Live'}
-        date={rec.depositDate ?? today()}
-      />,
-      () => {
+      {
+        type: 'receipt',
+        code: rec.waringCode || nextWaringCode(records.length + 1),
+        farmerName: rec.farmerName,
+        farmerId: rec.farmerId,
+        weightKg: rec.weightKg,
+        date: rec.depositDate || today(),
+        time: rec.time,
+      },
+      'reception',
+      (error) => {
         setIsPrinting(false)
-        toast.success(`Receipt printed for ${rec.farmerName}`)
+        if (error) toast.error(`Receipt print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
+        else toast.success(`Receipt printed for ${rec.farmerName}`)
       }
     )
   }
@@ -406,17 +450,20 @@ export default function WeighingPage() {
     if (!rec) return
     setIsPrinting(true)
     printThermal(
-      <LabelPreview
-        type="waring"
-        code={rec.waringCode || nextWaringCode(waringCounter)}
-        farmerName={rec.farmerName}
-        farmerId={rec.farmerId}
-        weightKg={rec.weightKg}
-        date={rec.depositDate ?? today()}
-      />,
-      () => {
+      {
+        type: 'waring',
+        code: rec.waringCode || nextWaringCode(records.length + 1),
+        farmerName: rec.farmerName,
+        farmerId: rec.farmerId,
+        weightKg: rec.weightKg,
+        date: rec.depositDate || today(),
+        time: rec.time,
+      },
+      'reception',
+      (error) => {
         setIsPrinting(false)
-        toast.success(`Waring QR label printed: ${rec.waringCode || ''}`)
+        if (error) toast.error(`Waring label print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
+        else toast.success(`Waring QR label printed: ${rec.waringCode || ''}`)
       }
     )
   }
@@ -425,43 +472,33 @@ export default function WeighingPage() {
     const rec = getPrintRecord(recordOverride)
     if (!rec) return
 
-    if (printTab === 'receipt') {
-      triggerPrintReceipt(rec)
-      return
-    }
-    if (printTab === 'label') {
-      triggerPrintWaringLabel(rec)
-      return
-    }
-
     setIsPrinting(true)
     printThermal(
-      <div>
-        <div className="print-page-break">
-          <LabelPreview
-            type="receipt"
-            code={rec.waringCode || nextWaringCode(waringCounter)}
-            farmerName={rec.farmerName}
-            farmerId={rec.farmerId}
-            weightKg={rec.weightKg}
-            time={rec.time ?? 'Live'}
-            date={rec.depositDate ?? today()}
-          />
-        </div>
-        <div>
-          <LabelPreview
-            type="waring"
-            code={rec.waringCode || nextWaringCode(waringCounter)}
-            farmerName={rec.farmerName}
-            farmerId={rec.farmerId}
-            weightKg={rec.weightKg}
-            date={rec.depositDate ?? today()}
-          />
-        </div>
-      </div>,
-      () => {
+      [
+        {
+          type: 'receipt',
+          code: rec.waringCode || nextWaringCode(records.length + 1),
+          farmerName: rec.farmerName,
+          farmerId: rec.farmerId,
+          weightKg: rec.weightKg,
+          date: rec.depositDate || today(),
+          time: rec.time,
+        },
+        {
+          type: 'waring',
+          code: rec.waringCode || nextWaringCode(records.length + 1),
+          farmerName: rec.farmerName,
+          farmerId: rec.farmerId,
+          weightKg: rec.weightKg,
+          date: rec.depositDate || today(),
+          time: rec.time,
+        },
+      ],
+      'reception',
+      (error) => {
         setIsPrinting(false)
-        toast.success(`Receipt & Waring label ${rec.waringCode || ''} printed`)
+        if (error) toast.error(`Receipt and Waring label print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
+        else toast.success(`Receipt & Waring label ${rec.waringCode || ''} printed`)
       }
     )
   }
@@ -728,7 +765,7 @@ export default function WeighingPage() {
                   setWeightKg(val)
                   setFormError('')
                 }}
-                capacityKg={SCALE_CAPACITY_KG}
+                capacityKg={scaleCapacityKg ?? 0}
               />
               {formError && (
                 <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-none flex items-center gap-2 font-medium">
@@ -750,7 +787,7 @@ export default function WeighingPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Commodity:</span>
-                    <span className="font-semibold text-foreground">Kentang (Potatoes)</span>
+                    <span className="font-semibold text-foreground">Potatoes</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Deposit Date:</span>
@@ -858,67 +895,27 @@ export default function WeighingPage() {
 
           {/* Print Previews */}
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-2 no-print" role="group" aria-label="Print view mode">
-              <button
-                type="button"
-                onClick={() => setPrintTab('both')}
-                className={`px-3 py-1.5 rounded-none border text-xs font-medium transition-colors cursor-pointer ${
-                  printTab === 'both'
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                }`}
-              >
-                Both (Receipt + Label)
-              </button>
-              <button
-                type="button"
-                onClick={() => setPrintTab('receipt')}
-                className={`px-3 py-1.5 rounded-none border text-xs font-medium transition-colors cursor-pointer ${
-                  printTab === 'receipt'
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                }`}
-              >
-                Farmer Receipt Slip
-              </button>
-              <button
-                type="button"
-                onClick={() => setPrintTab('label')}
-                className={`px-3 py-1.5 rounded-none border text-xs font-medium transition-colors cursor-pointer ${
-                  printTab === 'label'
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                }`}
-              >
-                QR Waring Label
-              </button>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
               {/* Receipt Preview */}
-              {(printTab === 'both' || printTab === 'receipt') && (
-                <LabelPreview
-                  type="receipt"
-                  code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? nextWaringCode(waringCounter)}
-                  farmerName={confirmApprove?.farmerName ?? farmer?.name}
-                  farmerId={confirmApprove?.farmerId ?? farmer?.id}
-                  weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
-                  time={confirmApprove?.time ?? 'Live'}
-                  date={today()}
-                />
-              )}
+              <LabelPreview
+                type="receipt"
+                code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? nextWaringCode(waringCounter)}
+                farmerName={confirmApprove?.farmerName ?? farmer?.name}
+                farmerId={confirmApprove?.farmerId ?? farmer?.id}
+                weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
+                time={confirmApprove?.time ?? 'Live'}
+                date={today()}
+              />
 
               {/* Waring Label Preview */}
-              {(printTab === 'both' || printTab === 'label') && (
-                <LabelPreview
-                  type="waring"
-                  code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? nextWaringCode(waringCounter)}
-                  farmerName={confirmApprove?.farmerName ?? farmer?.name}
-                  farmerId={confirmApprove?.farmerId ?? farmer?.id}
-                  weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
-                  date={today()}
-                />
-              )}
+              <LabelPreview
+                type="waring"
+                code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? nextWaringCode(waringCounter)}
+                farmerName={confirmApprove?.farmerName ?? farmer?.name}
+                farmerId={confirmApprove?.farmerId ?? farmer?.id}
+                weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
+                date={today()}
+              />
             </div>
           </div>
 
@@ -1044,14 +1041,14 @@ export default function WeighingPage() {
             </p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale Status</p>
-            <p className="text-2xl font-bold tracking-tight text-emerald-600">Online</p>
-            <p className="text-xs text-muted-foreground">Scale 01</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale</p>
+            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
+            <p className="text-xs text-muted-foreground font-mono">{scaleEndpoint}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Next Waring ID</p>
-            <p className="text-lg font-bold tracking-tight text-foreground font-mono">{nextWaringCode(waringCounter)}</p>
-            <p className="text-xs text-muted-foreground">Assigned on approval</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Printer</p>
+            <p className={`text-2xl font-bold tracking-tight ${printerOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{printerOnline ? 'Online' : 'Offline'}</p>
+            <p className="text-xs text-muted-foreground font-mono">{printerEndpoint}</p>
           </div>
         </div>
 
@@ -1063,8 +1060,8 @@ export default function WeighingPage() {
               <Badge tone="accent">Step {activeStep} of 3</Badge>
             </div>
             <div className="flex items-center gap-2">
-              <Badge tone="success" dot live>
-                Scale 01 · Ready
+              <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
+                Scale 01 · {scaleOnline ? 'Online' : 'Offline'}
               </Badge>
               <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
                 Open Focus Mode

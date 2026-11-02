@@ -212,7 +212,7 @@ export default function ReportsPage() {
             <div className="divider" />
             <div className="row gap-sm flex-wrap">
               <Badge tone="accent" icon="leaf">
-                Kentang only
+                Potatoes only
               </Badge>
               <Badge tone="neutral">{range === 'all' ? 'All time' : `Last ${range}`}</Badge>
             </div>

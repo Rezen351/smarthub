@@ -21,6 +21,7 @@ import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import { formatWeight } from '../lib/utils'
 import { usePackhouseStore, type GradedBatchRecord, type BufferWaringItem } from '../hooks/usePackhouseStore'
 import CameraScannerModal from '../components/shared/CameraScannerModal'
+import { api } from '../services/api'
 
 const STEPS = [
   { id: 1, label: 'Scan Waring' },
@@ -61,6 +62,28 @@ export default function SortingPage() {
   /* ── Step 3: Scale 02 Live Weighing & Pallet QRs (Grade A, B, C) ── */
   const [activeGradeTab, setActiveGradeTab] = useState<'A' | 'B' | 'C'>('A')
   const [liveScaleWeight, setLiveScaleWeight] = useState('0.0')
+  const [scaleCapacityKg, setScaleCapacityKg] = useState<number | null>(null)
+  const [scaleOnline, setScaleOnline] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    const pollScale = () => {
+      api.scales
+        .getWeight('02')
+        .then((scale) => {
+          if (!active) return
+          setScaleCapacityKg(Number(scale?.capacityKg) || null)
+          setScaleOnline(scale?.online === true)
+        })
+        .catch(() => active && setScaleOnline(false))
+    }
+    pollScale()
+    const timer = window.setInterval(pollScale, 2000)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [])
 
   /* Grade A */
   const [gradeAKg, setGradeAKg] = useState('0.0')
@@ -582,8 +605,8 @@ export default function SortingPage() {
                 Weigh Commercial Grades on Scale 02 & Link Pallet QRs
               </h2>
             </div>
-            <Badge tone="success" dot live>
-              Scale 02 · Ready
+            <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
+              Scale 02 · {scaleOnline ? 'Online' : 'Offline'}
             </Badge>
           </div>
 
@@ -624,15 +647,15 @@ export default function SortingPage() {
             <div className="border border-border p-4 bg-card space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-semibold">Weight Reading (Grade {activeGradeTab})</h4>
-                <Badge tone="accent">
-                  Floor Scale · 100 kg
+                <Badge tone={scaleOnline ? 'success' : 'warning'} dot>
+                  {scaleOnline ? 'Online' : 'Offline'} · Floor Scale{scaleCapacityKg ? ` · ${scaleCapacityKg} kg` : ''}
                 </Badge>
               </div>
               <ScaleWeightInput
                 stationId="02"
                 value={liveScaleWeight}
                 onChange={setLiveScaleWeight}
-                capacityKg={100}
+                capacityKg={scaleCapacityKg ?? 0}
               />
               <Button
                 variant="primary"
@@ -925,13 +948,13 @@ export default function SortingPage() {
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale 02 Status</p>
-            <p className="text-2xl font-bold tracking-tight text-emerald-600">Online</p>
-            <p className="text-xs text-muted-foreground">100 kg Floor Scale</p>
+            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
+            <p className="text-xs text-muted-foreground">{scaleCapacityKg ? `${scaleCapacityKg} kg Floor Scale` : 'Scale capacity unavailable'}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Commercial Yield</p>
             <p className="text-2xl font-bold tracking-tight text-emerald-600">
-              {gGross > 0 ? `${yieldPct.toFixed(1)}%` : '91.4%'}
+              {gGross > 0 ? `${yieldPct.toFixed(1)}%` : '0.0%'}
             </p>
             <p className="text-xs text-muted-foreground">Grade A+B+C ratio</p>
           </div>
@@ -952,8 +975,8 @@ export default function SortingPage() {
               <Badge tone="accent">Step {activeStep} of 4</Badge>
             </div>
             <div className="flex items-center gap-2">
-              <Badge tone="success" dot live>
-                Scale 02 · Ready
+              <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
+                Scale 02 · {scaleOnline ? 'Online' : 'Offline'}
               </Badge>
               <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
                 Open Focus Mode

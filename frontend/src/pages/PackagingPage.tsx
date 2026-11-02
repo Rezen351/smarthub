@@ -76,9 +76,61 @@ export default function PackagingPage() {
   const [packagingMode, setPackagingMode] = useState<PackagingMode>('RETAIL_POUCH')
   const [selectedGrade, setSelectedGrade] = useState<'A' | 'B' | 'C'>('A')
   const [exportTargetKg, setExportTargetKg] = useState<10 | 50>(10)
+  const [scaleCapacityKg, setScaleCapacityKg] = useState<number | null>(null)
+  const [scaleOnline, setScaleOnline] = useState(false)
+  const [scaleEndpoint, setScaleEndpoint] = useState('Not configured')
+  const [printerOnline, setPrinterOnline] = useState(false)
+  const [printerEndpoint, setPrinterEndpoint] = useState('Not configured')
+
+  useEffect(() => {
+    let active = true
+    const pollScale = () => {
+      api.scales
+        .getWeight('03')
+        .then((scale) => {
+          if (!active) return
+          setScaleCapacityKg(Number(scale?.capacityKg) || null)
+          setScaleOnline(scale?.online === true)
+          setScaleEndpoint(scale?.ip && scale?.port ? `${scale.ip}:${scale.port}` : 'Not configured')
+        })
+        .catch(() => active && setScaleOnline(false))
+    }
+    pollScale()
+    const timer = window.setInterval(pollScale, 2000)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [])
+
+  useEffect(() => {
+    api.printers
+      .get()
+      .then((printers) => {
+        const printer = Array.isArray(printers) ? printers.find((item: any) => item.station === 'PACKAGING') : null
+        if (printer?.ip && printer?.port) setPrinterEndpoint(`${printer.ip}:${printer.port}`)
+      })
+      .catch(() => setPrinterEndpoint('Not configured'))
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    const checkPrinter = () => {
+      api.printers
+        .test('packaging')
+        .then((result) => active && setPrinterOnline(result?.online === true))
+        .catch(() => active && setPrinterOnline(false))
+    }
+    checkPrinter()
+    const timer = window.setInterval(checkPrinter, 5000)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [])
 
   /* ── Step 2: Scale 03 Live Precision Weighing ── */
-  const [currentWeight, setCurrentWeight] = useState('1.002')
+  const [currentWeight, setCurrentWeight] = useState('')
   const [isPrinting, setIsPrinting] = useState(false)
   const [savedSuccessRecord, setSavedSuccessRecord] = useState<PackageRecord | null>(null)
   const [palletsFromApi, setPalletsFromApi] = useState<AvailablePallet[] | null>(null)
@@ -353,28 +405,19 @@ export default function PackagingPage() {
       })
 
       printThermal(
-        packagingMode === 'RETAIL_POUCH' ? (
-          <LabelPreview
-            type="pouch"
-            code={newCode}
-            farmerName={sourceFarmer}
-            farmerId={sourcePalletCode}
-            grade={selectedGrade}
-            weightKg={weightValue}
-            stationName="Station 03 · Packaging"
-          />
-        ) : (
-          <LabelPreview
-            type="export"
-            code={newCode}
-            farmerName={sourceFarmer}
-            farmerId={sourcePalletCode}
-            grade={selectedGrade}
-            weightKg={weightValue}
-          />
-        ),
-        () => {
+        {
+          type: packagingMode === 'RETAIL_POUCH' ? 'pouch' : 'export',
+          code: newCode,
+          farmerName: sourceFarmer,
+          farmerId: sourcePalletCode,
+          grade: selectedGrade,
+          weightKg: weightValue,
+          stationName: 'Station 03 · Packaging',
+        },
+        'packaging',
+        (error) => {
           setIsPrinting(false)
+          if (error) toast.error(`Packaging label print failed: ${error instanceof Error ? error.message : 'Check the Packaging printer.'}`)
         }
       )
 
@@ -727,8 +770,8 @@ export default function PackagingPage() {
             <div className="flex items-center gap-2">
               <Badge tone="accent">Pallet: {sourcePalletCode}</Badge>
               <Badge tone="accent">Grade {selectedGrade}</Badge>
-              <Badge tone="success" dot live>
-                Scale 03 · Ready
+                <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
+                Scale 03 · {scaleOnline ? 'Online' : 'Offline'}
               </Badge>
             </div>
           </div>
@@ -740,7 +783,7 @@ export default function PackagingPage() {
                 stationId="03"
                 value={currentWeight}
                 onChange={setCurrentWeight}
-                capacityKg={packagingMode === 'RETAIL_POUCH' ? 5 : 60}
+                capacityKg={scaleCapacityKg ?? 0}
                 label="Package Weight"
               />
 
@@ -934,27 +977,20 @@ export default function PackagingPage() {
                       if (!savedSuccessRecord) return
                       setIsPrinting(true)
                       printThermal(
-                        packagingMode === 'RETAIL_POUCH' ? (
-                          <LabelPreview
-                            type="pouch"
-                            code={savedSuccessRecord.code}
-                            farmerName={sourceFarmer}
-                            farmerId={sourcePalletCode}
-                            grade={selectedGrade}
-                            weightKg={savedSuccessRecord.weightKg}
-                            stationName="Station 03 · Packaging"
-                          />
-                        ) : (
-                          <LabelPreview
-                            type="export"
-                            code={savedSuccessRecord.code}
-                            farmerName={sourceFarmer}
-                            farmerId={sourcePalletCode}
-                            grade={selectedGrade}
-                            weightKg={savedSuccessRecord.weightKg}
-                          />
-                        ),
-                        () => setIsPrinting(false)
+                        {
+                          type: savedSuccessRecord.mode === 'RETAIL_POUCH' ? 'pouch' : 'export',
+                          code: savedSuccessRecord.code,
+                          farmerName: sourceFarmer,
+                          farmerId: savedSuccessRecord.sourcePallet,
+                          grade: savedSuccessRecord.grade,
+                          weightKg: savedSuccessRecord.weightKg,
+                          stationName: 'Station 03 · Packaging',
+                        },
+                        'packaging',
+                        (error) => {
+                          setIsPrinting(false)
+                          if (error) toast.error(`Packaging label print failed: ${error instanceof Error ? error.message : 'Check the Packaging printer.'}`)
+                        }
                       )
                     }}
                   >
@@ -1049,14 +1085,14 @@ export default function PackagingPage() {
             </p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale Status</p>
-            <p className="text-2xl font-bold tracking-tight text-emerald-600">Online</p>
-            <p className="text-xs text-muted-foreground">Scale 03</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale</p>
+            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
+            <p className="text-xs text-muted-foreground font-mono">{scaleEndpoint}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pallets Available</p>
-            <p className="text-2xl font-bold tracking-tight text-foreground">{effectivePallets.length}</p>
-            <p className="text-xs text-muted-foreground">From Station 02</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Printer</p>
+            <p className={`text-2xl font-bold tracking-tight ${printerOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{printerOnline ? 'Online' : 'Offline'}</p>
+            <p className="text-xs text-muted-foreground font-mono">{printerEndpoint}</p>
           </div>
         </div>
 
@@ -1068,8 +1104,8 @@ export default function PackagingPage() {
               <Badge tone="accent">Step {activeStep} of 3</Badge>
             </div>
             <div className="flex items-center gap-2">
-              <Badge tone="success" dot live>
-                Scale 03 · Ready
+              <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
+                Scale 03 · {scaleOnline ? 'Online' : 'Offline'}
               </Badge>
               <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
                 Open Focus Mode

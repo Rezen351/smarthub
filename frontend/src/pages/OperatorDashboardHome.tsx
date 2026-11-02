@@ -51,27 +51,27 @@ export default function OperatorDashboardHome() {
       stationNum: '01',
       stationLabel: 'Reception',
       scaleRole: 'Floor Scale',
-      ip: '192.168.1.100:502',
-      capacity: '150 kg',
-      status: 'ONLINE',
+      ip: 'Not configured',
+      capacity: 'Not configured',
+      status: 'OFFLINE',
     },
     {
       id: 'scale-02',
       stationNum: '02',
       stationLabel: 'Sorting',
       scaleRole: 'Floor Scale',
-      ip: '192.168.1.101:502',
-      capacity: '100 kg',
-      status: 'ONLINE',
+      ip: 'Not configured',
+      capacity: 'Not configured',
+      status: 'OFFLINE',
     },
     {
       id: 'scale-03',
       stationNum: '03',
       stationLabel: 'Packaging',
       scaleRole: 'Bench Scale',
-      ip: '192.168.1.102:502',
-      capacity: '30 kg',
-      status: 'ONLINE',
+      ip: 'Not configured',
+      capacity: 'Not configured',
+      status: 'OFFLINE',
     },
   ])
 
@@ -176,7 +176,7 @@ export default function OperatorDashboardHome() {
       icon: 'scale',
       tag: 'STATION 01',
       badgeTone: 'accent',
-      scaleName: 'Floor Scale (150 kg)',
+      scaleName: `Floor Scale (${tcpNodes.find((node) => node.stationNum === '01')?.capacity || 'Not configured'})`,
       metric: `${metrics.grossIntakeKg.toLocaleString()} kg · ${metrics.grossIntakeWarings} Warings`,
     },
     {
@@ -188,7 +188,7 @@ export default function OperatorDashboardHome() {
       icon: 'sortir',
       tag: 'STATION 02',
       badgeTone: 'success',
-      scaleName: 'Floor Scale (100 kg)',
+      scaleName: `Floor Scale (${tcpNodes.find((node) => node.stationNum === '02')?.capacity || 'Not configured'})`,
       metric: metrics.hasBatches
         ? `${metrics.yieldPct.toFixed(1)}% Yield · ${metrics.shrinkagePct.toFixed(1)}% Loss`
         : '0 Batches · Ready to Sort',
@@ -202,12 +202,13 @@ export default function OperatorDashboardHome() {
       icon: 'package',
       tag: 'STATION 03',
       badgeTone: 'accent',
-      scaleName: 'Bench Scale (30 kg)',
+      scaleName: `Bench Scale (${tcpNodes.find((node) => node.stationNum === '03')?.capacity || 'Not configured'})`,
       metric: `${metrics.finishedPouches} pouches · ${metrics.finishedCartons} crates`,
     },
   ]
 
-  const allScalesOnline = tcpNodes.every((n) => n.status === 'ONLINE')
+  const onlineScaleCount = tcpNodes.filter((n) => n.status === 'ONLINE').length
+  const allScalesOnline = tcpNodes.length === 3 && onlineScaleCount === 3
 
   return (
     <div className="space-y-6">
@@ -216,7 +217,7 @@ export default function OperatorDashboardHome() {
         subtitle="Select a physical workstation console to operate."
         actions={
           <Badge tone={allScalesOnline ? 'success' : 'warning'} dot live>
-            {allScalesOnline ? 'All 3 Scales Ready' : 'Connecting to Scales'}
+            {allScalesOnline ? 'All 3 Scales Online' : onlineScaleCount > 0 ? `${onlineScaleCount}/3 Scales Online` : 'All Scales Offline'}
           </Badge>
         }
       />
@@ -240,7 +241,7 @@ export default function OperatorDashboardHome() {
                       : 'bg-amber-100 text-amber-800'
                   }`}
                 >
-                  {allScalesOnline ? 'Ready · Online' : 'Active Connection'}
+                  {allScalesOnline ? 'Ready · Online' : onlineScaleCount > 0 ? 'Partial · Online' : 'Offline'}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -249,7 +250,7 @@ export default function OperatorDashboardHome() {
             </div>
           </div>
           <Link to="/dashboard/settings" className="text-xs font-mono text-primary hover:underline">
-            Scale Setup →
+                Settings
           </Link>
         </div>
 
@@ -283,7 +284,7 @@ export default function OperatorDashboardHome() {
                         isOnline ? 'bg-emerald-600 animate-pulse' : 'bg-amber-500'
                       }`}
                     />
-                    {isOnline ? 'Ready' : 'Standby'}
+                    {isOnline ? 'Online' : 'Offline'}
                   </span>
                 </div>
 
@@ -355,7 +356,7 @@ export default function OperatorDashboardHome() {
             </p>
           </div>
           <span className="text-xs font-mono text-muted-foreground">
-            3 Online
+            {onlineScaleCount} Online
           </span>
         </div>
 

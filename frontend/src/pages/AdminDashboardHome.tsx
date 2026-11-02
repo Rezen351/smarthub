@@ -33,7 +33,7 @@ const quickActions: QuickAction[] = [
   { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box', desc: 'Buffer & finished goods storage' },
   { label: 'Deliveries & Dispatch', path: '/dashboard/deliveries', icon: 'truck', desc: 'Manifest scan & truck departure' },
   { label: 'User Admin', path: '/dashboard/users', icon: 'users', desc: '3-role RBAC accounts' },
-      { label: 'Scale Setup', path: '/dashboard/settings', icon: 'settings', desc: 'Station scale setup' },
+      { label: 'Settings', path: '/dashboard/settings', icon: 'settings', desc: 'Scale and thermal printer settings' },
 ]
 
 export default function AdminDashboardHome() {
@@ -217,12 +217,12 @@ export default function AdminDashboardHome() {
       >
         <div className="row gap-sm flex-wrap">
           <Badge tone="accent" icon="leaf">
-            Kentang · active
+            Potatoes · active
           </Badge>
           <Badge tone="neutral">Tomat · disabled</Badge>
           <Badge tone="neutral">Cabai · disabled</Badge>
           <span className="t-caption text-text-secondary">
-            Only Kentang is active for this packhouse.
+            Only Potatoes is active for this packhouse.
           </span>
         </div>
       </Card>

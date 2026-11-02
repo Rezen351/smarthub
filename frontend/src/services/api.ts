@@ -259,16 +259,42 @@ export const api = {
       })
       return res.data
     },
-    updateConfig: async (stationId: string, host: string, port: number) => {
+    updateConfig: async (stationId: string, host: string, port: number, capacityKg: number) => {
       const res = await request<ApiResponse<any>>(`/scales/${encodeURIComponent(stationId)}/config`, {
         method: 'PUT',
-        body: JSON.stringify({ host, port }),
+        body: JSON.stringify({ host, port, capacityKg }),
       })
       return res.data
     },
     testConnection: async (stationId: string) => {
       const res = await request<ApiResponse<any>>(`/scales/${encodeURIComponent(stationId)}/test`, {
         method: 'POST',
+      })
+      return res.data
+    },
+  },
+
+  // IW-J300H Thermal Printers
+  printers: {
+    get: async () => {
+      const res = await request<ApiResponse<any[]>>('/printers')
+      return res.data
+    },
+    update: async (station: 'reception' | 'packaging', ip: string, port: number) => {
+      const res = await request<ApiResponse<any>>(`/printers/${station}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ip, port }),
+      })
+      return res.data
+    },
+    test: async (station: 'reception' | 'packaging') => {
+      const res = await request<ApiResponse<any>>(`/printers/${station}/test`, { method: 'POST' })
+      return res.data
+    },
+    print: async (station: 'reception' | 'packaging', jobs: any[]) => {
+      const res = await request<ApiResponse<any>>(`/printers/${station}/print`, {
+        method: 'POST',
+        body: JSON.stringify({ jobs }),
       })
       return res.data
     },

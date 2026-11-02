@@ -225,7 +225,7 @@ export default function ScaleWeightInput({
                   dot
                   live={connection === 'connected'}
                 >
-                  {connection === 'connected' ? 'Scale Online' : connection === 'reconnecting' ? 'Reconnecting' : 'Offline'}
+                  {connection === 'connected' ? 'Scale Online' : 'Scale Offline'}
                 </Badge>
                 <span className="t-caption mono font-bold" style={{ opacity: 0.85 }}>
                   Station {stationId}
