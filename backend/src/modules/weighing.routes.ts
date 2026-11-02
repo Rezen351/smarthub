@@ -54,7 +54,7 @@ router.get('/', async (req, res): Promise<void> => {
       data: warings.map((w) => ({
         id: w.id,
         code: w.code,
-        farmerId: w.farmer.id,
+        farmerId: w.farmer.code,
         farmerCode: w.farmer.code,
         farmerName: w.farmer.name,
         farmerVillage: w.farmer.village,
@@ -145,7 +145,7 @@ router.post('/', async (req, res): Promise<void> => {
     const waring = await prisma.waring.create({
       data: {
         code,
-        farmerId: farmer.id,
+        farmerId: farmer.code,
         commodityId: commodity.id,
         grossWeightKg: gross,
         tareWeightKg: tare,
@@ -163,7 +163,7 @@ router.post('/', async (req, res): Promise<void> => {
       data: {
         id: waring.id,
         code: waring.code,
-        farmerId: waring.farmer.id,
+        farmerId: waring.farmer.code,
         farmerCode: waring.farmer.code,
         farmerName: waring.farmer.name,
         farmerVillage: waring.farmer.village,

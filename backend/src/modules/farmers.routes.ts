@@ -110,7 +110,7 @@ router.get('/:idOrCode/summary', async (req, res): Promise<void> => {
     res.json({
       success: true,
       data: {
-        farmerId: farmer.id,
+        farmerId: farmer.code,
         farmerName: farmer.name,
         farmerCode: farmer.code,
         totalDeposited: Number(totalDeposited.toFixed(1)),

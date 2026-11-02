@@ -1,148 +1,98 @@
 import { Router } from 'express';
 import prisma from '../shared/database/prisma';
+import bwipjs from 'bwip-js';
 
 const router = Router();
 
 /**
- * GET /api/labels/pouch/:pouchId
- * Returns printable label data for a retail pouch
+ * GET /api/labels/farmer/:farmerId
+ * Returns printable label data for a farmer ID card with QR code
  */
-router.get('/pouch/:pouchId', async (req, res): Promise<void> => {
+router.get('/farmer/:farmerId', async (req, res): Promise<void> => {
   try {
-    const { pouchId } = req.params;
-    const query = pouchId.trim();
+    const { farmerId } = req.params;
+    const query = farmerId.trim();
 
-    const unit = await prisma.packageUnit.findFirst({
+    const farmer = await prisma.farmer.findFirst({
       where: {
         OR: [
           { id: query },
           { code: { equals: query, mode: 'insensitive' } },
         ],
       },
-      include: {
-        sourcePallet: {
-          include: {
-            farmer: true,
-            sortingBatch: {
-              include: {
-                waring: {
-                  include: { commodity: true },
-                },
-              },
-            },
-          },
-        },
-      },
     });
 
-    if (!unit) {
+    if (!farmer) {
       res.status(404).json({
         success: false,
-        error: { code: 'NOT_FOUND', message: `Pouch '${pouchId}' not found` },
+        error: { code: 'NOT_FOUND', message: `Farmer '${farmerId}' not found` },
       });
       return;
     }
 
-    const pallet = unit.sourcePallet;
-    const batch = pallet.sortingBatch;
-    const waring = batch.waring;
-    const farmer = pallet.farmer;
-
     res.json({
       success: true,
       data: {
-        type: 'pouch',
-        code: unit.code,
-        barcode: unit.barcode,
-        format: unit.format,
-        grade: unit.grade,
-        weightKg: unit.weightKg,
-        commodity: waring.commodity.name,
-        farmerName: farmer.name,
+        type: 'farmer',
+        farmerId: farmer.id,
         farmerCode: farmer.code,
+        farmerName: farmer.name,
         village: farmer.village,
-        sourcePalletCode: pallet.code,
-        packedAt: unit.createdAt,
-        traceabilityUrl: `https://enyx1.almuzky.my.id/traceability/${unit.code}`,
+        qrContent: farmer.code,
+        traceabilityUrl: `https://enyx1.almuzky.my.id/traceability/${farmer.code}`,
       },
     });
   } catch (err: any) {
     res.status(500).json({
       success: false,
-      error: { code: 'INTERNAL_SERVER_ERROR', message: err.message || 'Failed to generate pouch label' },
+      error: { code: 'INTERNAL_SERVER_ERROR', message: err.message || 'Failed to generate farmer label' },
     });
   }
 });
 
 /**
- * GET /api/labels/packaging/:packagingId
- * Returns printable label data for any packaging unit (pouch or export carton)
+ * GET /api/labels/farmer-qr/:farmerId
+ * Returns QR code image for farmer ID card
  */
-router.get('/packaging/:packagingId', async (req, res): Promise<void> => {
+router.get('/farmer-qr/:farmerId', async (req, res): Promise<void> => {
   try {
-    const { packagingId } = req.params;
-    const query = packagingId.trim();
+    const { farmerId } = req.params;
+    const query = farmerId.trim();
 
-    const unit = await prisma.packageUnit.findFirst({
+    const farmer = await prisma.farmer.findFirst({
       where: {
         OR: [
           { id: query },
           { code: { equals: query, mode: 'insensitive' } },
-          { barcode: { equals: query, mode: 'insensitive' } },
         ],
-      },
-      include: {
-        sourcePallet: {
-          include: {
-            farmer: true,
-            sortingBatch: {
-              include: {
-                waring: {
-                  include: { commodity: true },
-                },
-              },
-            },
-          },
-        },
       },
     });
 
-    if (!unit) {
+    if (!farmer) {
       res.status(404).json({
         success: false,
-        error: { code: 'NOT_FOUND', message: `Packaging unit '${packagingId}' not found` },
+        error: { code: 'NOT_FOUND', message: `Farmer '${farmerId}' not found` },
       });
       return;
     }
 
-    const pallet = unit.sourcePallet;
-    const batch = pallet.sortingBatch;
-    const waring = batch.waring;
-    const farmer = pallet.farmer;
-
-    res.json({
-      success: true,
-      data: {
-        type: unit.format === 'RETAIL_POUCH' ? 'pouch' : 'export',
-        code: unit.code,
-        barcode: unit.barcode,
-        format: unit.format,
-        cartonSpec: unit.cartonSpec,
-        grade: unit.grade,
-        weightKg: unit.weightKg,
-        commodity: waring.commodity.name,
-        farmerName: farmer.name,
-        farmerCode: farmer.code,
-        village: farmer.village,
-        sourcePalletCode: pallet.code,
-        packedAt: unit.createdAt,
-        traceabilityUrl: `https://enyx1.almuzky.my.id/traceability/${unit.code}`,
-      },
+    // Generate QR code with farmer code
+    const qrCode = await bwipjs.toBuffer({
+      bcid: 'qrcode',
+      text: farmer.code,
+      scale: 3,
+      height: 10,
+      includetext: true,
+      textxalign: 'center',
     });
+
+    res.setHeader('Content-Type', 'image/png');
+    res.send(qrCode);
   } catch (err: any) {
+    console.error('QR generation error:', err);
     res.status(500).json({
       success: false,
-      error: { code: 'INTERNAL_SERVER_ERROR', message: err.message || 'Failed to generate packaging label' },
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to generate QR code' },
     });
   }
 });

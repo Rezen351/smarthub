@@ -24,7 +24,7 @@ router.get('/queue', async (req, res): Promise<void> => {
       data: queue.map((w) => ({
         id: w.id,
         code: w.code,
-        farmerId: w.farmer.id,
+        farmerId: w.farmer.code,
         farmerCode: w.farmer.code,
         farmerName: w.farmer.name,
         farmerVillage: w.farmer.village,

@@ -98,7 +98,7 @@ router.get('/:code', async (req, res): Promise<void> => {
         weightKg: pallet.weightKg,
         remainingKg: pallet.remainingKg,
         status: pallet.status,
-        farmerId: pallet.farmer.id,
+        farmerId: pallet.farmer.code,
         farmerName: pallet.farmer.name,
         farmerCode: pallet.farmer.code,
         farmerVillage: pallet.farmer.village,
