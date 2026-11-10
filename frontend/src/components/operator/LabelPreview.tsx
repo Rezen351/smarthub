@@ -52,10 +52,10 @@ export default function LabelPreview({
     >
       <div className={`text-center border-b border-dashed border-gray-400 ${screenFit ? 'pb-1' : 'pb-2'}`}>
         <strong className={`block tracking-wide ${screenFit ? 'text-xs' : 'text-sm'}`}>ENYX-ENTERPRISE</strong>
-        <span className={`block ${screenFit ? 'text-[10px]' : 'text-xs'}`}>{TYPE_LABEL[type]}</span>
+        <span className="block text-xs">{TYPE_LABEL[type]}</span>
       </div>
 
-      <div className={`${screenFit ? 'space-y-0.5 text-[10px]' : 'space-y-1 text-xs'}`}>
+      <div className={`${screenFit ? 'space-y-0.5' : 'space-y-1'} text-xs break-words`}>
         {farmerName && (
           <div className="flex justify-between gap-3">
             <span>Farmer</span>
@@ -97,9 +97,9 @@ export default function LabelPreview({
         </div>
       </div>
 
-      <div className={`text-center space-y-0.5 ${screenFit ? 'text-[9px]' : 'text-[10px]'}`}>
+      <div className="text-center space-y-0.5 text-xs">
         <div>{date} · {time}</div>
-        <div>{type === 'receipt' ? 'BUFFER_WAITING' : 'PRINTED'}</div>
+        <div>Preview</div>
       </div>
     </div>
   )

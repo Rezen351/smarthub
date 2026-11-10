@@ -20,6 +20,7 @@ import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import LabelPreview from '../components/operator/LabelPreview'
 import { printThermal } from '../lib/thermalPrint'
+import { saveReceptionIntake } from '../lib/receptionIntake'
 import { useSessionContext } from '../hooks/useSessionContext'
 import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
@@ -42,11 +43,6 @@ type WeighingRecord = {
 
 const FARMERS: any[] = []
 
-const nextWaringCode = (index: number) => {
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-  return `WRG-${date}-${String(index).padStart(4, '0')}`
-}
-
 const today = () => new Date().toISOString().slice(0, 10)
 
 const statusTone: Record<WeighingStatus, 'success' | 'warning'> = {
@@ -63,7 +59,7 @@ const STEPS = [
 export default function WeighingPage() {
   const toast = useToast()
   const { farmer, active, startScan } = useSessionContext()
-  const { addBufferWaring } = usePackhouseStore()
+  const { syncWithBackend } = usePackhouseStore()
 
   /* ── Mode State ── */
   const [focusMode, setFocusMode] = useState(false)
@@ -95,10 +91,13 @@ export default function WeighingPage() {
   const [printModalRecord, setPrintModalRecord] = useState<WeighingRecord | null>(null)
   const [approvedSuccessRecord, setApprovedSuccessRecord] = useState<WeighingRecord | null>(null)
   const [isPrinting, setIsPrinting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const savingRef = useRef(false)
+  const [saveError, setSaveError] = useState('')
+  const [printStatus, setPrintStatus] = useState('Not sent to printer')
 
   /* ── Records Ledger ── */
   const [records, setRecords] = useState<WeighingRecord[]>([])
-  const [waringCounter, setWaringCounter] = useState(1)
   const [farmersList, setFarmersList] = useState(FARMERS)
 
   useEffect(() => {
@@ -342,58 +341,42 @@ export default function WeighingPage() {
   }
 
   /* ── Step 3: Handle Approval & Print ── */
-  const handleApproveCommit = (): WeighingRecord | null => {
-    if (!confirmApprove) return null
-    const assignedCode = confirmApprove.waringCode || nextWaringCode(waringCounter)
-    if (!confirmApprove.waringCode) {
-      setWaringCounter((value) => value + 1)
+  const handleApproveCommit = async (): Promise<WeighingRecord | null> => {
+    if (!confirmApprove || savingRef.current) return null
+    savingRef.current = true
+    setIsSaving(true)
+    setSaveError('')
+    try {
+      const updatedRecord = await saveReceptionIntake(confirmApprove, api.weighing.create)
+      const assignedCode = updatedRecord.waringCode!
+
+      setRecords((current) =>
+        current.map((item) => (item.id === confirmApprove.id ? updatedRecord : item)),
+      )
+
+      // Synchronize to cross-station store for Station 02 and Warehouse
+      void syncWithBackend()
+
+      toast.success(`Intake saved: ${assignedCode}`)
+      setConfirmApprove(updatedRecord)
+      setApprovedSuccessRecord(updatedRecord)
+      setPrintModalRecord(updatedRecord)
+      return updatedRecord
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not save intake.'
+      setSaveError(message)
+      toast.error(message)
+      return null
+    } finally {
+      savingRef.current = false
+      setIsSaving(false)
     }
-
-    const updatedRecord: WeighingRecord = {
-      ...confirmApprove,
-      status: 'BUFFER_WAITING',
-      waringCode: assignedCode,
-    }
-
-    setRecords((current) =>
-      current.map((item) => (item.id === confirmApprove.id ? updatedRecord : item)),
-    )
-
-    // Synchronize to cross-station store for Station 02 and Warehouse
-    addBufferWaring({
-      code: assignedCode,
-      farmerId: confirmApprove.farmerId,
-      farmerName: confirmApprove.farmerName,
-      farmerVillage: confirmApprove.farmerVillage,
-      grossWeightKg: confirmApprove.weightKg,
-      intakeTime: confirmApprove.time,
-      date: confirmApprove.depositDate,
-      status: 'BUFFER_WAITING',
-    })
-
-    // Persist to backend database via REST API
-    const activeFarmer = farmersList.find(
-      (f) => f.id === confirmApprove.farmerId || (f.code && f.code === confirmApprove.farmerId)
-    )
-    api.weighing
-      .create({
-        farmerCode: activeFarmer?.code || confirmApprove.farmerId,
-        grossWeightKg: confirmApprove.weightKg,
-        tareWeightKg: 1.2,
-        netWeightKg: Math.max(0, confirmApprove.weightKg - 1.2),
-        notes: 'Station 01 Reception weighing',
-      })
-      .catch(() => {})
-
-    toast.success(`Weight approved. Waring ${assignedCode} queued for Buffer Warehouse.`)
-    setConfirmApprove(updatedRecord)
-    setApprovedSuccessRecord(updatedRecord)
-    setPrintModalRecord(updatedRecord)
-    return updatedRecord
   }
 
   /* Reset for next farmer weighing */
   const handleNextWeighing = () => {
+    setSaveError('')
+    setPrintStatus('Not sent to printer')
     setWeightKg('')
     setFormError('')
     setScanError('')
@@ -408,6 +391,7 @@ export default function WeighingPage() {
 
   /* Correction: return to Step 2 with the recorded weight */
   const handleKoreksi = (record: WeighingRecord) => {
+    setSaveError('')
     setEditingId(record.id)
     setWeightKg(String(record.weightKg))
     setConfirmApprove(null)
@@ -424,12 +408,13 @@ export default function WeighingPage() {
 
   const triggerPrintReceipt = (recordOverride?: WeighingRecord | null) => {
     const rec = getPrintRecord(recordOverride)
-    if (!rec) return
+    if (!rec?.waringCode) return
+    setPrintStatus('Sending receipt to printer…')
     setIsPrinting(true)
     printThermal(
       {
         type: 'receipt',
-        code: rec.waringCode || nextWaringCode(records.length + 1),
+        code: rec.waringCode,
         farmerName: rec.farmerName,
         farmerId: rec.farmerId,
         weightKg: rec.weightKg,
@@ -439,6 +424,7 @@ export default function WeighingPage() {
       'reception',
       (error) => {
         setIsPrinting(false)
+        setPrintStatus(error ? 'Receipt print failed. Retry below.' : 'Receipt sent to printer')
         if (error) toast.error(`Receipt print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
         else toast.success(`Receipt printed for ${rec.farmerName}`)
       }
@@ -447,12 +433,13 @@ export default function WeighingPage() {
 
   const triggerPrintWaringLabel = (recordOverride?: WeighingRecord | null) => {
     const rec = getPrintRecord(recordOverride)
-    if (!rec) return
+    if (!rec?.waringCode) return
+    setPrintStatus('Sending Waring label to printer…')
     setIsPrinting(true)
     printThermal(
       {
         type: 'waring',
-        code: rec.waringCode || nextWaringCode(records.length + 1),
+        code: rec.waringCode,
         farmerName: rec.farmerName,
         farmerId: rec.farmerId,
         weightKg: rec.weightKg,
@@ -462,6 +449,7 @@ export default function WeighingPage() {
       'reception',
       (error) => {
         setIsPrinting(false)
+        setPrintStatus(error ? 'Waring label print failed. Retry below.' : 'Waring label sent to printer')
         if (error) toast.error(`Waring label print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
         else toast.success(`Waring QR label printed: ${rec.waringCode || ''}`)
       }
@@ -470,14 +458,15 @@ export default function WeighingPage() {
 
   const triggerPrintBoth = (recordOverride?: WeighingRecord | null) => {
     const rec = getPrintRecord(recordOverride)
-    if (!rec) return
+    if (!rec?.waringCode) return
 
+    setPrintStatus('Sending receipt and label to printer…')
     setIsPrinting(true)
     printThermal(
       [
         {
           type: 'receipt',
-          code: rec.waringCode || nextWaringCode(records.length + 1),
+          code: rec.waringCode,
           farmerName: rec.farmerName,
           farmerId: rec.farmerId,
           weightKg: rec.weightKg,
@@ -486,7 +475,7 @@ export default function WeighingPage() {
         },
         {
           type: 'waring',
-          code: rec.waringCode || nextWaringCode(records.length + 1),
+          code: rec.waringCode,
           farmerName: rec.farmerName,
           farmerId: rec.farmerId,
           weightKg: rec.weightKg,
@@ -497,6 +486,7 @@ export default function WeighingPage() {
       'reception',
       (error) => {
         setIsPrinting(false)
+        setPrintStatus(error ? 'Print failed. Intake is saved. Retry below.' : 'Receipt and label sent to printer')
         if (error) toast.error(`Receipt and Waring label print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
         else toast.success(`Receipt & Waring label ${rec.waringCode || ''} printed`)
       }
@@ -619,6 +609,7 @@ export default function WeighingPage() {
           <div key={step.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <button
               type="button"
+              disabled={isSaving || isPrinting}
               onClick={() => {
                 if (step.id < activeStep || approvedSuccessRecord) {
                   setActiveStep(step.id as 1 | 2 | 3)
@@ -758,8 +749,7 @@ export default function WeighingPage() {
               <ScaleWeightInput
                 id="focus-weighing-weight"
                 stationId="01"
-                label="Incoming Harvest Net Weight kg"
-                hint="Auto-locks from live scale indicator or type manually."
+                label="Weight (kg)"
                 value={weightKg}
                 onChange={(val) => {
                   setWeightKg(val)
@@ -796,9 +786,9 @@ export default function WeighingPage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Next Waring:</span>
+                    <span className="text-muted-foreground">Waring Code:</span>
                     <span className="font-mono text-xs font-semibold text-foreground">
-                      {nextWaringCode(waringCounter)}
+                      Assigned after saving
                     </span>
                   </div>
                 </div>
@@ -818,7 +808,7 @@ export default function WeighingPage() {
               disabled={!(Number(weightKg) > 0)}
               onClick={handleProceedToApproval}
             >
-              Approve & Print
+              Review Weight
             </Button>
           </div>
         </div>
@@ -838,7 +828,7 @@ export default function WeighingPage() {
             </div>
             {approvedSuccessRecord ? (
               <Badge tone="success" dot>
-                Status: APPROVED & LABELED
+                Intake Saved
               </Badge>
             ) : (
               <Badge tone="warning" dot>
@@ -859,7 +849,7 @@ export default function WeighingPage() {
               </span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Harvest Net Weight</span>
+              <span className="text-xs text-muted-foreground block font-medium">Captured Weight</span>
               <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 block tracking-tight">
                 {formatWeight(confirmApprove?.weightKg ?? weightKg)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
@@ -873,7 +863,7 @@ export default function WeighingPage() {
             <div>
               <span className="text-xs text-muted-foreground block font-medium">Assigned Waring ID</span>
               <span className="font-mono font-bold text-base text-primary block">
-                {approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? nextWaringCode(waringCounter)}
+                {approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? 'Assigned after saving'}
               </span>
               <span className="text-xs text-muted-foreground block">QR Waring Label</span>
             </div>
@@ -885,7 +875,7 @@ export default function WeighingPage() {
               {/* Receipt Preview */}
               <LabelPreview
                 type="receipt"
-                code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? nextWaringCode(waringCounter)}
+                code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? ''}
                 farmerName={confirmApprove?.farmerName ?? farmer?.name}
                 farmerId={confirmApprove?.farmerId ?? farmer?.id}
                 weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
@@ -897,7 +887,7 @@ export default function WeighingPage() {
               {/* Waring Label Preview */}
               <LabelPreview
                 type="waring"
-                code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? nextWaringCode(waringCounter)}
+                code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? ''}
                 farmerName={confirmApprove?.farmerName ?? farmer?.name}
                 farmerId={confirmApprove?.farmerId ?? farmer?.id}
                 weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
@@ -908,12 +898,21 @@ export default function WeighingPage() {
           </div>
 
           {/* Action Bar */}
+          {saveError && (
+            <p role="alert" className="alert alert-danger">
+              {saveError} Your weight is retained. Retry saving below.
+            </p>
+          )}
+          <p role="status" className={printStatus.includes('failed') ? 'alert alert-warning' : 'text-sm text-muted-foreground'}>
+            {isSaving ? 'Saving intake…' : approvedSuccessRecord ? `Saved · ${printStatus}` : 'Review the captured weight before saving.'}
+          </p>
           <div className="flex items-center justify-between border-t border-border pt-3 flex-wrap gap-2 no-print">
             {!approvedSuccessRecord ? (
               <>
                 <Button
                   variant="outline"
                   icon="refresh"
+                  disabled={isSaving}
                   onClick={() => confirmApprove && handleKoreksi(confirmApprove)}
                 >
                   Correct Weight
@@ -923,27 +922,35 @@ export default function WeighingPage() {
                     variant="primary"
                     icon="check"
                     touch
-                    loading={isPrinting}
-                    onClick={() => {
-                      handleApproveCommit()
-                      triggerPrintBoth()
+                    loading={isPrinting || isSaving}
+                    onClick={async () => {
+                      const saved = await handleApproveCommit()
+                      if (saved) triggerPrintBoth(saved)
                     }}
                   >
-                    Approve & Print All
+                    {isSaving ? 'Saving…' : saveError ? 'Retry Save & Print' : 'Approve & Print'}
                   </Button>
                 </div>
               </>
             ) : (
               <>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintReceipt()}>
-                    Re-print Receipt
+                  <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintBoth()}>
+                    {printStatus.includes('failed') ? 'Retry Print' : 'Print Again'}
                   </Button>
-                  <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintWaringLabel()}>
-                    Re-print Waring Label
-                  </Button>
+                  <details>
+                    <summary className="cursor-pointer text-sm p-3">More Print Options</summary>
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintReceipt()}>
+                        Re-print Receipt
+                      </Button>
+                      <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintWaringLabel()}>
+                        Re-print Waring Label
+                      </Button>
+                    </div>
+                  </details>
                 </div>
-                <Button variant="primary" icon="check" touch onClick={handleNextWeighing}>
+                <Button variant="primary" icon="check" touch disabled={isPrinting} onClick={handleNextWeighing}>
                   Next Weighing
                 </Button>
               </>

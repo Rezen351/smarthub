@@ -76,12 +76,12 @@ export default function ScaleWeightInput({
   capacityKg = 150,
 }: ScaleWeightInputProps) {
   const [mode, setMode] = useState<Mode>(readMode)
-  const [connection, setConnection] = useState<Connection>('connected')
+  const [connection, setConnection] = useState<Connection>('reconnecting')
   const [instantaneousReading, setInstantaneousReading] = useState(0)
   const [stableReading, setStableReading] = useState(0)
   const [isStable, setIsStable] = useState(true)
   const [lastReadingAt, setLastReadingAt] = useState(() => new Date())
-  const [flash, setFlash] = useState(false)
+  const [captured, setCaptured] = useState(false)
   const [tarePending, setTarePending] = useState(false)
   const toast = useToast()
 
@@ -98,6 +98,7 @@ export default function ScaleWeightInput({
   /* Live Modbus TCP Telemetry Polling */
   useEffect(() => {
     if (mode !== 'auto') return
+    setConnection('reconnecting')
 
     let isSubscribed = true
     let isPolling = false
@@ -153,12 +154,10 @@ export default function ScaleWeightInput({
   const reading = readingSource === 'stable' ? stableReading : instantaneousReading
   const numericValue = Number(value)
 
-  // Auto-sync form value when scale has active weight and input is currently unpopulated
+  // A live reading becomes a form value only after explicit capture.
   useEffect(() => {
-    if (mode === 'auto' && reading > 0 && (!value || value === '' || value === '0')) {
-      onChange(formatKg(reading))
-    }
-  }, [mode, reading, value, onChange])
+    if (!value) setCaptured(false)
+  }, [value])
   const withinTarget =
     targetKg !== undefined && Number.isFinite(numericValue) && Math.abs(numericValue - targetKg) <= toleranceKg
   const overCapacity = Number.isFinite(numericValue) && numericValue > capacityKg
@@ -166,9 +165,8 @@ export default function ScaleWeightInput({
 
   const useReading = useCallback(() => {
     onChange(formatKg(reading))
-    toast.success(`Weight locked at ${formatKg(reading)} kg`)
-    setFlash(true)
-    setTimeout(() => setFlash(false), 500)
+    setCaptured(true)
+    toast.success(`Weight captured: ${formatKg(reading)} kg`)
   }, [onChange, reading, toast])
 
   const remaining = useMemo(() => {
@@ -232,10 +230,10 @@ export default function ScaleWeightInput({
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
                 <p className="t-caption" style={{ opacity: 0.75 }}>
-                  Live Scale · Station {stationId}
+                  Live Weight · Station {stationId}
                 </p>
                 <p className="scale-value">
-                  {formatKg(reading)}
+                  {connection === 'connected' ? formatKg(reading) : '—'}
                   <span className="scale-unit">kg</span>
                 </p>
               </div>
@@ -258,7 +256,7 @@ export default function ScaleWeightInput({
             <div className="scale-meta">
               <span className="flex items-center gap-1">
                 <Icon name={isStable ? 'check-circle' : 'refresh'} size={13} />
-                {isStable ? 'Weight Stable' : 'Reading settling…'}
+                {connection !== 'connected' ? 'Waiting for scale' : isStable ? 'Weight Stable' : 'Reading settling…'}
               </span>
               <span>Maximum Load {capacityKg} kg</span>
             </div>
@@ -289,10 +287,10 @@ export default function ScaleWeightInput({
               <Button
                 variant="primary"
                 icon="check"
-                disabled={connection !== 'connected' || reading <= 0}
+                disabled={connection !== 'connected' || !isStable || !Number.isFinite(reading) || reading <= 0 || reading > capacityKg}
                 onClick={useReading}
               >
-                Lock & Use Value
+                Capture Weight
               </Button>
               <Button
                 variant="outline"
@@ -339,9 +337,9 @@ export default function ScaleWeightInput({
 
       {mode === 'auto' && (
         <Field
-          label={label}
+          label={label ? `Captured ${label}` : 'Captured Weight (kg)'}
           htmlFor={id}
-          hint={hint ?? 'Taken from the live scale reading, or edit manually.'}
+          hint={captured || numericValue > 0 ? 'This weight will be saved. Capture again to update it.' : 'Wait for a stable reading, then select Capture Weight.'}
           error={error ?? (overCapacity ? `Weight exceeds the maximum load of ${capacityKg} kg.` : undefined)}
         >
           <Input
@@ -351,9 +349,9 @@ export default function ScaleWeightInput({
             step="0.001"
             min="0"
             max={capacityKg}
-            className={`input-lg ${flash ? 'scale-flash' : ''}`}
+            className="input-lg"
             value={value}
-            onChange={(event) => onChange(event.target.value)}
+            readOnly
             placeholder="0"
             invalid={invalid}
           />
