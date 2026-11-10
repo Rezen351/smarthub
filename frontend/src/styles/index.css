@@ -747,3 +747,123 @@
     white-space: nowrap;
   }
 }
+
+/* ── Station 01–03 Single-Viewport Console ── */
+.station-workflow > * + * {
+  margin-top: 12px !important;
+}
+.station-step {
+  padding: 16px !important;
+}
+.station-step > * + * {
+  margin-top: 12px !important;
+}
+.station-step > :first-child {
+  padding-bottom: 8px !important;
+}
+.station-step h2 {
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+}
+.station-step .scale-readout {
+  padding: 12px !important;
+}
+.station-step .scale-value {
+  font-size: 32px !important;
+}
+.station-step .scale-body {
+  gap: 8px !important;
+  padding: 10px !important;
+}
+.station-step .printable-label {
+  min-width: 0;
+}
+.station-preview-grid svg,
+.station-step-preview svg,
+.station-final-preview svg {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 767px), (min-width: 768px) and (max-height: 820px) {
+  .station-page {
+    gap: 10px !important;
+  }
+  .station-page > :first-child,
+  .station-quick-stats {
+    display: none !important;
+  }
+  .station-stepper-shell {
+    padding: 8px !important;
+  }
+  .station-stepper-shell > * + * {
+    margin-top: 8px !important;
+  }
+  .station-stepper-shell > :first-child {
+    display: none !important;
+  }
+  .station-focus-main {
+    padding: 8px !important;
+  }
+  .station-focus-main > * + * {
+    margin-top: 8px !important;
+  }
+  .station-step {
+    padding: 10px !important;
+  }
+  .station-step > * + * {
+    margin-top: 8px !important;
+  }
+  .station-step > :first-child {
+    padding-bottom: 6px !important;
+  }
+  .station-step h2 {
+    font-size: 16px !important;
+  }
+  .station-step .scale-readout {
+    padding: 8px !important;
+  }
+  .station-step .scale-value {
+    font-size: 26px !important;
+  }
+  .station-step .scale-body {
+    gap: 6px !important;
+    padding: 8px !important;
+  }
+  .station-step .radio-card {
+    min-height: 36px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .station-scan-box {
+    padding: 10px !important;
+  }
+  .station-scan-box > * + * {
+    margin-top: 8px !important;
+  }
+  .station-scan-box .inline-flex.p-3,
+  .station-secondary-copy,
+  .station-secondary-panel,
+  .station-step-preview {
+    display: none !important;
+  }
+  .station-grade-tabs,
+  .station-mode-grid,
+  .station-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+  .station-grade-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .station-grade-tabs button,
+  .station-mode-grid button {
+    padding: 8px !important;
+  }
+  .station-grade-tabs button > div:last-child {
+    display: none;
+  }
+  .station-preview-grid .printable-label {
+    padding: 6px !important;
+  }
+}

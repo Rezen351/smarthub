@@ -560,10 +560,10 @@ export default function PackagingPage() {
      SEQUENTIAL WORKFLOW CONTENT (Used by both Focus & Standard Views)
   ───────────────────────────────────────────────────────────── */
   const renderSequentialContent = () => (
-    <div className="space-y-6">
+    <div className="station-workflow space-y-6">
       {/* ── STEP 1: Package Type & Source Pallet ── */}
       {activeStep === 1 && (
-        <div className="bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+        <div className="station-step bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
@@ -579,7 +579,7 @@ export default function PackagingPage() {
           </div>
 
           {/* Centered Pallet Scanner Box */}
-          <div className="border-2 border-dashed border-border p-6 sm:p-8 bg-card text-center space-y-4">
+          <div className="station-scan-box border-2 border-dashed border-border p-6 sm:p-8 bg-card text-center space-y-4">
             <div className="flex flex-col items-center gap-1.5">
               <div className="inline-flex p-3 bg-muted border border-border text-muted-foreground mb-1">
                 <Icon name="scan" size={28} />
@@ -652,7 +652,7 @@ export default function PackagingPage() {
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
               Choose Package Type:
             </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="station-mode-grid grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
                 type="button"
                 onClick={() => {
@@ -675,7 +675,7 @@ export default function PackagingPage() {
                     Product QR
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                <p className="station-secondary-copy text-xs text-muted-foreground mt-2 leading-relaxed">
                   1 kg consumer pouch with a product QR code. Target weight 1.000 kg (allowed range ±5 g).
                 </p>
               </button>
@@ -702,7 +702,7 @@ export default function PackagingPage() {
                     Barcode
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                <p className="station-secondary-copy text-xs text-muted-foreground mt-2 leading-relaxed">
                   Bulk master carton with a barcode. Target weight 10 kg or 50 kg (allowed range ±50 g).
                 </p>
               </button>
@@ -757,7 +757,7 @@ export default function PackagingPage() {
 
       {/* ── STEP 2: Weigh Package ── */}
       {activeStep === 2 && (
-        <div className="bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+        <div className="station-step bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
@@ -814,7 +814,7 @@ export default function PackagingPage() {
             </div>
 
             {/* Right: Live Label Preview (5 cols) */}
-            <div className="lg:col-span-5 space-y-4">
+            <div className="station-step-preview lg:col-span-5 space-y-4">
               <div className="border border-border p-4 bg-card space-y-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-foreground block">
                   {packagingMode === 'RETAIL_POUCH' ? 'Pouch Label Preview' : 'Carton Label Preview'}
@@ -830,6 +830,7 @@ export default function PackagingPage() {
                     weightKg={weightValue}
                     stationName="Station 03 · Packaging"
                     compact
+                    screenFit
                   />
                 ) : (
                   <LabelPreview
@@ -840,6 +841,7 @@ export default function PackagingPage() {
                     grade={selectedGrade}
                     weightKg={weightValue}
                     compact
+                    screenFit
                   />
                 )}
               </div>
@@ -866,7 +868,7 @@ export default function PackagingPage() {
 
       {/* ── STEP 3: Label & Store ── */}
       {activeStep === 3 && (
-        <div className="bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+        <div className="station-step bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
@@ -922,7 +924,7 @@ export default function PackagingPage() {
           </div>
 
           {/* Print Preview */}
-          <div className="max-w-md mx-auto">
+          <div className="station-final-preview max-w-md mx-auto">
             {packagingMode === 'RETAIL_POUCH' ? (
               <LabelPreview
                 type="pouch"
@@ -932,6 +934,7 @@ export default function PackagingPage() {
                 grade={selectedGrade}
                 weightKg={weightValue}
                 stationName="Station 03 · Packaging"
+                screenFit
               />
             ) : (
               <LabelPreview
@@ -941,6 +944,7 @@ export default function PackagingPage() {
                 farmerId={sourcePalletCode}
                 grade={selectedGrade}
                 weightKg={weightValue}
+                screenFit
               />
             )}
           </div>
@@ -1037,7 +1041,7 @@ export default function PackagingPage() {
             </div>
           </header>
 
-          <main className="flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto space-y-6">
+          <main className="station-focus-main flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto space-y-6">
             <div className="md:hidden">
               {renderStepperBar()}
             </div>
@@ -1047,7 +1051,7 @@ export default function PackagingPage() {
       )}
 
       {/* ── NORMAL DASHBOARD PAGE VIEW ── */}
-      <div className="space-y-6">
+      <div className="station-page space-y-6">
         <div className="no-print">
           <PageHeader
             title="Station 03: Packaging"
@@ -1071,7 +1075,7 @@ export default function PackagingPage() {
         </div>
 
         {/* Quick Stats Grid (4 Cards) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+        <div className="station-quick-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Retail Pouches</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{pouchCount}</p>
@@ -1097,7 +1101,7 @@ export default function PackagingPage() {
         </div>
 
         {/* Sequential Stepper in Standard View */}
-        <div id="packaging-stepper" className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
+        <div id="packaging-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <div className="flex items-center gap-3">
               <span className="font-semibold text-base text-foreground">Packaging Stepper</span>

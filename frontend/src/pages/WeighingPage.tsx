@@ -657,10 +657,10 @@ export default function WeighingPage() {
      RENDER: Focus Mode & Sequential Stepper Content
      ═══════════════════════════════════════════════════════════════════ */
   const renderFocusContent = () => (
-    <div className="space-y-6">
+    <div className="station-workflow space-y-6">
       {/* ── STEP 1: Farmer Identification ── */}
       {activeStep === 1 && (
-        <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+        <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
@@ -675,7 +675,7 @@ export default function WeighingPage() {
             </Badge>
           </div>
 
-          <div className="p-8 border-2 border-dashed border-border rounded-none bg-card text-center space-y-4">
+          <div className="station-scan-box p-8 border-2 border-dashed border-border rounded-none bg-card text-center space-y-4">
             <div className="inline-flex p-3 bg-muted border border-border text-muted-foreground mx-auto">
               <Icon name="scan" size={28} />
             </div>
@@ -733,7 +733,7 @@ export default function WeighingPage() {
 
       {/* ── STEP 2: Harvest Weighing ── */}
       {activeStep === 2 && (
-        <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+        <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
@@ -776,7 +776,7 @@ export default function WeighingPage() {
             </div>
 
             <div className="space-y-4">
-              <div className="p-4 bg-muted/30 border border-border rounded-none space-y-3">
+              <div className="station-secondary-panel p-4 bg-muted/30 border border-border rounded-none space-y-3">
                 <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-1.5">
                   <Icon name="info" size={14} /> Intake Metadata
                 </span>
@@ -804,20 +804,6 @@ export default function WeighingPage() {
                 </div>
               </div>
 
-              {/* Real-time Waring Label Preview */}
-              <div className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
-                  Live Waring QR Preview
-                </span>
-                <LabelPreview
-                  type="waring"
-                  code={nextWaringCode(waringCounter)}
-                  farmerName={farmer?.name}
-                  farmerId={farmer?.id}
-                  weightKg={Number(weightKg) > 0 ? Number(weightKg) : undefined}
-                  compact
-                />
-              </div>
             </div>
           </div>
 
@@ -840,13 +826,13 @@ export default function WeighingPage() {
 
       {/* ── STEP 3: Approve & Print Label ── */}
       {activeStep === 3 && (
-        <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
+        <div className="station-step bg-card border border-border rounded-none p-4 shadow-sm space-y-3 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-border pb-2 flex-wrap gap-2 no-print">
             <div>
-              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
+              <span className="text-[10px] uppercase font-mono font-semibold tracking-wider text-muted-foreground">
                 Step 3 of 3 · Final Verification & Print
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
+              <h2 className="text-xl font-bold tracking-tight text-foreground">
                 Approve & Print Intake Label
               </h2>
             </div>
@@ -862,7 +848,7 @@ export default function WeighingPage() {
           </div>
 
           {/* Intake Verification Box */}
-          <div className="p-4 bg-muted/30 border border-border rounded-none grid grid-cols-1 sm:grid-cols-4 gap-4 no-print">
+          <div className="p-3 bg-muted/30 border border-border rounded-none grid grid-cols-1 sm:grid-cols-4 gap-2 no-print">
             <div>
               <span className="text-xs text-muted-foreground block font-medium">Farmer</span>
               <span className="font-semibold text-base text-foreground block">
@@ -874,7 +860,7 @@ export default function WeighingPage() {
             </div>
             <div>
               <span className="text-xs text-muted-foreground block font-medium">Harvest Net Weight</span>
-              <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400 block tracking-tight">
+              <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 block tracking-tight">
                 {formatWeight(confirmApprove?.weightKg ?? weightKg)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
               </span>
@@ -894,8 +880,8 @@ export default function WeighingPage() {
           </div>
 
           {/* Print Previews */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+          <div>
+            <div className="station-preview-grid grid grid-cols-1 md:grid-cols-2 gap-3">
               {/* Receipt Preview */}
               <LabelPreview
                 type="receipt"
@@ -905,6 +891,7 @@ export default function WeighingPage() {
                 weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
                 time={confirmApprove?.time ?? 'Live'}
                 date={today()}
+                screenFit
               />
 
               {/* Waring Label Preview */}
@@ -915,12 +902,13 @@ export default function WeighingPage() {
                 farmerId={confirmApprove?.farmerId ?? farmer?.id}
                 weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
                 date={today()}
+                screenFit
               />
             </div>
           </div>
 
           {/* Action Bar */}
-          <div className="flex items-center justify-between border-t border-border pt-4 flex-wrap gap-2 no-print">
+          <div className="flex items-center justify-between border-t border-border pt-3 flex-wrap gap-2 no-print">
             {!approvedSuccessRecord ? (
               <>
                 <Button
@@ -991,7 +979,7 @@ export default function WeighingPage() {
             </div>
           </header>
 
-          <main className="flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto space-y-6">
+          <main className="station-focus-main flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto space-y-6">
             <div className="md:hidden">
               {renderStepperBar()}
             </div>
@@ -1003,7 +991,7 @@ export default function WeighingPage() {
       {/* ═══════════════════════════════════════════════════════════════════
          STANDARD DASHBOARD VIEW (Non-focus mode)
          ═══════════════════════════════════════════════════════════════════ */}
-      <div className="space-y-6">
+      <div className="station-page space-y-6">
         <div className="no-print">
           <PageHeader
             title="Station 01: Reception"
@@ -1027,7 +1015,7 @@ export default function WeighingPage() {
         </div>
 
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+        <div className="station-quick-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pending approval</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{pendingCount}</p>
@@ -1053,7 +1041,7 @@ export default function WeighingPage() {
         </div>
 
         {/* Sequential Stepper in Standard View */}
-        <div id="weighing-stepper" className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
+        <div id="weighing-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <div className="flex items-center gap-3">
               <span className="font-semibold text-base text-foreground">Reception Stepper</span>

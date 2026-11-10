@@ -14,6 +14,7 @@ export interface LabelPreviewProps {
   time?: string
   stationName?: string
   compact?: boolean
+  screenFit?: boolean
   className?: string
 }
 
@@ -38,6 +39,7 @@ export default function LabelPreview({
   time = 'Live',
   stationName,
   compact = false,
+  screenFit = false,
   className = '',
 }: LabelPreviewProps) {
   const showsQr = type !== 'receipt'
@@ -46,14 +48,14 @@ export default function LabelPreview({
 
   return (
     <div
-      className={`printable-label bg-white text-black border border-gray-400 font-mono rounded-none p-4 space-y-3 ${compact ? 'text-xs' : ''} ${className}`}
+      className={`printable-label bg-white text-black border border-gray-400 font-mono rounded-none ${screenFit ? 'p-2 space-y-1.5' : 'p-4 space-y-3'} ${compact ? 'text-xs' : ''} ${className}`}
     >
-      <div className="text-center border-b border-dashed border-gray-400 pb-2">
-        <strong className="block text-sm tracking-wide">ENYX-ENTERPRISE</strong>
-        <span className="block text-xs">{TYPE_LABEL[type]}</span>
+      <div className={`text-center border-b border-dashed border-gray-400 ${screenFit ? 'pb-1' : 'pb-2'}`}>
+        <strong className={`block tracking-wide ${screenFit ? 'text-xs' : 'text-sm'}`}>ENYX-ENTERPRISE</strong>
+        <span className={`block ${screenFit ? 'text-[10px]' : 'text-xs'}`}>{TYPE_LABEL[type]}</span>
       </div>
 
-      <div className="space-y-1 text-xs">
+      <div className={`${screenFit ? 'space-y-0.5 text-[10px]' : 'space-y-1 text-xs'}`}>
         {farmerName && (
           <div className="flex justify-between gap-3">
             <span>Farmer</span>
@@ -86,16 +88,16 @@ export default function LabelPreview({
         )}
       </div>
 
-      <div className="text-center border-t border-dashed border-gray-400 pt-3 space-y-2">
-        <strong className="block text-lg">{displayWeight}</strong>
-        <strong className="block text-sm tracking-wide break-all">{code || 'PENDING'}</strong>
-        <div className="border-t border-dashed border-gray-400 pt-3 space-y-2">
-          {showsBarcode && <OfflineBarcode value={code || 'PENDING'} height={compact ? 24 : 32} width={compact ? 180 : 240} />}
-          {showsQr && <OfflineQrCode value={code || 'PENDING'} size={189} className="mx-auto" />}
+      <div className={`text-center border-t border-dashed border-gray-400 ${screenFit ? 'pt-1.5 space-y-1' : 'pt-3 space-y-2'}`}>
+        <strong className={`block ${screenFit ? 'text-base' : 'text-lg'}`}>{displayWeight}</strong>
+        <strong className={`block tracking-wide break-all ${screenFit ? 'text-xs' : 'text-sm'}`}>{code || 'PENDING'}</strong>
+        <div className={`border-t border-dashed border-gray-400 ${screenFit ? 'pt-1.5 space-y-1' : 'pt-3 space-y-2'}`}>
+          {showsBarcode && <OfflineBarcode value={code || 'PENDING'} height={screenFit ? 18 : compact ? 24 : 32} width={screenFit ? 150 : compact ? 180 : 240} />}
+          {showsQr && <OfflineQrCode value={code || 'PENDING'} size={screenFit ? 112 : 189} className="mx-auto" />}
         </div>
       </div>
 
-      <div className="text-center text-[10px] space-y-0.5">
+      <div className={`text-center space-y-0.5 ${screenFit ? 'text-[9px]' : 'text-[10px]'}`}>
         <div>{date} · {time}</div>
         <div>{type === 'receipt' ? 'BUFFER_WAITING' : 'PRINTED'}</div>
       </div>

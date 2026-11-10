@@ -426,10 +426,10 @@ export default function SortingPage() {
      RENDER: Sequential Stepper Content (Used in Both Views & Focus Mode)
      ═══════════════════════════════════════════════════════════════════ */
   const renderFocusContent = () => (
-    <div className="space-y-6">
+    <div className="station-workflow space-y-6">
       {/* ── STEP 1: Scan Waring ── */}
       {activeStep === 1 && (
-        <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+        <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
@@ -445,7 +445,7 @@ export default function SortingPage() {
           </div>
 
           {/* Centered Dashed Scanner Box (Matching User Screenshot Pattern) */}
-          <div className="border-2 border-dashed border-border p-8 text-center space-y-5 bg-card">
+          <div className="station-scan-box border-2 border-dashed border-border p-8 text-center space-y-5 bg-card">
             <div className="inline-flex p-3 bg-muted border border-border text-muted-foreground">
               <Icon name="scan" size={28} />
             </div>
@@ -506,7 +506,7 @@ export default function SortingPage() {
 
       {/* ── STEP 2: Sizing & Wash ── */}
       {activeStep === 2 && (
-        <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+        <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
@@ -530,7 +530,7 @@ export default function SortingPage() {
                   {sizerFedConfirmed ? 'Feeding Confirmed' : 'Pending'}
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="station-secondary-copy text-xs text-muted-foreground leading-relaxed">
                 Pour waring <strong className="font-mono text-foreground">{waringCode}</strong> ({grossIntakeKg} kg)
                 into the sizer hopper. Tubers separate mechanically into Grade A (&gt;55mm), Grade B (40–55mm), and
                 Grade C (&lt;40mm).
@@ -552,7 +552,7 @@ export default function SortingPage() {
                   {washingRecord}
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="station-secondary-copy text-xs text-muted-foreground leading-relaxed">
                 Choose whether this sorted batch passes through the water washing line or bypasses dry directly to weighing.
               </p>
               <div className="grid grid-cols-2 gap-2 pt-1">
@@ -595,7 +595,7 @@ export default function SortingPage() {
 
       {/* ── STEP 3: Weigh Grades & Link Pallets ── */}
       {activeStep === 3 && (
-        <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+        <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
@@ -611,7 +611,7 @@ export default function SortingPage() {
           </div>
 
           {/* Grade Switcher Tabs */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="station-grade-tabs grid grid-cols-1 sm:grid-cols-3 gap-2">
             {(['A', 'B', 'C'] as const).map((grade) => {
               const isActive = activeGradeTab === grade
               const weight = grade === 'A' ? gradeAKg : grade === 'B' ? gradeBKg : gradeCKg
@@ -675,7 +675,7 @@ export default function SortingPage() {
                   Pre-attached QR
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="station-secondary-copy text-xs text-muted-foreground">
                 Scan the permanent QR code sticker attached to the Grade {activeGradeTab} physical pallet.
               </p>
 
@@ -700,7 +700,7 @@ export default function SortingPage() {
               </div>
 
               {/* Active Pallet Shortcuts */}
-              <div className="space-y-1">
+              <div className="station-secondary-panel space-y-1">
                 <span className="text-[10px] uppercase font-mono text-muted-foreground">Active Staged Pallets</span>
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -736,7 +736,7 @@ export default function SortingPage() {
 
       {/* ── STEP 4: Review & Save ── */}
       {activeStep === 4 && (
-        <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+        <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
@@ -905,7 +905,7 @@ export default function SortingPage() {
             </div>
           </header>
 
-          <main className="flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto space-y-6">
+          <main className="station-focus-main flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto space-y-6">
             <div className="md:hidden">
               {renderStepperBar()}
             </div>
@@ -917,7 +917,7 @@ export default function SortingPage() {
       {/* ═══════════════════════════════════════════════════════════════════
          STANDARD DASHBOARD VIEW (Non-focus mode)
          ═══════════════════════════════════════════════════════════════════ */}
-      <div className="space-y-6">
+      <div className="station-page space-y-6">
         {/* Page Header */}
         <PageHeader
           title="Station 02: Sorting Console"
@@ -940,7 +940,7 @@ export default function SortingPage() {
         />
 
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="station-quick-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Buffer Queue</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{waitingWarings.length}</p>
@@ -968,7 +968,7 @@ export default function SortingPage() {
         </div>
 
         {/* ── Main Sequential Stepper Card (Consistent with Screenshot) ── */}
-        <div id="sorting-stepper" className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
+        <div id="sorting-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div className="flex items-center gap-3">
               <span className="font-semibold text-base text-foreground">Sorting Stepper</span>
