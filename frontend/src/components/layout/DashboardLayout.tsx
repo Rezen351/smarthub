@@ -8,6 +8,7 @@ import Button from '../shared/Button'
 import ConfirmDialog from '../feedback/ConfirmDialog'
 import ContextBar from './ContextBar'
 import ConnectionBadge from './ConnectionBadge'
+import type { ConnectionState } from './ConnectionBadge'
 
 interface MenuItem {
   label: string
@@ -60,21 +61,56 @@ export default function DashboardLayout() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
+  const [serverState, setServerState] = useState<ConnectionState>('reconnecting')
 
   const menu = user ? roleMenu[user.role] ?? [] : []
   const currentPage =
     menu.find((item) => (item.end ? location.pathname === item.path : location.pathname.startsWith(item.path))) ??
     menu[0]
 
-  /* Real-time connection indicator (WebSocket layer is wired later) */
+  /* Check the API rather than treating browser connectivity as server health. */
   useEffect(() => {
-    const update = () => setOffline(!navigator.onLine)
-    update()
-    window.addEventListener('online', update)
-    window.addEventListener('offline', update)
+    let active = true
+    let pending = false
+    let controller: AbortController | undefined
+    const check = async () => {
+      if (pending) return
+      pending = true
+      controller = new AbortController()
+      const timeout = window.setTimeout(() => controller?.abort(), 5000)
+      try {
+        const response = await fetch('/api/v1/health', { signal: controller.signal, cache: 'no-store' })
+        const payload = await response.json()
+        if (!response.ok || payload?.status !== 'ok' || payload?.database !== 'connected') throw new Error('Server unavailable')
+        if (active) {
+          setServerState('connected')
+          setOffline(false)
+        }
+      } catch {
+        if (active) {
+          setServerState('disconnected')
+          setOffline(true)
+        }
+      } finally {
+        window.clearTimeout(timeout)
+        pending = false
+      }
+    }
+    const offline = () => {
+      controller?.abort()
+      setServerState('disconnected')
+      setOffline(true)
+    }
+    void check()
+    const timer = window.setInterval(check, 15000)
+    window.addEventListener('online', check)
+    window.addEventListener('offline', offline)
     return () => {
-      window.removeEventListener('online', update)
-      window.removeEventListener('offline', update)
+      active = false
+      controller?.abort()
+      window.clearInterval(timer)
+      window.removeEventListener('online', check)
+      window.removeEventListener('offline', offline)
     }
   }, [setOffline])
 
@@ -172,8 +208,8 @@ export default function DashboardLayout() {
         </div>
         <div className="px-3 pt-2 pb-1">
           <div className="flex items-center gap-2 font-mono text-[10px] text-emerald-900 bg-emerald-50/80 border border-emerald-200/80 px-2.5 py-1 rounded-none">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#229856] animate-pulse"></span>
-            <span className="tracking-wider">SYSTEM ONLINE</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${serverState === 'connected' ? 'bg-emerald-600' : 'bg-amber-600'}`}></span>
+            <span className="tracking-wider">SERVER {serverState === 'connected' ? 'ONLINE' : serverState === 'reconnecting' ? 'CHECKING' : 'OFFLINE'}</span>
           </div>
         </div>
         {navLinks}
@@ -221,7 +257,7 @@ export default function DashboardLayout() {
 
           <div className="navbar-spacer" />
 
-          <ConnectionBadge state={navigator.onLine ? 'connected' : 'disconnected'} label="Server" />
+          <ConnectionBadge state={serverState} label="Server" />
 
           <div className="relative" ref={userMenuRef}>
             <Button
@@ -289,6 +325,11 @@ export default function DashboardLayout() {
           </div>
         </header>
 
+        {serverState === 'disconnected' && (
+          <div role="status" className="alert alert-warning rounded-none">
+            Server offline. Check your connection before saving.
+          </div>
+        )}
         <ContextBar />
         <main className="app-main">
           <Outlet />

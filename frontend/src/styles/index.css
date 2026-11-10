@@ -791,7 +791,15 @@
   }
   .station-page > :first-child,
   .station-quick-stats {
-    display: none !important;
+    display: block;
+  }
+  .station-quick-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .station-quick-stats > div {
+    padding: 10px;
   }
   .station-stepper-shell {
     padding: 8px !important;
@@ -800,7 +808,7 @@
     margin-top: 8px !important;
   }
   .station-stepper-shell > :first-child {
-    display: none !important;
+    flex-wrap: wrap;
   }
   .station-focus-main {
     padding: 8px !important;
@@ -831,7 +839,7 @@
     padding: 8px !important;
   }
   .station-step .radio-card {
-    min-height: 36px;
+    min-height: 44px;
     padding: 6px 10px;
     font-size: 12px;
   }
@@ -842,7 +850,6 @@
     margin-top: 8px !important;
   }
   .station-scan-box .inline-flex.p-3,
-  .station-secondary-copy,
   .station-secondary-panel,
   .station-step-preview {
     display: none !important;
@@ -865,5 +872,19 @@
   }
   .station-preview-grid .printable-label {
     padding: 6px !important;
+  }
+  .station-step button,
+  .station-stepper-shell button {
+    min-height: 44px;
+    white-space: normal;
+  }
+  .station-step .scale-target {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .station-preview-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 }

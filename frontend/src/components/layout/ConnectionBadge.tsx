@@ -8,8 +8,8 @@ interface ConnectionBadgeProps {
 }
 
 const labels: Record<ConnectionState, string> = {
-  connected: 'Running',
-  reconnecting: 'Reconnecting',
+  connected: 'Online',
+  reconnecting: 'Checking',
   disconnected: 'Offline',
 }
 
