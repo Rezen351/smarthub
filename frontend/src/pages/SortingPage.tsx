@@ -463,10 +463,10 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 1 of 4 · Intake Identification
+                Step 1 of 4
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Scan Waring Sack
+                Scan Waring
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
@@ -540,10 +540,10 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 2 of 4 · Sizing & Washing
+                Step 2 of 4
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Size Produce & Choose Washing
+                Size & Wash
               </h2>
             </div>
             <Badge tone="accent">
@@ -629,10 +629,10 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 3 of 4 · Multi-Grade Weighing & Pallet Linkage
+                Step 3 of 4
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Weigh Commercial Grades on Scale 02 & Link Pallet QRs
+                Weigh Grades
               </h2>
             </div>
             <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
@@ -798,10 +798,10 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 4 of 4 · Yield Audit & Batch Commitment
+                Step 4 of 4
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Commercial Yield Distribution & Batch Commitment
+                Review & Save
               </h2>
             </div>
             <Badge tone="accent">
@@ -981,19 +981,14 @@ export default function SortingPage() {
           title="Station 02: Sorting Console"
           subtitle="Sort potato fractions, check yield, and link grade pallets."
           actions={
-            <div className="flex items-center gap-2">
-              <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
-                Focus Mode
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                icon="history"
-                onClick={() => document.getElementById('sorting-records')?.scrollIntoView({ behavior: 'smooth' })}
-              >
-                Records ({sortedBatches.length})
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              icon="history"
+              onClick={() => document.getElementById('sorting-records')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              Records ({sortedBatches.length})
+            </Button>
           }
         />
 
@@ -1028,16 +1023,13 @@ export default function SortingPage() {
         {/* ── Main Sequential Stepper Card (Consistent with Screenshot) ── */}
         <div id="sorting-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
-            <div className="flex items-center gap-3">
-              <span className="font-semibold text-base text-foreground">Sorting Stepper</span>
-              <Badge tone="accent">Step {activeStep} of 4</Badge>
-            </div>
+            <span className="font-semibold text-base text-foreground">Sorting Stepper</span>
             <div className="flex items-center gap-2">
               <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
                 Scale 02 · {scaleOnline ? 'Online' : 'Offline'}
               </Badge>
               <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-                Open Focus Mode
+                Focus Mode
               </Button>
             </div>
           </div>

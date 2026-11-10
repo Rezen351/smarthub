@@ -655,7 +655,7 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 1 of 3 · Intake Identification
+                Step 1 of 3
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
                 Scan Farmer Card
@@ -728,10 +728,10 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 2 of 3 · Live Harvest Intake
+                Step 2 of 3
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Weigh Crop Platform
+                Weigh Harvest
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -820,10 +820,10 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-2 flex-wrap gap-2 no-print">
             <div>
               <span className="text-[10px] uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 3 of 3 · Final Verification & Print
+                Step 3 of 3
               </span>
               <h2 className="text-xl font-bold tracking-tight text-foreground">
-                Approve & Print Intake Label
+                Approve & Print
               </h2>
             </div>
             {approvedSuccessRecord ? (
@@ -1004,19 +1004,14 @@ export default function WeighingPage() {
             title="Station 01: Reception"
             subtitle="Farmer verification, intake weighing, and buffer queue."
             actions={
-              <div className="flex items-center gap-2">
-                <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
-                  Focus Mode
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  icon="history"
-                  onClick={() => document.getElementById('weighing-records')?.scrollIntoView({ behavior: 'smooth' })}
-                >
-                  Records ({records.length})
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                icon="history"
+                onClick={() => document.getElementById('weighing-records')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                Records ({records.length})
+              </Button>
             }
           />
         </div>
@@ -1050,16 +1045,13 @@ export default function WeighingPage() {
         {/* Sequential Stepper in Standard View */}
         <div id="weighing-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
-            <div className="flex items-center gap-3">
-              <span className="font-semibold text-base text-foreground">Reception Stepper</span>
-              <Badge tone="accent">Step {activeStep} of 3</Badge>
-            </div>
+            <span className="font-semibold text-base text-foreground">Reception Stepper</span>
             <div className="flex items-center gap-2">
               <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
                 Scale 01 · {scaleOnline ? 'Online' : 'Offline'}
               </Badge>
               <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-                Open Focus Mode
+                Focus Mode
               </Button>
             </div>
           </div>

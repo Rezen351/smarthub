@@ -567,10 +567,10 @@ export default function PackagingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 1 of 3 · Source Pallet & Package Type
+                Step 1 of 3
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Scan Source Pallet & Select Packaging Format
+                Scan Pallet & Select Package
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
@@ -761,7 +761,7 @@ export default function PackagingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 2 of 3 · Weigh Package
+                Step 2 of 3
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
                 Weigh Package
@@ -872,7 +872,7 @@ export default function PackagingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 3 of 3 · Label & Store
+                Step 3 of 3
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
                 Print Label & Store
@@ -1057,19 +1057,14 @@ export default function PackagingPage() {
             title="Station 03: Packaging"
             subtitle="Retail pouches, export cartons, and warehouse storage."
             actions={
-              <div className="flex items-center gap-2">
-                <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
-                  Focus Mode
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  icon="history"
-                  onClick={() => document.getElementById('packaging-ledger')?.scrollIntoView({ behavior: 'smooth' })}
-                >
-                  Records ({packages.length})
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                icon="history"
+                onClick={() => document.getElementById('packaging-ledger')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                Records ({packages.length})
+              </Button>
             }
           />
         </div>
@@ -1103,16 +1098,13 @@ export default function PackagingPage() {
         {/* Sequential Stepper in Standard View */}
         <div id="packaging-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
-            <div className="flex items-center gap-3">
-              <span className="font-semibold text-base text-foreground">Packaging Stepper</span>
-              <Badge tone="accent">Step {activeStep} of 3</Badge>
-            </div>
+            <span className="font-semibold text-base text-foreground">Packaging Stepper</span>
             <div className="flex items-center gap-2">
               <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
                 Scale 03 · {scaleOnline ? 'Online' : 'Offline'}
               </Badge>
               <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-                Open Focus Mode
+                Focus Mode
               </Button>
             </div>
           </div>
