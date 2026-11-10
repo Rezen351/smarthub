@@ -46,6 +46,22 @@ export interface ApiResponse<T> {
   }
 }
 
+export interface Pallet {
+  id: string
+  code: string
+  tareKg: number
+  weightKg: number
+  remainingKg: number
+  grade?: string | null
+  status: 'AVAILABLE' | 'IN_USE' | 'PACKAGING' | 'DEPLETED' | string
+  notes?: string | null
+  farmerName?: string | null
+  farmerVillage?: string | null
+  waringCode?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
 export const api = {
   // Authentication
   auth: {
@@ -165,14 +181,33 @@ export const api = {
     },
   },
 
-  // Pallets
+  // Physical Pallets Management & QR Label Printing
   pallets: {
     list: async () => {
-      const res = await request<ApiResponse<any[]>>('/pallets')
+      const res = await request<ApiResponse<Pallet[]>>('/pallets')
       return res.data
     },
     get: async (code: string) => {
-      const res = await request<ApiResponse<any>>(`/pallets/${encodeURIComponent(code)}`)
+      const res = await request<ApiResponse<Pallet>>(`/pallets/${encodeURIComponent(code)}`)
+      return res.data
+    },
+    create: async (data: { code: string; tareKg?: number; notes?: string }) => {
+      const res = await request<ApiResponse<Pallet>>('/pallets', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+      return res.data
+    },
+    delete: async (idOrCode: string) => {
+      const res = await request<ApiResponse<{ message: string }>>(`/pallets/${encodeURIComponent(idOrCode)}`, {
+        method: 'DELETE',
+      })
+      return res.data
+    },
+    print: async (idOrCode: string) => {
+      const res = await request<ApiResponse<{ message: string; pallet: Pallet }>>(`/pallets/${encodeURIComponent(idOrCode)}/print`, {
+        method: 'POST',
+      })
       return res.data
     },
   },

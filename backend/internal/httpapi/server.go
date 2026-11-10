@@ -722,7 +722,207 @@ func appendQR(dst []byte, value string) []byte {
 }
 
 func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
-	write(w, map[string]any{"success": true, "data": []any{}})
+	// GET /api/v1/pallets - List all registered physical pallets
+	if r.Method == "GET" && len(p) == 0 {
+		rows, err := s.db.Query(r.Context(), `
+			SELECT p.id, p.code, p.grade, p.status, p."weightKg", p."remainingKg", p."tareKg", p.notes,
+			       f.name, p."createdAt", p."updatedAt"
+			FROM pallets p
+			LEFT JOIN farmers f ON f.id = p."farmerId"
+			ORDER BY p.code ASC
+		`)
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to list pallets")
+			return
+		}
+		defer rows.Close()
+		out := []any{}
+		for rows.Next() {
+			var id, code, status, notes string
+			var grade, farmerName *string
+			var weight, remaining, tare float64
+			var createdAt, updatedAt time.Time
+			if err := rows.Scan(&id, &code, &grade, &status, &weight, &remaining, &tare, &notes, &farmerName, &createdAt, &updatedAt); err == nil {
+				out = append(out, map[string]any{
+					"id":          id,
+					"code":        code,
+					"grade":       grade,
+					"status":      status,
+					"weightKg":    weight,
+					"remainingKg": remaining,
+					"tareKg":      tare,
+					"notes":       notes,
+					"farmerName":  farmerName,
+					"createdAt":   createdAt,
+					"updatedAt":   updatedAt,
+				})
+			}
+		}
+		write(w, map[string]any{"success": true, "data": out})
+		return
+	}
+
+	// POST /api/v1/pallets - Register new physical pallet
+	if r.Method == "POST" && len(p) == 0 {
+		var input struct {
+			Code   string  `json:"code"`
+			TareKg float64 `json:"tareKg"`
+			Notes  string  `json:"notes"`
+		}
+		if !decode(r, &input) || strings.TrimSpace(input.Code) == "" {
+			fail(w, 400, "VALIDATION_ERROR", "Pallet code is required")
+			return
+		}
+		code := strings.ToUpper(strings.TrimSpace(input.Code))
+		tare := input.TareKg
+		if tare <= 0 {
+			tare = 15.0
+		}
+		notes := strings.TrimSpace(input.Notes)
+		id := "plt-" + strings.ToLower(strings.TrimPrefix(code, "PLT-"))
+
+		var exists bool
+		_ = s.db.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM pallets WHERE UPPER(code)=UPPER($1))`, code).Scan(&exists)
+		if exists {
+			fail(w, 409, "PALLET_ALREADY_EXISTS", fmt.Sprintf("Pallet '%s' is already registered", code))
+			return
+		}
+
+		now := time.Now()
+		_, err := s.db.Exec(r.Context(), `
+			INSERT INTO pallets (id, code, status, "weightKg", "remainingKg", "tareKg", notes, "createdAt", "updatedAt")
+			VALUES ($1, $2, 'AVAILABLE', 0, 0, $3, $4, NOW(), NOW())
+		`, id, code, tare, notes)
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to register pallet: "+err.Error())
+			return
+		}
+
+		writeStatus(w, 201, map[string]any{
+			"success": true,
+			"data": map[string]any{
+				"id":          id,
+				"code":        code,
+				"status":      "AVAILABLE",
+				"weightKg":    0,
+				"remainingKg": 0,
+				"tareKg":      tare,
+				"notes":       notes,
+				"createdAt":   now,
+				"updatedAt":   now,
+			},
+		})
+		return
+	}
+
+	// DELETE /api/v1/pallets/:code
+	if r.Method == "DELETE" && len(p) == 1 {
+		q := strings.TrimSpace(p[0])
+		var id, code string
+		var weight float64
+		err := s.db.QueryRow(r.Context(), `SELECT id, code, "weightKg" FROM pallets WHERE id=$1 OR UPPER(code)=UPPER($1) LIMIT 1`, q).Scan(&id, &code, &weight)
+		if err == pgx.ErrNoRows {
+			fail(w, 404, "PALLET_NOT_FOUND", fmt.Sprintf("Pallet '%s' not found", q))
+			return
+		}
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to query pallet")
+			return
+		}
+		if weight > 0 {
+			fail(w, 400, "PALLET_IN_USE", "Cannot delete pallet that currently holds sorted inventory")
+			return
+		}
+		var unitCount int
+		_ = s.db.QueryRow(r.Context(), `SELECT COUNT(*) FROM package_units WHERE "sourcePalletId"=$1`, id).Scan(&unitCount)
+		if unitCount > 0 {
+			fail(w, 400, "PALLET_IN_USE", "Cannot delete pallet referenced by finished packages")
+			return
+		}
+		_, err = s.db.Exec(r.Context(), `DELETE FROM pallets WHERE id=$1`, id)
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to delete pallet")
+			return
+		}
+		write(w, map[string]any{"success": true, "data": map[string]any{"deleted": true, "code": code}})
+		return
+	}
+
+	// POST /api/v1/pallets/:code/print
+	if r.Method == "POST" && len(p) >= 2 && p[1] == "print" {
+		q := strings.TrimSpace(p[0])
+		var id, code, status, notes string
+		var grade, farmerName *string
+		var weight float64
+		err := s.db.QueryRow(r.Context(), `
+			SELECT p.id, p.code, p.status, p.grade, p."weightKg", p.notes, f.name
+			FROM pallets p
+			LEFT JOIN farmers f ON f.id=p."farmerId"
+			WHERE p.id=$1 OR UPPER(p.code)=UPPER($1) LIMIT 1
+		`, q).Scan(&id, &code, &status, &grade, &weight, &notes, &farmerName)
+		if err == pgx.ErrNoRows {
+			fail(w, 404, "PALLET_NOT_FOUND", fmt.Sprintf("Pallet '%s' not found", q))
+			return
+		}
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to query pallet")
+			return
+		}
+
+		grd := ""
+		if grade != nil {
+			grd = *grade
+		}
+		fn := ""
+		if farmerName != nil {
+			fn = *farmerName
+		}
+
+		job := printJob{
+			Type:       "pallet",
+			Code:       code,
+			Grade:      grd,
+			WeightKg:   weight,
+			FarmerName: fn,
+			Date:       time.Now().Format("2006-01-02"),
+			Time:       time.Now().Format("15:04:05"),
+			Station:    "Pallet Management",
+		}
+
+		s.printerMu.RLock()
+		printer, ok := s.printers["reception"]
+		if !ok || printer.IP == "" {
+			printer = s.printers["packaging"]
+		}
+		s.printerMu.RUnlock()
+
+		printed := false
+		if printer.IP != "" && printer.Port > 0 {
+			payload, err := encodePrintJobs([]printJob{job})
+			if err == nil {
+				conn, err := net.DialTimeout("tcp", net.JoinHostPort(printer.IP, strconv.Itoa(printer.Port)), 2*time.Second)
+				if err == nil {
+					_ = conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
+					_ = writeAll(conn, payload)
+					_ = conn.Close()
+					printed = true
+				}
+			}
+		}
+
+		write(w, map[string]any{
+			"success": true,
+			"data": map[string]any{
+				"code":    code,
+				"job":     job,
+				"printed": printed,
+				"message": "Pallet QR label generated successfully",
+			},
+		})
+		return
+	}
+
+	fail(w, 404, "NOT_FOUND", "Pallet route not found")
 }
 func (s *server) warehouse(w http.ResponseWriter, r *http.Request) {
 	write(w, map[string]any{"success": true, "data": map[string]any{"totalPallets": 0, "totalPackages": 0, "totalWeightKg": 0}})

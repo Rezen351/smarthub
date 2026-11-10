@@ -5,6 +5,7 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import WeighingPage from './pages/WeighingPage'
 import SortingPage from './pages/SortingPage'
+import PalletsPage from './pages/PalletsPage'
 import WarehousePage from './pages/WarehousePage'
 import PackagingPage from './pages/PackagingPage'
 import DeliveriesPage from './pages/DeliveriesPage'
@@ -72,7 +73,14 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="pallets" element={<Navigate to="/dashboard/warehouse" replace />} />
+        <Route
+          path="pallets"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OPERATOR']}>
+              <PalletsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="sorting"
           element={

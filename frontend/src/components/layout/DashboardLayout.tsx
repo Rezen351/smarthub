@@ -23,6 +23,7 @@ const roleMenu: Record<string, MenuItem[]> = {
     { label: 'Station 1: Reception', path: '/dashboard/weighing', icon: 'scale' },
     { label: 'Station 2: Sorting', path: '/dashboard/sorting', icon: 'sortir' },
     { label: 'Station 3: Packaging', path: '/dashboard/packaging', icon: 'package' },
+    { label: 'Pallet Registry', path: '/dashboard/pallets', icon: 'pallet' },
     { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box' },
     { label: 'Deliveries', path: '/dashboard/deliveries', icon: 'truck' },
     { label: 'Users', path: '/dashboard/users', icon: 'users' },
@@ -34,6 +35,7 @@ const roleMenu: Record<string, MenuItem[]> = {
     { label: 'Station 1: Reception', path: '/dashboard/weighing', icon: 'scale' },
     { label: 'Station 2: Sorting', path: '/dashboard/sorting', icon: 'sortir' },
     { label: 'Station 3: Packaging', path: '/dashboard/packaging', icon: 'package' },
+    { label: 'Pallet Registry', path: '/dashboard/pallets', icon: 'pallet' },
     { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box' },
     { label: 'Deliveries', path: '/dashboard/deliveries', icon: 'truck' },
     { label: 'Settings', path: '/dashboard/settings', icon: 'settings' },
@@ -130,6 +132,12 @@ export default function DashboardLayout() {
     return () => document.removeEventListener('mousedown', onClick)
   }, [userMenuOpen])
 
+  const requestLogout = () => {
+    setMenuOpen(false)
+    setUserMenuOpen(false)
+    setLogoutOpen(true)
+  }
+
   const confirmLogout = () => {
     setLogoutOpen(false)
     logout()
@@ -166,7 +174,7 @@ export default function DashboardLayout() {
           </p>
         </div>
       </div>
-      <Button variant="outline" size="sm" icon="logout" block onClick={() => setLogoutOpen(true)}>
+      <Button variant="outline" size="sm" icon="logout" block onClick={requestLogout}>
         Log Out
       </Button>
       <Link to="/traceability" className="t-caption text-text-secondary hover:text-text flex items-center gap-1">
@@ -309,10 +317,7 @@ export default function DashboardLayout() {
                     className="sidebar-link"
                     role="menuitem"
                     style={{ color: 'var(--color-danger)', width: '100%', background: 'none', border: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
-                    onClick={() => {
-                      setUserMenuOpen(false)
-                      setLogoutOpen(true)
-                    }}
+                    onClick={requestLogout}
                   >
                     <span className="sidebar-link-icon">
                       <Icon name="logout" size={16} />

@@ -260,7 +260,7 @@ export default function PackagingPage() {
           weightKg: Number(pallet.weightKg || remainingKg),
           remainingKg,
           farmerName: pallet.farmerName || 'Farmer',
-          farmerVillage: pallet.farmerVillage,
+          farmerVillage: pallet.farmerVillage || undefined,
           waringCode: pallet.waringCode || '',
         })
         setPalletSearch('')

@@ -10,6 +10,7 @@
  * Fully unified with Station 01 Stepper architecture and 100% sequential in Focus Mode.
  */
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import Icon from '../components/shared/Icon'
@@ -21,7 +22,7 @@ import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import { formatWeight } from '../lib/utils'
 import { usePackhouseStore, type GradedBatchRecord, type BufferWaringItem } from '../hooks/usePackhouseStore'
 import CameraScannerModal from '../components/shared/CameraScannerModal'
-import { api } from '../services/api'
+import { api, type Pallet } from '../services/api'
 
 const STEPS = [
   { id: 1, label: 'Scan Waring' },
@@ -51,8 +52,7 @@ export default function SortingPage() {
   const [farmerName, setFarmerName] = useState(initialWaring.farmerName)
   const [farmerVillage, setFarmerVillage] = useState(initialWaring.farmerVillage || '')
   const [grossIntakeKg, setGrossIntakeKg] = useState(initialWaring.grossWeightKg ? String(initialWaring.grossWeightKg) : '')
-  const nextSeq = String(sortedBatches.length + 1).padStart(2, '0')
-  const [palletCode, setPalletCode] = useState(`PLT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(sortedBatches.length + 1).padStart(4, '0')}`)
+  const [palletCode, setPalletCode] = useState('PLT-001')
   const scanInputRef = useRef<HTMLInputElement>(null)
 
   /* ── Step 2: Sizing & Wash ── */
@@ -85,17 +85,44 @@ export default function SortingPage() {
     }
   }, [])
 
+  /* Physical Pallet Registry */
+  const [registeredPallets, setRegisteredPallets] = useState<Pallet[]>([])
+
+  useEffect(() => {
+    let active = true
+    api.pallets
+      .list()
+      .then((data) => {
+        if (!active || !Array.isArray(data)) return
+        setRegisteredPallets(data)
+        if (data.length >= 1) {
+          setGradeAPalletQr(data[0].code)
+          setPalletCode(data[0].code)
+        }
+        if (data.length >= 2) {
+          setGradeBPalletQr(data[1].code)
+        }
+        if (data.length >= 3) {
+          setGradeCPalletQr(data[2].code)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
+
   /* Grade A */
   const [gradeAKg, setGradeAKg] = useState('0.0')
-  const [gradeAPalletQr, setGradeAPalletQr] = useState(`PLT-GRD-A-${nextSeq}`)
+  const [gradeAPalletQr, setGradeAPalletQr] = useState('PLT-001')
 
   /* Grade B */
   const [gradeBKg, setGradeBKg] = useState('0.0')
-  const [gradeBPalletQr, setGradeBPalletQr] = useState(`PLT-GRD-B-${nextSeq}`)
+  const [gradeBPalletQr, setGradeBPalletQr] = useState('PLT-002')
 
   /* Grade C */
   const [gradeCKg, setGradeCKg] = useState('0.0')
-  const [gradeCPalletQr, setGradeCPalletQr] = useState(`PLT-GRD-C-${nextSeq}`)
+  const [gradeCPalletQr, setGradeCPalletQr] = useState('PLT-003')
 
   /* ── Camera Scanner State ── */
   const [cameraModalMode, setCameraModalMode] = useState<'WARING' | 'PALLET' | null>(null)
@@ -217,7 +244,10 @@ export default function SortingPage() {
   const handleAssignScannedPallet = (scannedCode: string, targetGrade: 'A' | 'B' | 'C') => {
     const code = scannedCode.trim().toUpperCase()
     if (!code) return
-    if (targetGrade === 'A') setGradeAPalletQr(code)
+    if (targetGrade === 'A') {
+      setGradeAPalletQr(code)
+      setPalletCode(code)
+    }
     if (targetGrade === 'B') setGradeBPalletQr(code)
     if (targetGrade === 'C') setGradeCPalletQr(code)
     toast.success(`Pallet ${code} linked to Grade ${targetGrade}`)
@@ -278,13 +308,13 @@ export default function SortingPage() {
 
   /* Reset for next waring */
   const handleStartNextWaring = () => {
-    const nextIndex = sortedBatches.length + 1
-    const nextIdx = String(nextIndex).padStart(2, '0')
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    setPalletCode(`PLT-${dateStr}-${String(nextIndex).padStart(4, '0')}`)
-    setGradeAPalletQr(`PLT-GRD-A-${nextIdx}`)
-    setGradeBPalletQr(`PLT-GRD-B-${nextIdx}`)
-    setGradeCPalletQr(`PLT-GRD-C-${nextIdx}`)
+    const pA = registeredPallets[0]?.code || 'PLT-001'
+    const pB = registeredPallets[1]?.code || 'PLT-002'
+    const pC = registeredPallets[2]?.code || 'PLT-003'
+    setPalletCode(pA)
+    setGradeAPalletQr(pA)
+    setGradeBPalletQr(pB)
+    setGradeCPalletQr(pC)
     setGradeAKg('')
     setGradeBKg('')
     setGradeCKg('')
@@ -700,23 +730,51 @@ export default function SortingPage() {
               </div>
 
               {/* Active Pallet Shortcuts */}
-              <div className="station-secondary-panel space-y-1">
-                <span className="text-[10px] uppercase font-mono text-muted-foreground">Active Staged Pallets</span>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    `PLT-GRD-${activeGradeTab}-01`,
-                    `PLT-GRD-${activeGradeTab}-02`,
-                    `PLT-GRD-${activeGradeTab}-03`,
-                  ].map((code) => (
-                    <button
-                      key={code}
-                      type="button"
-                      onClick={() => handleAssignScannedPallet(code, activeGradeTab)}
-                      className="px-2 py-1 text-xs font-mono bg-muted border border-border hover:bg-primary/10 hover:border-primary cursor-pointer"
-                    >
-                      {code}
-                    </button>
-                  ))}
+              <div className="station-secondary-panel space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-mono text-muted-foreground">Select Physical Pallet</span>
+                  <Link
+                    to="/dashboard/pallets"
+                    target="_blank"
+                    className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <Icon name="pallet" size={13} />
+                    Pallet Registry / Reprint
+                  </Link>
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1.5 bg-muted/20 border border-border">
+                  {registeredPallets.length === 0 ? (
+                    <span className="text-xs text-muted-foreground p-1">No physical pallets loaded.</span>
+                  ) : (
+                    registeredPallets.map((p) => {
+                      const isCurrentGrade =
+                        (activeGradeTab === 'A' && gradeAPalletQr === p.code) ||
+                        (activeGradeTab === 'B' && gradeBPalletQr === p.code) ||
+                        (activeGradeTab === 'C' && gradeCPalletQr === p.code)
+                      const isAssignedOther =
+                        (activeGradeTab !== 'A' && gradeAPalletQr === p.code) ||
+                        (activeGradeTab !== 'B' && gradeBPalletQr === p.code) ||
+                        (activeGradeTab !== 'C' && gradeCPalletQr === p.code)
+
+                      return (
+                        <button
+                          key={p.code}
+                          type="button"
+                          onClick={() => handleAssignScannedPallet(p.code, activeGradeTab)}
+                          className={`px-2 py-1 text-xs font-mono border transition-all cursor-pointer flex items-center gap-1.5 ${
+                            isCurrentGrade
+                              ? 'bg-primary text-primary-foreground border-primary font-bold shadow-xs'
+                              : isAssignedOther
+                              ? 'bg-muted/40 text-muted-foreground border-border/50 line-through opacity-60'
+                              : 'bg-card text-foreground border-border hover:border-primary/60 hover:bg-primary/5'
+                          }`}
+                        >
+                          <span>{p.code}</span>
+                          <span className="text-[10px] opacity-75 font-sans">({p.tareKg}kg)</span>
+                        </button>
+                      )
+                    })
+                  )}
                 </div>
               </div>
             </div>
