@@ -5,7 +5,6 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import WeighingPage from './pages/WeighingPage'
 import SortingPage from './pages/SortingPage'
-import PalletsPage from './pages/PalletsPage'
 import WarehousePage from './pages/WarehousePage'
 import PackagingPage from './pages/PackagingPage'
 import DeliveriesPage from './pages/DeliveriesPage'
@@ -75,11 +74,7 @@ function App() {
         />
         <Route
           path="pallets"
-          element={
-            <ProtectedRoute allowedRoles={['ADMIN', 'OPERATOR']}>
-              <PalletsPage />
-            </ProtectedRoute>
-          }
+          element={<Navigate to="/dashboard/settings?section=pallets" replace />}
         />
         <Route
           path="sorting"

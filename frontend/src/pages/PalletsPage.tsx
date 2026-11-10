@@ -13,7 +13,11 @@ import OfflineQrCode from '../components/shared/OfflineQrCode'
 import { api, type Pallet } from '../services/api'
 import { formatWeight } from '../lib/utils'
 
-export default function PalletsPage() {
+interface PalletsPageProps {
+  embedded?: boolean
+}
+
+export default function PalletsPage({ embedded = false }: PalletsPageProps) {
   const toast = useToast()
   const [pallets, setPallets] = useState<Pallet[]>([])
   const [search, setSearch] = useState('')
@@ -280,15 +284,27 @@ export default function PalletsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Pallet Registry"
-        subtitle="Manage reusable physical pallets, calibrate tare weights, and print durable QR code labels."
-        actions={
+      {embedded ? (
+        <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Pallet Registry</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Register pallets, set tare weights, and print QR labels.</p>
+          </div>
           <Button variant="primary" icon="plus" touch onClick={handleOpenRegister}>
             Register Pallet
           </Button>
-        }
-      />
+        </div>
+      ) : (
+        <PageHeader
+          title="Pallet Registry"
+          subtitle="Register pallets, set tare weights, and print QR labels."
+          actions={
+            <Button variant="primary" icon="plus" touch onClick={handleOpenRegister}>
+              Register Pallet
+            </Button>
+          }
+        />
+      )}
 
       {/* Aggregate KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

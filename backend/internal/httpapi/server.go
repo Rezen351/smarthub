@@ -33,6 +33,9 @@ type server struct {
 type scale struct {
 	ID, Name, Host string
 	Port, Capacity int
+	UnitID         int
+	WeightRegister int
+	StatusRegister int
 }
 type printerSettings struct {
 	Station      string `json:"station"`
@@ -91,7 +94,7 @@ func Run(ctx context.Context) error {
 }
 
 func (s *server) loadScales(ctx context.Context) error {
-	rows, err := s.db.Query(ctx, `SELECT station,name,host,port,capacity_kg FROM scale_settings ORDER BY station`)
+	rows, err := s.db.Query(ctx, `SELECT station,name,host,port,capacity_kg,unit_id,weight_register,status_register FROM scale_settings ORDER BY station`)
 	if err != nil {
 		return fmt.Errorf("load scale settings: %w", err)
 	}
@@ -99,7 +102,7 @@ func (s *server) loadScales(ctx context.Context) error {
 	scales := make(map[string]scale)
 	for rows.Next() {
 		var v scale
-		if err = rows.Scan(&v.ID, &v.Name, &v.Host, &v.Port, &v.Capacity); err != nil {
+		if err = rows.Scan(&v.ID, &v.Name, &v.Host, &v.Port, &v.Capacity, &v.UnitID, &v.WeightRegister, &v.StatusRegister); err != nil {
 			return fmt.Errorf("scan scale settings: %w", err)
 		}
 		scales[v.ID] = v
@@ -365,24 +368,34 @@ func (s *server) scalesHandler(w http.ResponseWriter, r *http.Request, p []strin
 	}
 	if len(p) > 1 && p[1] == "config" && r.Method == "PUT" {
 		var x struct {
-			Host       string `json:"host"`
-			Port       int    `json:"port"`
-			CapacityKg int    `json:"capacityKg"`
+			Host           string `json:"host"`
+			Port           int    `json:"port"`
+			CapacityKg     int    `json:"capacityKg"`
+			UnitID         int    `json:"unitId"`
+			WeightRegister int    `json:"weightRegister"`
+			StatusRegister int    `json:"statusRegister"`
 		}
-		if !decode(r, &x) || strings.TrimSpace(x.Host) == "" || x.Port < 1 || x.Port > 65535 || x.CapacityKg <= 0 {
-			fail(w, 400, "VALIDATION_ERROR", "A valid scale host, TCP port, and maximum load are required")
+		decoded := decode(r, &x)
+		if !decoded || strings.TrimSpace(x.Host) == "" || x.Port < 1 || x.Port > 65535 || x.CapacityKg <= 0 || x.UnitID < 1 || x.UnitID > 247 {
+			fail(w, 400, "VALIDATION_ERROR", "A valid scale host, TCP port, maximum load, and Modbus unit ID are required")
 			return
 		}
-		_, err := s.db.Exec(r.Context(), `UPDATE scale_settings SET host=$1,port=$2,capacity_kg=$3,updated_at=NOW() WHERE station=$4`, strings.TrimSpace(x.Host), x.Port, x.CapacityKg, id)
+		candidate := scale{UnitID: x.UnitID, WeightRegister: x.WeightRegister, StatusRegister: x.StatusRegister}
+		if _, _, err := scaleRegisterWindow(candidate); err != nil {
+			fail(w, 400, "INVALID_REGISTER_MAP", err.Error())
+			return
+		}
+		_, err := s.db.Exec(r.Context(), `UPDATE scale_settings SET host=$1,port=$2,capacity_kg=$3,unit_id=$4,weight_register=$5,status_register=$6,updated_at=NOW() WHERE station=$7`, strings.TrimSpace(x.Host), x.Port, x.CapacityKg, x.UnitID, x.WeightRegister, x.StatusRegister, id)
 		if err != nil {
 			fail(w, 500, "SCALE_SETTINGS_FAILED", "Failed to save scale settings")
 			return
 		}
 		s.scaleMu.Lock()
 		v.Host, v.Port, v.Capacity = strings.TrimSpace(x.Host), x.Port, x.CapacityKg
+		v.UnitID, v.WeightRegister, v.StatusRegister = x.UnitID, x.WeightRegister, x.StatusRegister
 		s.scales[id] = v
 		s.scaleMu.Unlock()
-		write(w, map[string]any{"success": true, "data": map[string]any{"stationId": id, "host": v.Host, "port": v.Port, "online": false, "message": "Scale configuration accepted"}})
+		write(w, map[string]any{"success": true, "data": map[string]any{"stationId": id, "host": v.Host, "port": v.Port, "unitId": v.UnitID, "weightRegister": v.WeightRegister, "statusRegister": v.StatusRegister, "online": false, "message": "Scale configuration accepted"}})
 		return
 	}
 	if len(p) > 1 && p[1] == "test" && r.Method == "POST" {
@@ -399,7 +412,7 @@ func (s *server) scalesHandler(w http.ResponseWriter, r *http.Request, p []strin
 	}
 	snapshot, ok := s.scaleSnapshot(r.Context(), id)
 	if !ok {
-		write(w, map[string]any{"success": true, "data": map[string]any{"stationId": id, "name": v.Name, "capacityKg": v.Capacity, "ip": v.Host, "port": v.Port, "online": false, "weightKg": 0, "stableWeightKg": 0, "weightGrams": 0, "isStable": false, "timestamp": time.Now().UTC()}})
+		write(w, map[string]any{"success": true, "data": offlineScaleSnapshot(v)})
 		return
 	}
 	write(w, map[string]any{"success": true, "data": snapshot})
@@ -414,14 +427,78 @@ func (s *server) scaleSnapshot(ctx context.Context, id string) (map[string]any, 
 	}
 	telemetry, err := s.scaleTelemetry(ctx, v)
 	if err != nil {
-		return map[string]any{"stationId": v.ID, "name": v.Name, "capacityKg": v.Capacity, "ip": v.Host, "port": v.Port, "online": false, "weightKg": 0, "stableWeightKg": 0, "weightGrams": 0, "isStable": false, "timestamp": time.Now().UTC()}, true
+		return offlineScaleSnapshot(v), true
 	}
 	telemetry["stationId"], telemetry["name"], telemetry["capacityKg"] = v.ID, v.Name, v.Capacity
 	telemetry["ip"], telemetry["port"] = v.Host, v.Port
+	telemetry["unitId"], telemetry["weightRegister"], telemetry["statusRegister"] = v.UnitID, v.WeightRegister, v.StatusRegister
 	return telemetry, true
 }
 
+const (
+	firstScaleRegister = 40001
+	lastScaleRegister  = 40031
+)
+
+func offlineScaleSnapshot(v scale) map[string]any {
+	return map[string]any{
+		"stationId": v.ID, "name": v.Name, "capacityKg": v.Capacity,
+		"ip": v.Host, "port": v.Port, "unitId": v.UnitID,
+		"weightRegister": v.WeightRegister, "statusRegister": v.StatusRegister,
+		"online": false, "weightKg": 0, "weightGrams": 0,
+		"isStable": false, "timestamp": time.Now().UTC(),
+	}
+}
+
+func scaleRegisterWindow(v scale) (int, int, error) {
+	if v.WeightRegister < firstScaleRegister || v.WeightRegister+1 > lastScaleRegister {
+		return 0, 0, fmt.Errorf("Weight Start Register must be between 40001 and 40030")
+	}
+	if v.StatusRegister < firstScaleRegister || v.StatusRegister > lastScaleRegister {
+		return 0, 0, fmt.Errorf("Status Register must be between 40001 and 40031")
+	}
+	weightOffset := v.WeightRegister - firstScaleRegister
+	statusOffset := v.StatusRegister - firstScaleRegister
+	start := min(weightOffset, statusOffset)
+	end := max(weightOffset+1, statusOffset)
+	return start, end - start + 1, nil
+}
+
+func buildScaleReadRequest(v scale, start, quantity int) []byte {
+	request := make([]byte, 12)
+	binary.BigEndian.PutUint16(request[0:2], 1)
+	binary.BigEndian.PutUint16(request[4:6], 6)
+	request[6] = byte(v.UnitID)
+	request[7] = 3
+	binary.BigEndian.PutUint16(request[8:10], uint16(start))
+	binary.BigEndian.PutUint16(request[10:12], uint16(quantity))
+	return request
+}
+
+func decodeScaleRegisters(body []byte, v scale, start, quantity int) (float64, uint16, error) {
+	expectedBytes := quantity * 2
+	if len(body) != expectedBytes+2 || body[0] != 3 || int(body[1]) != expectedBytes {
+		return 0, 0, fmt.Errorf("invalid scale response payload")
+	}
+	registers := body[2:]
+	weightIndex := (v.WeightRegister - firstScaleRegister - start) * 2
+	statusIndex := (v.StatusRegister - firstScaleRegister - start) * 2
+	if weightIndex < 0 || weightIndex+4 > len(registers) || statusIndex < 0 || statusIndex+2 > len(registers) {
+		return 0, 0, fmt.Errorf("configured registers are outside the response window")
+	}
+	bits := uint32(binary.BigEndian.Uint16(registers[weightIndex:]))<<16 | uint32(binary.BigEndian.Uint16(registers[weightIndex+2:]))
+	weightGrams := float64(math.Float32frombits(bits))
+	if math.IsNaN(weightGrams) || math.IsInf(weightGrams, 0) {
+		return 0, 0, fmt.Errorf("configured weight register returned an invalid float")
+	}
+	return weightGrams, binary.BigEndian.Uint16(registers[statusIndex:]), nil
+}
+
 func (s *server) scaleTelemetry(ctx context.Context, v scale) (map[string]any, error) {
+	start, quantity, err := scaleRegisterWindow(v)
+	if err != nil {
+		return nil, err
+	}
 	dialer := net.Dialer{Timeout: 1200 * time.Millisecond}
 	conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(v.Host, strconv.Itoa(v.Port)))
 	if err != nil {
@@ -430,13 +507,16 @@ func (s *server) scaleTelemetry(ctx context.Context, v scale) (map[string]any, e
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(1500 * time.Millisecond))
 
-	request := []byte{0, 1, 0, 0, 0, 6, 1, 3, 0, 0, 0, 31}
+	request := buildScaleReadRequest(v, start, quantity)
 	if _, err = conn.Write(request); err != nil {
 		return nil, fmt.Errorf("request scale %s: %w", v.ID, err)
 	}
 	header := make([]byte, 7)
 	if _, err = io.ReadFull(conn, header); err != nil {
 		return nil, fmt.Errorf("read scale %s header: %w", v.ID, err)
+	}
+	if binary.BigEndian.Uint16(header[2:4]) != 0 || header[6] != byte(v.UnitID) {
+		return nil, fmt.Errorf("invalid scale %s Modbus response header", v.ID)
 	}
 	length := int(binary.BigEndian.Uint16(header[4:6])) - 1
 	if length < 2 || length > 252 {
@@ -446,27 +526,14 @@ func (s *server) scaleTelemetry(ctx context.Context, v scale) (map[string]any, e
 	if _, err = io.ReadFull(conn, body); err != nil {
 		return nil, fmt.Errorf("read scale %s body: %w", v.ID, err)
 	}
-	if body[0] != 3 || int(body[1]) != len(body)-2 {
-		return nil, fmt.Errorf("invalid scale response payload")
+	weightGrams, status, err := decodeScaleRegisters(body, v, start, quantity)
+	if err != nil {
+		return nil, err
 	}
-	registers := body[2:]
-	if len(registers) < 62 {
-		return nil, fmt.Errorf("incomplete scale register payload")
-	}
-	readFloat := func(index int) float64 {
-		bits := uint32(binary.BigEndian.Uint16(registers[index*2:]))<<16 | uint32(binary.BigEndian.Uint16(registers[index*2+2:]))
-		return float64(math.Float32frombits(bits))
-	}
-	status := binary.BigEndian.Uint16(registers[20:22])
-	weightGrams := readFloat(0)
 	return map[string]any{
-		"online":         true,
-		"weightKg":       weightGrams / 1000,
-		"stableWeightKg": readFloat(2) / 1000,
-		"weightGrams":    weightGrams,
-		"isStable":       status&0x0010 != 0,
-		"statusFlags":    fmt.Sprintf("0x%04x", status),
-		"timestamp":      time.Now().UTC(),
+		"online": true, "weightKg": weightGrams / 1000,
+		"weightGrams": weightGrams, "isStable": status&0x0010 != 0,
+		"statusFlags": fmt.Sprintf("0x%04x", status), "timestamp": time.Now().UTC(),
 	}, nil
 }
 

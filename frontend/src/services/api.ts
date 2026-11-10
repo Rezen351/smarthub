@@ -294,10 +294,17 @@ export const api = {
       })
       return res.data
     },
-    updateConfig: async (stationId: string, host: string, port: number, capacityKg: number) => {
+    updateConfig: async (stationId: string, config: {
+      host: string
+      port: number
+      capacityKg: number
+      unitId: number
+      weightRegister: number
+      statusRegister: number
+    }) => {
       const res = await request<ApiResponse<any>>(`/scales/${encodeURIComponent(stationId)}/config`, {
         method: 'PUT',
-        body: JSON.stringify({ host, port, capacityKg }),
+        body: JSON.stringify(config),
       })
       return res.data
     },

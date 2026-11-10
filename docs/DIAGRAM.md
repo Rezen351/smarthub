@@ -349,6 +349,20 @@ domain --> consumer    : Publik Tanpa Login (GS1 Traceability Pouch)
 
 ---
 
+## Konfigurasi Register Timbangan
+
+Setiap stasiun menyimpan konfigurasi Modbus TCP secara terpisah di `scale_settings`: alamat perangkat, port, Unit ID, kapasitas, Weight Start Register, dan Status Register. Backend membentuk window pembacaan FC03 dari alamat yang tersimpan; perubahan melalui Settings berlaku langsung tanpa restart backend.
+
+| Konfigurasi | Rentang | Default firmware |
+|-------------|---------|------------------|
+| Unit ID | `1–247` | `1` |
+| Weight Start Register | `40001–40030`, `FLOAT32` dua word | `40001` (live) atau `40003` (stable) |
+| Status Register | `40001–40031`, `UINT16` | `40011` |
+
+Status stabil dibaca dari bit `0x0010` pada Status Register yang dikonfigurasi. Alamat `40002` adalah word kedua dari nilai berat `FLOAT32` pada `40001–40002`, bukan status register.
+
+---
+
 ## Manajemen Akses Pengguna (RBAC 3-Role + Publik)
 
 Sistem menyederhanakan hak akses menjadi **3 peran pengguna terautentikasi** ditambah **1 akses publik tanpa autentikasi**:

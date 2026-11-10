@@ -16,12 +16,10 @@ import { api } from '../../services/api'
  */
 
 const MODE_KEY = 'enyx.scale-mode'
-const SETTINGS_STORAGE_KEY = 'smarthub_settings'
 const POLL_MS = 600
 
 type Mode = 'auto' | 'manual'
 type Connection = 'connected' | 'reconnecting' | 'disconnected'
-type ReadingSource = 'stable' | 'instantaneous'
 
 interface ScaleWeightInputProps {
   id?: string
@@ -46,19 +44,6 @@ function readMode(): Mode {
   }
 }
 
-function readReadingSource(stationId: string): ReadingSource {
-  try {
-    const stored = localStorage.getItem(SETTINGS_STORAGE_KEY)
-    if (!stored) return 'instantaneous'
-
-    const settings = JSON.parse(stored)
-    const stationKey = stationId === '02' ? 'grading' : stationId === '03' ? 'packaging' : 'intake'
-    return String(settings?.[stationKey]?.weightRegister) === '40003' ? 'stable' : 'instantaneous'
-  } catch {
-    return 'instantaneous'
-  }
-}
-
 function formatKg(value: number) {
   return formatWeight(value)
 }
@@ -77,8 +62,7 @@ export default function ScaleWeightInput({
 }: ScaleWeightInputProps) {
   const [mode, setMode] = useState<Mode>(readMode)
   const [connection, setConnection] = useState<Connection>('reconnecting')
-  const [instantaneousReading, setInstantaneousReading] = useState(0)
-  const [stableReading, setStableReading] = useState(0)
+  const [liveReading, setLiveReading] = useState(0)
   const [isStable, setIsStable] = useState(true)
   const [lastReadingAt, setLastReadingAt] = useState(() => new Date())
   const [captured, setCaptured] = useState(false)
@@ -114,9 +98,7 @@ export default function ScaleWeightInput({
         const telemetry = (res as any)?.data ?? res
         if (telemetry && typeof telemetry === 'object') {
           const liveWeight = Number(telemetry.weightKg ?? telemetry.weight ?? 0)
-          const liveStableWeight = Number(telemetry.stableWeightKg ?? liveWeight)
-          setInstantaneousReading(liveWeight)
-          setStableReading(liveStableWeight)
+          setLiveReading(liveWeight)
           setIsStable(telemetry.isStable !== undefined ? Boolean(telemetry.isStable) : true)
           setConnection(telemetry.online !== false ? 'connected' : 'reconnecting')
           setLastReadingAt(new Date(telemetry.timestamp || Date.now()))
@@ -150,8 +132,7 @@ export default function ScaleWeightInput({
     }
   }, [mode, stationId])
 
-  const readingSource = readReadingSource(stationId)
-  const reading = readingSource === 'stable' ? stableReading : instantaneousReading
+  const reading = liveReading
   const numericValue = Number(value)
 
   // A live reading becomes a form value only after explicit capture.
