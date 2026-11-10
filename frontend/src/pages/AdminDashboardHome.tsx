@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import Badge from '../components/shared/Badge'
-import Button from '../components/shared/Button'
 import Card from '../components/shared/Card'
 import Icon, { type IconName } from '../components/shared/Icon'
 import PageHeader from '../components/shared/PageHeader'
@@ -201,29 +200,6 @@ export default function AdminDashboardHome() {
               <Badge tone={activity.tone}>{activity.badge}</Badge>
             </div>
           ))}
-        </div>
-      </Card>
-
-      <Card
-        title="Product Setup"
-        subtitle="Active product and quality grades."
-        action={
-          <Link to="/dashboard/settings">
-            <Button variant="outline" size="sm" icon="settings">
-              Configure
-            </Button>
-          </Link>
-        }
-      >
-        <div className="row gap-sm flex-wrap">
-          <Badge tone="accent" icon="leaf">
-            Potatoes · active
-          </Badge>
-          <Badge tone="neutral">Tomat · disabled</Badge>
-          <Badge tone="neutral">Cabai · disabled</Badge>
-          <span className="t-caption text-text-secondary">
-            Only Potatoes is active for this packhouse.
-          </span>
         </div>
       </Card>
     </div>

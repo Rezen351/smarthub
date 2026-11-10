@@ -8,6 +8,7 @@
 
 | Date | Activity | Status | Notes |
 |------|----------|--------|-------|
+| 2026-11-11 | Remove redundant Product Setup card from Admin Dashboard | ✅ | Removed static/dummy Product Setup card (with disabled Tomat/Cabai badges and placeholder copy) from `AdminDashboardHome.tsx` and cleaned unused Button import. Verified clean TypeScript build and rebuilt frontend container. |
 | 2026-11-11 | Build and start full Docker Compose stack | ✅ | Built updated container images and started all ecosystem services: PostgreSQL 17 (healthy), db-migrate (exited 0 with all migrations applied), Go REST backend (HTTP 200 health), React/Nginx frontend (:5173 HTTP 200), Modbus TCP scale simulator (:5020-:5022 with HTTP control :8088), pgAdmin (:5050), and Cloudflare Tunnel. Verified all endpoints responsive. |
 | 2026-11-11 | Add GitHub Actions CI workflow | ✅ | Configured multi-job GitHub Actions CI pipeline in `.github/workflows/ci.yml` covering Go backend (module verification, vet, unit tests, binary build), frontend (clean npm install, Vite production build, UI contract scripts), firmware (ESP32-S3 transmitter unit & regression tests, HX711 test contracts), and Docker Compose validation. |
 | 2026-11-11 | Build and run updated frontend | ✅ | Built the current frontend image and confirmed the Compose frontend service is running. Reception route returned HTTP 200; proxied API health reported `ok` with the database connected. `git diff --check` passed. |
