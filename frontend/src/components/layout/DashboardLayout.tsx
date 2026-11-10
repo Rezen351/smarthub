@@ -1,159 +1,309 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { useSessionContext } from '../../hooks/useSessionContext'
+import Icon, { type IconName } from '../shared/Icon'
 import Logo from '../shared/Logo'
+import Button from '../shared/Button'
+import ConfirmDialog from '../feedback/ConfirmDialog'
+import ContextBar from './ContextBar'
+import ConnectionBadge from './ConnectionBadge'
 
-const roleMenu: Record<string, { label: string; path: string }[]> = {
+interface MenuItem {
+  label: string
+  path: string
+  icon: IconName
+  end?: boolean
+}
+
+const roleMenu: Record<string, MenuItem[]> = {
   ADMIN: [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Users', path: '/dashboard/users' },
-    { label: 'Reports', path: '/dashboard/reports' },
-    { label: 'Settings', path: '/dashboard/settings' },
+    { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
+    { label: 'Station 1: Reception', path: '/dashboard/weighing', icon: 'scale' },
+    { label: 'Station 2: Sorting', path: '/dashboard/sorting', icon: 'sortir' },
+    { label: 'Station 3: Packaging', path: '/dashboard/packaging', icon: 'package' },
+    { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box' },
+    { label: 'Deliveries', path: '/dashboard/deliveries', icon: 'truck' },
+    { label: 'Users', path: '/dashboard/users', icon: 'users' },
+    { label: 'Reports', path: '/dashboard/reports', icon: 'reports' },
+    { label: 'Settings', path: '/dashboard/settings', icon: 'settings' },
   ],
-  WEIGHING_OPERATOR: [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Weighing', path: '/dashboard/weighing' },
-    { label: 'Pallets', path: '/dashboard/pallets' },
-  ],
-  SORTING_OPERATOR: [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Grading', path: '/dashboard/grading' },
-    { label: 'Labels', path: '/dashboard/labels' },
-  ],
-  WAREHOUSE_OPERATOR: [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Stock In', path: '/dashboard/stock-in' },
-    { label: 'Stock Out', path: '/dashboard/stock-out' },
-  ],
-  DELIVERY_OPERATOR: [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Packaging', path: '/dashboard/packaging' },
-    { label: 'Deliveries', path: '/dashboard/deliveries' },
+  OPERATOR: [
+    { label: 'Workstation Hub', path: '/dashboard', icon: 'dashboard', end: true },
+    { label: 'Station 1: Reception', path: '/dashboard/weighing', icon: 'scale' },
+    { label: 'Station 2: Sorting', path: '/dashboard/sorting', icon: 'sortir' },
+    { label: 'Station 3: Packaging', path: '/dashboard/packaging', icon: 'package' },
+    { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box' },
+    { label: 'Deliveries', path: '/dashboard/deliveries', icon: 'truck' },
+    { label: 'Settings', path: '/dashboard/settings', icon: 'settings' },
   ],
   FARMER: [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'My Deliveries', path: '/dashboard/my-deliveries' },
-    { label: 'Profile', path: '/dashboard/profile' },
-    { label: 'My QR', path: '/dashboard/traceability' },
+    { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
+    { label: 'My Deposits', path: '/dashboard/my-deliveries', icon: 'clipboard' },
+    { label: 'My Farmer QR', path: '/dashboard/farmer-qr', icon: 'qr' },
+    { label: 'Profile', path: '/dashboard/profile', icon: 'user' },
   ],
+}
+
+const roleLabel: Record<string, string> = {
+  ADMIN: 'System Admin',
+  OPERATOR: 'Plant Operator',
+  FARMER: 'Farmer',
 }
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth()
+  const { setOffline } = useSessionContext()
   const navigate = useNavigate()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const location = useLocation()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [logoutOpen, setLogoutOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
 
-  const handleLogout = () => {
+  const menu = user ? roleMenu[user.role] ?? [] : []
+  const currentPage =
+    menu.find((item) => (item.end ? location.pathname === item.path : location.pathname.startsWith(item.path))) ??
+    menu[0]
+
+  /* Real-time connection indicator (WebSocket layer is wired later) */
+  useEffect(() => {
+    const update = () => setOffline(!navigator.onLine)
+    update()
+    window.addEventListener('online', update)
+    window.addEventListener('offline', update)
+    return () => {
+      window.removeEventListener('online', update)
+      window.removeEventListener('offline', update)
+    }
+  }, [setOffline])
+
+  /* Close the drawer whenever the route changes */
+  useEffect(() => {
+    setMenuOpen(false)
+    setUserMenuOpen(false)
+  }, [location.pathname])
+
+  /* Click-outside for the user menu */
+  useEffect(() => {
+    if (!userMenuOpen) return
+    const onClick = (event: MouseEvent) => {
+      if (!userMenuRef.current?.contains(event.target as Node)) setUserMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [userMenuOpen])
+
+  const confirmLogout = () => {
+    setLogoutOpen(false)
     logout()
     navigate('/login')
   }
 
-  const menu = user ? roleMenu[user.role] || [] : []
+  const navLinks = (
+        <nav className="sidebar-nav" aria-label="Main navigation">
+          <p className="sidebar-section">{user ? roleLabel[user.role] ?? 'Menu' : 'Menu'}</p>
+          {menu.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.end}
+              className={({ isActive }) => `sidebar-link ${isActive ? 'is-active' : ''}`}
+            >
+              <span className="sidebar-link-icon">
+                <Icon name={item.icon} size={17} />
+              </span>
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+  )
+
+  const userCard = (
+    <div className="sidebar-footer stack-sm">
+      <div className="flex items-center gap-2">
+        <span className="avatar">{user?.name?.charAt(0)?.toUpperCase() ?? 'U'}</span>
+        <div className="min-w-0 flex-1">
+          <p className="t-small font-semibold text-truncate">{user?.name}</p>
+          <p className="t-caption text-text-secondary text-truncate">
+            {user ? roleLabel[user.role] ?? user.role : ''}
+          </p>
+        </div>
+      </div>
+      <Button variant="outline" size="sm" icon="logout" block onClick={() => setLogoutOpen(true)}>
+        Log Out
+      </Button>
+      <Link to="/traceability" className="t-caption text-text-secondary hover:text-text flex items-center gap-1">
+        <Icon name="search" size={12} />
+        Public traceability
+      </Link>
+      <div className="pt-2 border-t border-border flex flex-col gap-0.5 text-text-light font-mono text-[11px]">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-text">ENYX-ENTERPRISE</span>
+          <span className="bg-bg-alt px-1.5 py-0.5 rounded-none text-[9px] font-mono tracking-wider">ENTERPRISE</span>
+        </div>
+        <span className="text-[10px]">Traceability System v1.0.0</span>
+      </div>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-surface border-b border-border flex items-center justify-between px-4 z-50">
-        <Logo className="h-8 w-auto" />
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 text-text hover:text-text-secondary transition-colors"
-          aria-label="Toggle menu"
-        >
-          {mobileMenuOpen ? (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          ) : (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          )}
-        </button>
+    <div className="app-shell">
+      {/* ── Sidebar (Persistent on desktop, drawer on mobile) ── */}
+      <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`} aria-label="Sidebar">
+        <div className="sidebar-brand">
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-3 text-inherit group"
+            style={{ textDecoration: 'none' }}
+            aria-label="ENYX-ENTERPRISE home"
+          >
+            <Logo className="h-8 w-auto" markOnly />
+            <div className="min-w-0">
+              <div className="font-display text-xl leading-none tracking-wider text-text flex items-center gap-1.5">
+                ENYX-ENTERPRISE
+              </div>
+              <div className="font-mono-custom text-[9px] text-text-light tracking-[0.22em] uppercase mt-0.5 hidden xs:block sm:block">
+                <span className="hidden sm:inline">TRACEABILITY SYSTEM</span>
+                <span className="sm:hidden">TRACE</span>
+              </div>
+            </div>
+          </Link>
+        </div>
+        <div className="px-3 pt-2 pb-1">
+          <div className="flex items-center gap-2 font-mono text-[10px] text-emerald-900 bg-emerald-50/80 border border-emerald-200/80 px-2.5 py-1 rounded-none">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#229856] animate-pulse"></span>
+            <span className="tracking-wider">SYSTEM ONLINE</span>
+          </div>
+        </div>
+        {navLinks}
+        {userCard}
+      </aside>
+      {menuOpen && <div className="sidebar-overlay hide-desktop" onClick={() => setMenuOpen(false)} />}
+
+      {/* ── Main content column ── */}
+      <div className="app-main-column">
+        {/* ── Navbar ── */}
+        <header className="navbar">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="hide-desktop p-2 min-h-[40px] text-foreground"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+          >
+            <Icon name={menuOpen ? 'close' : 'menu'} size={20} />
+          </Button>
+
+          {/* On mobile: show product brand in navbar because sidebar is off-canvas */}
+          <Link
+            to="/dashboard"
+            className="hide-desktop flex items-center gap-2 text-inherit group min-w-0"
+            style={{ textDecoration: 'none' }}
+            aria-label="ENYX-ENTERPRISE home"
+          >
+            <Logo className="h-6 w-auto shrink-0" markOnly />
+            <div className="min-w-0">
+              <div className="font-display text-sm leading-none tracking-wider text-text truncate">
+                ENYX-ENTERPRISE
+              </div>
+              <div className="font-mono-custom text-[7.5px] text-text-light tracking-[0.16em] uppercase truncate">
+                TRACEABILITY
+              </div>
+            </div>
+          </Link>
+
+          {/* On desktop: show only current page title (brand is in sidebar) */}
+          <span className="navbar-title hide-mobile font-semibold text-base text-text">
+            {currentPage?.label ?? 'Dashboard'}
+          </span>
+
+          <div className="navbar-spacer" />
+
+          <ConnectionBadge state={navigator.onLine ? 'connected' : 'disconnected'} label="Server" />
+
+          <div className="relative" ref={userMenuRef}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-1.5 min-h-[40px] gap-1.5"
+              onClick={() => setUserMenuOpen((open) => !open)}
+              aria-haspopup="menu"
+              aria-expanded={userMenuOpen}
+              aria-label="Account menu"
+            >
+              <span className="avatar avatar-sm">{user?.name?.charAt(0)?.toUpperCase() ?? 'U'}</span>
+              <Icon name="chevron-down" size={14} />
+            </Button>
+            {userMenuOpen && (
+              <div
+                className="rounded-lg border border-border bg-card p-3 shadow-lg"
+                role="menu"
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 'calc(100% + 6px)',
+                  width: 220,
+                  zIndex: 80,
+                }}
+              >
+                <div className="stack stack-xs" style={{ marginBottom: 10 }}>
+                  <p className="t-small font-semibold">{user?.name}</p>
+                  <p className="t-caption text-text-secondary">{user?.email}</p>
+                </div>
+                <div className="divider" style={{ margin: '8px 0' }} />
+                <div className="stack-xs">
+                  {user?.role === 'FARMER' && (
+                    <Link to="/dashboard/profile" className="sidebar-link" role="menuitem">
+                      <span className="sidebar-link-icon">
+                        <Icon name="user" size={16} />
+                      </span>
+                      Profile
+                    </Link>
+                  )}
+                  <Link to="/traceability" className="sidebar-link" role="menuitem">
+                    <span className="sidebar-link-icon">
+                      <Icon name="search" size={16} />
+                    </span>
+                    Public traceability
+                  </Link>
+                  <button
+                    type="button"
+                    className="sidebar-link"
+                    role="menuitem"
+                    style={{ color: 'var(--color-danger)', width: '100%', background: 'none', border: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
+                    onClick={() => {
+                      setUserMenuOpen(false)
+                      setLogoutOpen(true)
+                    }}
+                  >
+                    <span className="sidebar-link-icon">
+                      <Icon name="logout" size={16} />
+                    </span>
+                    Log Out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </header>
+
+        <ContextBar />
+        <main className="app-main">
+          <Outlet />
+        </main>
       </div>
 
-      {/* Sidebar */}
-      <aside className={`
-        fixed inset-y-0 left-0 z-40 w-[240px] bg-background border-r border-border
-        transform transition-transform duration-200 ease-in-out
-        lg:translate-x-0 lg:static lg:flex lg:flex-col
-        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-center h-16 border-b border-border">
-            <Logo className="h-8 w-auto" />
-          </div>
-
-          {/* Menu Items */}
-          <nav className="flex-1 overflow-y-auto py-4 px-3">
-            {menu.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={() => setMobileMenuOpen(false)}
-                className={({ isActive }) =>
-                  `block px-3 py-2.5 mb-1 rounded text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-background text-text font-semibold'
-                      : 'text-text-secondary hover:bg-background hover:text-text'
-                  }`
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-
-          {/* Bottom Section */}
-          <div className="border-t border-border p-3">
-            <div className="mb-2 px-3 py-2">
-              <div className="text-sm font-medium text-text">{user?.name}</div>
-              <div className="text-xs text-text-secondary">{user?.role.replace('_', ' ')}</div>
-            </div>
-            <NavLink
-              to="/dashboard/profile"
-              onClick={() => setMobileMenuOpen(false)}
-              className={({ isActive }) =>
-                `block px-3 py-2.5 mb-1 rounded text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-background text-text font-semibold'
-                    : 'text-text-secondary hover:bg-background hover:text-text'
-                }`
-              }
-            >
-              Account
-            </NavLink>
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false)
-                handleLogout()
-              }}
-              className="w-full text-left px-3 py-2.5 rounded text-sm font-medium text-danger hover:bg-background transition-colors"
-            >
-              Log Out
-            </button>
-            <div className="text-center px-3 py-3 text-xs text-text-light">
-              by Almuzky
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Mobile overlay */}
-      {mobileMenuOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/20 z-30"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Main Content */}
-      <main className="flex-1 min-w-0 overflow-y-auto pt-14 lg:pt-0">
-        <div className="p-4 sm:p-6 lg:p-8 max-w-4xl">
-          <Outlet />
-        </div>
-      </main>
+      <ConfirmDialog
+        open={logoutOpen}
+        tone="danger"
+        title="Log out?"
+        description="You will need to sign in again to continue working."
+        confirmLabel="Yes, Log Out"
+        onConfirm={confirmLogout}
+        onCancel={() => setLogoutOpen(false)}
+      />
     </div>
   )
 }

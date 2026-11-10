@@ -1,9 +1,7 @@
 # Weight Transmitter — Firmware Design Document
 
-> **E-Tani Smart Hub · Firmware v1.1**
-> Target: ESP32-WROOM-32 (dual-core Xtensa LX6, 240 MHz, 520 KB SRAM, 4 MB Flash)
-> Also compatible with: ESP32-S3 (Xtensa LX7, 240 MHz, native USB, same GPIO map)
-> Also compatible with: ESP32-C3-MINI (single-core RISC-V, WiFi only, compact form factor)
+> **E-Tani Smart Hub · Firmware v1.7**
+> Target: ESP32-S3 (dual-core Xtensa LX7, 240 MHz, native USB)
 > Build system: PlatformIO · framework-arduinoespressif32 6.6.0 · RTOS: FreeRTOS 10.4
 
 ---
@@ -13,11 +11,12 @@
 The **Weight Transmitter** is an autonomous edge device that:
 
 1. Acquires mass data from a strain-gauge load cell via an **HX711** 24-bit ADC.
-2. Publishes real-time weight over **Modbus TCP** (acting as a Modbus server on port 502).
-3. Provides a **captive-portal web UI** for device configuration and calibration — always reachable regardless of upstream network state.
+2. Publishes real-time weight over **Modbus TCP** on both **WiFi** and **Ethernet** simultaneously (dual-transport), acting as a Modbus server on port 502.
+3. Provides a **captive-portal web UI** for device configuration and calibration — reachable **only via WiFi Soft-AP** (`192.168.4.1`), regardless of Ethernet or STA state.
 4. Runs in **dual WiFi mode** simultaneously: Soft-AP (configuration hotspot) + STA uplink (user network), both always-on.
+5. Uses **W5500 Ethernet** for Modbus TCP only; portal access and WiFi STA remain independent.
 
-The design is intentionally **protocol-agnostic at the top level**: the `SharedState` bus decouples sensor acquisition from transport, allowing additional protocols (MQTT, Modbus RTU, OPC-UA, etc.) to be added as independent modules in future iterations without touching the sensor or portal code.
+The design is intentionally **protocol-agnostic at the top level**: the `SharedState` bus decouples sensor acquisition from transport, allowing additional protocols (Modbus RTU, OPC-UA, etc.) to be added as independent modules in future iterations without touching the sensor or portal code.
 
 ---
 
@@ -27,33 +26,154 @@ The design is intentionally **protocol-agnostic at the top level**: the `SharedS
 
 | Component | Part | Notes |
 |-----------|------|-------|
-| MCU | ESP32-WROOM-32 (DevKit V1) | Dual-core, built-in WiFi/BT |
-| MCU | ESP32-S3 DevKitC-1 (ESP32 v4) | Drop-in replacement, same GPIO map |
-| MCU | ESP32-C3-MINI (DevKitM-1) | Single-core RISC-V, WiFi only, compact |
-| MCU | ESP32-WROOM-32U | U.FL antenna variant, same as DevKit V1 |
+| MCU | ESP32-S3 DevKitC-1 | Dual-core Xtensa LX7, 240 MHz, native USB, WiFi/BT |
+| MCU | ESP32-WROOM-32 (DevKit V1) | Dual-core Xtensa LX6, 240 MHz, WiFi/BT, alternative variant |
 | Load cell ADC | HX711 module | 24-bit sigma-delta, 10/80 Hz |
 | Load cell | Any strain-gauge (1-200 kg range) | 4-wire Wheatstone bridge |
 | Power supply | 5 V / 1 A USB or regulated | HX711 may use 3.3 V or 5 V VCC |
 
+### 2.1 Minimum Bill of Materials
+
+| Component | Part | Notes |
+|-----------|------|-------|
+| MCU | ESP32-S3 DevKitC-1 | Dual-core Xtensa LX7, 240 MHz, native USB, WiFi/BT |
+| MCU | ESP32-WROOM-32 (DevKit V1) | Dual-core Xtensa LX6, 240 MHz, WiFi/BT, alternative variant |
+| Load cell ADC | HX711 module | 24-bit sigma-delta, 10/80 Hz |
+| Load cell | Any strain-gauge (1-200 kg range) | 4-wire Wheatstone bridge |
+| Ethernet | W5500 module (hardware SPI) | Modbus TCP over Ethernet |
+| Display | GN/TA/AiP6932 7-segment display | Weight, unit price, and total price |
+| Power supply | 5 V / 1 A USB or regulated | HX711 may use 3.3 V or 5 V VCC |
+
 ### 2.2 Pin Assignment
 
+#### ESP32-S3 DevKitC-1 N16R8
+
+This is the canonical assignment for the N16R8 module. GPIO 26–37 are
+reserved by Octal flash/PSRAM and are not application GPIO. GPIO 20 is kept free for native USB. GPIO 19 is assigned to the validated
+6932 DIN wiring. GPIO 0/3/45/46 are kept free for boot strapping,
+and GPIO 43/44 remain available for the UART0 console.
+
 ```
-ESP32 GPIO  | Signal        | Connected to
+GPIO       Signal             Connected to
+---------- ------------------ -------------------------------------
+GPIO 12    W5500_SCK          W5500 SPI clock
+GPIO 13    W5500_MISO         W5500 SPI MISO
+GPIO 11    W5500_MOSI         W5500 SPI MOSI
+GPIO 10    W5500_CS           W5500 chip select
+GPIO 9     W5500_RST          W5500 hardware reset
+GPIO 14    LOADCELL_DOUT      HX711 DT / DOUT
+GPIO 15    LOADCELL_SCK       HX711 PD_SCK
+GPIO 16    OLED_SDA           SSD1306 SDA
+GPIO 17    OLED_SCL           SSD1306 SCL
+GPIO 1     MATRIX_ROW_1       Button matrix row 1
+GPIO 2     MATRIX_ROW_2       Button matrix row 2
+GPIO 4     MATRIX_ROW_3       Button matrix row 3
+GPIO 5     MATRIX_ROW_4       Button matrix row 4
+GPIO 6     MATRIX_COL_1       Button matrix column 1
+GPIO 7     MATRIX_COL_2       Button matrix column 2
+GPIO 8     MATRIX_COL_3       Button matrix column 3
+GPIO 39    MATRIX_COL_4       Button matrix column 4 (JTAG-capable)
+GPIO 40    MATRIX_COL_5       Button matrix column 5 (JTAG-capable)
+GPIO 38    STATUS_RGB_LED     Built-in addressable RGB LED (single data pin)
+GPIO 18    DISPLAY6932_CLK    GN/TA/AiP6932 CLK, shared
+GPIO 19    DISPLAY6932_DIN    GN/TA/AiP6932 DIN, shared
+GPIO 21    DISPLAY6932_STB    GN/TA/AiP6932 STB, shared by both chips
+GPIO 47    BUZZER             Passive piezo buzzer (LEDC PWM, ~2.7 kHz)
+```
+
+Power the ESP32-S3 from a stable 5 V rail. Power the W5500 and 6932
+controller/display rail according to their modules, but keep all grounds
+common. The ESP32 GPIO signals must remain at 3.3 V logic; the 6932 inputs
+must use a level shifter if their input high threshold requires it.
+
+GPIO 39/40 are usable during normal firmware execution, but an external JTAG
+debugger cannot use them simultaneously. GPIO 38 is assigned exclusively to
+the DevKitC-1 built-in addressable RGB LED. Do not connect an external LED to
+this pin and do not drive it as a normal single-color LED; use an addressable
+RGB LED driver with the correct one-wire timing.
+
+The selected N16R8 DevKitC-1 variant must have its built-in RGB LED data line
+on GPIO 38. Some ESP32-S3 DevKit revisions use GPIO 48 instead, so verify the
+silkscreen/schematic before assembly. If the physical board uses GPIO 48,
+change both `STATUS_RGB_LED_PIN` in `src/config.h` and this table together.
+
+#### N16R8 reservation rules
+
+| GPIO | Status | Reason |
+|------|--------|--------|
+| 0, 3, 45, 46 | Reserved | Boot strapping |
+| 20 | Reserved | Native USB D+ |
+| 26–37 | Forbidden | Octal flash/PSRAM |
+| 38 | Assigned | Built-in addressable RGB LED data line |
+| 39–42 | Assigned with caution | JTAG-capable; 39/40 used by matrix |
+| 43, 44 | Reserved | UART0 console/programming |
+| 47 | Assigned | Passive piezo buzzer driven by LEDC PWM |
+| 48 | Reserved | Keep free for board LED/debug variants |
+
+#### ESP32 / ESP32-DOIT-V1 (esp32dev)
+
+```
+ESP32 GPIO | Signal        | Connected to
 -----------+---------------+-------------------------------
-GPIO 2      | LOADCELL_DOUT | HX711 DT  (data out)
-GPIO 4      | LOADCELL_SCK  | HX711 PD_SCK (clock)
-3.3 V       | HX711 VCC     | HX711 power (or 5 V)
-GND         | HX711 GND     | Common ground
-GPIO -1     | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset button)
+GPIO 14    | W5500_SCK     | W5500 SPI clock
+GPIO 13    | W5500_MISO    | W5500 SPI MISO
+GPIO 12    | W5500_MOSI    | W5500 SPI MOSI
+GPIO 15    | W5500_CS      | W5500 SPI chip select
+GPIO 16    | W5500_RST     | W5500 hardware reset
+GPIO 4     | LOADCELL_DOUT | HX711 DT  (data out)
+GPIO 5     | LOADCELL_SCK  | HX711 PD_SCK (clock)
+GPIO 21    | OLED_SDA      | SSD1306 SDA (I2C)
+GPIO 22    | OLED_SCL      | SSD1306 SCL (I2C)
 ```
+
+#### Bus topology
+
+##### ESP32-S3 N16R8
+
+| Bus | Peripheral | GPIO | Mode | Notes |
+|-----|-----------|------|------|-------|
+| Hardware SPI | W5500 | 12, 11, 13, 10, 9 | SPI | See pin assignment per board above |
+| Software GPIO | HX711 | 14, 15 | Bit-banged | Uses `HX711` library; does **not** use SPI peripheral |
+| I2C (Wire) | SSD1306 | 16, 17 | I2C | `Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN)` |
+| GPIO | Button matrix | rows 1, 2, 4, 5; columns 6, 7, 8, 39, 40 | 4x5 scan |
+| GPIO | GN/TA/AiP6932 | CLK 18, DIN 19, STB 21 | 3-wire serial, shared STB |
+| GPIO | Built-in RGB LED | 38 | Addressable one-wire data output |
+| LEDC | Piezo buzzer | 47 | PWM tone | Patterns only, no continuous tone |
+
+##### ESP32 / ESP32-DOIT-V1 (esp32dev)
+
+| Bus | Peripheral | GPIO | Mode | Notes |
+|-----|-----------|------|------|-------|
+| Hardware SPI | W5500 | 14, 12, 13, 15, 16 | SPI | See pin assignment per board above |
+| Software GPIO | HX711 | 4, 5 | Bit-banged | Uses `HX711` library; does **not** use SPI peripheral |
+| I2C (Wire) | SSD1306 | 21, 22 | I2C | `Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN)` |
+
+#### Pin conflict prevention
+
+- **ESP32-S3 N16R8**: W5500 SPI is isolated from HX711, OLED, matrix,
+  built-in RGB LED, and 6932. The only shared-function caveat is JTAG on
+  GPIO 39/40; GPIO 38 is reserved for the onboard RGB LED. GPIO 19 is
+  intentionally assigned to the validated 6932 DIN wiring.
+- **ESP32 / ESP32-DOIT-V1**: W5500 uses GPIO 14/13/12/15/16. HX711 moved to GPIO 4/5 and OLED moved to GPIO 21/22 to avoid SPI/RST conflicts.
+- Do **not** move HX711 to GPIO 11/12/13 on ESP32-S3 without also updating W5500 SPI pins.
+- Do **not** use GPIO 26–37 on N16R8; these pins belong to flash/PSRAM.
+- Do **not** connect the 6932 VDD or LED supply to an ESP32 GPIO.
+- Do **not** add an external status LED to GPIO 38; it is reserved for the
+  onboard addressable RGB LED.
+
+#### Electrical notes
+
+- HX711 VCC can be 3.3 V or 5 V depending on module variant; check module silkscreen.
+- W5500 CS must be pulled low during SPI transactions; the Arduino Ethernet library handles this via `Ethernet.init(W5500_CS_PIN)`.
+- W5500 RST is driven actively low for 10 ms during init to guarantee a clean hardware reset.
+- OLED reset pin is `-1` (unused) because the SSD1306 is held in reset by default and initialized via I2C address `0x3C`.
 
 > **Note:** `HX711_FAST_PROCESSOR = true` is mandatory for ESP32 because the core can
 > toggle GPIO in < 0.4 us; without this flag the library inserts a software delay that
 > breaks timing on fast MCUs.
-> 
-> **ESP32-S3 note:** GPIO 2 and GPIO 4 are valid on ESP32-S3 DevKitC-1; no pin changes needed.
-> 
-> **ESP32-C3 note:** GPIO 2 and GPIO 4 are valid on ESP32-C3-DevKitM-1; no pin changes needed.
+>
+> HX711 is bit-banged via the HX711 library and does not use the SPI peripheral, so
+> the W5500 hardware-SPI pins are safe from HX711 contention.
 
 ---
 
@@ -67,6 +187,9 @@ GPIO -1     | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset butt
 | **Deterministic sensor loop** | Scale task runs on core 0 with a fixed 30 ms tick, isolated from all networking latency. |
 | **Always-reachable portal** | Soft-AP + DNS never stop regardless of STA status. Configuration is possible even without an upstream router. |
 | **Robust persistence** | NVS writes are batched by category and serialised by a recursive mutex (`SettingsStore`); calibration survives power cycles; WiFi creds are separate from calibration data so a factory WiFi reset cannot erase calibration. |
+| **Structured logging** | All debug/error paths flow through compile-time `LOG_LEVEL` macros in `Logger.h`, replacing ad-hoc `Serial.print*` calls with level-gated output. |
+| **Non-blocking transports** | Ethernet DHCP retry, WiFi reconnect, and transport switches are driven by `millis()`-based state machines with WDT feeding, avoiding blind `delay()` loops. |
+| **Bounded allocations** | JSON responses use `snprintf` paths with fixed buffers; SPIFFS-backed offline buffering is capped; deep-sleep hooks are compile-time opt-in. |
 | **Zero-placeholder rule** | All code is complete and functional; no TODO stubs shipped in production. |
 
 ### 3.2 Module Dependency Graph
@@ -76,17 +199,19 @@ GPIO -1     | FORCE_AP_PIN  | (disabled; set a GPIO to enable factory-reset butt
 |                          main.ino                                 |
 |  (boot, FreeRTOS task creation, singleton wiring)                 |
 +------+----------+-------------+----------------+-----------------+
-       |          |             |                |
-   config.h   Settings      SharedState      (future: MQTT, RTU...)
-   (compile   Store         (mutex IPC)
-   constants) (NVS/Prefs)       |
-       |          |         +---+------------------------+
-   ScaleSensor    |         |                            |
-   (core 0)       +---------+  WifiManager       ModbusServer
-                             (core 1)              (core 1)
-                                  |
-                             WebPortal
-                             (core 1, HTTP + DNS)
+        |          |             |                |
+    config.h   Logger      Settings      (future: RTU...)
+    (compile   (level      Store         (mutex IPC)
+    constants) gated       (NVS/Prefs)       |
+    DeepSleep   output)         |         +---+------------------------+
+    OfflineBuffer)     |         |                            |
+        |          |         |                            |
+    ScaleSensor    |         +---------+  WifiManager       ModbusServer
+    Transport.h    |                   (core 1)              (core 1)
+    (core 0)       +----------------------------------+
+                                                      |
+                                                 WebPortal
+                                                 (core 1, HTTP + DNS)
 ```
 
 ### 3.3 FreeRTOS Task Layout
@@ -97,13 +222,15 @@ The ESP32 WROOM-32 has two Xtensa LX6 cores. Tasks are pinned to avoid WiFi/sens
 Core 0 ---------------------------------------------------------------
   Task: "scale"   Priority 2   Stack 4096 B
   |   ScaleSensor::loop()  every 30 ms
-  |   HX711 read -> EMA filter -> SharedState::setSnapshot()
+  |   HX711 read -> median-of-5 -> adaptive EMA -> stability detector
+  |            -> SharedState::setSnapshot()
   +-- Consume commands from SharedState (tare, calibrate, reset...)
+  +-- DeepSleep::maybeSleep() when compile-time deep-sleep is enabled
 
 Core 1 ---------------------------------------------------------------
   Task: "net"     Priority 2   Stack 8192 B
   |   WebPortal::handleClient()    HTTP + DNS per iteration
-  |   WifiManager::loop()          STA reconnect supervision
+  |   WifiManager::loop()          STA reconnect supervision + OfflineBuffer drain
   +-- ModbusServer::loop()         every 100 ms (MODBUS_POLL_MS)
         +-- reads SharedState::getSnapshot() -> updates Holding Regs
 
@@ -112,12 +239,9 @@ Arduino loop() -------------------------------------------------------
   All work is inside the two pinned tasks above.
 ```
 
-**Single-core chips (ESP32-C3, ESP32-S3):** Both tasks are pinned to core 0. The scheduler time-slices them. This is acceptable because:
-- Scale task runs every 30 ms with minimal work
-- Network task is mostly idle (HTTP/DNS/Modbus are event-driven)
-- Mutex-protected SharedState prevents data races
-
 **Why two cores?** The HX711 requires precise clock timing (<= 1 us between pulses). Placing the HX711 driver on a core isolated from WiFi interrupt jitter prevents data corruption and missed samples.
+
+On ESP32-S3, true dual-core pinning is used: scale on core 0, network on core 1. On ESP32, both tasks run on core 0 with time-slicing.
 
 ### 3.4 NVS access is serialised across cores
 
@@ -150,12 +274,18 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 
 | Constant | Default | Purpose |
 |----------|---------|---------|
-| `LOADCELL_DOUT_PIN` | 2 | HX711 data pin |
-| `LOADCELL_SCK_PIN` | 4 | HX711 clock pin |
+| `LOADCELL_DOUT_PIN` | 14 | HX711 data pin |
+| `LOADCELL_SCK_PIN` | 15 | HX711 clock pin |
 | `HX711_FAST_PROCESSOR` | true | Removes software delay for ESP32 |
 | `HX711_READS` | 10 | Samples averaged per raw reading |
 | `SCALE_SAMPLE_MS` | 30 | Sensor task period (ms) |
-| `SCALE_ALPHA` | 0.35 | EMA low-pass filter coefficient |
+| `SCALE_MEDIAN_WINDOW` | 5 | Samples used to reject isolated spikes |
+| `SCALE_FILTER_WINDOW` | 10 | Filtered samples used for stability range |
+| `SCALE_SLOW_ALPHA` | 0.10 | EMA coefficient while the load is stable |
+| `SCALE_FAST_ALPHA` | 0.60 | EMA coefficient while the load changes |
+| `SCALE_CHANGE_THRESHOLD_G` | 200 | Change in grams that selects fast EMA |
+| `SCALE_STABILITY_RANGE_G` | 10 | Maximum recent range considered stable |
+| `SCALE_STABILITY_HOLD_MS` | 1000 | Required stable duration |
 | `AP_SSID_PREFIX` | `"ENYX-SMARTHUB-"` | Soft-AP SSID prefix (+ last 3 bytes of MAC) |
 | `AP_SSID_PASSWORD` | `""` | Empty = open AP (recommended for captive portal) |
 | `AP_CHANNEL` | 6 | 2.4 GHz channel for the AP |
@@ -170,7 +300,12 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 | `FORCE_AP_PIN` | -1 | GPIO for force-AP button (-1 = disabled) |
 | `FORCE_AP_HOLD_MS` | 3000 | Hold duration to trigger force-AP (ms) |
 | `PREF_NAMESPACE` | `"scale"` | NVS namespace |
-| `FW_VERSION` | `0x0101` | Major.Minor encoded (1.1) |
+| `FW_VERSION` | `0x0107` | Major.Minor encoded (1.7) |
+| `KEYPAD_LONG_PRESS_MS` | 1500 | `M1`–`M3` hold duration that saves a preset |
+| `SCALE_ZERO_LAMP_BAND_G` | 20.0 | Median-weight band that lights the ZERO lamp |
+| `NET_INFO_PAGE1_MS` | 1200 | M4 page 1 (mode + link status) duration |
+| `NET_INFO_PAGE2_MS` | 2800 | M4 page 2 (IP address) duration |
+| `DEEP_SLEEP_ENABLED` | `0` | Compile-time deep-sleep opt-in for battery/solar deployments |
 
 ---
 
@@ -206,7 +341,110 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 
 ---
 
-### 4.3 `SharedState` — Inter-Core IPC
+### 4.2 `Logger` — Compile-Time Logging
+
+**Files:** [`Logger.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/Logger.h) / [`Logger.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/Logger.cpp)
+
+All firmware debug/error output is routed through level-gated macros instead of ad-hoc `Serial.print*` calls. The log level is selected at compile time via `LOG_LEVEL`:
+
+| Macro | Level | Default enabled |
+|-------|-------|-----------------|
+| `LOG_DEBUG(fmt, ...)` | 4 | No |
+| `LOG_INFO(fmt, ...)` | 3 | Yes |
+| `LOG_WARN(fmt, ...)` | 2 | Yes |
+| `LOG_ERROR(fmt, ...)` | 1 | Yes |
+
+Setting `LOG_LEVEL=LOG_LEVEL_ERROR` strips all lower-severity output at compile time, reducing flash usage and CPU cycles on the network task. `Logger::begin()` initialises the serial port; all macros delegate to `Serial.printf` with a consistent `[domain]` prefix.
+
+---
+
+### 4.3 `TransportState` — Minimal Transport FSM
+
+**Files:** [`Transport.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/Transport.h)
+
+Shared `TransportState` enum used by `WifiManager`, `EthernetManager`, and `ModbusServer`:
+
+| State | Meaning |
+|-------|---------|
+| `WiFi` | WiFi AP+STA active; Modbus TCP over WiFi |
+| `Ethernet` | W5500 Ethernet active; WiFi STA disconnected |
+| `Switching` | Transition in progress; deferred apply from `loop()` |
+
+Transport changes are requested via `requestTransportMode(mode)` and applied on the next loop iteration, keeping HTTP handlers and ISR-safe code free of blocking radio calls.
+
+---
+
+### 4.4 `EthernetManager` — W5500 Non-Blocking DHCP
+
+**Files:** [`EthernetManager.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/EthernetManager.h) / [`EthernetManager.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/EthernetManager.cpp)
+
+The old implementation blocked inside `initEthernet()` with `delay(500)` until DHCP succeeded or 3 s elapsed. The new implementation uses an explicit `DhcpState` machine:
+
+| DhcpState | Behaviour |
+|-----------|-----------|
+| `Idle` | No Ethernet request pending |
+| `Attempting` | Calls `Ethernet.begin(mac)` on a `millis()`-based timer with exponential backoff: 500 ms → 1 s → 2 s → 4 s → 8 s |
+| `FallbackStatic` | After 6 failed attempts, falls back to the configured static IP |
+| `LinkWait` | Waits 1 s for the link to come up before declaring `active` |
+| `Complete` | Terminal state; `loop()` reports active |
+
+The WDT is fed on every DHCP attempt and during link wait, so a flaky W5500 link cannot trip the task watchdog. The outer `EthernetManager::loop()` also retains a 5 s retry timer for full re-initialisation if the link drops after becoming active.
+
+---
+
+### 4.5 `WifiManager` — WiFi Exponential Backoff
+
+**Files:** [`WifiManager.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/WifiManager.h) / [`WifiManager.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/WifiManager.cpp)
+
+STA reconnect uses a bounded exponential backoff instead of a fixed 5 s retry:
+
+| Event | Next reconnect delay |
+|-------|----------------------|
+| First disconnect after connect | 5 s (reset to baseline) |
+| 1st retry | 10 s |
+| 2nd retry | 30 s |
+| 3rd+ retry | 60 s |
+
+State transitions are logged once (`[wifi] state=sta-connected`, `[wifi] state=sta-disconnected`) using instance flags, avoiding log spam in the 5-second polling loop.
+
+---
+
+### 4.6 `OfflineBuffer` — SPIFFS Bounded Queue
+
+**Files:** [`OfflineBuffer.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/OfflineBuffer.h)
+
+A minimal JSON-lines buffer for deferred telemetry when the STA uplink is down:
+
+| Property | Value |
+|----------|-------|
+| Backing store | SPIFFS `/offline.jsonl` |
+| Max entries | 50 |
+| Max entry size | 200 bytes |
+| Append behaviour | Throttled to one entry every 5 s |
+| Drain behaviour | One entry popped per WiFi reconnect cycle |
+
+`WifiManager::loop()` appends a minimal timestamped payload when disconnected and drains the oldest entry once `staConnected()` becomes true. The queue is bounded so a long outage cannot exhaust flash.
+
+---
+
+### 4.7 `DeepSleep` — Optional Battery Mode
+
+**Files:** [`DeepSleep.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/DeepSleep.h)
+**Control:** `DEEP_SLEEP_ENABLED` in `config.h` (default `0`)
+
+When enabled, the scale task calls `DeepSleep::maybeSleep()` after each acquisition cycle. Hook points are provided for timer-based or HX711-data-ready wake-up. Default-disabled preserves existing always-on behaviour for wired deployments.
+
+---
+
+### 4.8 `WebPortal` — Bounded JSON Responses
+
+**Files:** [`WebPortal.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/WebPortal.h) / [`WebPortal.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/WebPortal.cpp)
+
+High-traffic GET endpoints use `sendJsonBounded()` with a 512-byte stack buffer to avoid unbounded `String` concatenation. Calibration success responses also use bounded formatting.
+
+---
+
+### 4.9 `SharedState` — Inter-Core IPC
 
 **Files:** [`SharedState.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/SharedState.h) / [`SharedState.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/SharedState.cpp)
 **Mechanism:** Single FreeRTOS `SemaphoreHandle_t` mutex protecting a value-copy struct (`ScaleSnapshot`) and a one-deep command slot.
@@ -217,21 +455,28 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 |-------|------|-------------|
 | `rawSample` | counts | HX711 reading with tare offset subtracted |
 | `weightG` | grams | Instantaneous calibrated weight |
-| `stableWeightG` | grams | EMA-filtered weight |
+| `medianWeightG` | grams | Median-filtered weight with isolated spikes removed |
+| `stableWeightG` | grams | Adaptively EMA-filtered weight |
+| `noiseG` | grams | Range of recent filtered samples |
+| `stable` | bool | True after the stability range is held for one second |
+| `stableSampleCount` | samples | Samples accumulated while stable |
 | `offsetCounts` | counts | Current tare offset |
 | `countsPerKg` | counts/kg | Calibration slope |
 | `calibrated` | bool | Slope is valid |
+| `tareActive` | bool | A container tare is applied (RAM only) |
+| `atZero` | bool | Median weight is inside the center-of-zero lamp band |
 
 #### Command slot (written by network core, consumed by sensor core)
 
 | Command enum | Value | Argument |
 |-------------|-------|---------|
 | `CMD_NONE` | 0 | — |
-| `CMD_TARE` | 1 | — |
+| `CMD_TARE` | 1 | — (container tare, RAM only, calibration preserved) |
 | `CMD_CALIBRATE` | 2 | Known weight in kg (float) |
 | `CMD_CALIBRATE_MLR` | 5 | `countsPerKg` (float) + intercept (float) |
 | `CMD_RESET_SESSION` | 3 | — |
 | `CMD_FLUSH` | 4 | — |
+| `CMD_ZERO` | 8 | — (capture zero point, persisted, clears tare) |
 | `CMD_WIPE_WIFI` | 99 | — (triggers reboot) |
 
 The command slot is a single-producer / single-consumer queue of depth 1. The sensor task calls `takeCommand()` at the start of every loop; only one pending command can exist at a time, which is sufficient because portal interactions are human-paced.
@@ -246,7 +491,7 @@ The command slot is a single-producer / single-consumer queue of depth 1. The se
 #### Acquisition pipeline
 
 ```
-HX711 (24-bit ADC, GPIO 2/4)
+HX711 (24-bit ADC, GPIO 14/15)
        |
        v  get_value()            <- blocks <= 40 ms (hxPoll)
   raw counts (offset subtracted by HX711 library)
@@ -254,17 +499,30 @@ HX711 (24-bit ADC, GPIO 2/4)
        v  / countsPerKg * 1000
   instantaneous weight (grams)
        |
-       v  EMA: stableWeightG = alpha * inst + (1 - alpha) * prev
+       v  median-of-5: medianWeightG
+       |
+       v  adaptive EMA: slow alpha at rest, fast alpha on load changes
   stableWeightG (grams)
        |
-       +-- stable > 5 g  ->  accumulate session totals
+       v  recent range <= stability threshold for one second
+  stable flag
+       +-- stable and > 5 g  ->  accumulate session totals
        |
        +-- SharedState::setSnapshot()  (mutex-guarded)
 ```
 
-#### EMA filter
+#### Filtering and stability
 
-The exponential moving average (EMA) with alpha = 0.35 rejects noise from vibration while still tracking weight changes within ~5 sample periods (~150 ms).
+`HX711_READS` first averages samples inside the HX711 library. A median of
+five calibrated samples then rejects isolated spikes. The adaptive EMA uses
+`SCALE_SLOW_ALPHA` for quiet readings and `SCALE_FAST_ALPHA` when the median
+changes by at least `SCALE_CHANGE_THRESHOLD_G`, preserving responsiveness when
+a load is placed or removed. The last `SCALE_FILTER_WINDOW` filtered samples
+are measured as a range. The `stable` flag is asserted only after that range
+remains within `SCALE_STABILITY_RANGE_G` for `SCALE_STABILITY_HOLD_MS`.
+
+Display, Modbus stable-weight output, and session totals use
+`stableWeightG`. Raw and intermediate values remain available for diagnosis.
 
 | alpha | Effect |
 |-------|--------|
@@ -272,42 +530,71 @@ The exponential moving average (EMA) with alpha = 0.35 rejects noise from vibrat
 | 0.35 | **Default** — balanced for packaging-line use |
 | 0.70 | Fast response, noisier output |
 
+#### Two-offset zero/tare model
+
+The scale keeps two independent offsets so an operator can zero the empty
+platform and tare a container without ever touching the calibration:
+
+| Offset | Storage | Set by | Effect |
+|--------|---------|--------|--------|
+| Zero point | NVS (`calOff`) | `CMD_ZERO` | HX711 library offset; survives reboot |
+| Container tare | RAM only | `CMD_TARE` | Subtracted from every raw reading; cleared on reboot and by `CMD_ZERO` |
+
+`weight = (raw - intercept - tare) / countsPerKg * 1000` grams, where `raw` is
+the offset-subtracted HX711 reading. `snap.rawSample` keeps the zero-subtracted
+meaning (tare excluded) so Modbus and the portal still see the physical reading.
+`CMD_ZERO` persists the zero point through a full load-modify-save of the
+calibration struct (`saveCalibration()` writes `calOff` plus the calibration
+values), which is why it can never wipe `countsPerKg`/`calIntercept`.
+
 #### Two-point / Multi-Point calibration procedure
 
-1. **Tare** — Empty platform. Send `CMD_TARE`. HX711 library sets internal offset to current raw average. Offset persisted to NVS (calibration is invalidated until it is applied again).
-2. **Single-point calibrate** — Place known reference mass (kg) and call `POST /api/calibrate?kg=<mass>`. The portal computes `countsPerKg = rawCounts / knownKg` from the live snapshot, persists it with `SettingsStore::saveCalibrationValues()` and schedules a restart (~1.2 s).
-3. **Multi-point calibrate** — Capture 1–10 raw readings at different known masses via the web UI. The browser computes the average ratio `countsPerKg = mean(rawCounts / weightKg)` and calls `POST /api/calibrate/multi?slope=<countsPerKg>`. The portal persists the value (`calIntercept` is forced to `0`) and schedules a restart.
-4. **Restart** — Applying a calibration always restarts the ESP32. The coefficients are written to NVS *before* the reset, so the transmitter boots with the new calibration loaded, exactly like after a power cycle. The web UI shows a "Transmitter restarting" overlay, polls `/api/status` until the device answers again and then reloads the page.
+1. **Zero** — Empty platform. Send `CMD_ZERO` (keypad `ZERO`). The HX711 library sets its internal offset to the current raw average and the value is persisted to NVS. Calibration is preserved.
+2. **Tare** — With an empty container on the platform, send `CMD_TARE` (keypad `TARE`). A RAM-only tare offset is captured; nothing is written to NVS and the calibration stays valid.
+3. **Single-point calibrate** — Place known reference mass (kg) and call `POST /api/calibrate?kg=<mass>`. The portal computes `countsPerKg = rawCounts / knownKg` from the live snapshot, persists it with `SettingsStore::saveCalibrationValues()` and schedules a restart (~1.2 s).
+4. **Multi-point calibrate** — Capture 1–10 raw readings at different known masses via the web UI. The browser computes the average ratio `countsPerKg = mean(rawCounts / weightKg)` and calls `POST /api/calibrate/multi?slope=<countsPerKg>`. The portal persists the value (`calIntercept` is forced to `0`) and schedules a restart.
+5. **Restart** — Applying a calibration always restarts the ESP32. The coefficients are written to NVS *before* the reset, so the transmitter boots with the new calibration loaded, exactly like after a power cycle. The web UI shows a "Transmitter restarting" overlay, polls `/api/status` until the device answers again and then reloads the page.
 
 ---
 
-### 4.5 `WifiManager` — Dual WiFi Mode (AP + STA Always-On)
+### 4.5 `WifiManager` — WiFi + Ethernet Transport
 
 **Files:** [`WifiManager.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/WifiManager.h) / [`WifiManager.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/WifiManager.cpp)
 **Runs on:** Core 1, polled via `loop()`
 
 The ESP32 WiFi stack supports simultaneous **AP + STA** mode (`WIFI_AP_STA`). Both interfaces are always active; the AP for configuration, the STA for upstream connectivity.
 
+#### Transport modes
+
+| Mode | Value | Behavior |
+|------|-------|----------|
+| `TRANSPORT_WIFI` | 0 | Soft-AP + STA uplink, Modbus TCP over WiFi + Ethernet |
+| `TRANSPORT_ETHERNET` | 1 | Soft-AP only, Modbus TCP over Ethernet only |
+
+> **Note:** `transportMode` now only controls WiFi STA behavior. W5500 Ethernet is always initialized regardless of mode. Modbus TCP is served on **both WiFi and Ethernet simultaneously** in `TRANSPORT_WIFI` mode. In `TRANSPORT_ETHERNET` mode, WiFi STA is disconnected and Modbus TCP is served over Ethernet only. The captive portal remains WiFi Soft-AP only (`192.168.4.1`).
+
 #### Boot sequence
 
 ```
 begin(AppSettings)
   |
+  +-> WiFi.disconnect(false) + WiFi.setSleep(false)
+  +-> WiFi.mode(WIFI_AP) + softAP() with retry + AP IP wait loop
   +-> WiFi.mode(WIFI_AP_STA)
   |
-  +-> WiFi.softAP("ENYX-SMARTHUB-AABBCCDDEEFF", "", channel=6, hidden=0, maxConn=4)
-  |       AP is always started regardless of STA config.
-  |       SSID suffix = last 3 bytes of MAC address.
-  |
-  +-> startSta(AppSettings)
-        +- wifiMode == WIFI_MODE_PSK  -> WiFi.begin(ssid, password)
-        +- wifiMode == WIFI_MODE_ENT  -> esp_wifi_sta_wpa2_ent_set_*() + WiFi.begin(ssid)
-        +- wifiMode == WIFI_MODE_NONE -> STA not started (AP only)
+  +-> if transportMode == Ethernet:
+  |     beginEthernet() -> SPI.begin() + Ethernet.init() + Ethernet.begin()
+  |     WiFi.disconnect(false)
+  +-> else:
+  |     stopEthernet()
+  |     startSta(AppSettings)
 ```
 
 #### Reconnection loop (`loop()`)
 
-Called every network task iteration. Checks STA state every 5 s; if disconnected and a saved SSID exists, re-initiates connection without restarting the AP or portal.
+Called every network task iteration. Checks STA state every 5 s; if disconnected and a saved SSID exists, re-initiates connection without restarting the AP or portal. When Ethernet transport is active and the link is down, attempts to reinitialize W5500.
+
+STA reconnect uses exponential backoff: 5 s → 10 s → 30 s → 60 s. `OfflineBuffer` appends a minimal timestamped JSON line when disconnected and drains one entry per reconnect cycle when STA comes back.
 
 #### Deferred configuration apply (why `POST /api/wifi` answers immediately)
 
@@ -327,17 +614,26 @@ The delay is what makes "Apply Configuration" feel instant: the browser receives
 - **Non-blocking connect:** `WiFi.begin()` is non-blocking; `loop()` polls `WiFi.status()` and retries on `WL_DISCONNECTED` / `WL_CONNECTION_LOST`.
 - **No radio work inside HTTP handlers:** WiFi reconfiguration is queued and executed by the network task loop, so the web server never stalls mid-response.
 - **WPA2-Enterprise:** Uses `esp_wifi_sta_wpa2_ent_*` API for PEAP/MSCHAPv2. When the outer identity is left empty the inner username is used instead, and a missing inner username is rejected by the portal with a validation error.
+- **Transport FSM:** `TransportState::WiFi/Ethernet/Switching` replaces scattered boolean flags. `requestTransportMode()` defers the actual switch to `loop()`, keeping HTTP handlers and radio transitions deterministic.
+- **Exponential backoff:** WiFi reconnect delay grows 5 s → 10 s → 30 s → 60 s to avoid storming the AP during prolonged outages.
 
 ---
 
-### 4.6 `ModbusServer` — Modbus TCP Register Map
+### 4.6 `ModbusServer` — Dual-Transport Modbus TCP Register Map
 
-**Files:** [`ModbusServer.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/ModbusServer.h) / `ModbusServer.cpp`
-**Library:** `emelianov/modbus-esp8266 @ 4.1.0`
+**Files:** [`ModbusServer.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/ModbusServer.h) / [`ModbusServer.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/ModbusServer.cpp)
+**WiFi library:** `emelianov/modbus-esp8266 @ 4.1.0`
+**Ethernet library:** Arduino `Ethernet` library (vendored)
 **Runs on:** Core 1, polled every `MODBUS_POLL_MS` = 100 ms
 **Port:** 502 (TCP)
 
 The device acts as a **Modbus TCP server** (formerly "slave"). Holding registers (FC 03/06/16) are used. All multi-word values are **big-endian, high word first** (IEEE 754 float split into two 16-bit registers).
+
+Supports **dual-transport** simultaneously:
+- **WiFi**: `ModbusTCP` server from modbus-esp8266
+- **Ethernet**: Manual MBAP parser over `EthernetServer`/`EthernetClient` from Arduino Ethernet library
+
+Both transports share the same holding register bank. The WiFi path uses the modbus-esp8266 library (`_mb.task()`); the Ethernet path uses a custom parser (`processEthernetModbus()`) that decodes MBAP frames manually and reads/writes registers via `_mb.Hreg()`.
 
 #### Holding Register Map
 
@@ -377,6 +673,7 @@ Base address: **40001** (Modbus convention). Internal offset = Modbus address - 
 | 1 | `0x0002` | Scale calibrated (countsPerKg valid) |
 | 2 | `0x0004` | STA WiFi connected |
 | 3 | `0x0008` | Command pending (not yet consumed) |
+| 4 | `0x0010` | Weight is stable |
 
 #### Modbus command codes (write to register 40016)
 
@@ -425,8 +722,8 @@ When a device connects to the Soft-AP and opens any URL, DNS returns `192.168.4.
 | `GET` | `/` | — | Single-page UI (`/index.html` served from SPIFFS) |
 | `GET` | `/css/style.css` | — | Stylesheet served from SPIFFS |
 | `GET` | `/js/app.js` | — | Client application script served from SPIFFS |
-| `GET` | `/api/status` | — | JSON snapshot: weight, calibration, WiFi, uptime, session |
-| `GET` | `/api/config` | — | Return stored WiFi + calibration config as JSON |
+| `GET` | `/api/status` | — | JSON snapshot: weight, calibration, WiFi, transport, display, uptime, session |
+| `GET` | `/api/config` | — | Return stored WiFi + transport + display config as JSON |
 | `POST` | `/api/wifi` | Form: `mode`, `ssid`, `psk`, `eid`, `eusr`, `epwd` | Validate + save WiFi credentials, answer, then apply the uplink asynchronously |
 | `POST` | `/api/tare` | — | Issue `CMD_TARE` |
 | `POST` | `/api/calibrate` | Query: `kg=<float>` | Persist single-point `countsPerKg` to NVS + schedule restart |
@@ -434,6 +731,12 @@ When a device connects to the Soft-AP and opens any URL, DNS returns `192.168.4.
 | `POST` | `/api/totals/reset` | — | Issue `CMD_RESET_SESSION` |
 | `POST` | `/api/portal/force` | — | Forget uplink credentials + restart into soft-AP setup mode |
 | `POST` | `/api/factory` | — | Wipe all NVS + restart |
+| `GET` | `/api/transport` | — | Return current transport mode + status |
+| `POST` | `/api/transport` | Form: `mode` (0=WiFi, 1=Ethernet) | Switch transport mode |
+| `GET` | `/api/ethernet/config` | — | Return W5500 config (DHCP/static IP) |
+| `POST` | `/api/ethernet/config` | Form: `useDhcp`, `staticIp`, `staticGateway`, `staticSubnet`, `staticDns` | Save W5500 config + apply transport |
+| `GET` | `/api/display/config` | — | Return OLED enabled state |
+| `POST` | `/api/display/config` | Form: `enabled` (true/false) | Enable/disable OLED |
 | `GET` | `/*` | — | Captive redirect -> `/` (Android/iOS/Windows probes + unknown hosts) |
 
 #### Response formats
@@ -472,6 +775,8 @@ Errors carry a machine-readable code and an English message:
 {
   "weightKg": 1.234,
   "stableG": 1234.0,
+  "noiseG": 2.5,
+  "stable": true,
   "raw": 56789.0,
   "offset": 12345.0,
   "countsPerKg": 45678.0,
@@ -485,7 +790,7 @@ Errors carry a machine-readable code and an English message:
   "maxG": 2345.0,
   "modbusClients": 1,
   "uptime": 3600,
-  "fw": "1.2",
+  "fw": "1.4",
   "wifi": {
     "modeName": "WPA2-PSK",
     "mode": 1,
@@ -495,6 +800,20 @@ Errors carry a machine-readable code and an English message:
     "staIp": "192.168.1.100",
     "apSsid": "ENYX-SMARTHUB-AABBCCDDEEFF",
     "apIp": "192.168.4.1"
+  },
+  "transport": {
+    "mode": 0,
+    "modeName": "WiFi",
+    "ethernetActive": false,
+    "ethernetIp": "",
+    "w5500UseDhcp": true,
+    "w5500StaticIp": "192.168.1.100",
+    "w5500StaticGateway": "192.168.1.1",
+    "w5500StaticSubnet": "255.255.255.0",
+    "w5500StaticDns": "8.8.8.8"
+  },
+  "display": {
+    "oledEnabled": true
   }
 }
 ```
@@ -557,7 +876,7 @@ setup()
   +- gShared.begin()                     <- create mutex, zero state
   +- gScale.begin()                      <- HX711 power up, restore calibration
   +- gWifi.begin()                       <- start AP + STA (if configured)
-  +- gModbus.begin() + startServer()     <- register holding regs, listen :502
+  +- gModbus.begin() + startServer() + startEthernetServer()  <- register holding regs, listen :502 on WiFi and Ethernet
   +- gPortal.begin() + startDns()        <- bind HTTP :80, DNS wildcard
   |
   +- xTaskCreatePinnedToCore(networkTask, "net",   8192, core=1)
@@ -573,7 +892,7 @@ setup()
 ```
           +-------------- Core 0 ---------------+
           |                                      |
-          |  HX711 (GPIO 2, 4)                   |
+           |  HX711 (GPIO 14, 15)                |
           |    | 24-bit reading every 30 ms       |
           |    v                                  |
           |  ScaleSensor::loop()                  |
@@ -607,38 +926,264 @@ setup()
 ## 7. WiFi Dual-Mode Design
 
 ```
-                     +-------------------------------+
-                     |   ESP32 WiFi Stack            |
-                     |   mode: WIFI_AP_STA           |
-                     |                               |
-              +------+ Soft-AP (ALWAYS ON)           |
-               |      |  SSID: ENYX-SMARTHUB-AABBCCDDEEFF    |
-              |      |  IP:   192.168.4.1            |
-              |      |  Open network                 |
-              |      +-------------------------------+
-              |
-  Phone /     |   Configuration
-  Laptop      |   GET/POST /api/*
-              |   Captive portal auto-triggered
-              |
-              |      +-------------------------------+
-              +------+ STA uplink (when configured)  |
-                     |  WPA2-PSK or WPA2-Enterprise  |
-                     |  DHCP IP from router          |
-                     +---------------+---------------+
-                                     |
-                              LAN / industrial network
-                                     |
-                           Modbus TCP master
-                           (SCADA, PLC, Node-RED,
-                            E-Tani Smart Hub)
+                      +-------------------------------+
+                      |   ESP32 WiFi Stack            |
+                      |   mode: WIFI_AP_STA           |
+                      |                               |
+               +------+ Soft-AP (ALWAYS ON)           |
+                |      |  SSID: ENYX-SMARTHUB-AABBCCDDEEFF    |
+               |      |  IP:   192.168.4.1            |
+               |      |  Open network                 |
+               |      +-------------------------------+
+               |
+   Phone /     |   Configuration (WiFi-only)
+   Laptop      |   GET/POST /api/*
+               |   Captive portal auto-triggered
+               |
+               |      +-------------------------------+
+               +------+ STA uplink (when configured)  |
+                      |  WPA2-PSK or WPA2-Enterprise  |
+                      |  DHCP IP from router          |
+                      +---------------+---------------+
+                                      |
+                               LAN / industrial network
+                                      |
+                            Modbus TCP master
+                            (SCADA, PLC, Node-RED,
+                             E-Tani Smart Hub)
+
+   Ethernet (W5500) runs in parallel for Modbus TCP only:
+         +-------------------------------+
+         |   W5500 Ethernet              |
+         |   Modbus TCP server :502      |
+         +-------------------------------+
 ```
 
 Both interfaces run concurrently. The AP is **never disabled** — if STA credentials are wrong or the upstream router is offline, the operator can always connect to the AP, access the portal, and reconfigure without a hardware reset.
 
 ---
 
-## 8. NVS Layout
+## 8. Local keypad and 6932 display
+
+The GN/TA/AiP6932 7-segment path is the default for the ESP32-S3
+environment (`DISPLAY_USE_6932=1`). In that mode the OLED is not initialized
+or refreshed. The
+4x5 matrix is enabled automatically and is scanned from `networkTask`, where
+UI state and display writes remain on one core.
+
+The keypad layout is:
+
+```
+C    ADD  TARE ZERO M4
+9    6    3   STORE M3
+8    5    2   .    M2
+7    4    1   0    M1
+```
+
+`TARE` sends `CMD_TARE` to the scale task: it captures a RAM-only container
+tare while keeping the calibration valid. `ZERO` sends `CMD_ZERO`: it captures
+a new scale zero point with an empty platform, persists it to NVS, and clears
+any active tare. The two commands are independent because the scale keeps two
+offsets — the persisted zero point and the volatile tare — so taring a
+container never destroys the calibration. `C` clears the current unit-price
+entry and resets the accumulated money total (persisted). `ADD` calculates
+`weightKg * unitPrice` using integer cents and adds it to the accumulated
+total. `STORE` persists the total price and requests the existing session
+flush command. `M1`–`M3` recall a stored price preset on key release; a
+press-and-hold of `KEYPAD_LONG_PRESS_MS` (1.5 s) saves the current unit price
+into that preset slot instead, confirmed by the buzzer (save never touches the
+display). `M4` shows the two-page network info page below. Preset recall is
+deliberately deferred to the release event so a long-press save always reads
+the entry as typed instead of a freshly recalled value.
+
+The display uses fixed-point values to avoid floating-point currency drift:
+unit prices are stored in cents and the accumulated total is stored in
+unsigned 64-bit cents. The section format is:
+
+| Section | Grids | Value | Decimal-point grid |
+|---------|-------|-------|--------------------|
+| 1 | 0–4 | Weight in kg, two decimals | Grid 2 |
+| 2 | 5–9 | Unit price | Dynamic (see money rule) |
+| 3 | 10–15 | Accumulated price | Dynamic (see money rule) |
+
+Leading positions are blank. For example, weight `12.34` kg renders as ` 12.34`
+in section 1 and centi-value `1234` renders as `12.50` in a five-grid section.
+Decimal-point positions are explicit rather than enabling DP on every grid,
+which keeps numeric output readable. The weight is clamped at `999.99` kg.
+
+#### Money rule (sections 2 and 3)
+
+A value in cents renders with the most decimals that fit the section width,
+after rounding at each tier:
+
+1. A zero fraction renders as a plain integer when it fits
+   (`2500` cents -> `2500`, `30750` cents -> `30750`).
+2. Otherwise two decimals are tried (`1250` cents -> `12.50`),
+3. then one decimal (`123456` cents -> `1234.6` in five grids,
+   `12345.7` in six grids),
+4. and finally zero decimals clamped to the section width.
+
+Each tier rounds first and re-checks the width, so a rounding carry steps down
+instead of overflowing the section: `999996` cents is `9999.96`, which does not
+fit five grids, rounds to `10000.0` at one decimal, which still does not fit,
+and finally renders as `10000`.
+
+#### Unit-price entry cursor
+
+Section 2 shows the entry exactly as typed and right-aligned, so digits grow
+from the right edge of the section. The decimal point only appears when the
+operator presses `.`; round prices therefore display as plain integers
+(`2500`, not `2500.00`). A recalled preset renders the same way. When the
+entry needs more than five digit positions the section falls back to the
+money rule on the parsed centi-value.
+
+#### Status indicators
+
+Three decimal-point lamps are overlaid on every live render. They occupy
+grids that never carry a value decimal point, so a lamp never disturbs the
+displayed number:
+
+| Indicator | Grid | Section | Meaning |
+|-----------|------|---------|---------|
+| TARE | 0 (char 1) | 1 | A container tare is active |
+| ZERO | 4 (char 5) | 1 | Median weight is within `SCALE_ZERO_LAMP_BAND_G` (20 g) of zero |
+| STAB | 5 (char 6) | 2 | Weight is stable |
+
+TARE and ZERO are mutually exclusive: ZERO wins when the platform reads
+inside the zero band. The lamps are driven from the `tareActive`, `atZero`,
+and `stable` fields of `ScaleSnapshot`, which the scale task publishes and the
+network task only reads.
+
+#### Price presets (M1–M3)
+
+A short press recalls a preset on release; a 1.5 s hold saves the current unit
+price. Saving requires a non-empty entry — an empty entry is rejected with the
+error beep and no NVS write. Successful saves persist through
+`savePricePresets()` (full load-modify-save) and are confirmed with the
+buzzer `Confirm` pattern. The four NVS preset slots remain shared with the
+portal/NVS store; the keypad writes slots 1–3 only.
+
+#### M4 network info page
+
+Pressing `M4` replaces the live display for one two-step page:
+
+| Step | Duration | Section 1 | Section 2 | Section 3 |
+|------|----------|-----------|-----------|-----------|
+| 1 | `NET_INFO_PAGE1_MS` (1.2 s) | `ETHER` or `WWIFI` | `UP` or `DOWN` | blank |
+| 2 | `NET_INFO_PAGE2_MS` (2.8 s) | first IP octet | second IP octet | last two octets |
+
+The IP is the Ethernet address when the active transport is Ethernet,
+otherwise the STA address when connected, otherwise the Soft-AP address
+(`192.168.4.1`). After the second step the live weight/price/total display
+resumes.
+
+### 8.2 Serial Monitor test commands
+
+With the default `esp32s3` firmware running at 115200 baud, send one command
+per line. `CRLF` or `LF` line endings are accepted.
+
+| Command | Example | Function |
+|---------|---------|----------|
+| `test display` | `test display` | Enters exclusive display-test mode and runs `8` on section 1, then 2, then 3 (~800 ms each), then remains in test mode; manual `section`, `grid`, `char`, and `clear` commands are accepted only in this mode |
+| `test keypad` | `test keypad` | Enters exclusive keypad-test mode; every press/release is printed with its button id and label, normal keypad actions and press beeps are suspended |
+| `test buzzer` | `test buzzer` | Enters exclusive buzzer-test mode and plays the buzzer self-test: startup pattern, then press click, then error pattern, each separated by a 200 ms gap |
+| `section` | `section 2` | In display-test mode, displays `88888` or `888888` on the selected section (1–3) |
+| `grid` | `grid 3 0xA5` | In display-test mode, writes a raw 8-bit segment mask to one grid (grid 1–16, mask decimal or `0x` hex) |
+| `char` | `char 1 A` | In display-test mode, writes one calibrated character to one grid; `char 1 DP` lights only the decimal point |
+| `clear` | `clear` | In display-test mode, blanks all 16 grids |
+| `auto` | `auto` | Exits any test mode, performs a complete live display refresh, and resumes normal operation |
+| `exit` | `exit` | Exits any active test mode, cancels an active buzzer pattern, performs a complete live display refresh, and resumes normal operation |
+
+Grid and character commands require `test display` first. Display, keypad, and
+buzzer tests are mutually exclusive: display rendering, keypad scanning, and
+buzzer patterns from normal operation are disabled according to the active test.
+Send `auto` (or `exit`) to return to the live display. The firmware performs
+one complete weight/price/total refresh after leaving a test, preventing stale
+test frames from being overwritten piecemeal. Grid numbering is 1–16
+following the schematic, i.e. section 1 is grids 1–5, section 2 is grids 6–10,
+and section 3 is grids 11–16.
+
+`test display` lights all grids of section 1 (`88888`), then section 2
+(`88888`), then section 3 (`888888`), holding each section for roughly 800 ms
+with a brief clear frame in between. The sequence runs in the background
+(non-blocking, `millis()`-driven) while Modbus polling, the web portal, and the
+periodic state log keep running. After the last section, the firmware remains
+in display-test mode so the operator can inspect individual grids and
+characters without a time limit. Use `section <1-3>`, `grid`, `char`, or
+`clear` for further testing, then send `auto` or `exit` to resume the live
+weight/price display.
+
+While keypad test mode is active, every press and release is reported as
+`KEYPAD TEST: pressed id=<id> [<label>]` or `KEYPAD TEST: released id=<id>
+[<label>]`, and the normal keypad actions (price entry, TARE, ZERO, ADD,
+preset recall, preset save, STORE, M4 network page) are suspended so testing
+cannot change live pricing data. Press-and-hold is reported as
+`KEYPAD TEST: held id=<id> [<label>]` after `KEYPAD_LONG_PRESS_MS`.
+The mode can be left by sending `auto` or `exit`.
+
+`test buzzer` prints `OK: buzzer self-test started` and then plays the
+startup pattern, the press click, and the error pattern in sequence. It
+does not write to the live 6932 display or scan the keypad while active;
+Modbus polling, the web portal, and the periodic state log keep running. On
+builds without the buzzer (for example
+`esp32dev`), `test buzzer` reports that the buzzer is not available in this
+build.
+
+Keypad test output uses the verified button id mapping:
+
+| Id | Label | Id | Label |
+|----|-------|----|-------|
+| 0 | C | 10 | 8 |
+| 1 | ADD | 11 | 5 |
+| 2 | TARE | 12 | 2 |
+| 3 | ZERO | 13 | DP |
+| 4 | M4 | 14 | M2 |
+| 5 | 9 | 15 | 7 |
+| 6 | 6 | 16 | 4 |
+| 7 | 3 | 17 | 1 |
+| 8 | STORE | 18 | 0 |
+| 9 | M3 | 19 | M1 |
+
+`exit` while no test is active prints `No active test to exit`. On builds
+without the keypad (for example `esp32dev`), `test keypad` reports that the
+keypad is not available in this build.
+
+### 8.1 Compile-time feature rules
+
+```cpp
+#define DISPLAY_USE_6932 1
+```
+
+This is the default configuration. `KEYPAD_ENABLED` becomes `1` automatically
+for the ESP32-S3 build. The ESP32dev build retains the OLED path and does not
+compile the S3-only matrix/display integration.
+
+### 8.3 Buzzer
+
+The buzzer is a **passive** piezo transducer on **GPIO 47**, driven by LEDC
+channel 0 as a 2.7 kHz PWM tone (8-bit resolution, 50% duty). It is compiled
+in only for ESP32-S3 builds (`BUZZER_ENABLED`); the `esp32dev` build compiles
+the whole buzzer out.
+
+Wiring: GPIO 47 -> 100 Ω resistor -> piezo buzzer -> GND. No transistor is
+needed because a passive piezo draws only a few milliamps at 3.3 V logic,
+which is safe for an ESP32 GPIO. If an active buzzer module is used instead,
+drop the resistor and do not feed a tone, only DC on/off; the documented
+patterns assume a passive transducer.
+
+| Pattern | Sound | Fired when |
+|---------|-------|------------|
+| Startup | 2 beeps, 80 ms on / 80 ms off | FSM enters `NORMAL` at the end of `setup()` |
+| Press | 1 click, 25 ms | Any keypad button press during normal operation |
+| Error | 3 beeps, 100 ms on / 100 ms off | Boot failure rollback, OTA error, softAP failure, W5500 no-hardware, SPIFFS mount failure, `ADD` rejected (unit price zero / negative stable weight), preset save rejected (empty entry) |
+| Confirm | 2 short beeps + 1 long beep, 80 ms / 80 ms / 250 ms | Preset saved successfully with `M1`–`M3` hold |
+| SelfTest | Startup + press + error with 200 ms gaps | `test buzzer` serial command |
+
+The pattern engine is non-blocking: `play()` only requests a pattern
+(latest request wins) and `Buzzer::update()` steps it forward once per
+`networkTask` iteration, so no `delay()` is introduced in any loop.
+
+## 9. NVS Layout
 
 All keys live in the `"scale"` namespace.
 
@@ -656,6 +1201,18 @@ All keys live in the `"scale"` namespace.
 | `calib` | Bool | Calibration | Calibrated flag |
 | `totalG` | Float | Session | Total accumulated grams |
 | `count` | UInt | Session | Sample count |
+| `transportMode` | UChar | Transport | 0=WiFi, 1=Ethernet |
+| `oledEnabled` | Bool | Display | Legacy OLED on/off when using ESP32dev |
+| `price1` | Float | Keypad | Unit-price preset 1 |
+| `price2` | Float | Keypad | Unit-price preset 2 |
+| `price3` | Float | Keypad | Unit-price preset 3 |
+| `price4` | Float | Keypad | Unit-price preset 4 |
+| `totalPriceCenti` | ULong64 | Keypad | Accumulated price in cents |
+| `w5500Dhcp` | Bool | Ethernet | DHCP enabled |
+| `w5500Ip` | String | Ethernet | Static IP |
+| `w5500Gw` | String | Ethernet | Static gateway |
+| `w5500Sn` | String | Ethernet | Static subnet mask |
+| `w5500Dns` | String | Ethernet | Static DNS server |
 
 **Access rule:** every read/write goes through `SettingsStore`, which serialises the namespace with a recursive mutex (see §3.4). The `Preferences` handle is opened and closed inside each call, so no stale handle can survive across cores.
 
@@ -665,7 +1222,7 @@ All keys live in the `"scale"` namespace.
 
 ---
 
-## 9. Security Considerations
+## 10. Security Considerations
 
 | Area | Current posture | Recommendation for production |
 |------|----------------|-------------------------------|
@@ -677,13 +1234,13 @@ All keys live in the `"scale"` namespace.
 
 ---
 
-## 10. Extension Roadmap (Multi-Protocol)
+## 11. Extension Roadmap (Multi-Protocol)
 
 The architecture allows additional protocol modules to be added to core 1 without modifying `ScaleSensor` or `SharedState`:
 
 ```
 Planned protocols (plug in on core 1):
-  +- MQTT publish  -> SharedState::getSnapshot() -> JSON to broker
+
   +- Modbus RTU    -> RS-485 transceiver on GPIO, ModbusRTU::begin(Serial2)
   +- HTTP push     -> HTTP POST to E-Tani Smart Hub API
   +- BLE (future)  -> GATT characteristic = stableWeightG (float)
@@ -698,7 +1255,7 @@ No other files need modification.
 
 ---
 
-## 11. Build & Flash
+## 12. Build & Flash
 
 ### Prerequisites
 
@@ -720,11 +1277,18 @@ cd "firmware/transmitter-multi-core"
 pio run -e esp32s3
 ```
 
-### Build (ESP32-C3-MINI)
+The `esp32s3` environment builds the local keypad and GN/TA/AiP6932
+7-segment display path: `DISPLAY_USE_6932` defaults to `1` for ESP32-S3 in
+`src/config.h`, which also enables the keypad and the buzzer. The `esp32dev`
+environment keeps the legacy OLED path and compiles the S3-only matrix,
+display, and buzzer integration out.
+
+### Build
 
 ```bash
 cd "firmware/transmitter-multi-core"
-pio run -e esp32-c3-mini
+pio run -e esp32s3    # ESP32-S3 DevKitC-1 (primary)
+pio run -e esp32dev   # ESP32-WROOM-32 DevKit V1 (alternative)
 ```
 
 ### Flash & Monitor
@@ -749,10 +1313,13 @@ pio run -t uploadfs
 | `WebServer` | ESP32 Arduino SDK | HTTP server (built-in) |
 | `DNSServer` | ESP32 Arduino SDK | Captive portal DNS (built-in) |
 | `WiFi` | ESP32 Arduino SDK | AP+STA WiFi (built-in) |
+| `Adafruit SSD1306` | Adafruit | OLED display driver |
+| `Adafruit GFX` | Adafruit | Graphics primitives for OLED |
+| `Ethernet` | Arduino official library | W5500 Ethernet driver, vendored in `lib/Ethernet` |
 
 ---
 
-## 12. File Structure
+## 13. File Structure
 
 ```
 firmware/transmitter-multi-core/
@@ -767,12 +1334,23 @@ firmware/transmitter-multi-core/
 +-- src/
     +-- main.ino                <- boot, task creation, singleton wiring
     +-- config.h                <- ALL compile-time constants
+    +-- Logger.h/.cpp           <- compile-time log-level macros (DEBUG/INFO/WARN/ERROR)
+    +-- Transport.h             <- shared TransportState FSM enum
+    +-- DeepSleep.h             <- optional deep-sleep hooks (compile-time opt-in)
+    +-- OfflineBuffer.h         <- SPIFFS bounded JSON-lines queue (50 entries / 200 B)
     +-- SharedState.h/.cpp      <- mutex-guarded inter-core data bus + command slot
     +-- Settings.h/.cpp         <- NVS persistence (AppSettings struct) + cross-core mutex
     +-- Scale.h/.cpp            <- HX711 acquisition, EMA filter, calibration
-    +-- WifiManager.h/.cpp      <- AP+STA dual-mode WiFi management, deferred config apply
-    +-- ModbusServer.h/.cpp     <- Modbus TCP server, holding register publish
-    +-- WebPortal.h/.cpp        <- HTTP captive portal, SPIFFS static server, REST API, deferred reboot
+    +-- WifiManager.h/.cpp      <- AP+STA dual-mode WiFi, exponential backoff, OfflineBuffer
+    +-- EthernetManager.h/.cpp  <- W5500 non-blocking DHCP with millis backoff + WDT feed
+    +-- ModbusServer.h/.cpp     <- Modbus TCP server (WiFi/Ethernet), holding register publish
+    +-- WebPortal.h/.cpp        <- HTTP captive portal, bounded JSON responses, deferred reboot
+    +-- Display.h/.cpp          <- SSD1306 OLED driver (I2C)
+    +-- GN6932.h/.cpp           <- GN/TA/AiP6932 low-level driver
+    +-- Gn6932Display.h/.cpp   <- fixed-point three-section renderer
+    +-- MatrixScanner.h/.cpp   <- debounced 4x5 matrix scanner
+    +-- ButtonManager.h/.cpp   <- keypad actions and price state
+    +-- Buzzer.h/.cpp          <- non-blocking LEDC piezo pattern engine (ESP32-S3 only)
 ```
 
 ---

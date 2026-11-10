@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS printer_settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    model TEXT NOT NULL DEFAULT 'IW-J300H',
+    paper_width_mm INTEGER NOT NULL DEFAULT 80,
+    connection TEXT NOT NULL DEFAULT 'Ethernet',
+    ip TEXT NOT NULL DEFAULT '',
+    port INTEGER NOT NULL DEFAULT 9100,
+    protocol TEXT NOT NULL DEFAULT 'RAW TCP',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO printer_settings (id)
+VALUES (1)
+ON CONFLICT (id) DO NOTHING;

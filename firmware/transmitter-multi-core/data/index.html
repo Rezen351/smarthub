@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#000000">
-  <title>ENYX-Smart Hub | Weight Transmitter</title>
+  <title>Weight Transmitter</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/style.css">
@@ -16,7 +16,7 @@
     <!-- Header -->
     <header class="header">
       <div class="header-brand">
-        <img src="logo.svg" alt="ENYX-Smart Hub" class="header-logo">
+        <img src="logo.svg" alt="ENYX" class="header-logo">
         <div>
           <h1 class="header-title">Weight Transmitter</h1>
           <p class="header-subtitle">Precision Smart Load Cell Transmitter with Modbus TCP</p>
@@ -25,6 +25,7 @@
       <div class="system-bar" id="systemBar">
         <span class="badge badge-neutral" id="barUptime">Uptime: --s</span>
         <span class="badge badge-neutral" id="barFw">FW: --</span>
+        <span class="badge badge-neutral" id="barTransport">--</span>
         <span class="badge badge-neutral" id="barIp">IP: --</span>
       </div>
     </header>
@@ -183,64 +184,121 @@
         </div>
       </section>
 
-      <!-- WiFi & Network Settings Card -->
+      <!-- Network Configuration Card -->
       <section class="card">
         <div class="card-header">
-          <h2 class="card-title">Network &amp; WiFi Configuration</h2>
-          <span class="card-hint">Soft-AP is always active alongside Station uplink</span>
+          <h2 class="card-title">Network Configuration</h2>
+          <span class="card-hint">Select transport and configure network settings</span>
         </div>
         <div class="card-body">
-          <form id="wifiForm">
+          <form id="networkForm" class="space-y-4">
             <div class="form-group">
-              <label for="wmode" class="form-label">WiFi Connection Mode</label>
-              <select id="wmode" class="form-select">
-                <option value="0">Standalone Soft-AP Only</option>
-                <option value="1">WPA2-Personal (Standard PSK)</option>
-                <option value="2">WPA2-Enterprise (PEAP / MSCHAPv2)</option>
-              </select>
-            </div>
-
-            <div class="form-row" id="staFields">
-              <div class="form-group flex-1">
-                <label for="ssid" class="form-label">Network SSID</label>
-                <input type="text" id="ssid" class="form-input" placeholder="WiFi SSID name">
-              </div>
-              <div class="form-group flex-1" id="pskGroup">
-                <label for="psk" class="form-label">WPA Password</label>
-                <input type="password" id="psk" class="form-input" placeholder="Network password">
+              <label class="form-label">Transport Mode</label>
+              <div class="radio-group">
+                <label class="radio-label">
+                  <input type="radio" name="transportMode" value="0" checked>
+                  <span>WiFi</span>
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="transportMode" value="1">
+                  <span>Ethernet</span>
+                </label>
               </div>
             </div>
 
-            <!-- Enterprise EAP Fields -->
-            <div id="entFields" class="enterprise-box" style="display: none;">
-              <h3 class="enterprise-title">WPA2-Enterprise Parameters</h3>
-              <div class="form-row">
-                <div class="form-group flex-1">
-                  <label for="eid" class="form-label">Outer Identity (Anonymous/Realm)</label>
-                  <input type="text" id="eid" class="form-input" placeholder="user@domain.com">
-                </div>
-                <div class="form-group flex-1">
-                  <label for="eusr" class="form-label">Username (Inner Identity)</label>
-                  <input type="text" id="eusr" class="form-input" placeholder="username">
-                </div>
-              </div>
+            <div id="wifiFields">
               <div class="form-group">
-                <label for="epwd" class="form-label">Enterprise Password</label>
-                <input type="password" id="epwd" class="form-input" placeholder="Enterprise password">
+                <label for="wifiMode" class="form-label">WiFi Connection Mode</label>
+                <select id="wifiMode" class="form-select">
+                  <option value="0">Standalone Soft-AP Only</option>
+                  <option value="1">WPA2-Personal (Standard PSK)</option>
+                  <option value="2">WPA2-Enterprise (PEAP / MSCHAPv2)</option>
+                </select>
+              </div>
+
+              <div class="form-row" id="staFields">
+                <div class="form-group flex-1">
+                  <label for="ssid" class="form-label">Network SSID</label>
+                  <input type="text" id="ssid" class="form-input" placeholder="WiFi SSID name">
+                </div>
+                <div class="form-group flex-1" id="pskGroup">
+                  <label for="psk" class="form-label">WPA Password</label>
+                  <input type="password" id="psk" class="form-input" placeholder="Network password">
+                </div>
+              </div>
+
+              <div id="entFields" class="enterprise-box" style="display: none;">
+                <h3 class="enterprise-title">WPA2-Enterprise Parameters</h3>
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="eid" class="form-label">Outer Identity (Anonymous/Realm)</label>
+                    <input type="text" id="eid" class="form-input" placeholder="user@domain.com">
+                  </div>
+                  <div class="form-group flex-1">
+                    <label for="eusr" class="form-label">Username (Inner Identity)</label>
+                    <input type="text" id="eusr" class="form-input" placeholder="username">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="epwd" class="form-label">Enterprise Password</label>
+                  <input type="password" id="epwd" class="form-input" placeholder="Enterprise password">
+                </div>
+              </div>
+            </div>
+
+            <div id="ethernetFields" style="display: none;">
+              <div class="form-group">
+                <label class="form-label">Ethernet IP Configuration</label>
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="w5500Dhcp" class="form-label">DHCP</label>
+                    <select id="w5500Dhcp" class="form-select">
+                      <option value="true">DHCP Enabled</option>
+                      <option value="false">Static IP</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row" style="margin-top: 8px;">
+                  <div class="form-group flex-1">
+                    <label for="w5500StaticIp" class="form-label">Static IP</label>
+                    <input type="text" id="w5500StaticIp" class="form-input" placeholder="192.168.1.100">
+                  </div>
+                  <div class="form-group flex-1">
+                    <label for="w5500StaticGateway" class="form-label">Gateway</label>
+                    <input type="text" id="w5500StaticGateway" class="form-input" placeholder="192.168.1.1">
+                  </div>
+                </div>
+                <div class="form-row" style="margin-top: 8px;">
+                  <div class="form-group flex-1">
+                    <label for="w5500StaticSubnet" class="form-label">Subnet Mask</label>
+                    <input type="text" id="w5500StaticSubnet" class="form-input" placeholder="255.255.255.0">
+                  </div>
+                  <div class="form-group flex-1">
+                    <label for="w5500StaticDns" class="form-label">DNS Server</label>
+                    <input type="text" id="w5500StaticDns" class="form-input" placeholder="8.8.8.8">
+                  </div>
+                </div>
               </div>
             </div>
 
             <div class="action-row" style="margin-top: 14px;">
-              <button type="submit" class="btn btn-primary" id="btnSaveWifi">
-                Apply Configuration
-              </button>
-              <button type="button" class="btn btn-outline" id="btnForgetWifi">
-                Forget Network (Open AP)
-              </button>
+              <button type="submit" class="btn btn-primary" id="btnSaveNetwork">Save Configuration</button>
             </div>
           </form>
 
-          <div class="network-diagnostics">
+          <div class="network-diagnostics" style="margin-top: 18px;">
+            <div class="diag-item">
+              <span class="diag-label">Transport Mode:</span>
+              <span class="diag-val" id="valTransportMode">WiFi</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Ethernet Status:</span>
+              <span class="diag-val" id="valEthernetStatus">Inactive</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Ethernet IP:</span>
+              <span class="diag-val font-mono" id="valEthernetIp">--</span>
+            </div>
             <div class="diag-item">
               <span class="diag-label">Station Status:</span>
               <span class="diag-val" id="valWifiSta">Disconnected</span>
@@ -423,7 +481,8 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <p>ENYX-Smart Hub &bull; Weight Transmitter &bull; by Almuzky v1 multi-core</p>
+      <p>ENYX SmartHub &bull; Weight Transmitter &bull; by Almuzky v1</p>
+      <span class="badge-type">Type: enyx-smarthub</span>
     </footer>
   </div>
 

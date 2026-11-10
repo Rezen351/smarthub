@@ -2,10 +2,7 @@ import { useAuth } from '../hooks/useAuth'
 import DashboardHome from './DashboardHome'
 import FarmerDashboardHome from './FarmerDashboardHome'
 import AdminDashboardHome from './AdminDashboardHome'
-import WeighingDashboardHome from './WeighingDashboardHome'
-import SortingDashboardHome from './SortingDashboardHome'
-import WarehouseDashboardHome from './WarehouseDashboardHome'
-import DeliveryDashboardHome from './DeliveryDashboardHome'
+import OperatorDashboardHome from './OperatorDashboardHome'
 
 function DashboardHomeRouter() {
   const { user } = useAuth()
@@ -15,14 +12,8 @@ function DashboardHomeRouter() {
       return <FarmerDashboardHome />
     case 'ADMIN':
       return <AdminDashboardHome />
-    case 'WEIGHING_OPERATOR':
-      return <WeighingDashboardHome />
-    case 'SORTING_OPERATOR':
-      return <SortingDashboardHome />
-    case 'WAREHOUSE_OPERATOR':
-      return <WarehouseDashboardHome />
-    case 'DELIVERY_OPERATOR':
-      return <DeliveryDashboardHome />
+    case 'OPERATOR':
+      return <OperatorDashboardHome />
     default:
       return <DashboardHome />
   }

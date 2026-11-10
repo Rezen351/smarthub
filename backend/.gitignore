@@ -43,8 +43,5 @@ Thumbs.db
 uploads/*
 !uploads/.gitkeep
 
-# Prisma
-/prisma/migrations/
-
 # Docker
 docker-data/

@@ -1,12 +1,15 @@
 #include "Scale.h"
 #include "config.h"
+#include "Logger.h"
+#include <math.h>
 
 void ScaleSensor::begin(SharedState* shared, SettingsStore* settings) {
   _s = shared;
   _st = settings;
 
-  _hx.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN, HX711_FAST_PROCESSOR);
+  _hx.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN, HX711_FAST_PROCESSOR, false);
   _hx.power_up();
+  resetFilter();
 
   AppSettings persisted;
   _st->load(persisted);
@@ -14,6 +17,8 @@ void ScaleSensor::begin(SharedState* shared, SettingsStore* settings) {
   if (persisted.calOffset != 0.0f || persisted.calibrated) {
     _hx.set_offset((int32_t)persisted.calOffset);
   }
+  _zeroCounts = (float)_hx.get_offset();   // zero point = current HX711 offset
+  _tareCounts = 0.0f;                      // tare is RAM-only, cleared on boot
 
   ScaleSnapshot snap = _s->getSnapshot();
   snap.offsetCounts = persisted.calOffset;
@@ -26,17 +31,86 @@ void ScaleSensor::begin(SharedState* shared, SettingsStore* settings) {
     _s->addCalibrationPoint(persisted.calPointWeightKg[i], persisted.calPointRawCounts[i]);
   }
 
-  Serial.println("[scale] HX711 initialised, calibration loaded from NVS");
+  LOG_INFO("scale", "HX711 initialised, calibration loaded from NVS");
 }
 
 // Returns true once the HX711 has produced a datum.
 static bool hxPoll(HX711& hx, int waitMs) {
   int waited = 0;
   while (!hx.is_ready()) {
-    delay(1);
+    yield();
     if (++waited > waitMs) return false;
   }
   return true;
+}
+
+void ScaleSensor::resetFilter() {
+  _medianCount = 0;
+  _medianIndex = 0;
+  _filterCount = 0;
+  _filterIndex = 0;
+  _filterInitialized = false;
+  _stableSince = 0;
+  _stableSampleCount = 0;
+  for (uint8_t i = 0; i < SCALE_MEDIAN_WINDOW; i++) {
+    _medianHistory[i] = 0.0f;
+  }
+  for (uint8_t i = 0; i < SCALE_FILTER_WINDOW; i++) {
+    _filterHistory[i] = 0.0f;
+  }
+}
+
+float ScaleSensor::medianWeight(float value) {
+  _medianHistory[_medianIndex] = value;
+  _medianIndex = (uint8_t)((_medianIndex + 1) % SCALE_MEDIAN_WINDOW);
+  if (_medianCount < SCALE_MEDIAN_WINDOW) {
+    _medianCount++;
+  }
+
+  float sorted[SCALE_MEDIAN_WINDOW];
+  for (uint8_t i = 0; i < _medianCount; i++) {
+    sorted[i] = _medianHistory[i];
+  }
+  for (uint8_t i = 1; i < _medianCount; i++) {
+    float current = sorted[i];
+    uint8_t j = i;
+    while (j > 0 && sorted[j - 1] > current) {
+      sorted[j] = sorted[j - 1];
+      j--;
+    }
+    sorted[j] = current;
+  }
+  return sorted[_medianCount / 2];
+}
+
+float ScaleSensor::filterWeight(float median) {
+  float filtered = median;
+  if (_filterInitialized) {
+    float delta = fabsf(median - _filterHistory[(_filterIndex + SCALE_FILTER_WINDOW - 1) % SCALE_FILTER_WINDOW]);
+    float alpha = delta >= SCALE_CHANGE_THRESHOLD_G ? SCALE_FAST_ALPHA : SCALE_SLOW_ALPHA;
+    filtered = alpha * median + (1.0f - alpha) *
+      _filterHistory[(_filterIndex + SCALE_FILTER_WINDOW - 1) % SCALE_FILTER_WINDOW];
+  } else {
+    _filterInitialized = true;
+  }
+
+  _filterHistory[_filterIndex] = filtered;
+  _filterIndex = (uint8_t)((_filterIndex + 1) % SCALE_FILTER_WINDOW);
+  if (_filterCount < SCALE_FILTER_WINDOW) {
+    _filterCount++;
+  }
+  return filtered;
+}
+
+float ScaleSensor::filterNoise() const {
+  if (_filterCount == 0) return 0.0f;
+  float minimum = _filterHistory[0];
+  float maximum = _filterHistory[0];
+  for (uint8_t i = 1; i < _filterCount; i++) {
+    if (_filterHistory[i] < minimum) minimum = _filterHistory[i];
+    if (_filterHistory[i] > maximum) maximum = _filterHistory[i];
+  }
+  return maximum - minimum;
 }
 
 void ScaleSensor::loop() {
@@ -51,18 +125,32 @@ void ScaleSensor::loop() {
     switch (cmd) {
       case CMD_TARE: {
         if (hxPoll(_hx, 500)) {
-          _hx.tare();                       // sets offset to current raw
+          _tareCounts = (float)_hx.get_value();      // counts above the zero point
           ScaleSnapshot snap = _s->getSnapshot();
-          snap.offsetCounts = (float)_hx.get_offset();
-          snap.countsPerKg = 0.0f;          // calibration invalid after re-zero
-          snap.calibrated = false;
+          snap.tareActive = true;
+          snap.medianWeightG = 0.0f; snap.stableWeightG = 0.0f; snap.noiseG = 0.0f;
+          snap.stable = false; snap.stableSampleCount = 0;
+          resetFilter();
           _s->setSnapshot(snap);
-
+          LOG_INFO("scale", "tare applied tareCounts=%.1f counts (calibration kept)", _tareCounts);
+        }
+        break;
+      }
+      case CMD_ZERO: {
+        if (hxPoll(_hx, 500)) {
+          _hx.tare();                               // new zero point = current raw average
+          _zeroCounts = (float)_hx.get_offset();
+          _tareCounts = 0.0f;                       // a fresh zero replaces any tare
+          ScaleSnapshot snap = _s->getSnapshot();
+          snap.tareActive = false;
+          snap.medianWeightG = 0.0f; snap.stableWeightG = 0.0f; snap.noiseG = 0.0f;
+          snap.stable = false; snap.stableSampleCount = 0;
+          resetFilter();
+          _s->setSnapshot(snap);
           AppSettings a; _st->load(a);
-          a.calOffset = snap.offsetCounts;
-          a.countsPerKg = 0.0f;
-          a.calibrated = false;
+          a.calOffset = _zeroCounts;                // persist zero point, keep calibration values
           _st->saveCalibration(a);
+          LOG_INFO("scale", "zero point captured offsetCounts=%.1f (tare cleared)", _zeroCounts);
         }
         break;
       }
@@ -81,10 +169,10 @@ void ScaleSensor::loop() {
         float slope = arg;
         float intercept = arg2;
         if (slope > 0.0f) {
-          Serial.printf("[scale] CMD_CALIBRATE_MLR countsPerKg=%.4f intercept=%.4f\n", slope, intercept);
+          LOG_INFO("scale", "CMD_CALIBRATE_MLR countsPerKg=%.4f intercept=%.4f", slope, intercept);
           applyCalibration(slope, intercept);
         } else {
-          Serial.println("[scale] CMD_CALIBRATE_MLR ignored: slope <= 0");
+          LOG_WARN("scale", "CMD_CALIBRATE_MLR ignored: slope <= 0");
         }
         break;
       }
@@ -97,7 +185,7 @@ void ScaleSensor::loop() {
             raw = expectedRaw;
           }
           _s->addCalibrationPoint(weightKg, raw);
-          Serial.printf("[scale] CMD_CAPTURE_CAL_POINT captured %.3f kg -> %.1f counts (total points: %d)\n",
+          LOG_INFO("scale", "CMD_CAPTURE_CAL_POINT captured %.3f kg -> %.1f counts (total points: %d)",
                         weightKg, raw, (int)_s->calibrationPointCount());
         }
         break;
@@ -106,11 +194,10 @@ void ScaleSensor::loop() {
         float slope = 0.0f;
         float intercept = 0.0f;
         if (_s->computeLinearRegression(slope, intercept)) {
-          Serial.printf("[scale] CMD_FINISH_CALIBRATION computed slope=%.4f intercept=%.4f\n",
-                        slope, intercept);
+          LOG_INFO("scale", "CMD_FINISH_CALIBRATION computed slope=%.4f intercept=%.4f", slope, intercept);
           applyCalibration(slope, intercept);
         } else {
-          Serial.println("[scale] CMD_FINISH_CALIBRATION ignored: need at least 2 points with non-zero slope");
+          LOG_WARN("scale", "CMD_FINISH_CALIBRATION ignored: need at least 2 points with non-zero slope");
         }
         break;
       }
@@ -146,24 +233,39 @@ void ScaleSensor::loop() {
   if (!hxPoll(_hx, 40)) return;              // HX711 not responding yet
 
   float raw = (float)_hx.get_value();        // offset-subtracted counts
+  float netRaw = raw - _tareCounts;          // container tare excluded from weight
 
   ScaleSnapshot snap = _s->getSnapshot();
   snap.rawSample = raw;
 
   if (snap.calibrated && snap.countsPerKg > 0.0f) {
-    float instG = (raw - snap.interceptCounts) / snap.countsPerKg * 1000.0f;
+    float instG = (netRaw - snap.interceptCounts) / snap.countsPerKg * 1000.0f;
     snap.weightG = instG;
+    snap.medianWeightG = medianWeight(instG);
+    snap.stableWeightG = filterWeight(snap.medianWeightG);
+    snap.noiseG = filterNoise();
 
-    // First reading initialises the filter state.
-    if (snap.stableWeightG == 0.0f && instG != 0.0f) {
-      snap.stableWeightG = instG;
+    snap.atZero = fabsf(snap.medianWeightG) <= SCALE_ZERO_LAMP_BAND_G;
+    snap.tareActive = (_tareCounts != 0.0f);
+
+    bool withinRange = snap.noiseG <= SCALE_STABILITY_RANGE_G &&
+                       fabsf(snap.medianWeightG - snap.stableWeightG) <= SCALE_STABILITY_RANGE_G;
+    if (withinRange) {
+      if (_stableSince == 0) _stableSince = now;
+      if ((now - _stableSince) >= SCALE_STABILITY_HOLD_MS) {
+        snap.stable = true;
+        if (_stableSampleCount < 65535U) _stableSampleCount++;
+      }
     } else {
-      snap.stableWeightG = SCALE_ALPHA * instG + (1.0f - SCALE_ALPHA) * snap.stableWeightG;
+      _stableSince = 0;
+      _stableSampleCount = 0;
+      snap.stable = false;
     }
+    snap.stableSampleCount = _stableSampleCount;
 
-    // Accumulate session totals only from (near-)stable positive mass.
+    // Accumulate session totals only from stable positive mass.
     float stable = snap.stableWeightG;
-    if (stable > 5.0f) {
+    if (snap.stable && stable > 5.0f) {
       uint32_t cnt; double tg, mn, mx;
       _s->getSessionTotals(cnt, tg, mn, mx);
       if (cnt == 0) { mn = stable; mx = stable; }
@@ -191,11 +293,17 @@ void ScaleSensor::applyCalibration(float slope, float intercept) {
   snap.countsPerKg = slope;
   snap.interceptCounts = intercept;
   snap.calibrated = true;
+  snap.medianWeightG = 0.0f;
+  snap.stableWeightG = 0.0f;
+  snap.noiseG = 0.0f;
+  snap.stable = false;
+  snap.stableSampleCount = 0;
+  resetFilter();
   _s->setSnapshot(snap);
 
   // Persist only the calibration math: the tare offset stays untouched so a
   // concurrent portal write can never be overwritten with a stale copy.
   _st->saveCalibrationValues(slope, intercept, true);
-  Serial.printf("[scale] calibration applied countsPerKg=%.4f intercept=%.4f calibrated=%d\n",
-                slope, intercept, snap.calibrated);
+  LOG_INFO("scale", "calibration applied countsPerKg=%.4f intercept=%.4f calibrated=%d",
+            slope, intercept, snap.calibrated);
 }

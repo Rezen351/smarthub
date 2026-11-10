@@ -1,0 +1,440 @@
+% ============================================================================
+% Laporan Sistem ENYX-Smart Hub
+%
+% KOMPILASI (terverifikasi 25 Oktober 2026):
+%   cd docs && pdflatex -interaction=nonstopmode laporan.tex && pdflatex -interaction=nonstopmode laporan.tex
+%
+% Catatan compiler:
+% - pdflatex (rekomendasi, termasuk recipe "pdfLaTeX" di VS Code LaTeX Workshop):
+%   memilih figure .png secara otomatis (include ditulis tanpa ekstensi).
+% - Paket: geometry, graphicx, booktabs, longtable, array, xcolor, hyperref,
+%          amsmath, mathptmx (Times New Roman / URW Nimbus Roman, ukuran 12pt)
+% Sumber diagram: docs/DIAGRAM.md (PlantUML) -> docs/figures/ (png)
+% ============================================================================
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{mathptmx}
+\usepackage[vmargin=2.2cm,hmargin=2.4cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}{./}}
+
+\setlength{\emergencystretch}{3em}
+
+\definecolor{enyxgreen}{HTML}{166534}
+\definecolor{enyxlight}{HTML}{EAF4FB}
+\definecolor{rowgray}{HTML}{F3F4F6}
+
+\title{%
+  \textbf{Laporan Sistem ENYX-Smart Hub}\\[6pt]
+  \large Tata Kelola Pascapanen \& Pengemasan Kentang Berbasis IoT\\ dengan Tiga Konsol Stasiun Kerja Fisik, Palet Grade Ber-QR Tertempel,\\ Mesin Fisik Mandiri, Traceability GS1, Timbang Susut, \& RBAC Terpadu%
+}
+\author{ENYX-Smart Hub --- Tim Pengembangan}
+\date{Versi 4.1 --- 25 Oktober 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent
+Laporan ini menyajikan spesifikasi arsitektur dan keputusan desain sistem ENYX-Smart Hub Versi 4.1: platform tata kelola penanganan pascapanen dan pengemasan kentang berbasis IoT yang disederhanakan ke dalam tiga konsol stasiun kerja fisik utama. Ketiga konsol ini berpadanan langsung 1:1 dengan tiga unit timbangan digital industri berprotokol Modbus TCP port 502, yaitu Konsol 01 Penerimaan (Timbangan 01), Konsol 02 Sortir dan Grading (Timbangan 02), serta Konsol 03 Pengepakan dan Pengiriman (Timbangan 03). Integrasi ini mencakup pelabelan waring intake, gudang penyangga antrean tertib FIFO, penyortiran bertaut palet, pemilahan ukuran mekanis fisik mandiri, pencatatan status pencucian pasca-sortir, kalkulasi otomatis penyusutan bobot, penautan kode QR fisik yang sudah tertempel secara permanen pada palet grade tanpa memerlukan pencetakan label tambahan, pelabelan ganda produksi pouch retail berstandar QR GS1 Digital Link dan kemasan ekspor barcode GS1 ITF-14, serta pengelolaan gudang produk jadi. Seluruh mesin pemilah dan pencucian beroperasi secara mandiri (\emph{stand-alone}), di mana sistem perangkat lunak murni bertindak sebagai pencatat (\emph{recorder}). Antarmuka \emph{Focus Mode} dioptimalkan menjadi sangat ringkas untuk meminimalkan beban kognitif operator. Sistem menerapkan model RBAC 3-role (Admin, Operator terpadu dengan navigasi modular stasiun kerja, dan Petani) serta akses penelusuran publik untuk konsumen tanpa login. Seluruh diagram visual, alur kerja operasional, dan skema basis data dikelola pada dokumen \texttt{docs/DIAGRAM.md}.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ============================================================================
+\section{Pendahuluan}
+% ============================================================================
+
+\subsection{Latar Belakang}
+Rantai pasok komoditas hortikultura kentang menghadapi tantangan nyata pada penanganan pascapanen: pencatatan setoran petani sering kali tidak transparan, penyusutan bobot akibat tanah, lumpur, dan kentang afkir tidak terukur secara objektif, serta penelusuran asal-usul produk belum terintegrasi dari kebun hingga konsumen akhir. Selain itu, pasar ritel modern dan pasar ekspor menuntut identitas produk berstandar global GS1 serta konsistensi mutu yang terjamin.
+
+ENYX-Smart Hub mendigitalkan seluruh tahapan operasional fasilitas pengemasan kentang melalui konsolidasi praktis menjadi \textbf{3 Konsol Stasiun Kerja Fisik} yang menaungi fungsi operasional inti:
+\begin{enumerate}
+  \item \textbf{Konsol 01: Penerimaan \& Waring Intake} (Timbangan 01 kapasitas 150 kg):
+  Identifikasi petani melalui kartu QR, penimbangan bruto panen, penerbitan label identitas waring (\texttt{WRG-\ldots}), pencetakan struk tanda terima resmi, dan pencatatan otomatis ke dalam antrean gudang penyangga berbasis sistem FIFO.
+  
+  \item \textbf{Konsol 02: Sortir, Sizing \& Grading} (Timbangan 02 kapasitas 100 kg):
+  Pengambilan waring dari antrean penyangga, penyortiran manual bertaut palet penampung ber-QR (\texttt{PLT-\ldots}) untuk mengunci data silsilah petani, pemilahan ukuran umbi pada mesin sortir mekanis fisik mandiri, pencatatan status pencucian pasca-sortir (Washed/Unwashed), penimbangan bersih kelas mutu komersial (Grade A, B, dan C saja; kentang reject/afkir dipisahkan tanpa ditimbang), kalkulasi otomatis penyusutan bobot, dan pemindaian penautan QR fisik yang sudah tertempel secara permanen pada palet grade (\texttt{PLT-GRD-\ldots}) tanpa memerlukan pencetakan label baru.
+  
+  \item \textbf{Konsol 03: Pengepakan \& Pengiriman} (Timbangan 03 kapasitas 30 kg):
+  Penimbangan presisi pouch retail 1 kg berlabel QR GS1 Digital Link dan EAN-13, atau kardus/karung ekspor berlabel barcode GS1 ITF-14, pemutakhiran stok produk jadi secara otomatis, dan verifikasi pemindaian muatan truk saat keberangkatan pengiriman.
+\end{enumerate}
+
+\subsection{Tujuan Laporan}
+\begin{itemize}
+  \item Menjadi acuan tunggal untuk spesifikasi teknis dan implementasi sistem di fasilitas.
+  \item Merekam seluruh keputusan desain, penyederhanaan antarmuka operator (\emph{Focus Mode}), konfigurasi tiga timbangan Modbus TCP port 502, arsitektur pencatat data (\emph{data recorder}) tanpa kontrol mesin aktif, penggunaan QR palet grade tertempel, formula penyusutan bobot, dan model RBAC 3-role.
+  \item Menjadi pedoman pengujian mutu perangkat lunak, integrasi perangkat keras, dan rencana peluncuran produksi.
+\end{itemize}
+
+\subsection{Lingkup Operasional}
+Sistem beroperasi penuh untuk \textbf{komoditas Kentang} (Grade A, B, C, Reject). Arsitektur dan skema basis data dirancang siap multi-komoditas sehingga varietas tambahan di masa mendatang dapat diakomodasi melalui data master tanpa mengubah struktur relasional dasar.
+
+% ============================================================================
+\section{Keputusan Desain}
+% ============================================================================
+
+Tabel berikut merangkum keputusan desain utama sistem ENYX-Smart Hub:
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}p{6.2cm}>{\raggedright\arraybackslash}p{4.6cm}@{}}
+\toprule
+\textbf{Keputusan} & \textbf{Alasan} & \textbf{Dampak} \\
+\midrule
+\endhead
+Konsolidasi 3 Konsol Stasiun Kerja Fisik & Operator bekerja di depan meja timbangan fisik; pemisahan layar berlebih membingungkan pengguna & Antarmuka disederhanakan menjadi 3 stasiun kerja utama sesuai lokasi fisik 3 timbangan \\
+\hline
+Tiga Titik Penimbangan Modbus TCP Port 502 & Mengetahui berat bruto setoran, menghitung susut grading secara presisi, dan menjamin target bobot kemasan & Timbangan 01 di Penerimaan (150 kg), Timbangan 02 di Grading (100 kg), Timbangan 03 di Pengepakan (30 kg) \\
+\hline
+Waring sebagai Wadah Intake Ber-ID Unik & Memisahkan lot setoran petani secara fisik dan digital sebelum disatukan ke palet sortir & Entitas waring diterbitkan setelah approval berat intake; dilabeli stiker QR fisik (\texttt{WRG-\ldots}) \\
+\hline
+Fungsi Ganda Gudang Fasilitas & Fasilitas membutuhkan zona antrean bahan mentah dan zona penyimpanan produk jadi secara terpisah & Gudang dipartisi menjadi dua zona terdata: Zona Penyangga dan Zona Produk Jadi \\
+\hline
+Penyortiran Manual Bertaut Palet & Menjaga rantai ketertelusuran hulu saat kentang dari beberapa waring digabung ke satu palet & Operator memindai QR waring dan QR palet; sistem menyimpan relasi pada tabel \texttt{pallet\_warings} \\
+\hline
+Mesin Fisik Mandiri \& Sistem sebagai Pencatat & Mesin pemilah ukuran dan pencucian beroperasi independen dengan sakelar/panel listrik sendiri & Sistem web tidak mengontrol motor mesin, murni mencatat status proses (\emph{data recorder}) \\
+\hline
+Palet Grade Ber-QR Fisik Tertempel (Tanpa Cetak) & Menghemat bahan cetak label dan mempercepat alur kerja di stasiun grading & Palet mutu menggunakan stiker QR permanen; operator cukup scan dan tautkan ke hasil timbang \\
+\hline
+Focus Mode Ringkas \& Bebas Friksi & Operator di lapangan membutuhkan layar besar yang minim distraksi dan cepat & Tampilan angka timbangan raksasa, quick pull waring buffer, scan QR palet cepat, dan tombol simpan tunggal \\
+\hline
+Kalkulasi Penyusutan Otomatis & Memberikan transparansi rendemen bersih kepada petani dan fasilitas mengenai berat kotoran dan afkir & Sistem menghitung $\text{Susut} = \text{Bruto Waring} - \sum \text{Net Grade}$; disajikan otomatis di layar operator dan portal petani \\
+\hline
+Penyederhanaan RBAC 3-Role Terpadu & Efisiensi operasional di mana satu operator lapangan bertugas di beberapa stasiun kerja & Tiga role sistem: Admin, Operator (dengan menu pemilih stasiun kerja terpadu), dan Petani, ditambah akses publik Konsumen \\
+\hline
+Label Ganda Produksi GS1 Link dan Ekspor ITF-14 & Kemasan retail butuh akses publik konsumen via ponsel, sedangkan kemasan ekspor butuh standar logistik global & QR GS1 Digital Link pada pouch 1 kg; barcode GS1 ITF-14 pada kemasan ekspor 10/50 kg \\
+\bottomrule
+\end{longtable}
+
+% ============================================================================
+\section{Arsitektur Sistem}
+% ============================================================================
+
+\subsection{Gambaran 5 Layer}
+Sistem disusun dalam lima layer fungsional, dari perangkat keras lapangan hingga akses pengguna internet:
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{7.0cm}>{\raggedright\arraybackslash}p{5.0cm}@{}}
+\toprule
+\textbf{Layer} & \textbf{Komponen} & \textbf{Fungsi} \\
+\midrule
+\endhead
+Field Level & 3$\times$ Timbangan digital industri RS485, scanner barcode 2D, printer struk thermal, printer label barcode GS1, mesin sortir mekanis mandiri, unit pencucian mandiri & Akuisisi sinyal berat, pemindaian identitas fisik wadah dan palet, serta pencetakan tanda terima dan label kemasan \\
+\hline
+Edge / Gateway & 3$\times$ ESP32 Node MCU, Ethernet W5500 / Wi-Fi industri, switch jaringan LAN & Konversi data Modbus RTU timbangan menjadi Modbus TCP Server port 502 secara deterministik \\
+\hline
+Application Level & PC Server lokal fasilitas: Nginx, Express Backend, Modbus TCP Client Poller, Socket.io, Shrinkage Engine, PostgreSQL & Logika bisnis terpusat, polling berkala holding registers timbangan, kalkulasi susut, dan basis data lokal \\
+\hline
+Cloud Level & Database Cloud (Neon / Supabase) & Cadangan terjadwal berkala dan pemulihan data aman \\
+\hline
+Enterprise Level & Domain HTTPS publik (\texttt{trace.enyx.id}), RBAC 3-Role, dan halaman penelusuran publik & Portal manajemen eksekutif, konsol stasiun kerja operator, portal petani, dan verifikasi konsumen \\
+\bottomrule
+\end{longtable}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{arsitektur}
+  \caption{Diagram arsitektur sistem ENYX-Smart Hub 5-Layer dengan 3 titik timbangan Modbus TCP dan model RBAC 3-role.\newline
+  (Sumber: \texttt{docs/DIAGRAM.md})}
+\end{figure}
+
+\subsection{Prinsip Deployment \& Stabilitas Operasional}
+\begin{itemize}
+  \item \textbf{Local-First}: Seluruh layanan inti (backend, database, poller Modbus TCP, Socket.io, dan web server) berjalan pada PC server lokal fasilitas. Operasional penimbangan, sortir, dan pengemasan tetap berjalan 100\% normal tanpa ketergantungan koneksi internet.
+  \item \textbf{Pemisahan Kontrol Mesin}: Mesin sizer dan unit cuci/pengering memiliki sistem kelistrikan mandiri di fasilitas. Aplikasi web tidak mengintervensi kendali fisik motor, sehingga kegagalan perangkat lunak atau jaringan tidak akan menghentikan operasi fisik mesin.
+  \item \textbf{Segmentasi Jaringan Industri}: Lalu lintas Modbus TCP lokal berada pada segmen jaringan terisolasi untuk menjamin keamanan dan stabilitas transmisi data timbangan.
+\end{itemize}
+
+\subsection{Peta Holding Register Modbus TCP Port 502}
+Akuisisi data timbangan menggunakan protokol Modbus TCP pada port standar \texttt{502}. ESP32 bertindak sebagai Modbus TCP Server, dan PC Server bertindak sebagai Modbus TCP Client yang melakukan polling holding register dengan interval 200--500 ms:
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{2.2cm}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{6.8cm}@{}}
+\toprule
+\textbf{Alamat / Offset} & \textbf{Tipe Data} & \textbf{Nama Parameter} & \textbf{Keterangan} \\
+\midrule
+\endhead
+Offset 0--1 & Float32 & \texttt{stableWeightG} & Berat stabil terfilter dalam satuan gram \\
+Offset 2--3 & Float32 & \texttt{liveWeightG} & Berat mentah real-time dalam satuan gram \\
+Offset 4--5 & Float32 & \texttt{tareWeightG} & Bobot kontainer atau tara aktif \\
+Offset 6--7 & Float32 & \texttt{unitPrice} & Harga satuan per kg (opsional) \\
+Offset 8--9 & Float32 & \texttt{totalPrice} & Total kalkulasi nilai uang \\
+Offset 10 & UInt16 & \texttt{statusBitmask} & Bit 0: Stabil, Bit 1: Tara aktif, Bit 4: Titik nol \\
+Offset 11 & UInt16 & \texttt{commandReg} & Register perintah kontrol (1: Tare, 2: Zero, 3: Clear) \\
+\bottomrule
+\end{longtable}
+
+% ============================================================================
+\section{Alur Kerja \& Tiga Konsol Stasiun Kerja}
+% ============================================================================
+
+\subsection{Konfigurasi Tiga Titik Penimbangan}
+Sistem menerapkan tiga titik penimbangan terkalibrasi untuk menjamin integritas data:
+\begin{enumerate}
+  \item \textbf{Timbangan 01 (Area Penerimaan)}: Timbangan duduk kapasitas 150 kg untuk menimbang bobot bruto setoran waring petani.
+  \item \textbf{Timbangan 02 (Area Grading)}: Timbangan lantai kapasitas 100 kg untuk menimbang bobot bersih kelas komersial (Grade A, B, C saja); umbi reject/afkir dipisahkan tanpa ditimbang dan otomatis terhitung ke dalam susut bobot.
+  \item \textbf{Timbangan 03 (Area Pengepakan)}: Timbangan meja presisi kapasitas 30 kg untuk menimbang kemasan pouch retail 1 kg ($\pm$5 g) serta kemasan ekspor 10/50 kg.
+\end{enumerate}
+
+\subsection{Tiga Konsol Stasiun Kerja Fisik}
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{6.4cm}>{\raggedright\arraybackslash}p{5.4cm}@{}}
+\toprule
+\textbf{Konsol Stasiun Kerja} & \textbf{Aktivitas Operasional} & \textbf{Keluaran \& Dokumen} \\
+\midrule
+\endhead
+\textbf{Konsol 01:\newline Penerimaan \& Waring Intake}\newline(Timbangan 01: 150 kg) &
+Scan ID petani (\texttt{FRM-\ldots}), timbang bruto panen, verifikasi berat stabil, penerbitan identitas waring (\texttt{WRG-\ldots}), transfer otomatis ke antrean gudang penyangga berbasis FIFO. &
+Struk nota timbang resmi petani, label stiker QR waring intake, dan pencatatan kuantitas buffer gudang. \\
+\hline
+\textbf{Konsol 02:\newline Sortir, Sizing \& Grading}\newline(Timbangan 02: 100 kg) &
+Workflow sekuensial 5 tahap: (1) Scan waring intake (\texttt{WRG-\ldots}) dari antrean buffer, (2) Umpan umbi ke mesin sortir ukuran mekanis mandiri, (3) Pencatatan opsi cuci/kering pasca-alat sortir (Washed/Unwashed), (4) Penimbangan net grade komersial (Grade A, B, C saja; reject tidak ditimbang) pada Timbangan 02 dan scan penautan QR fisik yang sudah tertempel di palet grade (\texttt{PLT-GRD-\ldots}), dan (5) Review susut bobot otomatis lalu konfirmasi selesai menuju packaging. &
+Relasi silsilah data waring-palet, data susut bobot (kg dan \%), keterikatan QR palet grade fisik (\texttt{PLT-GRD-\ldots}) tanpa cetak label, dan status siap kemas. \\
+\hline
+\textbf{Konsol 03:\newline Pengepakan \& Pengiriman}\newline(Timbangan 03: 30 kg) &
+Timbang pouch retail 1 kg (toleransi $\pm$5 g), cetak label QR GS1 Digital Link dan barcode EAN-13, atau timbang kardus/karung ekspor berlabel barcode GS1 ITF-14, pemutakhiran stok gudang produk jadi, dan verifikasi muatan truk saat pengiriman. &
+Pouch retail bersertifikasi GS1, kemasan ekspor terstandarisasi, stok barang jadi real-time, dan surat jalan pengiriman. \\
+\bottomrule
+\end{longtable}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{workflow}
+  \caption{Diagram alur kerja pengemasan kentang terpadu dengan 3 konsol stasiun kerja fisik dan 3 titik timbangan IoT.\newline
+  (Sumber: \texttt{docs/DIAGRAM.md})}
+\end{figure}
+
+\subsection{Formula Penyusutan Bobot (Shrinkage Engine)}
+Penyusutan bobot dihitung secara otomatis saat seluruh fraksi grade mutu dari suatu palet selesai ditimbang:
+$$\text{Susut Bobot (kg)} = \text{Berat Bruto Intake Waring} - \sum (\text{Berat Bersih Grade A + B + C})$$
+$$\text{Persentase Susut (\%)} = \left(\frac{\text{Susut Bobot (kg)}}{\text{Berat Bruto Intake Waring}}\right) \times 100\%$$
+
+Data penyusutan ini tersimpan pada tabel \texttt{grading\_records} dan langsung dapat diakses pada ringkasan operasional stasiun kerja, laporan analitik admin, serta portal mandiri petani.
+
+% ============================================================================
+\section{Standar Identifikasi \& Barcode}
+% ============================================================================
+
+Seluruh identifier fisik di fasilitas mengikuti standar penomoran terstruktur:
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{6.6cm}>{\raggedright\arraybackslash}p{5.6cm}@{}}
+\toprule
+\textbf{Identifier} & \textbf{Format Standar} & \textbf{Penggunaan Fisik} \\
+\midrule
+\endhead
+Farmer ID & \texttt{FRM-\{YYYY\}-\{SEQ\}} & Kartu identitas QR Petani untuk aktivasi setoran \\
+Waring Code & \texttt{WRG-\{YYYYMMDD\}-\{SEQ\}} & Label stiker QR pada waring intake \\
+Pallet Code & \texttt{PLT-\{YYYYMMDD\}-\{SEQ\}} & Label QR palet sortir penampung kentang \\
+Pallet Grade QR & \texttt{PLT-GRD-\{GRADE\}-\{ID\}} & Stiker QR permanen tertempel di palet grade (discan \& ditautkan tanpa cetak) \\
+Pouch QR & \texttt{https://\{domain\}/01/\{GTIN\}/}\newline\texttt{10/\{LOT\}/21/\{SERIAL\}} & QR GS1 Digital Link pada pouch retail 1 kg \\
+Pouch EAN-13 & \texttt{899\{COMMODITY\_CODE\}\{SEQ\}} & Barcode EAN-13 pada kemasan retail \\
+Kemasan Ekspor & \texttt{\{GTIN-14\}} & Barcode GS1 ITF-14 pada kardus/karung ekspor \\
+\bottomrule
+\end{longtable}
+
+\subsection{Penerapan Standar GS1 Digital Link}
+URI pada label QR kemasan pouch retail mengikuti struktur resmi GS1 Digital Link:
+{\scriptsize
+\begin{verbatim}
+https://trace.enyx.id/01/899001000001/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001
+                   |                |                    |
+                 AI 01            AI 10                 AI 21
+               (GTIN-13)       (batch/lot)           (serial unik)
+\end{verbatim}
+}
+Kamera ponsel pintar konsumen langsung membuka halaman web penelusuran publik via HTTPS, menyajikan data nama petani, lokasi panen, tanggal penimbangan, kelas mutu, dan status distribusi tanpa memerlukan aplikasi khusus.
+
+% ============================================================================
+\section{Skema Basis Data}
+% ============================================================================
+
+Basis data relasional PostgreSQL mengelola data transaksi dari penerimaan hingga pengiriman:
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.72\textwidth]{database}
+  \caption{Diagram relasi entitas basis data ENYX-Smart Hub.\newline (Sumber: \texttt{docs/DIAGRAM.md})}
+\end{figure}
+
+\subsection{Daftar Entitas Inti}
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{11.0cm}@{}}
+\toprule
+\textbf{Entitas} & \textbf{Keterangan} \\
+\midrule
+\endhead
+\texttt{user} & Akun sistem dengan 3 role: \texttt{ADMIN}, \texttt{OPERATOR}, \texttt{FARMER} \\
+\texttt{farmer} & Data profil petani (\texttt{code}, nama, telepon, alamat, lokasi lahan) \\
+\texttt{commodity} & Master komoditas (Kentang aktif: \texttt{001}; Tomat \texttt{002} dan Cabai \texttt{003} dicadangkan) \\
+\texttt{waring} & Entitas waring intake (\texttt{code}, \texttt{farmerId}, \texttt{initialWeightKg}, \texttt{status}, \texttt{receivedAt}) \\
+\texttt{pallet} & Entitas palet sortir (\texttt{code}, \texttt{status}: \texttt{IN\_SORTING}, \texttt{GRADED}, \texttt{PACKED}) \\
+\texttt{pallet\_waring} & Tabel asosiasi penghubung relasi waring dan palet untuk silsilah ketertelusuran \\
+\texttt{grade} & Master kelas mutu (Grade A, Grade B, Grade C, Reject) \\
+\texttt{grading\_record} & Catatan timbang per grade, menyimpan bobot bersih, susut bobot kg, persentase susut, serta QR palet grade fisik yang ditautkan \\
+\texttt{weighing\_record} & Histori pembacaan timbangan berdasarkan stasiun (\texttt{INTAKE}, \texttt{GRADING}, \texttt{PACKAGING}) \\
+\texttt{pouch} & Unit kemasan pouch retail 1 kg (\texttt{qrCode} GS1 Digital Link, \texttt{ean13}, \texttt{weightKg}) \\
+\texttt{warehouse} & Master gudang dengan dua zona: \texttt{BUFFER\_WAITING} dan \texttt{FINISHED\_GOODS} \\
+\texttt{warehouse\_stock} & Rekapitulasi kuantitas dan total bobot stok per grade \\
+\texttt{packaging\_*} & Unit kemasan ekspor 10/50 kg berlabel ITF-14 dan relasi isi kemasan \\
+\texttt{delivery} & Manifest pengiriman: plat nomor truk, tujuan, pengemudi, dan verifikasi keberangkatan \\
+\texttt{scale\_reading} & Catatan time-series pembacaan sinyal timbangan real-time dari Modbus TCP \\
+\bottomrule
+\end{longtable}
+
+% ============================================================================
+\section{Tech Stack \& Estimasi Biaya Perangkat Keras}
+% ============================================================================
+
+\subsection{Daftar Teknologi}
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}p{7.2cm}@{}}
+\toprule
+\textbf{Layer} & \textbf{Teknologi} & \textbf{Keunggulan} \\
+\midrule
+\endhead
+Edge / MCU & 3$\times$ ESP32 + PlatformIO & Ethernet W5500 + Wi-Fi industri, Modbus TCP Server port 502, FreeRTOS \\
+Protokol IoT & Modbus TCP (Port 502) & Standar industri deterministik, membaca holding register timbangan secara langsung \\
+Backend & Node.js 20 + Express 5 + TypeScript & Ekosistem IoT matang, modular monolith, type-safety \\
+ORM & Prisma & Type-safe database client dengan manajemen migrasi terstruktur \\
+Basis Data & PostgreSQL 17 + TimescaleDB & Relasional tangguh dan hypertable time-series sensor IoT dalam satu mesin \\
+Frontend & React 19 + TypeScript + Vite & Cepat, modular, responsif, waktu kompilasi instan \\
+Styling & Tailwind CSS v4 & Utilitas CSS fleksibel, desain ringkas, performa tinggi \\
+Real-Time & Socket.io 4 & Distribusi real-time bobot timbangan, status buffer, dan pembaruan stok \\
+Autentikasi & JWT + RBAC 3-Role Middleware & Stateless, aman, membatasi akses Admin, Operator, dan Farmer \\
+Barcode & bwip-js + html5-qrcode & Generator barcode standar GS1 dan pemindaian kamera responsif \\
+Infrastruktur & Docker Compose + Nginx & Orkestrasi kontainer satu mesin PC server fasilitas dengan reverse proxy \\
+\bottomrule
+\end{longtable}
+
+\subsection{Estimasi Biaya Perangkat Keras (BOM)}
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{5.4cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{2.6cm}@{}}
+\toprule
+\textbf{Kategori} & \textbf{Minimum} & \textbf{Maksimum} & \textbf{Rekomendasi} \\
+\midrule
+\endhead
+Modul Edge IoT (3 unit ESP32 + casing industri) & Rp 3.200.000 & Rp 4.800.000 & Rp 3.900.000 \\
+Perangkat Lapangan (3 timbangan RS485, printer, scanner) & Rp 22.000.000 & Rp 34.000.000 & Rp 27.500.000 \\
+Jaringan LAN \& Switch Industri & Rp 4.500.000 & Rp 7.500.000 & Rp 5.500.000 \\
+PC Server Lokal \& Penyimpanan SSD & Rp 12.750.000 & Rp 18.000.000 & Rp 14.500.000 \\
+Bahan Habis Pakai (Label stiker waring, palet, kemasan) & Rp 1.500.000 & Rp 2.500.000 & Rp 1.900.000 \\
+Kalibrasi Timbangan \& Sertifikasi Tera & Rp 2.000.000 & Rp 3.000.000 & Rp 2.500.000 \\
+Proteksi Daya (UPS industri \& panel listrik) & Rp 1.500.000 & Rp 2.500.000 & Rp 1.800.000 \\
+\midrule
+\textbf{TOTAL} & \textbf{Rp 47.450.000} & \textbf{Rp 72.300.000} & \textbf{Rp 57.600.000} \\
+\bottomrule
+\end{longtable}
+
+% ============================================================================
+\section{Desain Antarmuka Pengguna \& RBAC}
+% ============================================================================
+
+\subsection{Hierarki Menu RBAC 3-Role}
+Sistem menerapkan pembagian hak akses terstruktur dengan satu portal login bersama:
+\begin{enumerate}
+  \item \textbf{Admin}: Pengaturan sistem, audit trail, master data komoditas dan grade, manajemen akun pengguna, konfigurasi koneksi timbangan, serta laporan analitik hasil panen.
+  \item \textbf{Operator}: Seluruh aktivitas operasional lapangan diakses melalui satu akun operator terpadu. Operator memilih stasiun kerja melalui bilah navigasi atau tombol stasiun pada beranda dashboard:
+  \begin{itemize}
+    \item \textbf{Station 1: Reception Desk} (\texttt{/dashboard/weighing}) --- Scan petani, timbang bruto Timbangan 01, cetak struk nota dan stiker QR waring intake.
+    \item \textbf{Station 2: Sorting \& Grading} (\texttt{/dashboard/grading}) --- Tarik waring dari buffer, sortir manual bertaut palet, catat status pencucian pasca-sortir, timbang net komersial (Grade A, B, C saja; reject tidak ditimbang) di Timbangan 02, kalkulasi susut otomatis, dan scan penautan QR fisik yang sudah tertempel di palet grade.
+    \item \textbf{Station 3: Packaging \& Dispatch} (\texttt{/dashboard/packaging}) --- Timbang pouch retail 1 kg di Timbangan 03, cetak label GS1 Digital Link dan EAN-13, timbang kemasan ekspor ITF-14, kelola stok gudang produk jadi, dan validasi manifest muatan truk pengiriman.
+    \item \textbf{Menu Pendukung}: Registrasi Palet (\texttt{/dashboard/pallets}) dan Buku Stok Gudang (\texttt{/dashboard/warehouse}).
+  \end{itemize}
+  \item \textbf{Petani}: Portal mandiri untuk memantau ringkasan setoran waring, nota timbang digital resmi, perolehan grade mutu, transparansi persentase susut bobot, dan kartu identitas QR petani.
+  \item \textbf{Konsumen (Publik)}: Halaman penelusuran asal-usul produk tanpa login pada rute publik \texttt{/traceability}.
+\end{enumerate}
+
+\subsection{Pembaruan Focus Mode yang Disederhanakan}
+Pada mode fokus di stasiun grading, tampilan layar dirancang khusus untuk meminimalkan beban operator lapangan:
+\begin{itemize}
+  \item \textbf{Layar Timbangan Raksasa}: Menampilkan angka pembacaan live dan status stabilitas Modbus TCP secara menonjol agar terbaca jelas dari jarak kerja.
+  \item \textbf{Penarikan Waring Cepat}: Operator dapat menarik waring dari antrean buffer penyangga dengan satu sentuhan.
+  \item \textbf{Pemindaian QR Palet Terpasang}: Operator cukup memindai atau memasukkan kode QR yang sudah terpasang pada palet tanpa prosedur pencetakan label.
+  \item \textbf{Pencatat Status Mandiri}: Tombol pencatatan status pencucian umbi (Washed/Unwashed) yang ringkas tanpa intervensi sakelar mesin.
+  \item \textbf{Kalkulasi Susut Real-Time}: Menampilkan bobot susut dan persentase defisit seketika saat berat dimasukkan.
+\end{itemize}
+
+\subsection{Mode Input Timbangan: Auto \& Manual}
+Operator dapat memilih dua mode pembacaan berat di setiap stasiun kerja:
+\begin{itemize}
+  \item \textbf{Mode Auto}: Sistem secara otomatis membaca holding register timbangan melalui Modbus TCP port 502 secara real-time. Tombol approval berat aktif ketika indikator stabil terpenuhi.
+  \item \textbf{Mode Manual}: Apabila terjadi kendala komunikasi jaringan pada perangkat timbangan, operator dapat menginput nilai berat secara manual melalui keypad numerik sebagai mekanisme cadangan (\emph{fallback}).
+\end{itemize}
+
+% ============================================================================
+\section{Rencana Implementasi \& Spesifikasi MVP}
+% ============================================================================
+
+\subsection{Definisi \& Sasaran MVP}
+Target Minimum Viable Product (MVP) adalah menghadirkan sistem tata kelola penanganan pascapanen dan pengemasan kentang siap pakai dalam kurun waktu \textbf{4--6 minggu} hingga fase produksi di fasilitas. Fokus operasional MVP dibatasi pada \textbf{satu komoditas tunggal: Kentang} (Grade A, B, C, dan Reject) untuk memvalidasi alur tanpa kertas, menjamin akurasi data timbangan IoT di tiga stasiun, mengeliminasi sengketa penyusutan bobot melalui kalkulasi transparan, dan menerbitkan kemasan retail (GS1 Digital Link) serta ekspor (ITF-14).
+
+\subsection{Ruang Lingkup Fitur MVP}
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}p{10.8cm}@{}}
+\toprule
+\textbf{Kategori} & \textbf{Cakupan Fitur \& Komponen} \\
+\midrule
+\endhead
+\textbf{In-Scope\newline(Fitur Inti MVP)} &
+\begin{itemize}
+  \item \textbf{Konsol 01 (Penerimaan)}: Scan ID petani, pembacaan Timbangan 01 via Modbus TCP, approval berat, cetak struk nota thermal, cetak label QR waring, dan antrean otomatis ke gudang penyangga berbasis FIFO.
+  \item \textbf{Konsol 02 (Sortir \& Grading)}: Penarikan waring buffer, scan pairing waring ke palet ber-QR, pencatatan status pencucian pasca-sortir, pembacaan Timbangan 02 untuk kelas komersial (Grade A, B, C saja; reject tidak ditimbang), kalkulasi otomatis penyusutan bobot, dan scan penautan QR fisik yang sudah tertempel di palet grade tanpa cetak label.
+  \item \textbf{Konsol 03 (Pengepakan \& Dispatch)}: Pembacaan Timbangan 03 pouch 1 kg, generator QR GS1 Digital Link + EAN-13, kemasan ekspor barcode ITF-14, pemutakhiran stok produk jadi, dan validasi muatan pengiriman.
+  \item \textbf{RBAC 3-Role Terpadu}: Akun Admin, akun Operator terpadu dengan 3 konsol utama, akun Petani, dan akses publik Konsumen tanpa login.
+  \item \textbf{Infrastruktur Local-First}: PC Server Ubuntu di fasilitas (Nginx, Express, PostgreSQL, Redis, Modbus Poller) dengan ketahanan operasional penuh saat internet padam.
+\end{itemize} \\
+\hline
+\textbf{Out-of-Scope\newline(Fase Lanjutan)} &
+\begin{itemize}
+  \item Multi-komoditas tambahan (Tomat, Cabai) --- skema basis data siap, operasional MVP murni fokus pada Kentang.
+  \item Integrasi pembayaran digital petani --- pembayaran dilakukan reguler berbasis nota timbang sah.
+  \item Otomasi Computer Vision kamera --- pemilahan mengandalkan mesin sizer mekanis dan operator.
+  \item Aplikasi mobile native toko aplikasi --- seluruh antarmuka berjalan optimal sebagai Responsive Web App.
+\end{itemize} \\
+\bottomrule
+\end{longtable}
+
+\subsection{Timeline \& Matriks Milestone 6 Fase}
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{2.0cm}>{\raggedright\arraybackslash}p{6.6cm}>{\raggedright\arraybackslash}p{3.8cm}@{}}
+\toprule
+\textbf{Fase} & \textbf{Waktu} & \textbf{Deliverable \& Rincian Kerja} & \textbf{Keluaran / Output} \\
+\midrule
+\endhead
+Fase 0: Setup \& Infra & Minggu 1 & Setup PC Server fasilitas, Docker Compose (PostgreSQL, Redis), migrasi Prisma skema basis data, dan seed data master komoditas Kentang & Layanan basis data aktif, skema terverifikasi \\
+\hline
+Fase 1: Auth \& RBAC 3-Role & Minggu 1--2 & Implementasi autentikasi JWT, middleware RBAC 3-role (Admin, Operator, Farmer), modul CRUD Petani, dan kartu QR Petani & Login bersama, API auth, portal mandiri petani \\
+\hline
+Fase 2: Konsol 01 Penerimaan & Minggu 2--3 & Konsol Reception Desk, poller Modbus TCP Timbangan 01 (:502), generator QR Waring, integrasi printer struk nota thermal, dan buffer FIFO & Struk tanda terima sah, label waring, buffer gudang \\
+\hline
+Fase 3: Konsol 02 Sortir \& Grading & Minggu 3--4 & Antarmuka pairing waring ke palet, pencatatan status cuci, poller Modbus TCP Timbangan 02, engine perhitungan susut otomatis, dan penautan QR palet grade fisik & Relasi data silsilah, catatan grade, metrik susut bobot, tautan palet grade \\
+\hline
+Fase 4: Konsol 03 Pengepakan & Minggu 4--5 & Poller Modbus TCP Timbangan 03 pouch 1 kg, generator QR GS1 Digital Link, barcode ITF-14 ekspor, dan resolver publik penelusuran & Label GS1 pouch, label ekspor, web traceability \\
+\hline
+Fase 5: Dispatch \& UAT & Minggu 5--6 & Manajemen stok gudang produk jadi, verifikasi scan manifest pengiriman truk, Socket.io live updates, dan pengujian integrasi UAT & Sistem go-live di fasilitas pengemasan \\
+\bottomrule
+\end{longtable}
+
+\subsection{Kriteria Keberhasilan MVP}
+Peluncuran MVP dinyatakan berhasil apabila memenuhi indikator kinerja utama:
+\begin{enumerate}
+  \item \textbf{Akurasi Penimbangan 100\%}: Nilai berat bruto waring, berat per grade, dan berat kemasan tersinkronisasi presisi dari indikator timbangan digital ke sistem tanpa deviasi data.
+  \item \textbf{Keterlacakan Tanpa Cacat}: 100\% waring yang masuk tercatat hubungannya dengan palet penampung, kelas mutu akhir, dan QR palet grade fisik yang ditautkan.
+  \item \textbf{Perhitungan Susut Objektif}: Seluruh batch setoran memiliki catatan penyusutan bobot (kg dan \%) yang terverifikasi secara matematis, mengeliminasi selisih klaim antara petani dan fasilitas.
+  \item \textbf{Standardisasi GS1 Sesuai Regulasi}: QR GS1 Digital Link pada kemasan pouch 1 kg berhasil dibuka oleh ponsel pintar ke laman ketertelusuran publik, dan barcode ITF-14 terbaca oleh scanner logistik.
+  \item \textbf{Keandalan Operasional Mandiri}: Sistem tetap berjalan 100\% saat koneksi internet eksternal terputus berkat arsitektur server lokal.
+  \item \textbf{Efisiensi Operator}: Satu akun operator dapat mengakses 3 konsol utama melalui menu modular dan Focus Mode yang sangat ringkas tanpa beban pencetakan yang tidak perlu.
+\end{enumerate}
+
+% ============================================================================
+\section{Penutup}
+% ============================================================================
+
+Laporan resmi Versi 4.1 ini mendokumentasikan pembaruan menyeluruh sistem ENYX-Smart Hub dengan konsolidasi praktis menjadi 3 konsol stasiun kerja fisik yang berpadanan langsung dengan 3 unit timbangan Modbus TCP port 502, pemanfaatan palet ber-QR permanen tanpa pencetakan label grade berulang, pemisahan kendali fisik mesin yang mandiri dengan sistem sebagai pencatat data, Focus Mode yang ringkas, kalkulasi penyusutan bobot otomatis, serta model RBAC 3-role yang efisien bagi operator lapangan. Dengan integrasi label standar internasional GS1 Digital Link dan ITF-14, fasilitas pengemasan kentang memiliki kapabilitas tinggi untuk memenuhi standar mutu pasar ritel modern dan ekspor internasional.
+
+\end{document}

@@ -1,43 +1,66 @@
 import Card from '../components/shared/Card'
+import Icon, { type IconName } from '../components/shared/Icon'
+import PageHeader from '../components/shared/PageHeader'
+import StatCard from '../components/shared/StatCard'
+
+interface Stat {
+  label: string
+  value: string
+  sub: string
+  trend: 'up' | 'down' | 'neutral'
+  icon: IconName
+}
+
+interface Activity {
+  time: string
+  action: string
+  icon: IconName
+  tone: 'neutral' | 'accent'
+}
+
+const stats: Stat[] = [
+  { label: 'Active Pallets', value: '24', sub: '+3 today', trend: 'up', icon: 'arrow-up' },
+  { label: "Today's Weighing", value: '156', sub: 'kg processed', trend: 'up', icon: 'arrow-up' },
+  { label: 'Pending Deliveries', value: '5', sub: '2 urgent', trend: 'down', icon: 'arrow-down' },
+  { label: 'Warehouse Capacity', value: '78%', sub: '2,340 kg used', trend: 'up', icon: 'arrow-up' },
+]
+
+const activities: Activity[] = [
+  { time: '10:30', action: 'Pallet PLT-20260914-0001 created by Ahmad', icon: 'pallet', tone: 'neutral' },
+  { time: '10:15', action: 'Weighing recorded: 45.5 kg - Grade A', icon: 'scale', tone: 'accent' },
+  { time: '09:45', action: 'Pouch PCH-PLT-20260914-0001-001 created', icon: 'package', tone: 'neutral' },
+  { time: '09:30', action: 'Warehouse stock updated: +10 pouch Grade A', icon: 'box', tone: 'neutral' },
+]
 
 export default function DashboardHome() {
-  const stats = [
-    { label: 'Active Pallets', value: '24', change: '+3 today' },
-    { label: "Today's Weighing", value: '156', change: 'kg processed' },
-    { label: 'Pending Deliveries', value: '5', change: '2 urgent' },
-    { label: 'Warehouse Capacity', value: '78%', change: '2,340 kg used' },
-  ]
-
-  const activities = [
-    { time: '10:30', action: 'Pallet PLT-20260914-0001 created by Ahmad' },
-    { time: '10:15', action: 'Weighing recorded: 45.5 kg - Grade A' },
-    { time: '09:45', action: 'Pouch PCH-PLT-20260914-0001-001 created' },
-    { time: '09:30', action: 'Warehouse stock updated: +10 pouch Grade A' },
-  ]
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-text">Dashboard</h1>
-        <p className="text-text-secondary mt-1">Overview of your operations</p>
-      </div>
+    <div className="stack stack-lg">
+      <PageHeader title="Dashboard" subtitle="Overview of your operations" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid-stats">
         {stats.map((stat) => (
-          <Card key={stat.label}>
-            <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">{stat.label}</div>
-            <div className="text-2xl font-bold text-text mb-1">{stat.value}</div>
-            <div className="text-xs text-text-secondary">{stat.change}</div>
-          </Card>
+          <StatCard
+            key={stat.label}
+            label={stat.label}
+            value={stat.value}
+            sub={stat.sub}
+            trend={stat.trend}
+            icon={<Icon name={stat.icon} size={16} />}
+          />
         ))}
       </div>
 
-      <Card title="Recent Activity">
-        <div className="space-y-3">
-          {activities.map((activity, i) => (
-            <div key={i} className="flex items-start gap-3 pb-3 border-b border-border last:border-0">
-              <div className="text-xs text-text-secondary w-12 pt-0.5">{activity.time}</div>
-              <div className="text-sm text-text">{activity.action}</div>
+      <Card title="Recent Activity" subtitle="Latest events across your workflow">
+        <div className="stack">
+          {activities.map((activity, index) => (
+            <div key={index} className="row gap-md py-3 border-b border-border last:border-0">
+              <span className="mono t-caption text-text-light w-12 flex-shrink-0">{activity.time}</span>
+              <span
+                className={`icon-tile flex-shrink-0 ${activity.tone === 'accent' ? 'icon-tile-accent' : ''}`}
+              >
+                <Icon name={activity.icon} size={18} />
+              </span>
+              <span className="t-small text-text min-w-0">{activity.action}</span>
             </div>
           ))}
         </div>

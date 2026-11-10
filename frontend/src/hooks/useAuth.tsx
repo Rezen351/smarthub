@@ -1,10 +1,11 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react'
+import { api } from '../services/api'
 
 export interface User {
   id: string
   email: string
   name: string
-  role: 'ADMIN' | 'WEIGHING_OPERATOR' | 'SORTING_OPERATOR' | 'WAREHOUSE_OPERATOR' | 'DELIVERY_OPERATOR' | 'FARMER'
+  role: 'ADMIN' | 'OPERATOR' | 'FARMER'
   farmerId?: string
 }
 
@@ -17,6 +18,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+function toUser(raw: any): User {
+  return {
+    id: raw.id,
+    email: raw.email,
+    name: raw.name,
+    role: raw.role,
+    farmerId: raw.farmerProfile?.code || undefined,
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -24,64 +35,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem('user')
     if (stored) {
-      setUser(JSON.parse(stored))
+      try {
+        setUser(JSON.parse(stored))
+      } catch {
+        localStorage.removeItem('user')
+      }
     }
     setLoading(false)
+
+    if (!localStorage.getItem('auth_token')) return
+    let cancelled = false
+    api.auth
+      .me()
+      .then((data) => {
+        if (cancelled || !data) return
+        const u = toUser(data)
+        setUser(u)
+        localStorage.setItem('user', JSON.stringify(u))
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const login = async (email: string, password: string) => {
-    const mockUsers: Record<string, User> = {
-      'admin@enyx.local': {
-        id: 'user-1',
-        email: 'admin@enyx.local',
-        name: 'Admin',
-        role: 'ADMIN',
-      },
-      'weighing@enyx.local': {
-        id: 'user-2',
-        email: 'weighing@enyx.local',
-        name: 'Weighing Operator',
-        role: 'WEIGHING_OPERATOR',
-      },
-      'sorting@enyx.local': {
-        id: 'user-3',
-        email: 'sorting@enyx.local',
-        name: 'Sorting Operator',
-        role: 'SORTING_OPERATOR',
-      },
-      'warehouse@enyx.local': {
-        id: 'user-4',
-        email: 'warehouse@enyx.local',
-        name: 'Warehouse Operator',
-        role: 'WAREHOUSE_OPERATOR',
-      },
-      'delivery@enyx.local': {
-        id: 'user-5',
-        email: 'delivery@enyx.local',
-        name: 'Delivery Operator',
-        role: 'DELIVERY_OPERATOR',
-      },
-      'farmer@enyx.local': {
-        id: 'user-6',
-        email: 'farmer@enyx.local',
-        name: 'Farmer',
-        role: 'FARMER',
-        farmerId: 'farmer-1',
-      },
-    }
-
-    const foundUser = mockUsers[email]
-    if (!foundUser || password !== 'password') {
-      throw new Error('Invalid credentials')
-    }
-
-    setUser(foundUser)
-    localStorage.setItem('user', JSON.stringify(foundUser))
+    const data = await api.auth.login(email, password)
+    if (!data?.user) throw new Error('Invalid credentials')
+    const u = toUser(data.user)
+    setUser(u)
+    localStorage.setItem('user', JSON.stringify(u))
   }
 
+
   const logout = () => {
+    api.auth.logout()
     setUser(null)
-    localStorage.removeItem('user')
   }
 
   return (

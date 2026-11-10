@@ -1,205 +1,1098 @@
-import { useState, useEffect } from 'react'
-import Card from '../components/shared/Card'
+/**
+ * Weighing — Receiving Intake Station.
+ *
+ * Implements the revised pure intake weighing workflow with Focus Mode (Full Screen):
+ *   Sequential 3-step workflow:
+ *     1. Step 1: Farmer Identification (Scan barcode)
+ *     2. Step 2: Harvest Weighing (Live gross scale reading via Modbus TCP RS485 indicator)
+ *     3. Step 3: Approve & Bag into Waring (WRG-... generation, thermal receipt & waring QR label)
+ *
+ * Weight transmitter network settings are managed in Settings.
+ */
+import { useState, useEffect, useRef, useCallback } from 'react'
+import Badge from '../components/shared/Badge'
+import Button from '../components/shared/Button'
+import Icon from '../components/shared/Icon'
+import { Input } from '../components/shared/Form'
+import DataTable, { type Column } from '../components/shared/DataTable'
+import PageHeader from '../components/shared/PageHeader'
+import { useToast } from '../components/feedback/Toast'
+import ScaleWeightInput from '../components/operator/ScaleWeightInput'
+import LabelPreview from '../components/operator/LabelPreview'
+import { printThermal } from '../lib/thermalPrint'
+import { useSessionContext } from '../hooks/useSessionContext'
+import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
+import { usePackhouseStore } from '../hooks/usePackhouseStore'
+import { api } from '../services/api'
+import CameraScannerModal from '../components/shared/CameraScannerModal'
 
-type TransportMode = 'wifi' | 'ethernet'
+type WeighingStatus = 'PENDING' | 'BUFFER_WAITING'
+
+type WeighingRecord = {
+  id: string
+  farmerId: string
+  farmerName: string
+  farmerVillage?: string
+  weightKg: number
+  depositDate: string
+  time: string
+  status: WeighingStatus
+  waringCode?: string
+}
+
+const FARMERS: any[] = []
+
+const nextWaringCode = (index: number) => {
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  return `WRG-${date}-${String(index).padStart(4, '0')}`
+}
+
+const today = () => new Date().toISOString().slice(0, 10)
+
+const statusTone: Record<WeighingStatus, 'success' | 'warning'> = {
+  BUFFER_WAITING: 'success',
+  PENDING: 'warning',
+}
+
+const STEPS = [
+  { id: 1, label: 'Farmer ID' },
+  { id: 2, label: 'Weigh Harvest' },
+  { id: 3, label: 'Approve & Label' },
+] as const
 
 export default function WeighingPage() {
-  const [form, setForm] = useState({ palletId: '', gradeId: '', weightKg: '', note: '' })
-  const [records, setRecords] = useState([
-    { id: '1', palletId: 'PLT-001', grade: 'A', weightKg: 45.5, time: '10:15' },
-    { id: '2', palletId: 'PLT-002', grade: 'B', weightKg: 38.2, time: '09:45' },
-  ])
+  const toast = useToast()
+  const { farmer, active, startScan } = useSessionContext()
+  const { addBufferWaring } = usePackhouseStore()
 
-  const [transportMode, setTransportMode] = useState<TransportMode>('wifi')
-  const [transportStatus, setTransportStatus] = useState({
-    staConnected: false,
-    ethernetActive: false,
-    ethernetIp: '',
-    apSsid: 'ENYX-SMARTHUB-AP',
-    apIp: '192.168.4.1',
-  })
-  const [transportSaving, setTransportSaving] = useState(false)
+  /* ── Mode State ── */
+  const [focusMode, setFocusMode] = useState(false)
+  const [activeStep, setActiveStep] = useState<1 | 2 | 3>(1)
+
+  /* ── Step 1: Scan & Farmer Identification ── */
+  const [scanFarmerId, setScanFarmerId] = useState('')
+  const [manualSearch, setManualSearch] = useState('')
+  const [scanError, setScanError] = useState('')
+  const scanInputRef = useRef<HTMLInputElement>(null)
+
+  /* ── Camera Scanner State ── */
+  const [cameraModalOpen, setCameraModalOpen] = useState(false)
+  const openCameraModal = () => setCameraModalOpen(true)
+  const closeCameraModal = useCallback(() => setCameraModalOpen(false), [])
+
+  /* ── Step 2: Weighing Form ── */
+  const [weightKg, setWeightKg] = useState('')
+  const [scaleCapacityKg, setScaleCapacityKg] = useState<number | null>(null)
+  const [scaleOnline, setScaleOnline] = useState(false)
+  const [scaleEndpoint, setScaleEndpoint] = useState('Not configured')
+  const [printerOnline, setPrinterOnline] = useState(false)
+  const [printerEndpoint, setPrinterEndpoint] = useState('Not configured')
+  const [formError, setFormError] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+
+  /* ── Step 3: Approval & Print State ── */
+  const [confirmApprove, setConfirmApprove] = useState<WeighingRecord | null>(null)
+  const [printModalRecord, setPrintModalRecord] = useState<WeighingRecord | null>(null)
+  const [approvedSuccessRecord, setApprovedSuccessRecord] = useState<WeighingRecord | null>(null)
+  const [isPrinting, setIsPrinting] = useState(false)
+
+  /* ── Records Ledger ── */
+  const [records, setRecords] = useState<WeighingRecord[]>([])
+  const [waringCounter, setWaringCounter] = useState(1)
+  const [farmersList, setFarmersList] = useState(FARMERS)
 
   useEffect(() => {
-    fetchTransportStatus()
+    api.scales
+      .getWeight('01')
+      .then((scale) => {
+        setScaleCapacityKg(Number(scale?.capacityKg) || null)
+        setScaleOnline(scale?.online === true)
+        setScaleEndpoint(scale?.ip && scale?.port ? `${scale.ip}:${scale.port}` : 'Not configured')
+      })
+      .catch(() => {
+        setScaleCapacityKg(null)
+        setScaleOnline(false)
+      })
   }, [])
 
-  const fetchTransportStatus = async () => {
-    try {
-      const res = await fetch('/api/weighing/transport')
-      const json = await res.json()
-      if (json.success) {
-        setTransportMode(json.data.transportMode || 'wifi')
-        setTransportStatus(json.data)
-      }
-    } catch (e) {
-      console.error('Failed to fetch transport status', e)
+  useEffect(() => {
+    let active = true
+    const checkPrinter = () => {
+      api.printers
+        .test('reception')
+        .then((result) => active && setPrinterOnline(result?.online === true))
+        .catch(() => active && setPrinterOnline(false))
     }
-  }
+    checkPrinter()
+    const timer = window.setInterval(checkPrinter, 5000)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [])
 
-  const handleTransportSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setTransportSaving(true)
-    try {
-      const res = await fetch('/api/weighing/transport', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: transportMode }),
+  useEffect(() => {
+    api.printers
+      .get()
+      .then((printers) => {
+        const printer = Array.isArray(printers) ? printers.find((item: any) => item.station === 'RECEPTION') : null
+        if (printer?.ip && printer?.port) setPrinterEndpoint(`${printer.ip}:${printer.port}`)
       })
-      const json = await res.json()
-      if (json.success) {
-        alert(json.message)
-        await fetchTransportStatus()
-      } else {
-        alert(json.error?.message || 'Failed to save transport mode')
+      .catch(() => setPrinterEndpoint('Not configured'))
+  }, [])
+
+  /* Fetch live farmers and historical warings from database */
+  useEffect(() => {
+    api.farmers
+      .list()
+      .then((list) => {
+        if (Array.isArray(list) && list.length > 0) {
+          setFarmersList(
+            list.map((f: any) => ({
+              id: f.code || f.id,
+              code: f.code || f.id,
+              name: f.name,
+              village: f.village || 'Desa Sumber Brantas',
+            }))
+          )
+        }
+      })
+      .catch(() => {})
+
+    api.weighing
+      .list()
+      .then((list) => {
+        if (Array.isArray(list)) {
+          setRecords(
+            list.map((w: any) => ({
+              id: w.id,
+              farmerId: w.farmerCode || w.farmerId || 'FMR-001',
+              farmerName: w.farmerName || 'Ahmad Santoso',
+              farmerVillage: w.farmerVillage || 'Desa Sumber Brantas',
+              weightKg: Number(w.grossWeightKg),
+              depositDate: formatSafeDate(w.createdAt || w.approvedAt),
+              time: formatSafeTime(w.createdAt || w.approvedAt),
+              status: 'BUFFER_WAITING',
+              waringCode: w.code,
+            }))
+          )
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  /* Auto-focus scanner input in Step 1 */
+  useEffect(() => {
+    if (activeStep === 1) {
+      const timer = window.setTimeout(() => {
+        scanInputRef.current?.focus()
+      }, 100)
+      return () => window.clearTimeout(timer)
+    }
+  }, [activeStep, focusMode])
+
+  /* Fullscreen & Esc handler */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && focusMode) {
+        setFocusMode(false)
+        if (document.fullscreenElement) {
+          document.exitFullscreen?.().catch(() => {})
+        }
       }
-    } catch (e) {
-      alert('Error saving transport configuration')
-    } finally {
-      setTransportSaving(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [focusMode])
+
+  const enterFocusMode = () => {
+    setFocusMode(true)
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {})
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setRecords([
-      ...records,
-      {
-        id: String(records.length + 1),
-        palletId: form.palletId,
-        grade: form.gradeId,
-        weightKg: parseFloat(form.weightKg),
-        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-      },
-    ])
-    setForm({ palletId: '', gradeId: '', weightKg: '', note: '' })
+  const exitFocusMode = () => {
+    setFocusMode(false)
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {})
+    }
   }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-text">Weighing</h1>
-        <p className="text-text-secondary mt-1">Record weighing for pallets</p>
-      </div>
+  /* ── Step 1: Handle Farmer Identification ── */
+  const selectFarmer = (targetFarmer: { id: string; code?: string; name: string; village: string }) => {
+    setScanError('')
+    startScan({ id: targetFarmer.id, name: targetFarmer.name })
+    setScanFarmerId(targetFarmer.code || targetFarmer.id)
+    toast.success(`Farmer verified: ${targetFarmer.name} (${targetFarmer.code || targetFarmer.id})`)
+    setActiveStep(2)
+  }
 
-      <Card title="Transmitter Configuration">
-        <form onSubmit={handleTransportSave} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-2">Transport Mode</label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="transportMode"
-                  value="wifi"
-                  checked={transportMode === 'wifi'}
-                  onChange={(e) => setTransportMode(e.target.value as TransportMode)}
-                  className="text-primary focus:ring-primary"
-                />
-                <span className="text-sm text-text">WiFi</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="transportMode"
-                  value="ethernet"
-                  checked={transportMode === 'ethernet'}
-                  onChange={(e) => setTransportMode(e.target.value as TransportMode)}
-                  className="text-primary focus:ring-primary"
-                />
-                <span className="text-sm text-text">Ethernet (W5500)</span>
-              </label>
+  const handleScanSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    setScanError('')
+    const query = (manualSearch || scanFarmerId).trim()
+    if (!query) {
+      setScanError('Please scan or type a Farmer ID / Barcode / Name.')
+      return
+    }
+
+    const normalize = (s: string) => s.replace(/[\r\n\t\s]/g, '').toLowerCase()
+    const queryNorm = normalize(query)
+    const matched = farmersList.find((f) => {
+      const candidates = [f.code, f.id, f.name, f.village].filter(Boolean).map((v) => normalize(String(v)))
+      if (candidates.includes(queryNorm)) return true
+      if ((f.code || f.id) && queryNorm.includes(normalize(f.code || f.id))) return true
+      if (normalize(f.name).includes(queryNorm) || queryNorm.includes(normalize(f.name))) return true
+      return false
+    })
+
+    if (matched) {
+      selectFarmer(matched)
+      setManualSearch('')
+      setScanFarmerId('')
+    } else {
+      setScanError('Unregistered Farmer: ID or Barcode not found in packhouse directory.')
+      toast.error(`Unregistered Farmer: "${query}". Please select an authorized farmer or register them first.`)
+      setManualSearch(query)
+      setScanFarmerId(query)
+      if (scanInputRef.current) {
+        scanInputRef.current.focus()
+        scanInputRef.current.select?.()
+      }
+    }
+  }
+
+  const handleVerifyScannedCode = (code: string) => {
+    const rawText = code.trim()
+    if (!rawText) return
+    // Extract farmer code pattern
+    const m = rawText.match(/(FMR|FRM)-?\d{3,}/i)
+    const query = m ? m[0].toUpperCase().replace(/FRM/i, 'FMR').replace(/FMR(\d)/, 'FMR-$1') : rawText.replace(/[\r\n\t\s]/g, '')
+    setScanError('')
+    const normalize = (s: string) => s.replace(/[\r\n\t\s]/g, '').toLowerCase()
+    const queryNorm = normalize(query)
+    const matched = farmersList.find((f) => {
+      const candidates = [f.code, f.id, f.name].filter(Boolean).map((v) => normalize(String(v)))
+      if (candidates.includes(queryNorm)) return true
+      if ((f.code || f.id) && queryNorm.includes(normalize(f.code || f.id))) return true
+      return false
+    })
+    if (matched) {
+      selectFarmer(matched)
+      closeCameraModal()
+    } else {
+      setScanError('Unregistered Farmer: ID or Barcode not found in packhouse directory.')
+      toast.error(`Unregistered Farmer: "${query}". Please select an authorized farmer or register them first.`)
+      setScanFarmerId(query)
+      setManualSearch(query)
+      closeCameraModal()
+      if (activeStep === 1 && scanInputRef.current) {
+        scanInputRef.current.focus()
+        scanInputRef.current.select?.()
+      }
+    }
+  }
+
+
+  /* ── Step 2: Handle Weight Commitment ── */
+  const handleProceedToApproval = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    setFormError('')
+
+    if (!active || !farmer) {
+      setFormError('Farmer context is required. Please go back to Step 1.')
+      setActiveStep(1)
+      return
+    }
+
+    const numericWeight = Number(weightKg)
+    if (!(numericWeight > 0)) {
+      setFormError('Weight must be greater than 0 kg.')
+      return
+    }
+    if (scaleCapacityKg !== null && numericWeight > scaleCapacityKg) {
+      setFormError(`Weight exceeds scale capacity of ${scaleCapacityKg} kg.`)
+      return
+    }
+
+    const activeFarmerObj = farmersList.find((f) => f.id === farmer.id)
+    const payload: WeighingRecord = {
+      id: editingId ?? String(Date.now()),
+      farmerId: farmer.id,
+      farmerName: farmer.name || '',
+      farmerVillage: activeFarmerObj?.village || '',
+      weightKg: Number(numericWeight.toFixed(3)),
+      depositDate: today(),
+      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      status: 'PENDING',
+    }
+
+    if (editingId) {
+      setRecords((current) => current.map((item) => (item.id === editingId ? payload : item)))
+      setEditingId(null)
+    } else {
+      setRecords((current) => [payload, ...current])
+    }
+
+    setConfirmApprove(payload)
+    setActiveStep(3)
+  }
+
+  /* ── Step 3: Handle Approval & Print ── */
+  const handleApproveCommit = (): WeighingRecord | null => {
+    if (!confirmApprove) return null
+    const assignedCode = confirmApprove.waringCode || nextWaringCode(waringCounter)
+    if (!confirmApprove.waringCode) {
+      setWaringCounter((value) => value + 1)
+    }
+
+    const updatedRecord: WeighingRecord = {
+      ...confirmApprove,
+      status: 'BUFFER_WAITING',
+      waringCode: assignedCode,
+    }
+
+    setRecords((current) =>
+      current.map((item) => (item.id === confirmApprove.id ? updatedRecord : item)),
+    )
+
+    // Synchronize to cross-station store for Station 02 and Warehouse
+    addBufferWaring({
+      code: assignedCode,
+      farmerId: confirmApprove.farmerId,
+      farmerName: confirmApprove.farmerName,
+      farmerVillage: confirmApprove.farmerVillage,
+      grossWeightKg: confirmApprove.weightKg,
+      intakeTime: confirmApprove.time,
+      date: confirmApprove.depositDate,
+      status: 'BUFFER_WAITING',
+    })
+
+    // Persist to backend database via REST API
+    const activeFarmer = farmersList.find(
+      (f) => f.id === confirmApprove.farmerId || (f.code && f.code === confirmApprove.farmerId)
+    )
+    api.weighing
+      .create({
+        farmerCode: activeFarmer?.code || confirmApprove.farmerId,
+        grossWeightKg: confirmApprove.weightKg,
+        tareWeightKg: 1.2,
+        netWeightKg: Math.max(0, confirmApprove.weightKg - 1.2),
+        notes: 'Station 01 Reception weighing',
+      })
+      .catch(() => {})
+
+    toast.success(`Weight approved. Waring ${assignedCode} queued for Buffer Warehouse.`)
+    setConfirmApprove(updatedRecord)
+    setApprovedSuccessRecord(updatedRecord)
+    setPrintModalRecord(updatedRecord)
+    return updatedRecord
+  }
+
+  /* Reset for next farmer weighing */
+  const handleNextWeighing = () => {
+    setWeightKg('')
+    setFormError('')
+    setScanError('')
+    setManualSearch('')
+    setScanFarmerId('')
+    setConfirmApprove(null)
+    setApprovedSuccessRecord(null)
+    setPrintModalRecord(null)
+    setActiveStep(1)
+    toast.info('Ready for the next farmer.')
+  }
+
+  /* Correction: return to Step 2 with the recorded weight */
+  const handleKoreksi = (record: WeighingRecord) => {
+    setEditingId(record.id)
+    setWeightKg(String(record.weightKg))
+    setConfirmApprove(null)
+    setApprovedSuccessRecord(null)
+    setPrintModalRecord(null)
+    setActiveStep(2)
+    toast.warning('Record loaded back for re-weighing.')
+  }
+
+  /* ── Thermal Print Actions ── */
+  const getPrintRecord = (override?: WeighingRecord | null) => {
+    return override ?? approvedSuccessRecord ?? confirmApprove ?? printModalRecord
+  }
+
+  const triggerPrintReceipt = (recordOverride?: WeighingRecord | null) => {
+    const rec = getPrintRecord(recordOverride)
+    if (!rec) return
+    setIsPrinting(true)
+    printThermal(
+      {
+        type: 'receipt',
+        code: rec.waringCode || nextWaringCode(records.length + 1),
+        farmerName: rec.farmerName,
+        farmerId: rec.farmerId,
+        weightKg: rec.weightKg,
+        date: rec.depositDate || today(),
+        time: rec.time,
+      },
+      'reception',
+      (error) => {
+        setIsPrinting(false)
+        if (error) toast.error(`Receipt print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
+        else toast.success(`Receipt printed for ${rec.farmerName}`)
+      }
+    )
+  }
+
+  const triggerPrintWaringLabel = (recordOverride?: WeighingRecord | null) => {
+    const rec = getPrintRecord(recordOverride)
+    if (!rec) return
+    setIsPrinting(true)
+    printThermal(
+      {
+        type: 'waring',
+        code: rec.waringCode || nextWaringCode(records.length + 1),
+        farmerName: rec.farmerName,
+        farmerId: rec.farmerId,
+        weightKg: rec.weightKg,
+        date: rec.depositDate || today(),
+        time: rec.time,
+      },
+      'reception',
+      (error) => {
+        setIsPrinting(false)
+        if (error) toast.error(`Waring label print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
+        else toast.success(`Waring QR label printed: ${rec.waringCode || ''}`)
+      }
+    )
+  }
+
+  const triggerPrintBoth = (recordOverride?: WeighingRecord | null) => {
+    const rec = getPrintRecord(recordOverride)
+    if (!rec) return
+
+    setIsPrinting(true)
+    printThermal(
+      [
+        {
+          type: 'receipt',
+          code: rec.waringCode || nextWaringCode(records.length + 1),
+          farmerName: rec.farmerName,
+          farmerId: rec.farmerId,
+          weightKg: rec.weightKg,
+          date: rec.depositDate || today(),
+          time: rec.time,
+        },
+        {
+          type: 'waring',
+          code: rec.waringCode || nextWaringCode(records.length + 1),
+          farmerName: rec.farmerName,
+          farmerId: rec.farmerId,
+          weightKg: rec.weightKg,
+          date: rec.depositDate || today(),
+          time: rec.time,
+        },
+      ],
+      'reception',
+      (error) => {
+        setIsPrinting(false)
+        if (error) toast.error(`Receipt and Waring label print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
+        else toast.success(`Receipt & Waring label ${rec.waringCode || ''} printed`)
+      }
+    )
+  }
+
+  /* ── Columns for History Table ── */
+  const columns: Column<WeighingRecord>[] = [
+    {
+      key: 'farmerName',
+      label: 'Farmer',
+      priority: true,
+      render: (row) => (
+        <div>
+          <span className="font-semibold block text-foreground">{row.farmerName}</span>
+          <span className="font-mono text-xs text-muted-foreground">{row.farmerId}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'weightKg',
+      label: 'Weight kg',
+      priority: true,
+      align: 'right',
+      render: (row) => (
+        <span className="font-mono font-bold text-base text-foreground">
+          {formatWeight(row.weightKg)} kg
+        </span>
+      ),
+    },
+    {
+      key: 'depositDate',
+      label: 'Deposit Date',
+      priority: true,
+      render: (row) => (
+        <div>
+          <span className="font-mono text-xs block text-foreground">{row.depositDate}</span>
+          <span className="text-xs text-muted-foreground">{row.time}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      priority: true,
+      render: (row) => (
+        <Badge tone={statusTone[row.status]} dot>
+          {row.status}
+        </Badge>
+      ),
+    },
+    {
+      key: 'waringCode',
+      label: 'Waring Code',
+      priority: true,
+      render: (row) =>
+        row.waringCode ? (
+          <span className="font-mono font-medium tabular-nums text-foreground">{row.waringCode}</span>
+        ) : (
+          <span className="text-xs text-muted-foreground italic">Assigned on approval</span>
+        ),
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      align: 'right',
+      render: (row) =>
+        row.status === 'PENDING' ? (
+          <div className="flex items-center gap-1.5 justify-end">
+            <Button
+              size="sm"
+              variant="primary"
+              icon="check"
+              onClick={() => {
+                setConfirmApprove(row)
+                setApprovedSuccessRecord(null)
+                setActiveStep(3)
+                document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
+              }}
+            >
+              Approve
+            </Button>
+            <Button size="sm" variant="outline" icon="refresh" onClick={() => handleKoreksi(row)}>
+              Correct
+            </Button>
+          </div>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            icon="print"
+            onClick={() => {
+              setConfirmApprove(row)
+              setPrintModalRecord(row)
+              setApprovedSuccessRecord(row)
+              setActiveStep(3)
+              document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
+            }}
+          >
+            Reprint
+          </Button>
+        ),
+    },
+  ]
+
+  const pendingCount = records.filter((item) => item.status === 'PENDING').length
+  const approvedToday = records.filter((item) => item.status === 'BUFFER_WAITING').length
+
+  /* ─────────────────────────────────────────────────────────────
+     STEPPER PROGRESS BAR COMPONENT
+  ───────────────────────────────────────────────────────────── */
+  const renderStepperBar = () => (
+    <nav className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto scrollbar-none" aria-label="Weighing steps">
+      {STEPS.map((step, idx) => {
+        const isCurrent = activeStep === step.id
+        const isDone = activeStep > step.id || (step.id === 3 && approvedSuccessRecord !== null)
+        const compactLabel = step.id === 1 ? 'Farmer' : step.id === 2 ? 'Weigh' : 'Print'
+
+        return (
+          <div key={step.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                if (step.id < activeStep || approvedSuccessRecord) {
+                  setActiveStep(step.id as 1 | 2 | 3)
+                }
+              }}
+              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                isCurrent
+                  ? 'text-primary'
+                  : isDone
+                  ? 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-900'
+                  : 'text-muted-foreground'
+              }`}
+            >
+              <span
+                className={`w-5 h-5 flex items-center justify-center text-[11px] font-mono font-bold ${
+                  isCurrent
+                    ? 'bg-primary text-primary-foreground'
+                    : isDone
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-muted border border-border text-muted-foreground'
+                }`}
+              >
+                {isDone ? '✓' : step.id}
+              </span>
+              <span className="sm:hidden">{compactLabel}</span>
+              <span className="hidden sm:inline">{step.label}</span>
+            </button>
+            {idx < STEPS.length - 1 && <span className="text-muted-foreground/40 text-xs mx-0.5 sm:mx-1">/</span>}
+          </div>
+        )
+      })}
+    </nav>
+  )
+
+  /* ═══════════════════════════════════════════════════════════════════
+     RENDER: Focus Mode & Sequential Stepper Content
+     ═══════════════════════════════════════════════════════════════════ */
+  const renderFocusContent = () => (
+    <div className="station-workflow space-y-6">
+      {/* ── STEP 1: Farmer Identification ── */}
+      {activeStep === 1 && (
+        <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
+            <div>
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
+                Step 1 of 3 · Intake Identification
+              </span>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
+                Scan Farmer Card
+              </h2>
+            </div>
+            <Badge tone="accent" icon="scan">
+              Awaiting Scan
+            </Badge>
+          </div>
+
+          <div className="station-scan-box p-8 border-2 border-dashed border-border rounded-none bg-card text-center space-y-4">
+            <div className="inline-flex p-3 bg-muted border border-border text-muted-foreground mx-auto">
+              <Icon name="scan" size={28} />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-foreground">
+                2D Scanner and Camera
+              </h3>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                Scan the barcode on the farmer ID card with a USB 2D hardware scanner or device camera.
+              </p>
+            </div>
+
+            <form onSubmit={handleScanSubmit} className="max-w-md mx-auto flex flex-col sm:flex-row gap-2">
+              <Input
+                ref={scanInputRef}
+                value={manualSearch}
+                onChange={(e) => {
+                  setManualSearch(e.target.value)
+                  setScanError('')
+                }}
+                placeholder="Scan 2D barcode or enter name / ID..."
+                className="font-mono text-sm py-2.5 flex-1 min-w-0"
+                autoFocus
+              />
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <Button type="submit" variant="primary" icon="check" className="w-full sm:w-auto">
+                  Verify
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  icon="scan"
+                  onClick={openCameraModal}
+                  title="Open Camera Scanner"
+                  className="w-full sm:w-auto"
+                >
+                  Camera
+                </Button>
+              </div>
+            </form>
+
+            {scanError && (
+              <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-left flex items-start gap-2.5 max-w-md mx-auto animate-in fade-in">
+                <Icon name="alert-triangle" size={16} className="text-destructive shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="text-xs font-semibold text-destructive">Verification Rejected</p>
+                  <p className="text-xs text-destructive/90">{scanError}</p>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 2: Harvest Weighing ── */}
+      {activeStep === 2 && (
+        <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
+            <div>
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
+                Step 2 of 3 · Live Harvest Intake
+              </span>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
+                Weigh Crop Platform
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge tone="success" dot>
+                Farmer: {farmer?.name}
+              </Badge>
+              <Button size="sm" variant="ghost" icon="edit" onClick={() => setActiveStep(1)}>
+                Change Farmer
+              </Button>
             </div>
           </div>
 
-          <div className="text-xs text-text-secondary space-y-1">
-            <p>AP SSID: {transportStatus.apSsid}</p>
-            <p>AP IP: {transportStatus.apIp}</p>
-            <p>WiFi Status: {transportStatus.staConnected ? 'Connected' : 'Disconnected'}</p>
-            <p>Ethernet Status: {transportStatus.ethernetActive ? `Active (${transportStatus.ethernetIp})` : 'Inactive'}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <div className="lg:col-span-2 space-y-4">
+              <ScaleWeightInput
+                id="focus-weighing-weight"
+                stationId="01"
+                label="Incoming Harvest Net Weight kg"
+                hint="Auto-locks from live scale indicator or type manually."
+                value={weightKg}
+                onChange={(val) => {
+                  setWeightKg(val)
+                  setFormError('')
+                }}
+                capacityKg={scaleCapacityKg ?? 0}
+              />
+              {formError && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-none flex items-center gap-2 font-medium">
+                  <Icon name="alert" size={16} />
+                  <span>{formError}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <div className="station-secondary-panel p-4 bg-muted/30 border border-border rounded-none space-y-3">
+                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <Icon name="info" size={14} /> Intake Metadata
+                </span>
+                <div className="space-y-2 text-sm pt-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Farmer:</span>
+                    <span className="font-semibold text-foreground">{farmer?.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Commodity:</span>
+                    <span className="font-semibold text-foreground">Potatoes</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Deposit Date:</span>
+                    <span className="font-mono font-semibold text-foreground flex items-center gap-1">
+                      {today()} <Badge tone="accent">Auto</Badge>
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Next Waring:</span>
+                    <span className="font-mono text-xs font-semibold text-foreground">
+                      {nextWaringCode(waringCounter)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={transportSaving}
-            className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-sm hover:bg-primary-hover transition-colors disabled:opacity-50"
-          >
-            {transportSaving ? 'Saving...' : 'Save Transport Configuration'}
-          </button>
-        </form>
-      </Card>
-
-      <Card>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">Pallet ID</label>
-            <input
-              className="w-full px-3 py-2 border border-border rounded-sm text-sm text-text bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-              value={form.palletId}
-              onChange={(e) => setForm({ ...form, palletId: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">Grade</label>
-            <select
-              className="w-full px-3 py-2 border border-border rounded-sm text-sm text-text bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-              value={form.gradeId}
-              onChange={(e) => setForm({ ...form, gradeId: e.target.value })}
-              required
+          <div className="flex items-center justify-between border-t border-border pt-4">
+            <Button variant="outline" onClick={() => setActiveStep(1)}>
+              Back to Farmer
+            </Button>
+            <Button
+              variant="primary"
+              icon="check"
+              touch
+              disabled={!(Number(weightKg) > 0)}
+              onClick={handleProceedToApproval}
             >
-              <option value="">Select grade</option>
-              <option value="A">Grade A</option>
-              <option value="B">Grade B</option>
-              <option value="C">Grade C</option>
-            </select>
+              Approve & Print
+            </Button>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">Weight (kg)</label>
-            <input
-              type="number"
-              step="0.1"
-              className="w-full px-3 py-2 border border-border rounded-sm text-sm text-text bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-              value={form.weightKg}
-              onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
-              required
-            />
-          </div>
-          <div className="flex items-end">
-            <button
-              type="submit"
-              className="w-full bg-primary text-white py-2 rounded-sm text-sm font-medium hover:bg-primary-hover transition-colors"
-            >
-              Record
-            </button>
-          </div>
-        </form>
-      </Card>
-
-      <Card title="Today's Records">
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Pallet ID</th>
-                <th>Grade</th>
-                <th>Weight (kg)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.time}</td>
-                  <td>{r.palletId}</td>
-                  <td>{r.grade}</td>
-                  <td>{r.weightKg}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
-      </Card>
+      )}
+
+      {/* ── STEP 3: Approve & Print Label ── */}
+      {activeStep === 3 && (
+        <div className="station-step bg-card border border-border rounded-none p-4 shadow-sm space-y-3 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-border pb-2 flex-wrap gap-2 no-print">
+            <div>
+              <span className="text-[10px] uppercase font-mono font-semibold tracking-wider text-muted-foreground">
+                Step 3 of 3 · Final Verification & Print
+              </span>
+              <h2 className="text-xl font-bold tracking-tight text-foreground">
+                Approve & Print Intake Label
+              </h2>
+            </div>
+            {approvedSuccessRecord ? (
+              <Badge tone="success" dot>
+                Status: APPROVED & LABELED
+              </Badge>
+            ) : (
+              <Badge tone="warning" dot>
+                Status: PENDING OPERATOR APPROVAL
+              </Badge>
+            )}
+          </div>
+
+          {/* Intake Verification Box */}
+          <div className="p-3 bg-muted/30 border border-border rounded-none grid grid-cols-1 sm:grid-cols-4 gap-2 no-print">
+            <div>
+              <span className="text-xs text-muted-foreground block font-medium">Farmer</span>
+              <span className="font-semibold text-base text-foreground block">
+                {confirmApprove?.farmerName ?? farmer?.name}
+              </span>
+              <span className="font-mono text-xs text-muted-foreground block">
+                {confirmApprove?.farmerId ?? farmer?.id}
+              </span>
+            </div>
+            <div>
+              <span className="text-xs text-muted-foreground block font-medium">Harvest Net Weight</span>
+              <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 block tracking-tight">
+                {formatWeight(confirmApprove?.weightKg ?? weightKg)}
+                <span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
+              </span>
+            </div>
+            <div>
+              <span className="text-xs text-muted-foreground block font-medium">Deposit Date</span>
+              <span className="font-mono font-semibold text-foreground block">{today()}</span>
+              <span className="text-xs text-muted-foreground block">System timestamped</span>
+            </div>
+            <div>
+              <span className="text-xs text-muted-foreground block font-medium">Assigned Waring ID</span>
+              <span className="font-mono font-bold text-base text-primary block">
+                {approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? nextWaringCode(waringCounter)}
+              </span>
+              <span className="text-xs text-muted-foreground block">QR Waring Label</span>
+            </div>
+          </div>
+
+          {/* Print Previews */}
+          <div>
+            <div className="station-preview-grid grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Receipt Preview */}
+              <LabelPreview
+                type="receipt"
+                code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? nextWaringCode(waringCounter)}
+                farmerName={confirmApprove?.farmerName ?? farmer?.name}
+                farmerId={confirmApprove?.farmerId ?? farmer?.id}
+                weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
+                time={confirmApprove?.time ?? 'Live'}
+                date={today()}
+                screenFit
+              />
+
+              {/* Waring Label Preview */}
+              <LabelPreview
+                type="waring"
+                code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? nextWaringCode(waringCounter)}
+                farmerName={confirmApprove?.farmerName ?? farmer?.name}
+                farmerId={confirmApprove?.farmerId ?? farmer?.id}
+                weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
+                date={today()}
+                screenFit
+              />
+            </div>
+          </div>
+
+          {/* Action Bar */}
+          <div className="flex items-center justify-between border-t border-border pt-3 flex-wrap gap-2 no-print">
+            {!approvedSuccessRecord ? (
+              <>
+                <Button
+                  variant="outline"
+                  icon="refresh"
+                  onClick={() => confirmApprove && handleKoreksi(confirmApprove)}
+                >
+                  Correct Weight
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="primary"
+                    icon="check"
+                    touch
+                    loading={isPrinting}
+                    onClick={() => {
+                      handleApproveCommit()
+                      triggerPrintBoth()
+                    }}
+                  >
+                    Approve & Print All
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintReceipt()}>
+                    Re-print Receipt
+                  </Button>
+                  <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintWaringLabel()}>
+                    Re-print Waring Label
+                  </Button>
+                </div>
+                <Button variant="primary" icon="check" touch onClick={handleNextWeighing}>
+                  Next Weighing
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  )
+
+  return (
+    <>
+      {/* ═══════════════════════════════════════════════════════════════════
+         FULLSCREEN FOCUS MODE OVERLAY
+         ═══════════════════════════════════════════════════════════════════ */}
+      {focusMode && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto" role="dialog" aria-modal="true" aria-label="Weighing Focus Mode">
+          <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
+            <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
+              STATION 01 · RECEPTION · FOCUS MODE
+            </div>
+
+            {/* Stepper Progress */}
+            <div className="hidden md:flex">
+              {renderStepperBar()}
+            </div>
+
+            {/* Controls */}
+            <div className="flex shrink-0 items-center gap-2">
+              <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode} className="whitespace-nowrap">
+                Exit Focus Mode
+              </Button>
+            </div>
+          </header>
+
+          <main className="station-focus-main flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto space-y-6">
+            <div className="md:hidden">
+              {renderStepperBar()}
+            </div>
+            {renderFocusContent()}
+          </main>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+         STANDARD DASHBOARD VIEW (Non-focus mode)
+         ═══════════════════════════════════════════════════════════════════ */}
+      <div className="station-page space-y-6">
+        <div className="no-print">
+          <PageHeader
+            title="Station 01: Reception"
+            subtitle="Farmer verification, intake weighing, and buffer queue."
+            actions={
+              <div className="flex items-center gap-2">
+                <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
+                  Focus Mode
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon="history"
+                  onClick={() => document.getElementById('weighing-records')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  Records ({records.length})
+                </Button>
+              </div>
+            }
+          />
+        </div>
+
+        {/* Quick Stats Grid */}
+        <div className="station-quick-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+          <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pending approval</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">{pendingCount}</p>
+            <p className="text-xs text-muted-foreground">Awaiting verification</p>
+          </div>
+          <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Approved today</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">{approvedToday}</p>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+              Approved warings
+            </p>
+          </div>
+          <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale</p>
+            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
+            <p className="text-xs text-muted-foreground font-mono">{scaleEndpoint}</p>
+          </div>
+          <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Printer</p>
+            <p className={`text-2xl font-bold tracking-tight ${printerOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{printerOnline ? 'Online' : 'Offline'}</p>
+            <p className="text-xs text-muted-foreground font-mono">{printerEndpoint}</p>
+          </div>
+        </div>
+
+        {/* Sequential Stepper in Standard View */}
+        <div id="weighing-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
+            <div className="flex items-center gap-3">
+              <span className="font-semibold text-base text-foreground">Reception Stepper</span>
+              <Badge tone="accent">Step {activeStep} of 3</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
+                Scale 01 · {scaleOnline ? 'Online' : 'Offline'}
+              </Badge>
+              <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
+                Open Focus Mode
+              </Button>
+            </div>
+          </div>
+
+          {/* Stepper Navigation Bar */}
+          <div className="no-print">
+            {renderStepperBar()}
+          </div>
+
+          {/* Embed the same sequential step logic */}
+          {renderFocusContent()}
+        </div>
+
+        {/* ── Today's Harvest Weighing Records Ledger ── */}
+        <div id="weighing-records" className="space-y-3 no-print">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Today's Reception Records</h2>
+            <span className="text-xs text-muted-foreground font-mono">
+              {pendingCount} pending · {approvedToday} approved
+            </span>
+          </div>
+          <DataTable
+            columns={columns}
+            data={records}
+            rowKey={(row) => row.id}
+            emptyTitle="No harvest records today."
+            emptyDescription="Select a farmer and record the first intake weighing."
+          />
+        </div>
+      </div>
+
+      {/* ── Universal Camera Barcode/QR Scanner Modal ── */}
+      <CameraScannerModal
+        isOpen={cameraModalOpen}
+        onClose={closeCameraModal}
+        onScan={handleVerifyScannedCode}
+        title="Scan Farmer ID Card · Station 01 Reception"
+        subtitle="Align the QR code or 1D barcode on the farmer ID card within the camera viewport."
+        manualPlaceholder="Scan barcode or enter farmer ID / name..."
+      />
+    </>
   )
 }

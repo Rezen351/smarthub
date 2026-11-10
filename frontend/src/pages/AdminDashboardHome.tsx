@@ -1,82 +1,231 @@
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import Badge from '../components/shared/Badge'
+import Button from '../components/shared/Button'
 import Card from '../components/shared/Card'
+import Icon, { type IconName } from '../components/shared/Icon'
+import PageHeader from '../components/shared/PageHeader'
+import StatCard from '../components/shared/StatCard'
+import { api } from '../services/api'
+import { formatSafeTime, formatSafeDate } from '../lib/utils'
+
+interface QuickAction {
+  label: string
+  path: string
+  icon: IconName
+  desc: string
+  primary?: boolean
+}
+
+interface Activity {
+  time: string
+  action: string
+  icon: IconName
+  badge: string
+  tone: 'neutral' | 'accent' | 'success' | 'warning'
+}
+
+const quickActions: QuickAction[] = [
+  { label: 'Station 01: Reception', path: '/dashboard/weighing', icon: 'scale', desc: 'Gross intake scale & waring QR' },
+  { label: 'Station 02: Sorting', path: '/dashboard/sorting', icon: 'sortir', desc: 'Sizing, washing & grade weighing' },
+  { label: 'Station 03: Packaging', path: '/dashboard/packaging', icon: 'package', desc: 'Retail 1 kg & bulk export', primary: true },
+  { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box', desc: 'Buffer & finished goods storage' },
+  { label: 'Deliveries & Dispatch', path: '/dashboard/deliveries', icon: 'truck', desc: 'Manifest scan & truck departure' },
+  { label: 'User Admin', path: '/dashboard/users', icon: 'users', desc: '3-role RBAC accounts' },
+      { label: 'Settings', path: '/dashboard/settings', icon: 'settings', desc: 'Scale and thermal printer settings' },
+]
 
 export default function AdminDashboardHome() {
   const { user } = useAuth()
+  const [metrics, setMetrics] = useState({
+    intakeKg: 0,
+    waringCount: 0,
+    yieldPct: 0,
+    shrinkagePct: 0,
+    hasBatches: false,
+    scalesOnline: 0,
+    scalesTotal: 0,
+    userCount: 0,
+    activities: [] as Activity[],
+  })
 
-  const stats = [
-    { label: 'Total Users', value: '24' },
-    { label: 'Active Today', value: '18' },
-    { label: 'System Status', value: 'Online' },
-  ]
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [weighingRes, sortingRes, scalesRes, usersRes] = await Promise.allSettled([
+          api.weighing.list(),
+          api.sorting.batches(),
+          api.scales.list(),
+          api.auth.users(),
+        ])
 
-  const quickActions = [
-    { label: 'Manage Users', path: '/dashboard/users', icon: '👥' },
-    { label: 'View Reports', path: '/dashboard/reports', icon: '📊' },
-    { label: 'Settings', path: '/dashboard/settings', icon: '⚙️' },
-  ]
+        let intakeKg = 0
+        let waringCount = 0
+        const activities: Activity[] = []
 
-  const activities = [
-    { time: '10:30', action: 'New user registered: operator@enyx.local', type: 'user' },
-    { time: '09:15', action: 'System backup completed', type: 'system' },
-    { time: '08:00', action: 'Daily report generated', type: 'report' },
-  ]
+        if (weighingRes.status === 'fulfilled' && Array.isArray(weighingRes.value)) {
+          const todayStr = new Date().toISOString().slice(0, 10)
+          const todays = weighingRes.value.filter((w: any) => {
+            const wDate = formatSafeDate(w.createdAt)
+            return wDate === todayStr
+          })
+          intakeKg = todays.reduce((acc: number, w: any) => acc + (Number(w.grossWeightKg) || 0), 0)
+          waringCount = todays.length
+
+          // Generate recent activity items from latest warings
+          weighingRes.value.slice(0, 3).forEach((w: any) => {
+            activities.push({
+              time: formatSafeTime(w.createdAt || w.approvedAt),
+              action: `Intake waring ${w.code} weighed: ${w.grossWeightKg} kg (${w.farmerName})`,
+              icon: 'scale',
+              badge: 'Intake',
+              tone: 'accent',
+            })
+          })
+        }
+
+        let yieldPct = 0
+        let shrinkagePct = 0
+        let hasBatches = false
+        if (sortingRes.status === 'fulfilled' && Array.isArray(sortingRes.value) && sortingRes.value.length > 0) {
+          hasBatches = true
+          const totalIntake = sortingRes.value.reduce((acc: number, b: any) => acc + (Number(b.grossWeightKg) || 0), 0)
+          const totalGraded = sortingRes.value.reduce((acc: number, b: any) => acc + (Number(b.totalGradedKg) || 0), 0)
+          if (totalIntake > 0) {
+            yieldPct = (totalGraded / totalIntake) * 100
+            shrinkagePct = 100 - yieldPct
+          }
+        }
+
+        let scalesOnline = 0
+        let scalesTotal = 0
+        if (scalesRes.status === 'fulfilled' && Array.isArray(scalesRes.value)) {
+          scalesOnline = scalesRes.value.filter((s: any) => s.online).length
+          scalesTotal = scalesRes.value.length
+        }
+
+        const userCount =
+          usersRes.status === 'fulfilled' && Array.isArray(usersRes.value) ? usersRes.value.length : 0
+
+        setMetrics({
+          intakeKg: parseFloat(intakeKg.toFixed(2)),
+          waringCount,
+          yieldPct: parseFloat(yieldPct.toFixed(1)),
+          shrinkagePct: parseFloat(shrinkagePct.toFixed(1)),
+          hasBatches,
+          scalesOnline,
+          scalesTotal,
+          userCount,
+          activities,
+        })
+      } catch {
+        // keep defaults
+      }
+    }
+
+    loadData()
+  }, [])
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <p className="text-sm text-text-secondary mb-1">Welcome back,</p>
-        <h1 className="text-2xl font-bold text-text">{user?.name}</h1>
+    <div className="stack stack-lg">
+      <PageHeader
+        title={`Welcome back, ${user?.name ?? 'Admin'}`}
+        subtitle="Overview of users, operations, and reports."
+      />
+
+      <div className="grid-stats">
+        <StatCard
+          label="System Users"
+          value={String(metrics.userCount)}
+          sub="Admin, Operator, Farmer"
+          trend="neutral"
+          icon={<Icon name="users" size={16} />}
+        />
+        <StatCard
+          label="Intake Today"
+          value={`${metrics.intakeKg.toLocaleString()} kg`}
+          sub={`${metrics.waringCount} Warings received`}
+          trend="neutral"
+          icon={<Icon name="scale" size={16} />}
+        />
+        <StatCard
+          label="Sorting Yield"
+          value={metrics.hasBatches ? `${metrics.yieldPct.toFixed(1)}%` : '0.0%'}
+          sub={metrics.hasBatches ? `${metrics.shrinkagePct.toFixed(1)}% Shrinkage` : 'No batches sorted'}
+          trend="neutral"
+          icon={<Icon name="clipboard" size={16} />}
+        />
+        <StatCard
+          label="Scales Status"
+          value={`${metrics.scalesOnline}/${metrics.scalesTotal} Online`}
+          sub="Reception, Sorting, Packaging"
+          trend="neutral"
+          icon={<Icon name="shield" size={16} />}
+        />
       </div>
 
-      <Card>
-        <h3 className="card-title mb-4">System Overview</h3>
-        <div className="grid grid-cols-3 gap-4">
-          {stats.map((item) => (
-            <div key={item.label} className="bg-background border border-border p-4 rounded-sm">
-              <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">{item.label}</div>
-              <div className="text-xl font-bold text-text">{item.value}</div>
+      <section className="stack-sm">
+        <div className="section-header">
+          <h2 className="section-title">Quick actions</h2>
+        </div>
+        <div className="grid-quick">
+          {quickActions.map((action) => (
+            <Link key={action.label} to={action.path} className="quick-action">
+              <span className={`icon-tile ${action.primary ? 'icon-tile-solid' : 'icon-tile-accent'}`}>
+                <Icon name={action.icon} size={18} />
+              </span>
+              <span className="quick-action-label">{action.label}</span>
+              <span className="quick-action-desc">{action.desc}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <Card title="Recent Activity" subtitle="Latest activity across the packhouse.">
+        <div className="stack">
+          {metrics.activities.length === 0 && (
+            <p className="t-small text-text-secondary py-3">No recent activity.</p>
+          )}
+          {metrics.activities.map((activity, index) => (
+            <div key={index} className="row gap-md between py-3 border-b border-border last:border-0">
+              <div className="row gap-md min-w-0">
+                <span className="icon-tile flex-shrink-0">
+                  <Icon name={activity.icon} size={18} />
+                </span>
+                <div className="min-w-0">
+                  <p className="t-small text-truncate">{activity.action}</p>
+                  <p className="t-caption text-text-secondary mono">{activity.time}</p>
+                </div>
+              </div>
+              <Badge tone={activity.tone}>{activity.badge}</Badge>
             </div>
           ))}
         </div>
       </Card>
 
-      <div>
-        <h2 className="text-lg font-semibold text-text mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-3 gap-4">
-          {quickActions.map((action) => (
-            <a
-              key={action.label}
-              href={action.path}
-              className="bg-surface border border-border rounded-sm p-4 text-center hover:border-primary transition-colors"
-            >
-              <div className="text-2xl mb-2">{action.icon}</div>
-              <div className="text-sm font-medium text-text">{action.label}</div>
-            </a>
-          ))}
+      <Card
+        title="Product Setup"
+        subtitle="Active product and quality grades."
+        action={
+          <Link to="/dashboard/settings">
+            <Button variant="outline" size="sm" icon="settings">
+              Configure
+            </Button>
+          </Link>
+        }
+      >
+        <div className="row gap-sm flex-wrap">
+          <Badge tone="accent" icon="leaf">
+            Potatoes · active
+          </Badge>
+          <Badge tone="neutral">Tomat · disabled</Badge>
+          <Badge tone="neutral">Cabai · disabled</Badge>
+          <span className="t-caption text-text-secondary">
+            Only Potatoes is active for this packhouse.
+          </span>
         </div>
-      </div>
-
-      <div>
-        <h2 className="text-lg font-semibold text-text mb-3">Recent Activity</h2>
-        <Card>
-          <div className="space-y-4">
-            {activities.map((activity, i) => (
-              <div key={i} className="flex items-center justify-between pb-4 border-b border-border last:border-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-background rounded-sm flex items-center justify-center text-lg">
-                    {activity.type === 'user' ? '👤' : activity.type === 'system' ? '⚙️' : '📊'}
-                  </div>
-                  <div>
-                    <div className="font-medium text-text text-sm">{activity.action}</div>
-                    <div className="text-xs text-text-secondary">{activity.time}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+      </Card>
     </div>
   )
 }

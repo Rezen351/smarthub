@@ -1,10 +1,12 @@
 # Diagram Alur Kerja — Proses Pengemasan Kentang
-## Pendataan Digital & Lokasi-Berbasis Wadah
+## Pendataan Digital Terpadu & Lokasi-Berbasis Wadah
 
-## Workflow
+---
+
+## 1. Diagram Alur Kerja (Workflow)
 
 ```plantuml
-@startuml Pengemasan_Kentang_v2
+@startuml Pengemasan_Kentang_v5
 
 skinparam ActivityBackgroundColor #EAF4FB
 skinparam ActivityBorderColor #1A73E8
@@ -16,141 +18,99 @@ skinparam StartColor #2E7D32
 skinparam EndColor #C62828
 skinparam ConditionStyle diamond
 
-title Alur Kerja Pengemasan Kentang\nPendataan Digital
+title Alur Kerja Terpadu 3 Konsol Stasiun Fisik\nENYX-Smart Hub — v5
 
 |Petani|
 start
-:Membawa Hasil Panen ke Fasilitas;
+:Membawa Hasil Panen\n& Tunjukkan ID Petani;
 
-|Operator|
-:Scan ID Petani;
-:Select Commodity\n(Kentang / Tomat / Cabai);
+|Konsol 01: Penerimaan (Timbangan 01)|
+:Scan ID Petani (FRM-…);
 
-|Sistem|
-:Auto-fetch Context:
-  - Farmer info
-  - Pallet association
-  - Commodity type (dari pilihan operator);
+|Sistem (Otomasi Buffer & Silsilah)|
+:Auto-fetch Profil Petani\n& Set Tanggal Setor Otomatis;
 note right
-  Context disimpan dalam session aktif:
-  - farmerId
-  - commodityId (dari pilihan operator)
-  - palletId
-  - grade defaults
+  Komoditas aktif: Kentang.
+  Identifikasi awal sebelum penimbangan.
 end note
 
-:Penimbangan Karung\npada Palet Ber-ID;
-note right
-  Timbangan pertama:
-  - Input berat
-  - Commodity dari context (sudah dipilih operator)
-  - Palet otomatis terasosiasi
-end note
-
-|Sistem|
-:Catat Otomatis Data Penimbangan\n(Berat, Waktu, ID Petani, ID Palet, Commodity);
-note right
-  Keterkaitan Palet ↔ Petani ↔ Commodity
-  tersimpan di database
-end note
-
-|Proses|
-if (Perlu Pencucian?) then (Ya)
-  :Proses Pencucian;
-  :Pengeringan;
-else (Tidak)
+|Konsol 01: Penerimaan (Timbangan 01)|
+label timbang_intake
+:Timbang Bruto Hasil Panen (Timbangan Intake RS485)\n& Masukkan Panen ke Karung Waring;
+if (Berat Sesuai?) then (Tidak)
+  :Koreksi / Timbang Ulang;
+  goto timbang_intake
+else (Ya)
+  :Verifikasi & Approve Berat Intake;
 endif
 
-:Sortir & Pengelompokan\nberdasarkan Grade per Commodity;
-
-:Penimbangan Hasil Sortir\nper Grade;
-
-|Sistem|
-:Catat Berat per Grade\nper Commodity per Petani;
+|Sistem (Otomasi Buffer & Silsilah)|
+:Approve Resmi & Generate Waring ID (WRG-…);
+:Otomatis Masukkan Waring ke Antrean Buffer FIFO;
 note right
-  Commodity auto-dari context palet/farmer
-  Setiap petani memiliki data per commodity:
-  - Kentang Grade A: x kg
-  - Tomat Size L: x kg
-  - Cabai Grade A: x kg
+  Transisi Pasif Otomatis:
+  Status Waring: BUFFER_WAITING.
+  Waring langsung siap ditarik di Konsol 02.
 end note
 
-|Pengemasan|
-:Masukkan ke Pouch 1 kg\nper Grade;
+|Konsol 01: Penerimaan (Timbangan 01)|
+:Cetak Struk Bukti Timbang Petani (Thermal)\n& Cetak Label QR Waring (WRG-…);
+:Tempel Label QR pada Fisik Waring;
 
-:Scan Pouch / Cetak Label;
+|Petani|
+:Menerima Struk Bukti Timbang Sah;
+
+|Konsol 02: Sortir, Sizing & Grading (Timbangan 02)|
+:Step 1: Scan QR Waring (WRG-…) dari Antrean Buffer FIFO\n(atau pilih langsung dari antrean);
+:Step 2: Masukkan Kentang ke Mesin Grading Mekanis\n(Mesin beroperasi fisik mandiri / stand-alone);
+:Sortir Mekanis Pemisahan Fraksi Ukuran\n(Grade A, Grade B, Grade C, dan pemisahan reject/kotoran);
+if (Step 3: Cuci atau Tidak?) then (WASHED - Perlu Cuci)
+  :Jalur Cuci & Kering Fisik (Catat: WASHED);
+else (UNWASHED - Sudah Bersih)
+  :Bypass Kering Langsung ke Penimbangan (Catat: UNWASHED);
+endif
+
+:Pemisahan Reject Fisik (Tanpa Ditimbang);\nReject & kotoran langsung disisihkan;
+:Step 4: Timbang Setiap Grade Komersial (Grade A, B, C) di Timbangan 02;
+:Scan QR Palet Grade Fisik Tertempel (PLT-GRD-…)\n& Tautkan Grade serta Berat (kg) ke Palet Tersebut;
+
+|Sistem (Otomasi Buffer & Silsilah)|
+:Step 5: Review Susut Bobot & Selesai Menuju Packaging;
+:Kalkulasi Otomatis Penyusutan Bobot (Shrinkage Engine);
 note right
-  Label otomatis include commodity info
-  QR Code: farmer + commodity + grade + berat
-  EAN-13: GTIN-13 + commodity + negara (899)
+  Susut & Reject (kg) = Berat Bruto Waring - Σ(Grade A + B + C).
+  Reject & tanah otomatis terserap sebagai susut bobot.
+end note
+:Kunci Relasi Silsilah & Siap Diproses di Konsol 03 (Packaging);
+
+|Konsol 03: Pengepakan & Dispatch (Timbangan 03)|
+if (Target Kemasan?) then (Retail Pouch 1 kg)
+  :Timbang Presisi Pouch 1 kg di Timbangan 03 (±5g);
+  :Cetak Label Produksi (QR GS1 Digital Link + EAN-13);
+  :Tempel Label pada Pouch 1 kg;
+else (Kemasan Ekspor / Bulk)
+  :Timbang Kemasan Kardus/Karung (10 kg / 50 kg);
+  :Cetak Label Ekspor (Barcode GS1 ITF-14 & QR Ekspor);
+  :Tempel Label pada Kemasan Ekspor;
+endif
+
+|Sistem (Otomasi Buffer & Silsilah)|
+:Otomatis Tambah Saldo Stok Gudang Barang Jadi per Grade;
+note right
+  Stok produk kemasan tercatat real-time
+  siap dialokasikan untuk pesanan buyer.
 end note
 
-|Warehouse|
-:Scan Pallet / Packaging → Warehouse In;
-note right
-  Warehouse in auto-fill:
-  - commodity dari palet/packaging
-  - grade dari item
-  - quantity dari scan
-end note
+|Konsol 03: Pengepakan & Dispatch (Timbangan 03)|
+:Permintaan Order / Manifest Muat Truk Pengiriman;
+:Scan Verifikasi Barcode Muatan Truk (ITF-14 / QR);
+:Konfirmasi Muat Barang ke Bak Truk;
 
-|Sistem|
-:Catat Stok Masuk Warehouse\n(Jumlah, Grade, Commodity, Total Berat);
-:Update Kapasitas & Sisa\nWarehouse per Commodity;
+|Sistem (Otomasi Buffer & Silsilah)|
+:Otomatis Kurangi Stok Barang Jadi & Catat Surat Jalan;
 
-|Pengemasan|
-fork
-  :Packaging → Ekspor 10 kg\n(10 Pouch × 1 kg);
-  :Cetak & Tempel Barcode\nGS1 ITF-14 pada Packaging;
-  note right
-    ITF-14 include:
-    - GTIN-14 + commodity
-    - Kode negara asal (ID)
-    - Batch / Lot number
-    - Berat bersih & kotor
-  end note
-fork again
-  :Packaging → Ekspor 50 kg\n(50 Pouch × 1 kg);
-  :Cetak & Tempel Barcode\nGS1 ITF-14 pada Packaging;
-end fork
-
-|Sistem|
-:Catat Stok Keluar Warehouse\n(Jumlah, Commodity, Tujuan, Tanggal);
-:Update Total Kapasitas\n& Sisa Stok Warehouse per Commodity;
-note right
-  Laporan real-time:
-  - Stok masuk / keluar per commodity
-  - Sisa kapasitas per commodity
-  - Stok per grade per commodity
-end note
-
-|Pengiriman|
-:Muat Packaging ke Delivery Truck;
-note right
-  Muatan auto-tag commodity dari packaging
-  Dicatat:
-  - Nomor Polisi Truck
-  - Jumlah Packaging
-  - Total Berat Muatan
-  - Commodity
-  - Tujuan Pengiriman
-end note
-
-:Scan Barcode ITF-14\nVerifikasi Muatan + Commodity;
-note right
-  Sistem memvalidasi:
-  - Kesesuaian jumlah packaging
-  - Commodity sesuai
-  - Kode batch / lot
-  - Tujuan & jadwal kirim
-end note
-
-|Sistem|
-:Catat Keberangkatan Truck\n(Waktu, Tujuan, Nomor Truck, Commodity);
-
-|Pengiriman|
-:Truck Berangkat ke Tujuan;
-
+|Pengiriman / Logistik|
+:Armada Truk Berangkat ke Tujuan Distribusi;
 stop
 
 @enduml
@@ -158,103 +118,57 @@ stop
 
 ---
 
----
+## Deskripsi Rinci Alur Kerja (3 Konsol Terpadu Berbasis 3 Timbangan Fisik)
 
-> **Referensi:** Diagram Proses Pengemasan Kentang — *Pendataan Digital & Lokasi-Berbasis Wadah*
+Sistem tata kelola pengemasan kentang ENYX-Smart Hub menyederhanakan alur operasional ke dalam **3 Konsol Stasiun Fisik** yang masing-masing terhubung langsung (*1:1 hardware mapping*) dengan unit timbangan digital:
 
----
+### 1. Konsol 01: Penerimaan & Waring Intake — *Area Intake (Timbangan 01)*
+- **Perangkat Keras**: Timbangan Lantai RS485 kapasitas 150 kg, barcode scanner, dan printer thermal IW-J300H 80 mm Ethernet untuk Reception.
+- **Fungsi**: Operator memindai ID Petani (`FRM-...`), menimbang bruto hasil panen kentang, dan memasukkan panen ke karung waring. Operator memeriksa bobot stabil dan menekan persetujuan (*Approval*).
+- **Otomasi Sistem**:
+  1. Menerbitkan kode waring unik (`WRG-...`) dan otomatis memasukkan waring ke dalam antrean Gudang Penyangga FIFO (*Buffer Waiting Queue*).
+  2. Mencetak **Struk Bukti Timbang Petani** (tanda terima fisik resmi untuk dibawa pulang petani) dan **Label QR Waring** untuk ditempelkan pada karung waring.
+- **Keunggulan**: Memangkas waktu tunggu petani di gerbang penerimaan (*zero truck queue*) dan mengunci identitas waring sejak hulu tanpa perlu pencatatan manual.
 
-## Deskripsi Alur Kerja
+### 2. Konsol 02: Sortir, Sizing, Cuci & Grading Mutu — *Area Sortir & Grading (Timbangan 02)*
+- **Perangkat Keras**: Timbangan Lantai RS485 kapasitas 100 kg, barcode scanner 2D. (Mesin sortir mekanis dan unit cuci/pengering beroperasi secara fisik mandiri / *stand-alone*; sistem web murni bertindak sebagai pencatat / *recorder* data proses).
+- **Fungsi Terpadu (Proses Sekuensial 5 Langkah)**:
+  1. *Step 1: Scan QR Waring*: Operator memindai QR code waring intake (`WRG-...`) atau memilih dari antrean buffer FIFO. Sistem memuat identitas petani asal, desa, dan berat bruto intake waring.
+  2. *Step 2: Masukkan ke Mesin Grading*: Operator menuangkan umbi kentang ke dalam hopper mesin sortir mekanis (alat pemilah ukuran beroperasi fisik mandiri / *stand-alone*). Umbi terpilah secara mekanis ke fraksi ukuran Grade A (>55mm), Grade B (40-55mm), Grade C (<40mm), serta pemisahan reject/kotoran awal.
+  3. *Step 3: Cuci atau Tidak (Washing Decision)*: Operator mencatat opsi pencucian pasca-alat sortir (`WASHED` jika melalui lini pencucian & pengeringan fisik, atau `UNWASHED` jika umbi kering langsung ditimbang).
+  4. *Step 4: Timbangan Grade & Scan QR Palet*: Operator memilih channel grade komersial yang sedang berada di atas Timbangan 02 (Grade A, Grade B, atau Grade C; umbi reject disisihkan tanpa ditimbang). Operator mengunci bobot timbangan dan memindai QR fisik yang telah tertempel permanen di palet grade tersebut (`PLT-GRD-...`) untuk mengaitkan grade dan kuantitas kilogram ke palet bersangkutan.
+  5. *Step 5: Review Susut Bobot & Selesai Menuju Packaging*: Sistem menampilkan ringkasan bobot bruto waring, total komersial tergradasi, formula susut otomatis, dan persentase yield komersial. Operator menekan konfirmasi final dan palet siap dialirkan ke Konsol 03 (Packaging).
+     $$\text{Susut (kg)} = \text{Berat Bruto Intake Waring} - \sum (\text{Berat Bersih Grade A + B + C})$$
+     $$\text{Persentase Susut (\%)} = \left(\frac{\text{Susut (kg)}}{\text{Berat Bruto Intake Waring}}\right) \times 100\%$$
+- **Keunggulan**: Mengadopsi workflow sekuensial terarah seperti Konsol 01 yang mencegah kesalahan tahapan operator di lapangan (*poka-yoke*), tanpa kerumitan kontrol mesin di aplikasi web, dan tanpa pencetakan stiker palet baru.
 
-### 1. Penerimaan & Verifikasi Petani
-Petani datang membawa hasil panen ke fasilitas. ID Petani di-scan menggunakan perangkat (tablet/scanner). Sistem menampilkan data farmer:
-- Nama petani
-- Lokasi kebun
-- Riwayat setoran
-
-### 2. Penimbangan Pertama (Penerimaan) + Pemilihan Commodity
-Karung hasil panen ditimbang di atas palet yang memiliki ID unik. Saat penimbangan pertama:
-1. Operator scan ID petani
-2. Operator **memilih commodity** yang ditimbang (Kentang / Tomat / Cabai / dll.)
-3. Operator input berat dari timbangan
-4. Sistem menyimpan:
-   - Berat dari sensor
-   - Waktu sekarang
-   - ID Petani (dari scan)
-   - ID Palet
-   - **Commodity** (dari pilihan operator)
-5. Palet terhubung langsung dengan farmer dan commodity
-
-> **Catatan**: Commodity dipilih operator karena petani bisa menyetorkan berbagai jenis hasil panen. Pilihan ini menjadi **context** untuk semua langkah berikutnya.
-
-### 3. Proses Pencucian *(Opsional)*
-Berdasarkan kondisi komoditas, dilakukan keputusan apakah perlu pencucian atau tidak:
-- **Ya** → Komoditas melalui proses pencucian dan pengeringan sebelum lanjut ke tahap berikutnya.
-- **Tidak** → Komoditas langsung menuju proses sortir.
-
-### 4. Sortir & Pengelompokan Grade per Commodity
-Komoditas disortir dan dikelompokkan berdasarkan ukuran dan kualitas sesuai standar commodity:
-- **Kentang**: Grade A, B, C
-- **Tomat**: Size L, M, S
-- **Cabai**: Grade A, B, C
-
-Hasil sortir per grade ditimbang kembali. Saat penimbangan kedua/scan kedua:
-- Operator **hanya pilih grade** dan **input berat**
-- **Commodity otomatis terisi** dari context penimbangan pertama
-- Sistem hitung total per grade per commodity per farmer
-
-### 5. Pengemasan Pouch 1 kg
-Komoditas dimasukkan ke dalam pouch transparan berukuran **1 kg per pouch**. Setiap pouch ditempeli label dengan dua jenis kode:
-- **QR Code** — untuk traceabilitas internal (ID Petani, Lokasi Kebun, Tanggal Panen, **Commodity**, Grade, Berat)
-- **EAN-13 Barcode** — standar GS1 internasional untuk kebutuhan ritel dan ekspor (GTIN-13 + **commodity code** + kode negara Indonesia `899`)
-
-### 6. Penyimpanan di Warehouse
-Pouch yang sudah berlabel disimpan di warehouse. Saat warehouse in:
-- Operator scan pallet/packaging
-- Sistem otomatis:
-  - Ambil commodity dari palet/pouch
-  - Ambil grade dari item
-  - Hitung quantity dan total berat
-  - Update stok warehouse per commodity + grade
-- Sistem mencatat stok masuk (jumlah pouch, grade, commodity, total berat) dan memperbarui kapasitas serta sisa ruang warehouse secara real-time.
-
-### 7. Pengemasan Ekspor (Packaging)
-Pouch dikemas ulang ke dalam packaging untuk keperluan ekspor dalam dua ukuran yang diproses secara paralel:
-- **Packaging 10 kg** — berisi 10 pouch × 1 kg
-- **Packaging 50 kg** — berisi 50 pouch × 1 kg
-
-Setiap packaging ditempeli label **GS1 ITF-14 Barcode** yang merupakan standar barcode internasional untuk kemasan logistik, memuat GTIN-14, kode negara asal, **commodity code**, nomor batch/lot, serta berat bersih dan kotor.
-
-### 8. Pengiriman (Delivery Truck)
-Packaging ekspor dimuat ke delivery truck. Sebelum berangkat, barcode ITF-14 pada setiap packaging di-scan ulang untuk **verifikasi muatan** — memastikan kesesuaian jumlah packaging, **commodity**, kode batch, dan tujuan pengiriman. Sistem mencatat waktu keberangkatan, tujuan, nomor polisi truck, dan commodity. Stok keluar warehouse diperbarui secara otomatis per commodity.
+### 3. Konsol 03: Pengepakan, Gudang Jadi & Dispatch — *Area Pengepakan & Pengiriman (Timbangan 03)*
+- **Perangkat Keras**: Timbangan Meja Presisi RS485 kapasitas 30 kg, printer thermal IW-J300H 80 mm Ethernet untuk Packaging, dan wireless barcode scanner pengiriman.
+- **Fungsi Terpadu**:
+  1. *Pengepakan Retail Pouch 1 kg*: Ditimbang presisi dengan toleransi ketat $\pm$5 g pada target 1.000 g, lalu dicetak **Label Produksi: QR GS1 Digital Link + Barcode EAN-13**.
+  2. *Pengepakan Ekspor / Bulk*: Ditimbang pada target 10 kg atau 50 kg, lalu dicetak **Label Ekspor: Barcode GS1 ITF-14 & QR Ekspor**.
+  3. *Otomasi Saldo Gudang Jadi*: Kemasan yang selesai diberi label otomatis menambah saldo inventori barang jadi per grade (*Finished Goods Ledger*).
+  4. *Verifikasi Muat Truk (*Dispatch Scan*)*: Saat pengiriman tiba, operator memindai barcode kemasan yang dimuat ke bak truk untuk mencocokkan manifest pengiriman dan otomatis memotong saldo stok gudang saat armada diberangkatkan.
+- **Keunggulan**: Mengintegrasikan proses pengemasan presisi dengan pencatatan inventori barang jadi dan kepatuhan manifest logistik ekspor tanpa disparitas data.
 
 ---
 
-### Ringkasan Standar Barcode
+## Ringkasan Standar Identifikasi & Barcode
 
-| Kemasan | Jenis Barcode | Standar | Fungsi |
-|---------|--------------|---------|--------|
-| Pouch 1 kg | QR Code | Internal | Traceabilitas petani, commodity & produk |
-| Pouch 1 kg | EAN-13 | GS1 Ritel | Identifikasi produk ritel/ekspor + commodity |
-| Packaging 10 kg / 50 kg | ITF-14 | GS1 Logistik | Identifikasi kemasan logistik ekspor + commodity |
-
-### Ringkasan Swimlane
-
-| Lane | Peran |
-|------|-------|
-| **Petani** | Membawa panen, scan ID, penimbangan |
-| **Operator** | Scan pallet/farmer → input berat saja → sistem auto-fill commodity + grade |
-| **Sistem** | Auto-fetch context, pencatatan otomatis, validasi, pembaruan stok & kapasitas per commodity |
-| **Proses** | Pencucian (opsional), sortir grade per commodity, penimbangan hasil sortir |
-| **Pengemasan** | Pengisian pouch, pelabelan, pengemasan packaging ekspor |
-| **Warehouse** | Penyimpanan pouch, manajemen stok masuk/keluar per commodity |
-| **Pengiriman** | Loading truck, verifikasi muatan + commodity, keberangkatan |
+| Wadah / Dokumen | Jenis Barcode | Standar | Fungsi |
+|-----------------|--------------|---------|--------|
+| ID Petani | QR Code | Internal | Identifikasi petani saat proses intake (`FRM-YYYY-SEQ`) |
+| Struk Timbang Petani | Nota Thermal | Fisik | Tanda terima sah setoran bruto petani |
+| Waring Intake | QR Code / Barcode | Internal | Identitas waring intake di area penerimaan & buffer (`WRG-YYYYMMDD-SEQ`) |
+| Palet Sortir | QR Code | Internal | Wadah agregasi hasil sortir manual (`PLT-YYYYMMDD-SEQ`) |
+| Palet Grade Fisik | QR Code Tertempel | Internal | QR permanen pada palet grade (`PLT-GRD-A-...`), operator scan & tautkan (tanpa cetak) |
+| Pouch Retail 1 kg | QR GS1 Digital Link | GS1 Internasional | Traceability publik via HTTPS smartphone & decode scanner internal |
+| Pouch Retail 1 kg | EAN-13 | GS1 Ritel | Kode identifikasi produk ritel/supermarket |
+| Kemasan Ekspor 10/50 kg | ITF-14 | GS1 Logistik | Identifikasi kemasan pengiriman logistik ekspor |
 
 ---
 
 ## 2. Diagram Arsitektur Sistem
-
-> Diagram arsitektur sistem diurutkan dari **Field Level** (perangkat lapangan) hingga **Enterprise Level** (akses pengguna & internet).
 
 ```plantuml
 @startuml Arsitektur_Sistem
@@ -271,39 +185,49 @@ skinparam arrowColor #1A73E8
 skinparam defaultFontName Arial
 skinparam defaultFontSize 11
 
-title Arsitektur Sistem Pengemasan Kentang
+title Arsitektur Sistem Tata Kelola Pengemasan Kentang (5 Layer)
 
 ' ============================================================
 ' LAYER 1 — FIELD LEVEL
 ' ============================================================
-rectangle "**[ FIELD LEVEL ]**\nPerangkat Lapangan & IoT" as FL #FFEBEE {
+rectangle "**[ FIELD LEVEL ]**\nPerangkat Lapangan, Sensor, & Aktuator IoT" as FL #FFEBEE {
 
-  rectangle "Area Penerimaan" as area_recv #FFC1C1 {
-    component [Timbangan RS485\n(Kapasitas Besar)] as scale_big
-    component [Scanner QR\n(ID Petani & ID Palet)] as scanner_recv
+  rectangle "Area Penerimaan (Intake)" as area_recv #FFCDD2 {
+    component [Timbangan Intake RS485\n(Gross Waring)] as scale_intake
+    component [Scanner QR\n(ID Petani)] as scan_farmer
+    component [Printer Struk Thermal\n(Nota Petani)] as print_receipt
+    component [Printer Label\n(QR Waring WRG-…)] as print_waring
   }
 
-  rectangle "Area Sortir" as area_sort #FFC1C1 {
-    component [Timbangan RS485\nGrade A] as scale_a
-    component [Timbangan RS485\nGrade B] as scale_b
-    component [Timbangan RS485\nGrade C] as scale_c
+  rectangle "Warehouse — Zona Buffer (Waiting)" as area_buf #FFCDD2 {
+    component [Scanner In/Out\nWaring Buffer] as scan_buffer
   }
 
-  rectangle "Area Pengemasan" as area_pack #FFC1C1 {
-    component [Printer Label\n(QR Code / EAN-13)] as printer
+  rectangle "Area Sortir Manual & Paletisasi" as area_sort_manual #FFCDD2 {
+    component [Scanner Barcode\n(Pairing Waring ↔ Palet)] as scan_pairing
   }
 
-  rectangle "Area Warehouse" as area_wh #FFC1C1 {
-    component [Scanner Masuk\nWarehouse] as scan_in
-    component [Scanner Keluar Warehouse\n& Verifikasi Muatan ITF-14] as scan_out
+  rectangle "Area Sortir Mekanis & Washer" as area_machine #FFCDD2 {
+    component [Mesin Sortir Mekanis\n(Roller/Sizer)] as machine_sizer
+    component [Unit Pencucian & Pengering\n(Kondisional)] as machine_washer
   }
 
-  rectangle "Smartphone Petani" as area_phone #FFC1C1 {
-    component [Mobile Browser\n(Web App Sistem)] as mobile
+  rectangle "Area Grading & Timbang Susut" as area_grading #FFCDD2 {
+    component [Timbangan Grading RS485\n(Net Grade & Shrinkage)] as scale_grading
+    component [Printer Label Grade\n(GRD-…)] as print_grade
   }
 
-  rectangle "Area Pengiriman" as area_ship #FFC1C1 {
-    component [Smartphone Driver\n(Mobile Browser)] as phone_driver
+  rectangle "Area Pengepakan (Packaging)" as area_pack #FFCDD2 {
+    component [Timbangan Pouch RS485\n(Target 1 kg / Bulk)] as scale_pouch
+    component [Printer Label Produksi & Ekspor\n(QR GS1 Digital Link / ITF-14)] as print_pack
+  }
+
+  rectangle "Warehouse — Zona Barang Jadi" as area_wh_fg #FFCDD2 {
+    component [Scanner In/Out\nBarang Jadi] as scan_fg
+  }
+
+  rectangle "Area Pengiriman (Delivery)" as area_ship #FFCDD2 {
+    component [Scanner Dispatch\nVerifikasi Manifest Truk] as scan_dispatch
     component [Delivery Truck] as truck
   }
 }
@@ -311,143 +235,130 @@ rectangle "**[ FIELD LEVEL ]**\nPerangkat Lapangan & IoT" as FL #FFEBEE {
 ' ============================================================
 ' LAYER 2 — EDGE / GATEWAY LEVEL
 ' ============================================================
-rectangle "**[ EDGE / GATEWAY LEVEL ]**\nAkuisisi & Transmisi Data" as EGL #F3E5F5 {
+rectangle "**[ EDGE / GATEWAY LEVEL ]**\nAkuisisi Data Sensor & Gateway Komunikasi" as EGL #F3E5F5 {
 
-  node "Mikrokontroler #1\n(Area Penerimaan)" as mcu1 {
-    component [MQTT Client\nFirmware] as fw1
+  node "Node MCU #1\n(Area Penerimaan)" as mcu1 {
+    component [Firmware ESP32 #1\nModbus TCP Server :502] as fw1
   }
 
-  node "Mikrokontroler #2\n(Area Sortir)" as mcu2 {
-    component [MQTT Client\nFirmware] as fw2
+  node "Node MCU #2\n(Area Grading)" as mcu2 {
+    component [Firmware ESP32 #2\nModbus TCP Server :502] as fw2
   }
 
-  node "Router / Switch\n(LAN / Wi-Fi Lokal)" as router
+  node "Node MCU #3\n(Area Pengepakan)" as mcu3 {
+    component [Firmware ESP32 #3\nModbus TCP Server :502] as fw3
+  }
+
+  node "Switch / Router Jaringan Lokal\n(LAN & Wi-Fi Industri)" as router
 }
 
 ' ============================================================
-' LAYER 3 — APPLICATION LEVEL (LOCAL)
+' LAYER 3 — APPLICATION LEVEL (LOCAL SERVER)
 ' ============================================================
-rectangle "**[ APPLICATION LEVEL ]**\nServer Operasional Internal" as AL #FFF3E0 {
+rectangle "**[ APPLICATION LEVEL ]**\nServer Operasional Terpusat Fasilitas" as AL #FFF3E0 {
 
-  node "PC Server\n(Gudang / Fasilitas)" as pc {
-    component [Local Web Server\n(Nginx / Apache)] as web
-    component [Aplikasi\n(Business Logic)] as app
-    component [MQTT Broker\n(Mosquitto)] as broker
-    component [Session Context\nManager] as ctx
-    database "Local Database\n(PostgreSQL / MySQL)" as local_db
+  node "PC Server Fasilitas\n(Ubuntu Linux Local Server)" as pc {
+    component [Web Server Nginx\n(Reverse Proxy)] as web
+    component [Backend Core App\n(Modular Monolith)] as app
+    component [Modbus TCP Master\n/ Polling Client] as mb_client
+    component [WebSocket Server\n(Socket.io Real-Time)] as ws_server
+    component [Session Context &\nWaring Linkage Manager] as ctx
+    component [Shrinkage Calculation Engine] as shrinkage_eng
+    component [GS1 Digital Link Resolver\n& Traceability Engine] as trace_resolver
+    database "PostgreSQL Database\n(Local Operational Data)" as local_db
   }
 }
 
 ' ============================================================
 ' LAYER 4 — CLOUD LEVEL
 ' ============================================================
-rectangle "**[ CLOUD LEVEL ]**\nBackup & Disaster Recovery" as CL #E3F2FD {
-  node "Cloud Server" as cloud {
-    database "Cloud Database\n(Backup / DR)" as cloud_db
+rectangle "**[ CLOUD LEVEL ]**\nSinkronisasi Data, Cadangan, & Disaster Recovery" as CL #E3F2FD {
+  node "Cloud Infrastructure" as cloud {
+    database "Cloud DB Backup\n(Periodic Data Synchronization)" as cloud_db
   }
 }
 
 ' ============================================================
 ' LAYER 5 — ENTERPRISE LEVEL
 ' ============================================================
-rectangle "**[ ENTERPRISE LEVEL ]**\nAkses Pengguna & Internet" as ENT #E8F5E9 {
+rectangle "**[ ENTERPRISE LEVEL ]**\nHak Akses Pengguna Terpadu (RBAC 3-Role) & Konsumen Publik" as ENT #E8F5E9 {
 
-  node "Internet / Public Domain" as internet {
-    component [Custom Domain\n(HTTPS)] as domain
+  node "Gateway Internet / Domain Publik" as internet {
+    component [HTTPS Domain\n(trace.enyx.id)] as domain
   }
 
-  actor "Admin\n(Full Access)" as admin
-  actor "Operator\n(Operasional)" as operator
-  actor "Petani\n(Traceability)" as farmer_user
+  actor "Admin\n(Hak Akses Penuh)" as admin
+  actor "Operator Terpadu\n(Multi-Menu Workstation)" as operator
+  actor "Petani\n(Portal Mandiri)" as farmer_user
+  actor "Konsumen / Buyer\n(Scan QR Publik)" as consumer
 }
 
 ' ============================================================
-' CONNECTIONS
+' KONEKSI ANTAR PERANGKAT & LAYER
 ' ============================================================
 
-' Field → Edge (RS485 wired)
-scale_big    --> mcu1   : RS485
-scale_a      --> mcu2   : RS485
-scale_b      --> mcu2   : RS485
-scale_c      --> mcu2   : RS485
+' Field RS485 → MCU Edge
+scale_intake  --> mcu1 : RS485 / Modbus RTU
+scale_grading --> mcu2 : RS485 / Modbus RTU
+scale_pouch   --> mcu3 : RS485 / Modbus RTU
 
-' Field → Router (USB / LAN)
-scanner_recv --> router : USB / LAN
-printer      --> router : USB / LAN
-scan_in      --> router : USB / LAN
-scan_out     --> router : USB / LAN
+' MCU Edge (Modbus TCP Server :502) <--> Router
+mcu1 <--> router : Modbus TCP (:502) / LAN
+mcu2 <--> router : Modbus TCP (:502) / LAN
+mcu3 <--> router : Modbus TCP (:502) / LAN
 
-' Truck → Departure (notasi logis)
-phone_driver --> domain : Manifest Pengiriman\n(HTTPS / Internet)
+' Field Scanners & Printers → Router (USB/LAN)
+scan_farmer   --> router : USB / LAN
+print_receipt --> router : USB / LAN
+print_waring  --> router : USB / LAN
+scan_buffer   --> router : Wi-Fi / LAN
+scan_pairing  --> router : Wi-Fi / LAN
+print_grade   --> router : USB / LAN
+print_pack    --> router : USB / LAN
+scan_fg       --> router : Wi-Fi / LAN
+scan_dispatch --> router : Wi-Fi / LAN
 
-' Edge → Application (MQTT over LAN)
-mcu1   --> broker : MQTT / Wi-Fi LAN
-mcu2   --> broker : MQTT / Wi-Fi LAN
-router --> pc     : LAN
+router <--> pc : TCP/IP (LAN)
 
-' Internal PC
-web    <--> app
-app    <--> ctx
-app    <--> local_db
-app    <--> broker
-ctx    <--> local_db : "read context\n(farmer, commodity, pallet)"
+' Komponen Internal PC Server
+web <--> app
+app <--> mb_client
+app <--> ws_server
+app <--> local_db
+app <--> ctx
+app <--> shrinkage_eng
+app <--> trace_resolver
+ctx <--> local_db
+shrinkage_eng <--> local_db
+mb_client --> ws_server : Broadcast Live Weight (Socket.io)
 
-' Operator input → context lookup
-scanner_recv --> router : USB / LAN
-router --> web : "scan pallet/farmer"
-web --> app : "lookup context"
-app --> ctx : "create/update session"
-ctx --> local_db : "fetch farmer, commodity, pallet"
+' Sync ke Cloud
+local_db --> cloud_db : Sinkronisasi Terjadwal (HTTPS)
 
-' Application → Cloud (periodic sync)
-local_db --> cloud_db : Sinkronisasi Berkala\n(Backup / HTTPS)
+' Server ke Domain Internet
+web --> domain : Reverse Proxy (HTTPS)
 
-' Application → Enterprise
-web    --> domain : Reverse Proxy\n(HTTPS)
-
-' Enterprise → Users (RBAC)
-domain --> admin       : RBAC — Full Access
-domain --> operator    : RBAC — Operasional
-domain --> farmer_user : RBAC — Traceability
-
-' Smartphone → Internet
-mobile --> domain : HTTPS (Internet)
+' Akses Pengguna (RBAC 3-Role + Publik)
+domain --> admin       : RBAC: ADMIN (Full Control)
+domain --> operator    : RBAC: OPERATOR (Akses Semua Menu Stasiun Kerja)
+domain --> farmer_user : RBAC: FARMER (Riwayat Setor, Timbang, & Grade)
+domain --> consumer    : Publik Tanpa Login (GS1 Traceability Pouch)
 
 @enduml
 ```
 
 ---
 
-### Penjelasan Layer Arsitektur
+## Manajemen Akses Pengguna (RBAC 3-Role + Publik)
 
-| Layer | Komponen | Fungsi |
-|-------|----------|--------|
-| **Field Level** | Timbangan RS485, Scanner QR, Printer Label, Scanner Warehouse, Scanner Pengiriman, Smartphone Petani | Perangkat fisik di lapangan untuk input data, pengemasan, dan pengiriman |
-| **Edge / Gateway** | Mikrokontroler ×2, Router/Switch | Akuisisi data dari timbangan via RS485, transmisi ke server via MQTT |
-| **Application Level** | PC Server (Web Server + App + MQTT Broker + Session Context + DB) | Pusat logika bisnis, session context management, dan penyimpanan lokal |
-| **Cloud Level** | Cloud Database | Backup berkala dan disaster recovery |
-| **Enterprise Level** | Custom Domain (HTTPS), Admin, Operator, Petani | Akses publik berbasis RBAC melalui internet |
+Sistem menyederhanakan hak akses menjadi **3 peran pengguna terautentikasi** ditambah **1 akses publik tanpa autentikasi**:
 
-### Protokol Komunikasi
-
-| Koneksi | Protokol | Keterangan |
-|---------|----------|------------|
-| Timbangan → Mikrokontroler | **RS485** | Serial wired, andal untuk jarak pendek di lingkungan industri |
-| Mikrokontroler → PC Server | **MQTT** | Lightweight, real-time, ideal untuk IoT over LAN/Wi-Fi |
-| Scanner / Printer → PC | **USB / LAN** | Koneksi langsung ke jaringan lokal |
-| PC Server → Cloud | **HTTPS** | Sinkronisasi berkala database ke cloud backup |
-| Pengguna → Aplikasi | **HTTPS** | Akses web aman via custom domain (internet) |
-
-### Manajemen Akses (RBAC)
-
-| Role | Hak Akses |
-|------|-----------|
-| **Admin** | Penuh — konfigurasi sistem, laporan, manajemen pengguna |
-| **Weighing Operator** | Operasional penimbangan — scan ID, verifikasi timbangan, input berat, create pallet |
-| **Sorting Operator** | Operasional penyortiran — grading, buat pouch, cetak label |
-| **Warehouse Operator** | Operasional gudang — warehouse in/out, stok management |
-| **Delivery Operator** | Operasional pengiriman — packaging, delivery, cetak dokumen |
-| **Petani** | Terbatas — riwayat setoran, validasi data panen, traceability |
+| Role | Kategori | Hak Akses & Cakupan Antarmuka |
+|------|----------|-------------------------------|
+| **ADMIN** | Akun Internal | Akses penuh (*Full Access*) untuk konfigurasi master data (komoditas, grade, packaging), manajemen pengguna & petani, audit trail sistem, pengaturan harga, serta analitik yield pabrik. |
+| **OPERATOR** | Akun Internal | **Akun Operasional Tunggal (*Unified Operator Account*)**.<br>Satu akun operator memiliki akses ke seluruh modul lapangan melalui **Menu Pemilih Stasiun Kerja (*Workstation Selector*)**:<br>1. *Penerimaan (Intake)*: Scan petani, timbang bruto waring, approve berat, cetak struk nota & label waring.<br>2. *Gudang Penyangga (Waiting Buffer)*: Kontrol antrean waring mentah (FIFO).<br>3. *Sortir Manual & Pairing*: Pembersihan kotoran fisik kasar, masukkan ke palet ber-QR, dan scan pairing waring $\leftrightarrow$ palet.<br>4. *Mesin Sortir & Cuci*: Monitoring alat sortir mekanis dan status pencucian.<br>5. *Grading & Timbang Susut*: Timbang net per grade (A/B/C/Reject), visualisasi kalkulasi penyusutan real-time.<br>6. *Pengepakan*: Timbang pouch 1 kg / kardus ekspor, cetak label GS1 Digital Link & ITF-14.<br>7. *Gudang Barang Jadi & Dispatch*: Manajemen stok produk jadi dan scan verifikasi muatan truk. |
+| **FARMER** (Petani) | Akun Eksternal | Portal mandiri petani untuk melihat riwayat setoran waring, status timbangan intake, nota digital, serta transparansi laporan grading dan persentase penyusutan. |
+| **KONSUMEN / BUYER** | Publik (Tanpa Login) | Memindai QR Code GS1 Digital Link pada kemasan produk untuk membuka halaman penelusuran (*traceability*) publik melalui peramban web smartphone. |
 
 ---
 
@@ -462,20 +373,11 @@ skinparam ArrowFontName Arial
 skinparam DefaultFontName Arial
 skinparam DefaultFontSize 11
 
-title Skema Database — ENYX-Smart Hub\n(Multi-Commodity)
+title Skema Database Relasional — ENYX-Smart Hub\n(Waring Intake, Pairing Palet, Timbang Susut, & Dual Warehouse)
 
 ' ============================================================
 ' CORE MODELS
 ' ============================================================
-
-entity "Commodity" as commodity {
-  *id : UUID <<PK>>
-  --
-  *name : VARCHAR <<UNIQUE>>
-  description : TEXT
-  *unit : VARCHAR <<DEFAULT: kg>>
-  createdAt : TIMESTAMP
-}
 
 entity "User" as user {
   *id : UUID <<PK>>
@@ -483,7 +385,7 @@ entity "User" as user {
   *email : VARCHAR <<UNIQUE>>
   *name : VARCHAR
   *password : VARCHAR
-  *role : ENUM <<DEFAULT: OPERATOR>>
+  *role : ENUM <<ADMIN, OPERATOR, FARMER>>
   createdAt : TIMESTAMP
   updatedAt : TIMESTAMP
 }
@@ -491,42 +393,86 @@ entity "User" as user {
 entity "Farmer" as farmer {
   *id : UUID <<PK>>
   --
+  *code : VARCHAR <<UNIQUE>> <<FRM-YYYY-SEQ>>
   *name : VARCHAR
   phone : VARCHAR
   address : TEXT
   location : VARCHAR
-  *code : VARCHAR <<UNIQUE>>
   *userId : UUID <<FK>>
   createdAt : TIMESTAMP
   updatedAt : TIMESTAMP
 }
 
+entity "Commodity" as commodity {
+  *id : UUID <<PK>>
+  --
+  *code : VARCHAR <<UNIQUE>> <<001: Kentang>>
+  *name : VARCHAR <<UNIQUE>>
+  description : TEXT
+  *unit : VARCHAR <<DEFAULT: kg>>
+  createdAt : TIMESTAMP
+}
+
+entity "Waring" as waring {
+  *id : UUID <<PK>>
+  --
+  *code : VARCHAR <<UNIQUE>> <<WRG-YYYYMMDD-SEQ>>
+  *farmerId : UUID <<FK>>
+  *commodityId : UUID <<FK>>
+  *initialWeightKg : FLOAT
+  *status : ENUM <<BUFFER_WAITING, IN_SORTING, COMPLETED>>
+  receivedAt : TIMESTAMP
+  verifiedBy : UUID <<FK>>
+  createdAt : TIMESTAMP
+}
+
 entity "Pallet" as pallet {
   *id : UUID <<PK>>
   --
-  *code : VARCHAR <<UNIQUE>>
-  *farmerId : UUID <<FK>>
+  *code : VARCHAR <<UNIQUE>> <<PLT-YYYYMMDD-SEQ>>
   *commodityId : UUID <<FK>>
+  *status : ENUM <<IN_SORTING, GRADED, PACKED, SHIPPED>>
   createdAt : TIMESTAMP
+}
+
+entity "PalletWaring" as pallet_waring {
+  *id : UUID <<PK>>
+  --
+  *palletId : UUID <<FK>>
+  *waringId : UUID <<FK>>
+  associatedAt : TIMESTAMP
+  associatedBy : UUID <<FK>>
 }
 
 entity "Grade" as grade {
   *id : UUID <<PK>>
   --
-  *name : VARCHAR <<UNIQUE>>
+  *name : VARCHAR <<UNIQUE>> <<Grade A, B, C, Reject>>
   description : TEXT
   *commodityId : UUID <<FK>>
   createdAt : TIMESTAMP
 }
 
-entity "WeighingRecord" as weighing {
+entity "GradingRecord" as grading_record {
   *id : UUID <<PK>>
   --
   *palletId : UUID <<FK>>
-  gradeId : UUID <<FK>>
+  *gradeId : UUID <<FK>>
+  *netWeightKg : FLOAT
+  shrinkageKg : FLOAT
+  shrinkagePercentage : FLOAT
+  recordedAt : TIMESTAMP
+  *operatorId : UUID <<FK>>
+}
+
+entity "WeighingRecord" as weighing {
+  *id : UUID <<PK>>
+  --
+  *stage : ENUM <<INTAKE, GRADING, PACKAGING>>
+  referenceId : UUID
   *weightKg : FLOAT
   note : TEXT
-  *recordedAt : TIMESTAMP
+  recordedAt : TIMESTAMP
   *userId : UUID <<FK>>
 }
 
@@ -535,7 +481,7 @@ entity "Pouch" as pouch {
   --
   *palletId : UUID <<FK>>
   *gradeId : UUID <<FK>>
-  *qrCode : VARCHAR <<UNIQUE>>
+  *qrCode : VARCHAR <<UNIQUE>> <<GS1 Digital Link URI>>
   *ean13 : VARCHAR <<UNIQUE>>
   *weightKg : FLOAT <<DEFAULT: 1.0>>
   *commodityId : UUID <<FK>>
@@ -546,6 +492,7 @@ entity "Warehouse" as warehouse {
   *id : UUID <<PK>>
   --
   *name : VARCHAR
+  *zone : ENUM <<BUFFER_WAITING, FINISHED_GOODS>>
   *capacity : INT
   createdAt : TIMESTAMP
   updatedAt : TIMESTAMP
@@ -555,7 +502,8 @@ entity "WarehouseStock" as stock {
   *id : UUID <<PK>>
   --
   *warehouseId : UUID <<FK>>
-  *gradeId : UUID <<FK>>
+  gradeId : UUID <<FK>>
+  *itemType : ENUM <<RAW_WARING, FINISHED_POUCH, FINISHED_BOX>>
   *quantity : INT
   *totalWeight : FLOAT
   createdAt : TIMESTAMP
@@ -563,15 +511,14 @@ entity "WarehouseStock" as stock {
 }
 
 ' ============================================================
-' PACKAGING MODELS (Generalized)
+' PACKAGING & DELIVERY MODELS
 ' ============================================================
 
 entity "PackagingType" as pkg_type {
   *id : UUID <<PK>>
   --
-  *code : VARCHAR <<UNIQUE>> <<CARTON, BOX, PALLET>>
+  *code : VARCHAR <<UNIQUE>> <<CARTON, BOX, SACK>>
   *name : VARCHAR
-  description : TEXT
   createdAt : TIMESTAMP
 }
 
@@ -582,7 +529,6 @@ entity "PackagingSize" as pkg_size {
   *code : VARCHAR <<UNIQUE>> <<10KG, 50KG, STD>>
   *name : VARCHAR
   *capacity : INT
-  *unit : VARCHAR <<DEFAULT: pouch>>
   createdAt : TIMESTAMP
 }
 
@@ -590,7 +536,7 @@ entity "PackagingUnit" as pkg_unit {
   *id : UUID <<PK>>
   --
   *sizeId : UUID <<FK>>
-  *barcode : VARCHAR <<UNIQUE>> <<ITF-14, GS1-128>>
+  *barcode : VARCHAR <<UNIQUE>> <<ITF-14 / GS1-128>>
   batchNo : VARCHAR
   totalWeight : FLOAT
   *commodityId : UUID <<FK>>
@@ -607,18 +553,6 @@ entity "PackagingItem" as pkg_item {
   createdAt : TIMESTAMP
 }
 
-entity "PackagingDelivery" as pkg_delivery {
-  *id : UUID <<PK>>
-  --
-  *packagingId : UUID <<FK>>
-  *deliveryId : UUID <<FK>>
-  createdAt : TIMESTAMP
-}
-
-' ============================================================
-' DELIVERY & TIME SERIES
-' ============================================================
-
 entity "Delivery" as delivery {
   *id : UUID <<PK>>
   --
@@ -630,199 +564,109 @@ entity "Delivery" as delivery {
   createdAt : TIMESTAMP
 }
 
+entity "PackagingDelivery" as pkg_delivery {
+  *id : UUID <<PK>>
+  --
+  *packagingId : UUID <<FK>>
+  *deliveryId : UUID <<FK>>
+  createdAt : TIMESTAMP
+}
+
 entity "ScaleReading" as scale {
   *time : TIMESTAMP <<PK>>
   *deviceId : VARCHAR <<PK>>
   --
+  *stage : ENUM <<INTAKE, GRADING, PACKAGING>>
   weightKg : FLOAT
-  palletId : UUID <<FK>>
-  commodityId : UUID <<FK>>
+  referenceCode : VARCHAR
   raw : JSON
 }
 
 ' ============================================================
-' RELATIONSHIPS
+' HUBUNGAN RELASIONAL ENTITAS
 ' ============================================================
 
-' Commodity relationships
-commodity ||--o{ pallet : "has many"
-commodity ||--o{ grade : "has many"
-commodity ||--o{ pouch : "has many"
-commodity ||--o{ stock : "has many"
-commodity ||--o{ pkg_unit : "has many"
-commodity ||--o{ delivery : "has many"
-commodity ||--o{ scale : "has many"
+user ||--o| farmer : "profile akun"
+farmer ||--o{ waring : "menyetor waring"
+commodity ||--o{ waring : "memiliki jenis"
+commodity ||--o{ pallet : "memiliki jenis"
+commodity ||--o{ grade : "memiliki jenis"
+commodity ||--o{ pouch : "memiliki jenis"
 
-' User relationships
-user ||--o{ farmer : "has profile"
-user ||--o{ weighing : "records"
+waring ||--o{ pallet_waring : "dikelompokkan ke"
+pallet ||--o{ pallet_waring : "memuat waring"
 
-' Farmer relationships
-farmer ||--o{ pallet : "has many"
+pallet ||--o{ grading_record : "hasil grading"
+grade ||--o{ grading_record : "diklasifikasikan"
+pallet ||--o{ pouch : "dikemas menjadi"
+grade ||--o{ pouch : "mutu pouch"
 
-' Pallet relationships
-pallet ||--o{ weighing : "has many"
-pallet ||--o{ pouch : "has many"
+warehouse ||--o{ stock : "menyimpan stok"
+grade ||--o{ stock : "stok per grade"
 
-' Grade relationships
-grade ||--o{ weighing : "has many"
-grade ||--o{ pouch : "has many"
-grade ||--o{ stock : "has many"
+pouch ||--o{ pkg_item : "dimasukkan ke"
+pkg_type ||--o{ pkg_size : "memiliki ukuran"
+pkg_size ||--o{ pkg_unit : "menghasilkan unit"
+pkg_unit ||--o{ pkg_item : "berisi"
+pkg_unit ||--o{ pkg_delivery : "dikirim via"
+delivery ||--o{ pkg_delivery : "memuat pengiriman"
 
-' Weighing relationships
-weighing }|--|| pallet : "belongs to"
-weighing }|--o| grade : "belongs to"
-weighing }|--|| user : "recorded by"
-
-' Pouch relationships
-pouch }|--|| pallet : "belongs to"
-pouch }|--|| grade : "belongs to"
-pouch ||--o{ pkg_item : "packed in"
-
-' Warehouse relationships
-warehouse ||--o{ stock : "has many"
-stock }|--|| warehouse : "belongs to"
-stock }|--|| grade : "belongs to"
-
-' Packaging Type relationships
-pkg_type ||--o{ pkg_size : "has many"
-pkg_type ||--o{ pkg_unit : "has many"
-
-' Packaging Size relationships
-pkg_size }|--|| pkg_type : "belongs to"
-pkg_size ||--o{ pkg_unit : "has many"
-
-' Packaging Unit relationships
-pkg_unit }|--|| pkg_size : "belongs to"
-pkg_unit }|--|| commodity : "belongs to"
-pkg_unit ||--o{ pkg_item : "contains"
-pkg_unit ||--o{ pkg_delivery : "shipped via"
-
-' Packaging Item relationships
-pkg_item }|--|| pkg_unit : "belongs to"
-
-' Packaging Delivery relationships
-pkg_delivery }|--|| pkg_unit : "belongs to"
-pkg_delivery }|--|| delivery : "belongs to"
-
-' Delivery relationships
-delivery ||--o{ pkg_delivery : "contains"
-
-' Scale Reading relationships
-scale }|--o| pallet : "references"
+user ||--o{ weighing : "mencatat timbangan"
+user ||--o{ grading_record : "mencatat grading"
 
 @enduml
 ```
 
 ---
 
-### Penjelasan Skema Database
+## Standar Kodefikasi & Barcode
 
-#### 1. Core Models (Inti)
+Semua entitas fisik lapangan menggunakan standar identifier berikut:
 
-| Tabel | Fungsi | Relasi |
-|-------|--------|--------|
-| `commodities` | Master data commodity (kentang, tomat, cabai) | 1 → N ke semua tabel bisnis |
-| `users` | User accounts (admin, operator, farmer) | 1 → 1 ke farmer profile |
-| `farmers` | Data petani | N → 1 ke user |
-| `pallets` | Palet pembawa hasil panen | N → 1 ke farmer, N → 1 ke commodity |
-| `grades` | Grade kualitas (A/B/C) per commodity | N → 1 ke commodity |
-| `weighing_records` | Data timbangan | N → 1 ke pallet, grade, user |
-| `pouches` | Pouch 1 kg setelah grading | N → 1 ke pallet, grade, commodity |
-| `warehouses` | Master warehouse | 1 → N ke stock |
-| `warehouse_stock` | Stok warehouse per grade | N → 1 ke warehouse, grade |
-
-#### 2. Packaging Models (Generalized)
-
-| Tabel | Fungsi | Relasi |
-|-------|--------|--------|
-| `packaging_types` | Tipe pengemas (CARTON, BOX, PALLET) | 1 → N ke sizes & units |
-| `packaging_sizes` | Ukuran pengemas (10KG, 50KG, STD) | N → 1 ke type, 1 → N ke units |
-| `packaging_units` | Unit pengemas konkret dengan barcode | N → 1 ke size, commodity |
-| `packaging_items` | Relasi item ke packaging unit | N → 1 ke packaging unit |
-| `packaging_deliveries` | Relasi packaging ke delivery | N → 1 ke packaging & delivery |
-
-#### 3. Delivery & Time Series
-
-| Tabel | Fungsi | Relasi |
-|-------|--------|--------|
-| `deliveries` | Data pengiriman truck | 1 → N ke packaging_deliveries |
-| `scale_readings` | Data timbangan real-time dari MQTT | Time-series hypertable |
-
-#### 4. Index & Constraints
-
-- **Primary Keys**: Semua tabel menggunakan UUID
-- **Unique Constraints**: `code` (farmer, pallet), `qrCode`, `ean13`, `barcode`
-- **Composite Keys**: `scale_readings` menggunakan `(time, deviceId)`
-- **Foreign Keys**: Semua relasi menggunakan UUID dengan cascade rules
-- **Check Constraints**: `status` enum untuk packaging units
-
-#### 5. Multi-Commodity Support
-
-Setiap tabel bisnis memiliki `commodityId` yang mengacu ke tabel `commodities`. Ini memungkinkan:
-- Petani bisa menyetorkan berbagai jenis hasil panen
-- Setiap commodity punya grading system sendiri
-- Warehouse stock di-track per commodity
-- Packaging configuration per commodity
-- Delivery per commodity
-
-#### 6. QR/Barcode Code Standards
-
-Semua identifier yang discan di lapangan mengikuti format standar berikut:
-
-**Farmer Code** — Format: `FRM-{YYYY}-{SEQ}`
-- `FRM`: prefix farmer
-- `{YYYY}`: tahun registrasi, contoh `2026`
-- `{SEQ}`: nomor urut 4 digit, contoh `0001`
-- Contoh: `FRM-2026-0001`
-- Generate: Sistem auto-generate saat farmer didaftarkan
-- Used in: QR Code pada ID card petani
-
-**Pallet Code** — Format: `PLT-{YYYYMMDD}-{SEQ}`
-- `PLT`: prefix pallet
-- `{YYYYMMDD}`: tanggal dibuat, contoh `20260914`
-- `{SEQ}`: nomor urut 4 digit per hari, contoh `0001`
-- Contoh: `PLT-20260914-0001`
-- Generate: Sistem auto-generate saat pallet dibuat
-- Used in: QR Code pada palet
-
-**Pouch QR Code** — Format: `PCH-{PALLET_CODE}-{SEQ}`
-- `PCH`: prefix pouch
-- `{PALLET_CODE}`: kode pallet sumber, contoh `PLT-20260914-0001`
-- `{SEQ}`: nomor urut pouch dalam pallet, contoh `001`
-- Contoh: `PCH-PLT-20260914-0001-001`
-- Generate: Sistem auto-generate saat pouch dibuat dari pallet
-- Used in: QR Code pada label pouch 1 kg
-
-**Pouch EAN-13** — Format: `899{COMMODITY_CODE}{SEQ}`
-- `899`: kode negara Indonesia (GS1)
-- `{COMMODITY_CODE}`: 3 digit commodity code, contoh `001` untuk Kentang
-- `{SEQ}`: 6 digit nomor urut unik global
-- Contoh: `899001000001`
-- Generate: Sistem auto-generate saat pouch dibuat
-- Used in: EAN-13 barcode pada label pouch
-
-**Packaging Barcode (ITF-14)** — Format: `{GTIN-14}`
-- GTIN-14: 14 digit yang includes:
-  - 1 digit packaging indicator (0 untuk inner, 1 untuk case)
-  - 3 digit commodity code
-  - 5 digit batch/lot number
-  - 5 digit sequence
-- Contoh: `000189700100011`
-- Generate: Sistem auto-generate saat packaging unit dibuat
-- Used in: ITF-14 barcode pada packaging ekspor
-
-**Commodity Code Mapping** (3 digit):
-- `001`: Kentang
-- `002`: Tomat
-- `003`: Cabai
-- Ditambahkan secara dinamis saat commodity baru dibuat
+1. **Farmer Code (`FRM-{YYYY}-{SEQ}`)**:
+   - Contoh: `FRM-2026-0001`
+   - Dicetak sebagai QR Code pada kartu ID Petani.
+2. **Waring Code (`WRG-{YYYYMMDD}-{SEQ}`)**:
+   - Contoh: `WRG-20261025-0001`
+   - Diterbitkan sistem pasca-penimbangan penerimaan; dicetak dan ditempelkan pada wadah waring.
+3. **Pallet Code (`PLT-{YYYYMMDD}-{SEQ}`)**:
+   - Contoh: `PLT-20261025-0001`
+   - Diterbitkan saat kentang hasil sortir manual dimasukkan ke palet; menjadi wadah induk untuk proses mekanis dan grading.
+4. **Grade Label (`GRD-{PALLET_CODE}-{GRADE}`)**:
+   - Contoh: `GRD-PLT-20261025-0001-A`
+   - Penanda fisik wadah hasil grading per mutu.
+5. **Pouch QR GS1 Digital Link (`https://{domain}/01/{GTIN-13}/10/{LOT}/21/{SERIAL}`)**:
+   - Contoh: `https://trace.enyx.id/01/899001000001/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001`
+   - AI 01: GTIN-13 (EAN-13 produk ritel)
+   - AI 10: Batch/Lot (Pallet Code + Grade)
+   - AI 21: Serial Pouch Unik
+   - Dapat dipindai scanner industri (decode GS1 AI key) dan smartphone publik (membuka halaman web traceability).
+6. **Packaging Barcode Ekspor (`ITF-14`)**:
+   - Standar 14 digit GS1 untuk kemasan logistik ekspor (kardus 10 kg / karung 50 kg).
 
 ---
 
-## 📚 Related Documentation
+## 4. Spesifikasi & Ruang Lingkup MVP (Minimum Viable Product)
 
-- `API.md` — Complete API endpoint registry with OpenAPI/Swagger documentation
-- `TECH_STACK.md` — Technology choices and database schema
-- `ARCHITECTURE.md` — Module architecture and responsibilities
-- `PLANNING.md` — Implementation phases and task breakdown
+### A. Sasaran MVP
+- **Jangka Waktu**: 4--6 minggu menuju go-live operasional packhouse.
+- **Komoditas**: Kentang tunggal (Grade A, B, C, Reject).
+- **Tujuan Utama**: Digitalisasi penuh penerimaan waring, eliminasi sengketa susut melalui penimbangan transparan, validasi alur sortir & pairing palet, serta penerbitan label kemasan GS1 Digital Link dan ITF-14.
+
+### B. Matriks Ruang Lingkup (In-Scope vs. Out-of-Scope)
+
+| Kategori | Rincian Fitur & Komponen |
+|----------|--------------------------|
+| **In-Scope (Fitur Inti MVP)** | 1. **Penerimaan Waring**: Scan ID petani (`FRM`), timbang bruto RS485, approve berat, cetak struk nota tanda terima thermal, dan cetak label QR waring (`WRG`).<br>2. **Gudang Penyangga (Waiting Buffer)**: Kontrol antrean waring FIFO di zona penyangga gudang.<br>3. **Sortir Manual & Pairing**: Pembersihan fisik kasar & scan pairing QR Waring $\leftrightarrow$ QR Palet (`PLT`) untuk menjaga silsilah asal petani.<br>4. **Mesin Sortir & Cuci**: Pencatatan parameter operasional sortir mekanis dan opsi pencucian/pengeringan kondisional.<br>5. **Grading & Timbang Susut**: Timbangan IoT RS485 per grade dan kalkulasi penyusutan otomatis ($\text{Susut} = \text{Bruto Waring} - \sum \text{Net Grade}$).<br>6. **Pengepakan Retail & Ekspor**: Timbangan presisi pouch 1 kg dengan cetak label QR GS1 Digital Link + EAN-13, serta kemasan ekspor 10/50 kg dengan barcode ITF-14.<br>7. **Gudang Barang Jadi & Dispatch**: Kontrol stok per grade dan scan verifikasi manifest pengiriman truk.<br>8. **RBAC 3-Role Terpadu**: Akun `ADMIN`, akun `OPERATOR` dengan menu modular pemilih stasiun kerja (*workstation selector*), akun `FARMER`, dan akses publik `KONSUMEN`.<br>9. **Infrastruktur Local-First**: Server Ubuntu lokal (Go REST API, PostgreSQL, dan Modbus TCP over Ethernet) dengan ketahanan jaringan saat internet padam. |
+| **Out-of-Scope (Fase Lanjutan)** | 1. Komoditas multi-varietas (Tomat, Cabai) — skema DB ready, implementasi MVP fokus pada Kentang.<br>2. Pembayaran digital / e-wallet petani langsung dari aplikasi.<br>3. Computer Vision / AI automatic optical grading.<br>4. Aplikasi mobile native toko aplikasi (Play Store / App Store) — antarmuka berjalan responsif via peramban web/PWA.<br>5. Konveyor PLC otomatisasi robotik. |
+
+### C. Milestone 6 Fase Implementasi
+
+1. **Fase 0 (Minggu 1)**: Setup server lokal, Docker Compose, migrasi SQL Go (`Waring`, `PalletWaring`, `GradingRecord`, dual warehouse zone), seed master data.
+2. **Fase 1 (Minggu 1--2)**: Autentikasi JWT, middleware RBAC 3-role (Admin, Operator, Farmer), CRUD Petani & cetak kartu QR `FRM`.
+3. **Fase 2 (Minggu 2--3)**: Layanan Waring Intake, driver Modbus RS485 timbangan penerimaan, dua printer thermal IW-J300H 80 mm melalui Ethernet untuk Reception dan Packaging, cetak struk nota thermal & label waring `WRG`, kontrol FIFO antrean buffer.
+4. **Fase 3 (Minggu 3--4)**: Antarmuka scan pairing Waring $\leftrightarrow$ Palet `PLT`, form parameter mesin sortir & cuci kondisional, validasi upstream traceability.
+5. **Fase 4 (Minggu 4)**: Driver timbangan IoT Area Grading, modul GradingRecord & Shrinkage Engine, dashboard visualisasi rendemen susut real-time.
+6. **Fase 5 (Minggu 4--5)**: Timbangan meja pouch 1 kg, generator QR GS1 Digital Link & barcode ekspor ITF-14, resolver publik `/traceability`.
+7. **Fase 6 (Minggu 5--6)**: Gudang barang jadi, modul dispatch muatan truk, Socket.io real-time events, pengujian lapangan UAT.
+
