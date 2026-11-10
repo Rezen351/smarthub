@@ -3,7 +3,9 @@
 #include "Logger.h"
 #include "TaskWatchdog.h"
 #include "EventBus.h"
+#if ETHERNET_ENABLED
 #include <Ethernet.h>
+#endif
 #include <WiFi.h>
 #include <SPI.h>
 #include <SPIFFS.h>
@@ -12,6 +14,7 @@ extern EventBus gEventBus;
 
 static uint8_t mac[6];
 
+#if ETHERNET_ENABLED
 static void resetW5500() {
   pinMode(W5500_RST_PIN, OUTPUT);
   digitalWrite(W5500_RST_PIN, LOW);
@@ -28,6 +31,7 @@ static const char *linkStatusText(int status) {
   }
   return "UNKNOWN";
 }
+#endif
 
 EthernetManager::EthernetManager() {}
 
@@ -36,6 +40,14 @@ EthernetManager::~EthernetManager() {
 }
 
 void EthernetManager::begin(const AppSettings& s) {
+#if !ETHERNET_ENABLED
+  _transportMode = TRANSPORT_WIFI;
+  _transportState = TransportState::WiFi;
+  _active = false;
+  _noHardware = false;
+  LOG_INFO("eth", "Ethernet disabled in configuration (WiFi only)");
+  return;
+#else
   _transportMode = s.transportMode;
   _pendingCfg.transportMode = s.transportMode;
 
@@ -85,9 +97,13 @@ void EthernetManager::begin(const AppSettings& s) {
   LOG_INFO("eth", "W5500 ready to connect via %s",
            _pendingCfg.w5500UseDhcp ? "DHCP" : "static");
   initEthernet(_pendingCfg);
+#endif
 }
 
 void EthernetManager::loop() {
+#if !ETHERNET_ENABLED
+  return;
+#else
   uint32_t now = millis();
 
   if (_transportState == TransportState::Switching) {
@@ -125,22 +141,37 @@ void EthernetManager::loop() {
   if (_active) {
     stopEthernet();
   }
+#endif
 }
 
 void EthernetManager::setTransportMode(uint8_t mode) {
+#if !ETHERNET_ENABLED
+  (void)mode;
+  _transportMode = TRANSPORT_WIFI;
+  _pendingCfg.transportMode = TRANSPORT_WIFI;
+  _transportState = TransportState::WiFi;
+  _retryAtMs = 0;
+#else
   _transportMode = mode;
   _pendingCfg.transportMode = mode;
   _transportState = mode == TRANSPORT_WIFI ? TransportState::WiFi : TransportState::Ethernet;
   _retryAtMs = 0;
   LOG_INFO("eth", "transport mode -> %s",
             mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+#endif
 }
 
 void EthernetManager::requestTransportMode(uint8_t mode) {
+#if !ETHERNET_ENABLED
+  (void)mode;
+  _transportMode = TRANSPORT_WIFI;
+  _transportState = TransportState::WiFi;
+#else
   _transportState = TransportState::Switching;
   _transportTarget = mode;
   LOG_INFO("eth", "transport mode change requested: %s (will apply from loop)",
             mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
+#endif
 }
 
 void EthernetManager::updatePendingEthernetConfig(const AppSettings& s) {
@@ -177,6 +208,10 @@ void EthernetManager::applyPendingTransportMode() {
 }
 
 void EthernetManager::initEthernet(const AppSettings& s) {
+#if !ETHERNET_ENABLED
+  (void)s;
+  return;
+#else
   if (_active) {
     LOG_INFO("eth", "state=already-active");
     return;
@@ -296,9 +331,14 @@ void EthernetManager::initEthernet(const AppSettings& s) {
     }
     return;
   }
+#endif
 }
 
 void EthernetManager::stopEthernet() {
+#if !ETHERNET_ENABLED
+  _active = false;
+  return;
+#else
   if (!_active) {
     LOG_INFO("eth", "state=already-stopped");
     return;
@@ -312,6 +352,7 @@ void EthernetManager::stopEthernet() {
   _linkAttempt = 0;
 
   LOG_INFO("eth", "state=stopped");
+#endif
 }
 
 void EthernetManager::loadEthernetConfigFromJson(AppSettings& s) {

@@ -1,6 +1,6 @@
-# Weight Transmitter — Firmware Design Document
+# enyx-weight-transmitter — Firmware Design Document
 
-> **E-Tani Smart Hub · Firmware v1.7**
+> **enyx-weight-transmitter · Firmware v1.7**
 > Target: ESP32-S3 (dual-core Xtensa LX7, 240 MHz, native USB)
 > Build system: PlatformIO · framework-arduinoespressif32 6.6.0 · RTOS: FreeRTOS 10.4
 
@@ -8,13 +8,13 @@
 
 ## 1. Overview
 
-The **Weight Transmitter** is an autonomous edge device that:
+The **enyx-weight-transmitter** is an autonomous edge device that:
 
 1. Acquires mass data from a strain-gauge load cell via an **HX711** 24-bit ADC.
-2. Publishes real-time weight over **Modbus TCP** on both **WiFi** and **Ethernet** simultaneously (dual-transport), acting as a Modbus server on port 502.
-3. Provides a **captive-portal web UI** for device configuration and calibration — reachable **only via WiFi Soft-AP** (`192.168.4.1`), regardless of Ethernet or STA state.
+2. Publishes real-time weight over **Modbus TCP** on **WiFi**, acting as a Modbus server on port 502.
+3. Provides a **captive-portal web UI** for device configuration and calibration reachable via WiFi Soft-AP (`192.168.4.1`) or station IP.
 4. Runs in **dual WiFi mode** simultaneously: Soft-AP (configuration hotspot) + STA uplink (user network), both always-on.
-5. Uses **W5500 Ethernet** for Modbus TCP only; portal access and WiFi STA remain independent.
+5. Uses a dedicated **GN/TA/AiP6932 7-segment display** (weight, unit price, total price) and a **4x6 keypad matrix**.
 
 The design is intentionally **protocol-agnostic at the top level**: the `SharedState` bus decouples sensor acquisition from transport, allowing additional protocols (Modbus RTU, OPC-UA, etc.) to be added as independent modules in future iterations without touching the sensor or portal code.
 
@@ -22,131 +22,54 @@ The design is intentionally **protocol-agnostic at the top level**: the `SharedS
 
 ## 2. Hardware
 
-### 2.1 Minimum Bill of Materials
+### 2.1 Bill of Materials
 
 | Component | Part | Notes |
 |-----------|------|-------|
-| MCU | ESP32-S3 DevKitC-1 | Dual-core Xtensa LX7, 240 MHz, native USB, WiFi/BT |
-| MCU | ESP32-WROOM-32 (DevKit V1) | Dual-core Xtensa LX6, 240 MHz, WiFi/BT, alternative variant |
+| MCU | ESP32-S3 DevKitC-1 N16R8 | Dual-core Xtensa LX7, 240 MHz, native USB, WiFi/BT |
 | Load cell ADC | HX711 module | 24-bit sigma-delta, 10/80 Hz |
-| Load cell | Any strain-gauge (1-200 kg range) | 4-wire Wheatstone bridge |
-| Power supply | 5 V / 1 A USB or regulated | HX711 may use 3.3 V or 5 V VCC |
-
-### 2.1 Minimum Bill of Materials
-
-| Component | Part | Notes |
-|-----------|------|-------|
-| MCU | ESP32-S3 DevKitC-1 | Dual-core Xtensa LX7, 240 MHz, native USB, WiFi/BT |
-| MCU | ESP32-WROOM-32 (DevKit V1) | Dual-core Xtensa LX6, 240 MHz, WiFi/BT, alternative variant |
-| Load cell ADC | HX711 module | 24-bit sigma-delta, 10/80 Hz |
-| Load cell | Any strain-gauge (1-200 kg range) | 4-wire Wheatstone bridge |
-| Ethernet | W5500 module (hardware SPI) | Modbus TCP over Ethernet |
-| Display | GN/TA/AiP6932 7-segment display | Weight, unit price, and total price |
+| Load cell | Strain-gauge | 4-wire Wheatstone bridge |
+| Display | GN/TA/AiP6932 7-segment display | 3 sections (weight, unit price, total price) |
+| Keypad | 4x6 matrix keypad | 24 keys: digits, function, and memory presets |
+| Buzzer | Passive piezo buzzer | Driven by LEDC PWM on GPIO 5 |
 | Power supply | 5 V / 1 A USB or regulated | HX711 may use 3.3 V or 5 V VCC |
 
 ### 2.2 Pin Assignment
 
 #### ESP32-S3 DevKitC-1 N16R8
 
-This is the canonical assignment for the N16R8 module. GPIO 26–37 are
-reserved by Octal flash/PSRAM and are not application GPIO. GPIO 20 is kept free for native USB. GPIO 19 is assigned to the validated
-6932 DIN wiring. GPIO 0/3/45/46 are kept free for boot strapping,
-and GPIO 43/44 remain available for the UART0 console.
-
 ```
 GPIO       Signal             Connected to
 ---------- ------------------ -------------------------------------
-GPIO 12    W5500_SCK          W5500 SPI clock
-GPIO 13    W5500_MISO         W5500 SPI MISO
-GPIO 11    W5500_MOSI         W5500 SPI MOSI
-GPIO 10    W5500_CS           W5500 chip select
-GPIO 9     W5500_RST          W5500 hardware reset
-GPIO 14    LOADCELL_DOUT      HX711 DT / DOUT
-GPIO 15    LOADCELL_SCK       HX711 PD_SCK
-GPIO 16    OLED_SDA           SSD1306 SDA
-GPIO 17    OLED_SCL           SSD1306 SCL
-GPIO 1     MATRIX_ROW_1       Button matrix row 1
-GPIO 2     MATRIX_ROW_2       Button matrix row 2
-GPIO 4     MATRIX_ROW_3       Button matrix row 3
-GPIO 5     MATRIX_ROW_4       Button matrix row 4
-GPIO 6     MATRIX_COL_1       Button matrix column 1
-GPIO 7     MATRIX_COL_2       Button matrix column 2
-GPIO 8     MATRIX_COL_3       Button matrix column 3
-GPIO 39    MATRIX_COL_4       Button matrix column 4 (JTAG-capable)
-GPIO 40    MATRIX_COL_5       Button matrix column 5 (JTAG-capable)
-GPIO 38    STATUS_RGB_LED     Built-in addressable RGB LED (single data pin)
-GPIO 18    DISPLAY6932_CLK    GN/TA/AiP6932 CLK, shared
-GPIO 19    DISPLAY6932_DIN    GN/TA/AiP6932 DIN, shared
-GPIO 21    DISPLAY6932_STB    GN/TA/AiP6932 STB, shared by both chips
-GPIO 47    BUZZER             Passive piezo buzzer (LEDC PWM, ~2.7 kHz)
+GPIO 13    LOADCELL_DOUT      HX711 DT / DOUT (HX-DT)
+GPIO 14    LOADCELL_SCK       HX711 PD_SCK (HX-SCK)
+GPIO 5     BUZZER             Passive piezo buzzer (LEDC PWM, ~2.7 kHz)
+GPIO 21    DISPLAY6932_STB    GN/TA/AiP6932 STB (D-STB)
+GPIO 19    DISPLAY6932_DIN    GN/TA/AiP6932 DIN (D-DIN)
+GPIO 20    DISPLAY6932_CLK    GN/TA/AiP6932 CLK (D-CLK)
+GPIO 38    MATRIX_ROW_1       Button matrix row 1 (R1)
+GPIO 48    MATRIX_ROW_2       Button matrix row 2 (R2)
+GPIO 18    MATRIX_ROW_3       Button matrix row 3 (R3)
+GPIO 47    MATRIX_ROW_4       Button matrix row 4 (R4)
+GPIO 41    MATRIX_COL_1       Button matrix column 1 (C1)
+GPIO 2     MATRIX_COL_2       Button matrix column 2 (C2)
+GPIO 1     MATRIX_COL_3       Button matrix column 3 (C3)
+GPIO 42    MATRIX_COL_4       Button matrix column 4 (C4)
+GPIO 40    MATRIX_COL_5       Button matrix column 5 (C5)
+GPIO 39    MATRIX_COL_6       Button matrix column 6 (C6)
 ```
 
-Power the ESP32-S3 from a stable 5 V rail. Power the W5500 and 6932
-controller/display rail according to their modules, but keep all grounds
-common. The ESP32 GPIO signals must remain at 3.3 V logic; the 6932 inputs
-must use a level shifter if their input high threshold requires it.
-
-GPIO 39/40 are usable during normal firmware execution, but an external JTAG
-debugger cannot use them simultaneously. GPIO 38 is assigned exclusively to
-the DevKitC-1 built-in addressable RGB LED. Do not connect an external LED to
-this pin and do not drive it as a normal single-color LED; use an addressable
-RGB LED driver with the correct one-wire timing.
-
-The selected N16R8 DevKitC-1 variant must have its built-in RGB LED data line
-on GPIO 38. Some ESP32-S3 DevKit revisions use GPIO 48 instead, so verify the
-silkscreen/schematic before assembly. If the physical board uses GPIO 48,
-change both `STATUS_RGB_LED_PIN` in `src/config.h` and this table together.
-
-#### N16R8 reservation rules
-
-| GPIO | Status | Reason |
-|------|--------|--------|
-| 0, 3, 45, 46 | Reserved | Boot strapping |
-| 20 | Reserved | Native USB D+ |
-| 26–37 | Forbidden | Octal flash/PSRAM |
-| 38 | Assigned | Built-in addressable RGB LED data line |
-| 39–42 | Assigned with caution | JTAG-capable; 39/40 used by matrix |
-| 43, 44 | Reserved | UART0 console/programming |
-| 47 | Assigned | Passive piezo buzzer driven by LEDC PWM |
-| 48 | Reserved | Keep free for board LED/debug variants |
-
-#### ESP32 / ESP32-DOIT-V1 (esp32dev)
-
-```
-ESP32 GPIO | Signal        | Connected to
------------+---------------+-------------------------------
-GPIO 14    | W5500_SCK     | W5500 SPI clock
-GPIO 13    | W5500_MISO    | W5500 SPI MISO
-GPIO 12    | W5500_MOSI    | W5500 SPI MOSI
-GPIO 15    | W5500_CS      | W5500 SPI chip select
-GPIO 16    | W5500_RST     | W5500 hardware reset
-GPIO 4     | LOADCELL_DOUT | HX711 DT  (data out)
-GPIO 5     | LOADCELL_SCK  | HX711 PD_SCK (clock)
-GPIO 21    | OLED_SDA      | SSD1306 SDA (I2C)
-GPIO 22    | OLED_SCL      | SSD1306 SCL (I2C)
-```
+Power the ESP32-S3 from a stable 5 V rail. Power the 6932
+controller/display rail according to its module, but keep all grounds common.
 
 #### Bus topology
 
-##### ESP32-S3 N16R8
-
 | Bus | Peripheral | GPIO | Mode | Notes |
 |-----|-----------|------|------|-------|
-| Hardware SPI | W5500 | 12, 11, 13, 10, 9 | SPI | See pin assignment per board above |
-| Software GPIO | HX711 | 14, 15 | Bit-banged | Uses `HX711` library; does **not** use SPI peripheral |
-| I2C (Wire) | SSD1306 | 16, 17 | I2C | `Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN)` |
-| GPIO | Button matrix | rows 1, 2, 4, 5; columns 6, 7, 8, 39, 40 | 4x5 scan |
-| GPIO | GN/TA/AiP6932 | CLK 18, DIN 19, STB 21 | 3-wire serial, shared STB |
-| GPIO | Built-in RGB LED | 38 | Addressable one-wire data output |
-| LEDC | Piezo buzzer | 47 | PWM tone | Patterns only, no continuous tone |
-
-##### ESP32 / ESP32-DOIT-V1 (esp32dev)
-
-| Bus | Peripheral | GPIO | Mode | Notes |
-|-----|-----------|------|------|-------|
-| Hardware SPI | W5500 | 14, 12, 13, 15, 16 | SPI | See pin assignment per board above |
-| Software GPIO | HX711 | 4, 5 | Bit-banged | Uses `HX711` library; does **not** use SPI peripheral |
-| I2C (Wire) | SSD1306 | 21, 22 | I2C | `Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN)` |
+| Software GPIO | HX711 | 13, 14 | Bit-banged | Uses `HX711` library |
+| GPIO | 4x6 Matrix Keypad | rows: 38, 48, 18, 47; cols: 41, 2, 1, 42, 40, 39 | 4x6 scan | Internal pullups |
+| GPIO | GN/TA/AiP6932 | CLK 20, DIN 19, STB 21 | 3-wire serial | Shared STB |
+| LEDC | Piezo buzzer | 5 | PWM tone | Patterns only |
 
 #### Pin conflict prevention
 
@@ -281,15 +204,26 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 | `SCALE_SAMPLE_MS` | 30 | Sensor task period (ms) |
 | `SCALE_MEDIAN_WINDOW` | 5 | Samples used to reject isolated spikes |
 | `SCALE_FILTER_WINDOW` | 10 | Filtered samples used for stability range |
-| `SCALE_SLOW_ALPHA` | 0.10 | EMA coefficient while the load is stable |
-| `SCALE_FAST_ALPHA` | 0.60 | EMA coefficient while the load changes |
-| `SCALE_CHANGE_THRESHOLD_G` | 200 | Change in grams that selects fast EMA |
-| `SCALE_STABILITY_RANGE_G` | 10 | Maximum recent range considered stable |
-| `SCALE_STABILITY_HOLD_MS` | 1000 | Required stable duration |
+| `SCALE_SLOW_ALPHA` | 0.05 | EMA coefficient while the load is stable |
+| `SCALE_FAST_ALPHA` | 0.65 | EMA coefficient while the load changes |
+| `SCALE_CHANGE_THRESHOLD_G` | 120 | Change in grams that selects fast EMA |
+| `SCALE_STABILITY_RANGE_G` | 35 | Maximum recent range considered stable |
+| `SCALE_STABILITY_HOLD_MS` | 800 | Required stable duration |
+| `SCALE_DIVISION_G` | 50.0 | Quantized display interval (50g precision) |
+| `SCALE_DEADBAND_G` | 45.0 | Deadband freeze lock window (grams) |
+| `SCALE_BREAKOUT_THRESHOLD_G` | 120.0 | Fast breakout threshold (grams) |
+| `SCALE_AZT_ENABLED` | 1 | Automatic Zero Tracking enabled |
+| `SCALE_AZT_BAND_G` | 30.0 | Zero drift tracking band (grams) |
+| `SCALE_AZT_RATE_G_PER_S` | 2.0 | Maximum zero drift tracking rate (g/s) |
 | `AP_SSID_PREFIX` | `"ENYX-SMARTHUB-"` | Soft-AP SSID prefix (+ last 3 bytes of MAC) |
 | `AP_SSID_PASSWORD` | `""` | Empty = open AP (recommended for captive portal) |
 | `AP_CHANNEL` | 6 | 2.4 GHz channel for the AP |
 | `AP_MAX_CONNECTIONS` | 4 | Max concurrent AP clients |
+| `WIFI_USE_DHCP` | `true` | Default WiFi STA IPv4 mode |
+| `WIFI_STATIC_IP` | `"192.168.1.100"` | Default WiFi STA static address |
+| `WIFI_STATIC_GATEWAY` | `"192.168.1.1"` | Default WiFi STA gateway |
+| `WIFI_STATIC_SUBNET` | `"255.255.255.0"` | Default WiFi STA subnet mask |
+| `WIFI_STATIC_DNS` | `"8.8.8.8"` | Default WiFi STA DNS server |
 | `MODBUS_PORT` | 502 | Modbus TCP standard port |
 | `MODBUS_POLL_MS` | 100 | Register publish interval |
 | `WEB_PORT` | 80 | HTTP portal port |
@@ -311,7 +245,7 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 
 ### 4.2 `Settings` — NVS Persistence
 
-**Files:** [`Settings.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/Settings.h) / [`Settings.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/Settings.cpp)
+**Files:** [`Settings.h`](file:///home/almuzky/smarthub/firmware/weight%20transmitter/src/Settings.h) / [`Settings.cpp`](file:///home/almuzky/smarthub/firmware/weight%20transmitter/src/Settings.cpp)
 **Storage backend:** Arduino `Preferences` library -> ESP32 NVS (non-volatile storage) in flash.
 
 #### AppSettings fields
@@ -324,6 +258,11 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 | `entIdentity` | `String` | `eid` | EAP outer identity |
 | `entUsername` | `String` | `eusr` | EAP inner username |
 | `entPassword` | `String` | `epwd` | EAP inner password |
+| `wifiUseDhcp` | `bool` | `wifiDhcp` | `true` for DHCP; `false` for static IPv4 |
+| `wifiStaticIp` | `String` | `wifiIp` | WiFi STA static IPv4 address |
+| `wifiStaticGateway` | `String` | `wifiGw` | WiFi STA gateway |
+| `wifiStaticSubnet` | `String` | `wifiSn` | WiFi STA subnet mask |
+| `wifiStaticDns` | `String` | `wifiDns` | WiFi STA DNS server |
 | `calOffset` | `float` | `calOff` | Tare offset in raw HX711 counts |
 | `countsPerKg` | `float` | `cntPerKg` | Calibration slope (counts/kg) |
 | `calIntercept` | `float` | `calInt` | Calibration intercept (counts at 0 kg) |
@@ -343,7 +282,7 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 
 ### 4.2 `Logger` — Compile-Time Logging
 
-**Files:** [`Logger.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/Logger.h) / [`Logger.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/Logger.cpp)
+**Files:** [`Logger.h`](file:///home/almuzky/smarthub/firmware/transmitter-multi-core/src/Logger.h) / [`Logger.cpp`](file:///home/almuzky/smarthub/firmware/transmitter-multi-core/src/Logger.cpp)
 
 All firmware debug/error output is routed through level-gated macros instead of ad-hoc `Serial.print*` calls. The log level is selected at compile time via `LOG_LEVEL`:
 
@@ -360,7 +299,7 @@ Setting `LOG_LEVEL=LOG_LEVEL_ERROR` strips all lower-severity output at compile 
 
 ### 4.3 `TransportState` — Minimal Transport FSM
 
-**Files:** [`Transport.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/Transport.h)
+**Files:** [`Transport.h`](file:///home/almuzky/smarthub/firmware/transmitter-multi-core/src/Transport.h)
 
 Shared `TransportState` enum used by `WifiManager`, `EthernetManager`, and `ModbusServer`:
 
@@ -376,7 +315,7 @@ Transport changes are requested via `requestTransportMode(mode)` and applied on 
 
 ### 4.4 `EthernetManager` — W5500 Non-Blocking DHCP
 
-**Files:** [`EthernetManager.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/EthernetManager.h) / [`EthernetManager.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/EthernetManager.cpp)
+**Files:** [`EthernetManager.h`](file:///home/almuzky/smarthub/firmware/transmitter-multi-core/src/EthernetManager.h) / [`EthernetManager.cpp`](file:///home/almuzky/smarthub/firmware/transmitter-multi-core/src/EthernetManager.cpp)
 
 The old implementation blocked inside `initEthernet()` with `delay(500)` until DHCP succeeded or 3 s elapsed. The new implementation uses an explicit `DhcpState` machine:
 
@@ -394,7 +333,7 @@ The WDT is fed on every DHCP attempt and during link wait, so a flaky W5500 link
 
 ### 4.5 `WifiManager` — WiFi Exponential Backoff
 
-**Files:** [`WifiManager.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/WifiManager.h) / [`WifiManager.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/WifiManager.cpp)
+**Files:** [`WifiManager.h`](file:///home/almuzky/smarthub/firmware/transmitter-multi-core/src/WifiManager.h) / [`WifiManager.cpp`](file:///home/almuzky/smarthub/firmware/transmitter-multi-core/src/WifiManager.cpp)
 
 STA reconnect uses a bounded exponential backoff instead of a fixed 5 s retry:
 
@@ -411,7 +350,7 @@ State transitions are logged once (`[wifi] state=sta-connected`, `[wifi] state=s
 
 ### 4.6 `OfflineBuffer` — SPIFFS Bounded Queue
 
-**Files:** [`OfflineBuffer.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/OfflineBuffer.h)
+**Files:** [`OfflineBuffer.h`](file:///home/almuzky/smarthub/firmware/transmitter-multi-core/src/OfflineBuffer.h)
 
 A minimal JSON-lines buffer for deferred telemetry when the STA uplink is down:
 
@@ -429,7 +368,7 @@ A minimal JSON-lines buffer for deferred telemetry when the STA uplink is down:
 
 ### 4.7 `DeepSleep` — Optional Battery Mode
 
-**Files:** [`DeepSleep.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/DeepSleep.h)
+**Files:** [`DeepSleep.h`](file:///home/almuzky/smarthub/firmware/transmitter-multi-core/src/DeepSleep.h)
 **Control:** `DEEP_SLEEP_ENABLED` in `config.h` (default `0`)
 
 When enabled, the scale task calls `DeepSleep::maybeSleep()` after each acquisition cycle. Hook points are provided for timer-based or HX711-data-ready wake-up. Default-disabled preserves existing always-on behaviour for wired deployments.
@@ -438,7 +377,7 @@ When enabled, the scale task calls `DeepSleep::maybeSleep()` after each acquisit
 
 ### 4.8 `WebPortal` — Bounded JSON Responses
 
-**Files:** [`WebPortal.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/WebPortal.h) / [`WebPortal.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/transmitter-multi-core/src/WebPortal.cpp)
+**Files:** [`WebPortal.h`](file:///home/almuzky/smarthub/firmware/transmitter-multi-core/src/WebPortal.h) / [`WebPortal.cpp`](file:///home/almuzky/smarthub/firmware/transmitter-multi-core/src/WebPortal.cpp)
 
 High-traffic GET endpoints use `sendJsonBounded()` with a 512-byte stack buffer to avoid unbounded `String` concatenation. Calibration success responses also use bounded formatting.
 
@@ -446,7 +385,7 @@ High-traffic GET endpoints use `sendJsonBounded()` with a 512-byte stack buffer 
 
 ### 4.9 `SharedState` — Inter-Core IPC
 
-**Files:** [`SharedState.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/SharedState.h) / [`SharedState.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/SharedState.cpp)
+**Files:** [`SharedState.h`](file:///home/almuzky/smarthub/firmware/weight%20transmitter/src/SharedState.h) / [`SharedState.cpp`](file:///home/almuzky/smarthub/firmware/weight%20transmitter/src/SharedState.cpp)
 **Mechanism:** Single FreeRTOS `SemaphoreHandle_t` mutex protecting a value-copy struct (`ScaleSnapshot`) and a one-deep command slot.
 
 #### ScaleSnapshot (written by sensor core, read by network core)
@@ -485,7 +424,7 @@ The command slot is a single-producer / single-consumer queue of depth 1. The se
 
 ### 4.4 `ScaleSensor` — Load Cell Acquisition
 
-**Files:** [`Scale.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/Scale.h) / [`Scale.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/Scale.cpp)
+**Files:** [`Scale.h`](file:///home/almuzky/smarthub/firmware/weight%20transmitter/src/Scale.h) / [`Scale.cpp`](file:///home/almuzky/smarthub/firmware/weight%20transmitter/src/Scale.cpp)
 **Runs on:** Core 0 ("scale" task)
 
 #### Acquisition pipeline
@@ -559,7 +498,7 @@ values), which is why it can never wipe `countsPerKg`/`calIntercept`.
 
 ### 4.5 `WifiManager` — WiFi + Ethernet Transport
 
-**Files:** [`WifiManager.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/WifiManager.h) / [`WifiManager.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/WifiManager.cpp)
+**Files:** [`WifiManager.h`](file:///home/almuzky/smarthub/firmware/weight%20transmitter/src/WifiManager.h) / [`WifiManager.cpp`](file:///home/almuzky/smarthub/firmware/weight%20transmitter/src/WifiManager.cpp)
 **Runs on:** Core 1, polled via `loop()`
 
 The ESP32 WiFi stack supports simultaneous **AP + STA** mode (`WIFI_AP_STA`). Both interfaces are always active; the AP for configuration, the STA for upstream connectivity.
@@ -588,7 +527,14 @@ begin(AppSettings)
   +-> else:
   |     stopEthernet()
   |     startSta(AppSettings)
+  |       +-> WiFi.config(DHCP or static IPv4)
+  |       +-> WiFi.begin(...)
 ```
+
+The portal exposes DHCP and static IPv4 modes for the WiFi STA uplink. Static
+mode validates the IP address, gateway, subnet mask, and DNS server before the
+configuration is persisted or applied. The configuration SoftAP remains at
+`192.168.4.1` in both modes.
 
 #### Reconnection loop (`loop()`)
 
@@ -621,7 +567,7 @@ The delay is what makes "Apply Configuration" feel instant: the browser receives
 
 ### 4.6 `ModbusServer` — Dual-Transport Modbus TCP Register Map
 
-**Files:** [`ModbusServer.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/ModbusServer.h) / [`ModbusServer.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/ModbusServer.cpp)
+**Files:** [`ModbusServer.h`](file:///home/almuzky/smarthub/firmware/weight%20transmitter/src/ModbusServer.h) / [`ModbusServer.cpp`](file:///home/almuzky/smarthub/firmware/weight%20transmitter/src/ModbusServer.cpp)
 **WiFi library:** `emelianov/modbus-esp8266 @ 4.1.0`
 **Ethernet library:** Arduino `Ethernet` library (vendored)
 **Runs on:** Core 1, polled every `MODBUS_POLL_MS` = 100 ms
@@ -702,7 +648,7 @@ Python decode:
 
 ### 4.7 `WebPortal` — Captive Portal & Configuration UI
 
-**Files:** [`WebPortal.h`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/WebPortal.h) / [`WebPortal.cpp`](file:///home/almuzky/E-Tani-Smart-Hub/firmware/weight%20transmitter/src/WebPortal.cpp)
+**Files:** [`WebPortal.h`](file:///home/almuzky/smarthub/firmware/weight%20transmitter/src/WebPortal.h) / [`WebPortal.cpp`](file:///home/almuzky/smarthub/firmware/weight%20transmitter/src/WebPortal.cpp)
 **HTTP server:** ESP32 Arduino `WebServer` on port 80
 **DNS:** `DNSServer` wildcard redirect -> captive portal IP
 
@@ -950,7 +896,7 @@ setup()
                                       |
                             Modbus TCP master
                             (SCADA, PLC, Node-RED,
-                             E-Tani Smart Hub)
+                             enyx-weight-transmitter)
 
    Ethernet (W5500) runs in parallel for Modbus TCP only:
          +-------------------------------+
@@ -968,16 +914,16 @@ Both interfaces run concurrently. The AP is **never disabled** — if STA creden
 The GN/TA/AiP6932 7-segment path is the default for the ESP32-S3
 environment (`DISPLAY_USE_6932=1`). In that mode the OLED is not initialized
 or refreshed. The
-4x5 matrix is enabled automatically and is scanned from `networkTask`, where
+4x6 matrix is enabled automatically and is scanned from `networkTask`, where
 UI state and display writes remain on one core.
 
 The keypad layout is:
 
 ```
-C    ADD  TARE ZERO M4
-9    6    3   STORE M3
-8    5    2   .    M2
-7    4    1   0    M1
+C    ADD  TARE ZERO M4   M5
+9    6    3   STORE M3   M6
+8    5    2   .    M2   M7
+7    4    1   0    M1   M8
 ```
 
 `TARE` sends `CMD_TARE` to the scale task: it captures a RAM-only container
@@ -1124,48 +1070,37 @@ The mode can be left by sending `auto` or `exit`.
 `test buzzer` prints `OK: buzzer self-test started` and then plays the
 startup pattern, the press click, and the error pattern in sequence. It
 does not write to the live 6932 display or scan the keypad while active;
-Modbus polling, the web portal, and the periodic state log keep running. On
-builds without the buzzer (for example
-`esp32dev`), `test buzzer` reports that the buzzer is not available in this
-build.
+Modbus polling, the web portal, and the periodic state log keep running.
 
-Keypad test output uses the verified button id mapping:
+Keypad test output uses the 4x6 matrix button id mapping:
 
-| Id | Label | Id | Label |
-|----|-------|----|-------|
-| 0 | C | 10 | 8 |
-| 1 | ADD | 11 | 5 |
-| 2 | TARE | 12 | 2 |
-| 3 | ZERO | 13 | DP |
-| 4 | M4 | 14 | M2 |
-| 5 | 9 | 15 | 7 |
-| 6 | 6 | 16 | 4 |
-| 7 | 3 | 17 | 1 |
-| 8 | STORE | 18 | 0 |
-| 9 | M3 | 19 | M1 |
+| Id | Label | Id | Label | Id | Label |
+|----|-------|----|-------|----|-------|
+| 0 | C | 8 | 3 | 16 | M2 |
+| 1 | ADD | 9 | STORE | 17 | M7 |
+| 2 | TARE | 10 | M3 | 18 | 7 |
+| 3 | ZERO | 11 | M6 | 19 | 4 |
+| 4 | M4 | 12 | 8 | 20 | 1 |
+| 5 | M5 | 13 | 5 | 21 | 0 |
+| 6 | 9 | 14 | 2 | 22 | M1 |
+| 7 | 6 | 15 | DP | 23 | M8 |
 
-`exit` while no test is active prints `No active test to exit`. On builds
-without the keypad (for example `esp32dev`), `test keypad` reports that the
-keypad is not available in this build.
+`exit` while no test is active prints `No active test to exit`.
 
 ### 8.1 Compile-time feature rules
 
 ```cpp
 #define DISPLAY_USE_6932 1
+#define KEYPAD_ENABLED   1
+#define BUZZER_ENABLED   1
 ```
-
-This is the default configuration. `KEYPAD_ENABLED` becomes `1` automatically
-for the ESP32-S3 build. The ESP32dev build retains the OLED path and does not
-compile the S3-only matrix/display integration.
 
 ### 8.3 Buzzer
 
-The buzzer is a **passive** piezo transducer on **GPIO 47**, driven by LEDC
-channel 0 as a 2.7 kHz PWM tone (8-bit resolution, 50% duty). It is compiled
-in only for ESP32-S3 builds (`BUZZER_ENABLED`); the `esp32dev` build compiles
-the whole buzzer out.
+The buzzer is a **passive** piezo transducer on **GPIO 5**, driven by LEDC
+channel 0 as a 2.7 kHz PWM tone (8-bit resolution, 50% duty).
 
-Wiring: GPIO 47 -> 100 Ω resistor -> piezo buzzer -> GND. No transistor is
+Wiring: GPIO 5 -> piezo buzzer -> GND. No transistor is
 needed because a passive piezo draws only a few milliamps at 3.3 V logic,
 which is safe for an ESP32 GPIO. If an active buzzer module is used instead,
 drop the resistor and do not feed a tone, only DC on/off; the documented
@@ -1242,7 +1177,7 @@ The architecture allows additional protocol modules to be added to core 1 withou
 Planned protocols (plug in on core 1):
 
   +- Modbus RTU    -> RS-485 transceiver on GPIO, ModbusRTU::begin(Serial2)
-  +- HTTP push     -> HTTP POST to E-Tani Smart Hub API
+  +- HTTP push     -> HTTP POST to central server API
   +- BLE (future)  -> GATT characteristic = stableWeightG (float)
 ```
 
@@ -1270,26 +1205,15 @@ cd "firmware/transmitter-multi-core"
 pio run
 ```
 
-### Build (ESP32-S3 / ESP32 v4)
+### Build (ESP32-S3)
 
 ```bash
 cd "firmware/transmitter-multi-core"
 pio run -e esp32s3
 ```
 
-The `esp32s3` environment builds the local keypad and GN/TA/AiP6932
-7-segment display path: `DISPLAY_USE_6932` defaults to `1` for ESP32-S3 in
-`src/config.h`, which also enables the keypad and the buzzer. The `esp32dev`
-environment keeps the legacy OLED path and compiles the S3-only matrix,
-display, and buzzer integration out.
-
-### Build
-
-```bash
-cd "firmware/transmitter-multi-core"
-pio run -e esp32s3    # ESP32-S3 DevKitC-1 (primary)
-pio run -e esp32dev   # ESP32-WROOM-32 DevKit V1 (alternative)
-```
+The `esp32s3` environment builds the local 4x6 keypad and GN/TA/AiP6932
+7-segment display path with passive buzzer and WiFi-only operation.
 
 ### Flash & Monitor
 
@@ -1313,9 +1237,6 @@ pio run -t uploadfs
 | `WebServer` | ESP32 Arduino SDK | HTTP server (built-in) |
 | `DNSServer` | ESP32 Arduino SDK | Captive portal DNS (built-in) |
 | `WiFi` | ESP32 Arduino SDK | AP+STA WiFi (built-in) |
-| `Adafruit SSD1306` | Adafruit | OLED display driver |
-| `Adafruit GFX` | Adafruit | Graphics primitives for OLED |
-| `Ethernet` | Arduino official library | W5500 Ethernet driver, vendored in `lib/Ethernet` |
 
 ---
 
@@ -1345,10 +1266,9 @@ firmware/transmitter-multi-core/
     +-- EthernetManager.h/.cpp  <- W5500 non-blocking DHCP with millis backoff + WDT feed
     +-- ModbusServer.h/.cpp     <- Modbus TCP server (WiFi/Ethernet), holding register publish
     +-- WebPortal.h/.cpp        <- HTTP captive portal, bounded JSON responses, deferred reboot
-    +-- Display.h/.cpp          <- SSD1306 OLED driver (I2C)
     +-- GN6932.h/.cpp           <- GN/TA/AiP6932 low-level driver
     +-- Gn6932Display.h/.cpp   <- fixed-point three-section renderer
-    +-- MatrixScanner.h/.cpp   <- debounced 4x5 matrix scanner
+    +-- MatrixScanner.h/.cpp   <- debounced 4x6 matrix scanner
     +-- ButtonManager.h/.cpp   <- keypad actions and price state
     +-- Buzzer.h/.cpp          <- non-blocking LEDC piezo pattern engine (ESP32-S3 only)
 ```

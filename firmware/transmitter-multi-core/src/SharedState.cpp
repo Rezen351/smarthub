@@ -107,14 +107,31 @@ void SharedState::resetCalibrationPoints() {
   if (_mutex) xSemaphoreGive(_mutex);
 }
 
-void SharedState::addCalibrationPoint(float weightKg, float rawCounts) {
+bool SharedState::addCalibrationPoint(float weightKg, float rawCounts) {
+  bool added = false;
   if (_mutex) xSemaphoreTake(_mutex, portMAX_DELAY);
   if (_calPointCount < MAX_CALIBRATION_POINTS) {
     _calPoints[_calPointCount].weightKg = weightKg;
     _calPoints[_calPointCount].rawCounts = rawCounts;
     _calPointCount++;
+    added = true;
   }
   if (_mutex) xSemaphoreGive(_mutex);
+  return added;
+}
+
+bool SharedState::removeCalibrationPoint(uint8_t index) {
+  bool removed = false;
+  if (_mutex) xSemaphoreTake(_mutex, portMAX_DELAY);
+  if (index < _calPointCount) {
+    for (uint8_t i = index; i + 1 < _calPointCount; i++) {
+      _calPoints[i] = _calPoints[i + 1];
+    }
+    _calPointCount--;
+    removed = true;
+  }
+  if (_mutex) xSemaphoreGive(_mutex);
+  return removed;
 }
 
 uint8_t SharedState::calibrationPointCount() const {

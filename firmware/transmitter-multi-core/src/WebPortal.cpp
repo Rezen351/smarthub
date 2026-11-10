@@ -14,6 +14,13 @@ static void sendJsonBounded(WebServer& http, uint16_t code, const char* fmt, ...
   http.send(code, "application/json", buf);
 }
 
+static bool validWifiStaticIpv4(const AppSettings& cfg) {
+  return isValidIp(cfg.wifiStaticIp) &&
+         isValidIp(cfg.wifiStaticGateway) &&
+         isValidIp(cfg.wifiStaticSubnet) &&
+         isValidIp(cfg.wifiStaticDns);
+}
+
 // =====================================================================
 //  HTTP static callback wrappers
 // =====================================================================
@@ -24,10 +31,12 @@ static void hStatus()          { if (gPortal) gPortal->handleApiStatus(); }
 static void hConfig()          { if (gPortal) gPortal->handleApiConfig(); }
 static void hWifi()            { if (gPortal) gPortal->handleApiWifi(); }
 static void hTare()            { if (gPortal) gPortal->handleApiTare(); }
+static void hZero()            { if (gPortal) gPortal->handleApiZero(); }
 static void hCalibrate()       { if (gPortal) gPortal->handleApiCalibrate(); }
 static void hCalibrateMulti()  { if (gPortal) gPortal->handleApiCalibrateMulti(); }
 static void hCalibrationStart()  { if (gPortal) gPortal->handleApiCalibrationStart(); }
 static void hCalibrationCapture() { if (gPortal) gPortal->handleApiCalibrationCapture(); }
+static void hCalibrationDelete() { if (gPortal) gPortal->handleApiCalibrationDelete(); }
 static void hCalibrationFinish()  { if (gPortal) gPortal->handleApiCalibrationFinish(); }
 static void hCalibrationPoints()  { if (gPortal) gPortal->handleApiCalibrationPoints(); }
 static void hResetSession()    { if (gPortal) gPortal->handleApiResetSession(); }
@@ -42,12 +51,11 @@ static void hDisplayConfig()   { if (gPortal) gPortal->handleApiDisplayConfig();
 //  Initialization & Lifecycle
 // =====================================================================
 void WebPortal::begin(SharedState* shared, SettingsStore* settings,
-                      WifiManager* wifi, ModbusServer* modbus, DisplayManager* display) {
+                      WifiManager* wifi, ModbusServer* modbus) {
   _shared = shared;
   _settings = settings;
   _wifi = wifi;
   _modbus = modbus;
-  _display = display;
   gPortal = this;
 
   // Mount SPIFFS filesystem (formatOnFail = false to avoid silent corruption)
@@ -74,10 +82,12 @@ void WebPortal::begin(SharedState* shared, SettingsStore* settings,
   _http.on("/api/config",           HTTP_GET,  hConfig);
   _http.on("/api/wifi",             HTTP_POST, hWifi);
   _http.on("/api/tare",             HTTP_POST, hTare);
+  _http.on("/api/zero",             HTTP_POST, hZero);
   _http.on("/api/calibrate",        HTTP_POST, hCalibrate);
   _http.on("/api/calibrate/multi",  HTTP_POST, hCalibrateMulti);
   _http.on("/api/calibration/start",  HTTP_POST, hCalibrationStart);
   _http.on("/api/calibration/capture", HTTP_POST, hCalibrationCapture);
+  _http.on("/api/calibration/delete",  HTTP_POST, hCalibrationDelete);
   _http.on("/api/calibration/finish",  HTTP_POST, hCalibrationFinish);
   _http.on("/api/calibration/points",  HTTP_GET,  hCalibrationPoints);
   _http.on("/api/totals/reset",     HTTP_POST, hResetSession);
@@ -149,6 +159,19 @@ void WebPortal::ensureCfg() {
     _settings->load(_cfg);
     _cfgLoaded = true;
   }
+}
+
+void WebPortal::persistCalibrationPoints() {
+  if (!_shared || !_settings) return;
+
+  AppSettings points;
+  points.calPointCount = _shared->calibrationPointCount();
+  for (uint8_t i = 0; i < points.calPointCount; i++) {
+    CalibrationPoint point = _shared->getCalibrationPoint(i);
+    points.calPointWeightKg[i] = point.weightKg;
+    points.calPointRawCounts[i] = point.rawCounts;
+  }
+  _settings->saveCalibrationPoints(points);
 }
 
 void WebPortal::sendJson(uint16_t code, const String& json) {
@@ -277,6 +300,7 @@ void WebPortal::handleNotFound() {
 
 // ---- /api/status (GET) ----
 void WebPortal::handleApiStatus() {
+  ensureCfg();
   ScaleSnapshot s = _shared ? _shared->getSnapshot() : ScaleSnapshot{};
   uint32_t cnt = 0;
   double tg = 0, mn = 0, mx = 0;
@@ -298,7 +322,9 @@ void WebPortal::handleApiStatus() {
     "\"totalG\":%.1f,\"sampleCount\":%lu,\"minG\":%.1f,\"maxG\":%.1f,"
     "\"modbusClients\":%u,\"uptime\":%lu,\"fw\":\"%d.%d\","
     "\"wifi\":{\"modeName\":\"%s\",\"mode\":%d,\"ssid\":\"%s\",\"status\":\"%s\","
-    "\"rssi\":%d,\"staIp\":\"%s\",\"apSsid\":\"%s\",\"apIp\":\"%s\"},"
+    "\"rssi\":%d,\"staIp\":\"%s\",\"apSsid\":\"%s\",\"apIp\":\"%s\","
+    "\"useDhcp\":%s,\"staticIp\":\"%s\",\"staticGateway\":\"%s\","
+    "\"staticSubnet\":\"%s\",\"staticDns\":\"%s\"},"
     "\"transport\":{\"mode\":%u,\"modeName\":\"%s\",\"state\":\"%s\",\"ethernetActive\":%s,"
     "\"ethernetIp\":\"%s\",\"w5500UseDhcp\":%s,\"w5500StaticIp\":\"%s\","
     "\"w5500StaticGateway\":\"%s\",\"w5500StaticSubnet\":\"%s\",\"w5500StaticDns\":\"%s\"},"
@@ -322,6 +348,11 @@ void WebPortal::handleApiStatus() {
     sta ? WiFi.localIP().toString().c_str() : "",
     _wifi ? _wifi->apSsid().c_str() : "",
     _wifi ? _wifi->apIP().toString().c_str() : "",
+    _cfg.wifiUseDhcp ? "true" : "false",
+    _cfg.wifiStaticIp.c_str(),
+    _cfg.wifiStaticGateway.c_str(),
+    _cfg.wifiStaticSubnet.c_str(),
+    _cfg.wifiStaticDns.c_str(),
     _cfg.transportMode,
     _cfg.transportMode == TRANSPORT_WIFI ? "WiFi" : "Ethernet",
     _wifi ? _wifi->transportStateName() : "unknown",
@@ -341,6 +372,9 @@ void WebPortal::handleApiConfig() {
   sendJsonBounded(_http, 200,
     "{\"wifiMode\":%u,\"ssid\":\"%s\",\"wpaPassword\":\"%s\","
     "\"entIdentity\":\"%s\",\"entUsername\":\"%s\",\"entPassword\":\"%s\","
+    "\"wifiUseDhcp\":%s,\"wifiStaticIp\":\"%s\","
+    "\"wifiStaticGateway\":\"%s\",\"wifiStaticSubnet\":\"%s\","
+    "\"wifiStaticDns\":\"%s\","
     "\"transportMode\":%u,\"oledEnabled\":%s,\"w5500UseDhcp\":%s,"
     "\"w5500StaticIp\":\"%s\",\"w5500StaticGateway\":\"%s\","
     "\"w5500StaticSubnet\":\"%s\",\"w5500StaticDns\":\"%s\"}",
@@ -350,6 +384,11 @@ void WebPortal::handleApiConfig() {
     _cfg.entIdentity.c_str(),
     _cfg.entUsername.c_str(),
     _cfg.entPassword.c_str(),
+    _cfg.wifiUseDhcp ? "true" : "false",
+    _cfg.wifiStaticIp.c_str(),
+    _cfg.wifiStaticGateway.c_str(),
+    _cfg.wifiStaticSubnet.c_str(),
+    _cfg.wifiStaticDns.c_str(),
     _cfg.transportMode,
     _cfg.oledEnabled ? "true" : "false",
     _cfg.w5500UseDhcp ? "true" : "false",
@@ -385,9 +424,18 @@ void WebPortal::handleApiWifi() {
   _cfg.entIdentity  = _http.hasArg("eid")  ? _http.arg("eid")  : "";
   _cfg.entUsername  = _http.hasArg("eusr") ? _http.arg("eusr") : "";
   _cfg.entPassword  = _http.hasArg("epwd") ? _http.arg("epwd") : "";
+  _cfg.wifiUseDhcp  = _http.hasArg("useDhcp") ? (_http.arg("useDhcp") == "true") : _cfg.wifiUseDhcp;
+  _cfg.wifiStaticIp = _http.hasArg("staticIp") ? _http.arg("staticIp") : _cfg.wifiStaticIp;
+  _cfg.wifiStaticGateway = _http.hasArg("staticGateway") ? _http.arg("staticGateway") : _cfg.wifiStaticGateway;
+  _cfg.wifiStaticSubnet = _http.hasArg("staticSubnet") ? _http.arg("staticSubnet") : _cfg.wifiStaticSubnet;
+  _cfg.wifiStaticDns = _http.hasArg("staticDns") ? _http.arg("staticDns") : _cfg.wifiStaticDns;
   _cfg.ssid.trim();
   _cfg.entIdentity.trim();
   _cfg.entUsername.trim();
+  _cfg.wifiStaticIp.trim();
+  _cfg.wifiStaticGateway.trim();
+  _cfg.wifiStaticSubnet.trim();
+  _cfg.wifiStaticDns.trim();
   _cfgLoaded = true;
 
   if (_cfg.wifiMode != WIFI_MODE_NONE && _cfg.ssid.length() == 0) {
@@ -418,6 +466,15 @@ void WebPortal::handleApiWifi() {
     return;
   }
 
+  if (!_cfg.wifiUseDhcp && !validWifiStaticIpv4(_cfg)) {
+    LOG_INFO("portal", "/api/wifi rejected: invalid static IPv4 configuration");
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"INVALID_WIFI_STATIC_IPV4\","
+                  "\"message\":\"Static WiFi configuration requires valid IP, gateway, subnet and DNS addresses\"},"
+                  "\"message\":\"Invalid WiFi static IPv4 configuration\"}");
+    return;
+  }
+
   if (_settings) _settings->saveWifi(_cfg);
 
   // Answer first: everything below runs after this response is on the wire.
@@ -434,6 +491,13 @@ void WebPortal::handleApiTare() {
   if (_shared) _shared->requestCommand(CMD_TARE);
   sendJson(200, "{\"ok\":true,\"success\":true,"
                 "\"message\":\"Tare requested - keep scale empty\"}");
+}
+
+// ---- /api/zero (POST) ----
+void WebPortal::handleApiZero() {
+  if (_shared) _shared->requestCommand(CMD_ZERO);
+  sendJson(200, "{\"ok\":true,\"success\":true,"
+                "\"message\":\"Zero requested - ADC zero offset captured and persisted\"}");
 }
 
 // ---- /api/calibrate?kg=... (POST) ----
@@ -529,6 +593,9 @@ void WebPortal::handleApiCalibrationStart() {
   if (_shared) {
     _shared->resetCalibrationPoints();
   }
+  if (_settings) {
+    _settings->clearCalibrationPoints();
+  }
   LOG_INFO("portal", "/api/calibration/start cleared previous calibration points");
   sendJson(200, "{\"ok\":true,\"success\":true,"
                 "\"message\":\"Calibration session started. Place a known weight and capture points.\"}");
@@ -553,18 +620,54 @@ void WebPortal::handleApiCalibrationCapture() {
     return;
   }
 
-  if (_shared) {
-    _shared->requestCommand(CMD_CAPTURE_CAL_POINT, kg, snap.rawSample);
+  if (!_shared || !_shared->addCalibrationPoint(kg, snap.rawSample)) {
+    sendJsonBounded(_http, 409,
+      "{\"ok\":false,\"success\":false,"
+      "\"error\":{\"code\":\"CALIBRATION_POINTS_FULL\","
+      "\"message\":\"A maximum of %u calibration points can be stored\"},"
+      "\"message\":\"Calibration point storage is full\"}",
+      (unsigned)MAX_CALIBRATION_POINTS);
+    return;
   }
 
-  uint8_t count = _shared ? _shared->calibrationPointCount() : 0;
-  LOG_INFO("portal", "/api/calibration/capture queued %.3f kg (points: %d)", kg, (int)count);
+  persistCalibrationPoints();
+
+  uint8_t count = _shared->calibrationPointCount();
+  LOG_INFO("portal", "/api/calibration/capture persisted %.3f kg -> %.1f counts (points: %d)",
+           kg, snap.rawSample, (int)count);
 
   sendJsonBounded(_http, 200,
     "{\"ok\":true,\"success\":true,"
     "\"data\":{\"weightKg\":%.4f,\"rawCounts\":%.1f,\"pointCount\":%u},"
     "\"message\":\"Calibration point captured (%u points)\"}",
     kg, snap.rawSample, (unsigned)count, (unsigned)count);
+}
+
+void WebPortal::handleApiCalibrationDelete() {
+  int index = _http.hasArg("index") ? _http.arg("index").toInt() : -1;
+  if (!_shared || index < 0 || index >= (int)_shared->calibrationPointCount()) {
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"INVALID_POINT_INDEX\","
+                  "\"message\":\"Calibration point index is invalid\"},"
+                  "\"message\":\"Invalid calibration point\"}");
+    return;
+  }
+
+  if (!_shared->removeCalibrationPoint((uint8_t)index)) {
+    sendJson(409, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"POINT_DELETE_FAILED\","
+                  "\"message\":\"Calibration point could not be deleted\"},"
+                  "\"message\":\"Calibration point delete failed\"}");
+    return;
+  }
+
+  persistCalibrationPoints();
+  uint8_t count = _shared->calibrationPointCount();
+  LOG_INFO("portal", "/api/calibration/delete persisted index=%d (points: %d)", index, (int)count);
+  sendJsonBounded(_http, 200,
+    "{\"ok\":true,\"success\":true,\"data\":{\"pointCount\":%u},"
+    "\"message\":\"Calibration point deleted\"}",
+    (unsigned)count);
 }
 
 void WebPortal::handleApiCalibrationFinish() {
@@ -741,6 +844,14 @@ void WebPortal::handleApiNetworkConfig() {
   ensureCfg();
 
   int mode = _http.hasArg("transportMode") ? _http.arg("transportMode").toInt() : (int)_cfg.transportMode;
+#if !ETHERNET_ENABLED
+  if (mode == TRANSPORT_ETHERNET) {
+    sendJson(400, "{\"ok\":false,\"success\":false,"
+                  "\"error\":{\"code\":\"ETHERNET_DISABLED\",\"message\":\"Ethernet transport is disabled (WiFi only)\"},"
+                  "\"message\":\"Ethernet is disabled\"}");
+    return;
+  }
+#endif
   if (mode != TRANSPORT_WIFI && mode != TRANSPORT_ETHERNET) {
     sendJson(400, "{\"ok\":false,\"success\":false,"
                   "\"error\":{\"code\":\"INVALID_TRANSPORT_MODE\",\"message\":\"Transport mode must be 0 (WiFi) or 1 (Ethernet)\"},"
@@ -765,9 +876,18 @@ void WebPortal::handleApiNetworkConfig() {
     _cfg.entIdentity  = _http.hasArg("eid")           ? _http.arg("eid")           : _cfg.entIdentity;
     _cfg.entUsername  = _http.hasArg("eusr")          ? _http.arg("eusr")          : _cfg.entUsername;
     _cfg.entPassword  = _http.hasArg("epwd")          ? _http.arg("epwd")          : _cfg.entPassword;
+    _cfg.wifiUseDhcp  = _http.hasArg("wifiUseDhcp") ? (_http.arg("wifiUseDhcp") == "true") : _cfg.wifiUseDhcp;
+    _cfg.wifiStaticIp = _http.hasArg("wifiStaticIp") ? _http.arg("wifiStaticIp") : _cfg.wifiStaticIp;
+    _cfg.wifiStaticGateway = _http.hasArg("wifiStaticGateway") ? _http.arg("wifiStaticGateway") : _cfg.wifiStaticGateway;
+    _cfg.wifiStaticSubnet = _http.hasArg("wifiStaticSubnet") ? _http.arg("wifiStaticSubnet") : _cfg.wifiStaticSubnet;
+    _cfg.wifiStaticDns = _http.hasArg("wifiStaticDns") ? _http.arg("wifiStaticDns") : _cfg.wifiStaticDns;
     _cfg.ssid.trim();
     _cfg.entIdentity.trim();
     _cfg.entUsername.trim();
+    _cfg.wifiStaticIp.trim();
+    _cfg.wifiStaticGateway.trim();
+    _cfg.wifiStaticSubnet.trim();
+    _cfg.wifiStaticDns.trim();
 
     if (_cfg.wifiMode != WIFI_MODE_NONE && _cfg.ssid.length() == 0) {
       sendJson(400, "{\"ok\":false,\"success\":false,"
@@ -788,6 +908,14 @@ void WebPortal::handleApiNetworkConfig() {
       sendJson(400, "{\"ok\":false,\"success\":false,"
                     "\"error\":{\"code\":\"ENTERPRISE_USERNAME_REQUIRED\",\"message\":\"Enterprise username is required\"},"
                     "\"message\":\"Enterprise username is required\"}");
+      return;
+    }
+
+    if (!_cfg.wifiUseDhcp && !validWifiStaticIpv4(_cfg)) {
+      sendJson(400, "{\"ok\":false,\"success\":false,"
+                    "\"error\":{\"code\":\"INVALID_WIFI_STATIC_IPV4\","
+                    "\"message\":\"Static WiFi configuration requires valid IP, gateway, subnet and DNS addresses\"},"
+                    "\"message\":\"Invalid WiFi static IPv4 configuration\"}");
       return;
     }
   }
@@ -863,18 +991,10 @@ void WebPortal::handleApiDisplayConfig() {
   ensureCfg();
 
   if (_http.method() == HTTP_GET) {
-    sendJsonBounded(_http, 200, "{\"oledEnabled\":%s}", _cfg.oledEnabled ? "true" : "false");
+    sendJsonBounded(_http, 200, "{\"displayType\":\"GN6932\",\"enabled\":true}");
     return;
   }
 
-  bool enabled = _http.hasArg("enabled") ? _http.arg("enabled") == "true" : _cfg.oledEnabled;
-  _cfg.oledEnabled = enabled;
-  _cfgLoaded = true;
-
-  if (_display) _display->setEnabled(enabled);
-  if (_settings) _settings->saveAll(_cfg);
-
-  LOG_INFO("portal", "/api/display/config saved (oled=%u)", (unsigned)enabled);
   sendJson(200, "{\"ok\":true,\"success\":true,"
                 "\"message\":\"Display configuration saved\"}");
 }

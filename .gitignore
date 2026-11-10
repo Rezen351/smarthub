@@ -43,4 +43,9 @@ backend/uploads/*
 
 # Temporary scratch and audit artifacts
 scratch/
+scripts/output/
+
+# Python test caches
+**/__pycache__/
+*.pyc
 

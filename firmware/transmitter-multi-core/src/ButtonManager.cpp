@@ -4,49 +4,60 @@
 
 #if KEYPAD_ENABLED
 
-static constexpr uint8_t BTN_C = 0;
-static constexpr uint8_t BTN_ADD = 1;
-static constexpr uint8_t BTN_TARE = 2;
-static constexpr uint8_t BTN_ZERO = 3;
-static constexpr uint8_t BTN_M4 = 4;
-static constexpr uint8_t BTN_9 = 5;
-static constexpr uint8_t BTN_6 = 6;
-static constexpr uint8_t BTN_3 = 7;
-static constexpr uint8_t BTN_STORE = 8;
-static constexpr uint8_t BTN_M3 = 9;
-static constexpr uint8_t BTN_8 = 10;
-static constexpr uint8_t BTN_5 = 11;
-static constexpr uint8_t BTN_2 = 12;
-static constexpr uint8_t BTN_DP = 13;
-static constexpr uint8_t BTN_M2 = 14;
-static constexpr uint8_t BTN_7 = 15;
-static constexpr uint8_t BTN_4 = 16;
-static constexpr uint8_t BTN_1 = 17;
-static constexpr uint8_t BTN_0 = 18;
-static constexpr uint8_t BTN_M1 = 19;
+static constexpr uint8_t BTN_C     = 0;
+static constexpr uint8_t BTN_ADD   = 1;
+static constexpr uint8_t BTN_TARE  = 2;
+static constexpr uint8_t BTN_ZERO  = 3;
+static constexpr uint8_t BTN_M4    = 4;
+static constexpr uint8_t BTN_M5    = 5;
+
+static constexpr uint8_t BTN_9     = 6;
+static constexpr uint8_t BTN_6     = 7;
+static constexpr uint8_t BTN_3     = 8;
+static constexpr uint8_t BTN_STORE = 9;
+static constexpr uint8_t BTN_M3    = 10;
+static constexpr uint8_t BTN_M6    = 11;
+
+static constexpr uint8_t BTN_8     = 12;
+static constexpr uint8_t BTN_5     = 13;
+static constexpr uint8_t BTN_2     = 14;
+static constexpr uint8_t BTN_DP    = 15;
+static constexpr uint8_t BTN_M2    = 16;
+static constexpr uint8_t BTN_M7    = 17;
+
+static constexpr uint8_t BTN_7     = 18;
+static constexpr uint8_t BTN_4     = 19;
+static constexpr uint8_t BTN_1     = 20;
+static constexpr uint8_t BTN_0     = 21;
+static constexpr uint8_t BTN_M1    = 22;
+static constexpr uint8_t BTN_M8    = 23;
 
 static const char* buttonLabel(uint8_t id) {
   switch (id) {
-    case 0:  return "C";
-    case 1:  return "ADD";
-    case 2:  return "TARE";
-    case 3:  return "ZERO";
-    case 4:  return "M4";
-    case 5:  return "9";
-    case 6:  return "6";
-    case 7:  return "3";
-    case 8:  return "STORE";
-    case 9:  return "M3";
-    case 10: return "8";
-    case 11: return "5";
-    case 12: return "2";
-    case 13: return "DP";
-    case 14: return "M2";
-    case 15: return "7";
-    case 16: return "4";
-    case 17: return "1";
-    case 18: return "0";
-    case 19: return "M1";
+    case BTN_C:     return "C";
+    case BTN_ADD:   return "ADD";
+    case BTN_TARE:  return "TARE";
+    case BTN_ZERO:  return "ZERO";
+    case BTN_M4:    return "M4";
+    case BTN_M5:    return "M5";
+    case BTN_9:     return "9";
+    case BTN_6:     return "6";
+    case BTN_3:     return "3";
+    case BTN_STORE: return "STORE";
+    case BTN_M3:    return "M3";
+    case BTN_M6:    return "M6";
+    case BTN_8:     return "8";
+    case BTN_5:     return "5";
+    case BTN_2:     return "2";
+    case BTN_DP:    return "DP";
+    case BTN_M2:    return "M2";
+    case BTN_M7:    return "M7";
+    case BTN_7:     return "7";
+    case BTN_4:     return "4";
+    case BTN_1:     return "1";
+    case BTN_0:     return "0";
+    case BTN_M1:    return "M1";
+    case BTN_M8:    return "M8";
     default: return "?";
   }
 }
@@ -74,7 +85,7 @@ ButtonManager::ButtonManager(SharedState* shared, SettingsStore* settings, Buzze
 void ButtonManager::begin() {
   _scanner.begin();
   _totalPriceCenti = _settings->loadTotalPrice();
-  LOG_INFO("keypad", "ButtonManager initialized (4x5 matrix)");
+  LOG_INFO("keypad", "ButtonManager initialized (4x6 matrix)");
 }
 
 void ButtonManager::update() {
@@ -124,16 +135,16 @@ void ButtonManager::handlePress(uint8_t buttonId) {
   bool isDigit = false;
 
   switch (buttonId) {
-    case 5:  digit = '9'; isDigit = true; break;
-    case 6:  digit = '6'; isDigit = true; break;
-    case 7:  digit = '3'; isDigit = true; break;
-    case 10: digit = '8'; isDigit = true; break;
-    case 11: digit = '5'; isDigit = true; break;
-    case 12: digit = '2'; isDigit = true; break;
-    case 15: digit = '7'; isDigit = true; break;
-    case 16: digit = '4'; isDigit = true; break;
-    case 17: digit = '1'; isDigit = true; break;
-    case 18: digit = '0'; isDigit = true; break;
+    case BTN_9: digit = '9'; isDigit = true; break;
+    case BTN_6: digit = '6'; isDigit = true; break;
+    case BTN_3: digit = '3'; isDigit = true; break;
+    case BTN_8: digit = '8'; isDigit = true; break;
+    case BTN_5: digit = '5'; isDigit = true; break;
+    case BTN_2: digit = '2'; isDigit = true; break;
+    case BTN_7: digit = '7'; isDigit = true; break;
+    case BTN_4: digit = '4'; isDigit = true; break;
+    case BTN_1: digit = '1'; isDigit = true; break;
+    case BTN_0: digit = '0'; isDigit = true; break;
     default: break;
   }
 

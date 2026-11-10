@@ -24,7 +24,7 @@ class MatrixScanner {
 
   private:
     static constexpr uint8_t ROW_COUNT = 4;
-    static constexpr uint8_t COL_COUNT = 5;
+    static constexpr uint8_t COL_COUNT = 6;
     static constexpr uint8_t BUTTON_COUNT = ROW_COUNT * COL_COUNT;
     static constexpr uint32_t DEBOUNCE_MS = 5;
     static constexpr uint16_t ROW_SETTLE_US = 20;

@@ -6,7 +6,7 @@
 extern EventBus gEventBus;
 
 // =====================================================================
-//  E-Tani Smart Hub - Weight Transmitter
+//  enyx-weight-transmitter
 //  ModbusServer implementation — Modbus TCP server on port 502
 //
 //  Float encoding: IEEE 754 split into two consecutive 16-bit registers,
@@ -36,13 +36,28 @@ void ModbusServer::begin(SharedState* shared, SettingsStore* settings, uint8_t t
   _transportMode = transportMode;
 }
 
-// ---- startServer: allocate all holding registers and start WiFi TCP ----
-void ModbusServer::startServer() {
+void ModbusServer::initializeRegisters() {
+  if (_registersInitialized) return;
   for (uint16_t i = 0; i < NUM_REGS; i++) {
     _mb.addHreg(i, 0);
   }
-
   _mb.Hreg(REG_FW_VER, (uint16_t)FW_VERSION);
+  _registersInitialized = true;
+}
+
+// ---- startServer: allocate all holding registers and start WiFi TCP ----
+void ModbusServer::startServer() {
+  if (_started && _transportState == TransportState::WiFi) return;
+  initializeRegisters();
+  _wifiClientCount = 0;
+  _mb.onConnect([this](IPAddress) {
+    if (_wifiClientCount < UINT8_MAX) _wifiClientCount++;
+    return true;
+  });
+  _mb.onDisconnect([this](IPAddress) {
+    if (_wifiClientCount > 0) _wifiClientCount--;
+    return true;
+  });
   _mb.server(MODBUS_PORT);
   _started = true;
 
@@ -51,6 +66,7 @@ void ModbusServer::startServer() {
 
 // ---- startEthernetServer: allocate all holding registers and start Ethernet TCP ----
 void ModbusServer::startEthernetServer() {
+#if ETHERNET_ENABLED
   for (uint16_t i = 0; i < NUM_REGS; i++) {
     _mb.addHreg(i, 0);
   }
@@ -61,8 +77,12 @@ void ModbusServer::startEthernetServer() {
   _started = true;
 
   LOG_INFO("modbus", "Ethernet server started on port %u (%u holding regs)", (unsigned)MODBUS_PORT, (unsigned)NUM_REGS);
+#else
+  LOG_INFO("modbus", "Ethernet server skipped (Ethernet disabled)");
+#endif
 }
 
+#if ETHERNET_ENABLED
 // ---- processEthernetModbus: manual MBAP/FC03/06/16 parser for W5500 ----
 void ModbusServer::processEthernetModbus() {
   if (!_ethClient || !_ethClient.connected()) {
@@ -166,6 +186,7 @@ void ModbusServer::processEthernetModbus() {
 
   _ethRxLen = 0;
 }
+#endif
 
 // ---- loop: poll Modbus stack, then publish if interval elapsed ----
 void ModbusServer::loop() {
@@ -175,6 +196,13 @@ void ModbusServer::loop() {
     applyPendingTransportMode();
   }
 
+  uint32_t now = millis();
+  if ((uint32_t)(now - _lastPublishMs) >= MODBUS_POLL_MS) {
+    _lastPublishMs = now;
+    publish(_rssiCache, _wifiModeCache);
+  }
+
+#if ETHERNET_ENABLED
   if (_transportState == TransportState::WiFi) {
     _mb.task();
   } else if (_transportState == TransportState::Ethernet) {
@@ -191,6 +219,9 @@ void ModbusServer::loop() {
     }
     processEthernetModbus();
   }
+#else
+  _mb.task();
+#endif
 
   // Command register is shared across both transports
   {
@@ -213,6 +244,7 @@ void ModbusServer::loop() {
         case 2:  _shared->requestCommand(CMD_CALIBRATE, arg); break;
         case 3:  _shared->requestCommand(CMD_RESET_SESSION); break;
         case 4:  _shared->requestCommand(CMD_FLUSH);         break;
+        case 8:  _shared->requestCommand(CMD_ZERO);          break;
         case 99: _shared->requestCommand(CMD_WIPE_WIFI);     break;
         default:
           LOG_WARN("modbus", "state=cmd-unknown cmd=%u", (unsigned)cmd);
@@ -222,7 +254,6 @@ void ModbusServer::loop() {
     }
   }
 
-  publish(_rssiCache, _wifiModeCache);
 }
 
 // ---- setRuntime: inject radio state from main (called before loop) ----
@@ -233,9 +264,14 @@ void ModbusServer::setRuntime(int8_t rssi, uint8_t wifiMode) {
 
 // ---- setTransportMode: switch between WiFi and Ethernet Modbus ----
 void ModbusServer::setTransportMode(uint8_t mode) {
+#if !ETHERNET_ENABLED
+  mode = TRANSPORT_WIFI;
+#endif
+  if (_started && mode == _transportMode) return;
   _transportMode = mode;
   _transportState = mode == TRANSPORT_WIFI ? TransportState::WiFi : TransportState::Ethernet;
   _started = false;
+#if ETHERNET_ENABLED
   _ethServerStarted = false;
   _mb.server(0);
 
@@ -249,6 +285,12 @@ void ModbusServer::setTransportMode(uint8_t mode) {
   } else if (mode == TRANSPORT_ETHERNET) {
     startEthernetServer();
   }
+#else
+  _transportMode = TRANSPORT_WIFI;
+  _transportState = TransportState::WiFi;
+  _mb.server(0);
+  startServer();
+#endif
 
   LOG_INFO("modbus", "transport mode -> %s", mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 
@@ -261,6 +303,13 @@ void ModbusServer::setTransportMode(uint8_t mode) {
 }
 
 void ModbusServer::requestTransportMode(uint8_t mode) {
+#if !ETHERNET_ENABLED
+  mode = TRANSPORT_WIFI;
+#endif
+  if (_started && mode == _transportMode) {
+    LOG_INFO("modbus", "transport mode unchanged; server remains active");
+    return;
+  }
   _transportState = TransportState::Switching;
   _transportTarget = mode;
   LOG_INFO("modbus", "transport mode change requested: %s (will apply from loop)", mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
@@ -273,6 +322,7 @@ void ModbusServer::applyPendingTransportMode() {
   _transportMode = mode;
   _transportState = mode == TRANSPORT_WIFI ? TransportState::WiFi : TransportState::Ethernet;
   _started = false;
+#if ETHERNET_ENABLED
   _ethServerStarted = false;
   _mb.server(0);
 
@@ -286,6 +336,12 @@ void ModbusServer::applyPendingTransportMode() {
   } else if (mode == TRANSPORT_ETHERNET) {
     startEthernetServer();
   }
+#else
+  _transportMode = TRANSPORT_WIFI;
+  _transportState = TransportState::WiFi;
+  _mb.server(0);
+  startServer();
+#endif
 
   LOG_INFO("modbus", "transport mode -> %s", mode == TRANSPORT_WIFI ? "WiFi" : "Ethernet");
 
@@ -302,10 +358,13 @@ bool ModbusServer::clientConnected() {
   if (!_started) return false;
 
   if (_transportState == TransportState::WiFi) {
-    return _mb.isConnected(_mb.eventSource());
-  } else if (_transportState == TransportState::Ethernet) {
+    return _wifiClientCount > 0;
+  }
+#if ETHERNET_ENABLED
+  else if (_transportState == TransportState::Ethernet) {
     return _ethClient && _ethClient.connected();
   }
+#endif
   return false;
 }
 

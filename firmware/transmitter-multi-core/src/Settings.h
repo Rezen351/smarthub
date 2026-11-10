@@ -21,6 +21,11 @@ struct AppSettings {
   String   entIdentity;
   String   entUsername;
   String   entPassword;
+  bool     wifiUseDhcp = WIFI_USE_DHCP;
+  String   wifiStaticIp = WIFI_STATIC_IP;
+  String   wifiStaticGateway = WIFI_STATIC_GATEWAY;
+  String   wifiStaticSubnet = WIFI_STATIC_SUBNET;
+  String   wifiStaticDns = WIFI_STATIC_DNS;
 
   float    calOffset   = 0.0f;   // tare offset (raw counts)
   float    countsPerKg = 0.0f;   // calibration slope

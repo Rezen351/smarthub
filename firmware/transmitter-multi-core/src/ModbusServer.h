@@ -2,7 +2,7 @@
 #define MODBUS_SERVER_H
 
 // =====================================================================
-//  E-Tani Smart Hub - Weight Transmitter (Multi-Core)
+//  enyx-weight-transmitter (Multi-Core)
 //  ModbusServer — Modbus TCP server (port 502)
 //
 //  Uses ModbusTCP from emelianov/modbus-esp8266.
@@ -11,7 +11,10 @@
 
 #include <Arduino.h>
 #include <ModbusTCP.h>
+#include "config.h"
+#if ETHERNET_ENABLED
 #include <Ethernet.h>
+#endif
 #include "SharedState.h"
 #include "Settings.h"
 #include "Transport.h"
@@ -69,16 +72,21 @@ class ModbusServer {
 
  private:
   ModbusTCP      _mb;
+#if ETHERNET_ENABLED
   EthernetServer _ethServer{MODBUS_PORT};
   EthernetClient _ethClient;
   bool           _ethServerStarted = false;
   uint8_t        _ethRxBuf[256];
   uint16_t       _ethRxLen = 0;
+#endif
 
   SharedState*   _shared        = nullptr;
   SettingsStore* _settings      = nullptr;
 
   bool    _started       = false;
+  bool    _registersInitialized = false;
+  uint8_t _wifiClientCount = 0;
+  uint32_t _lastPublishMs = 0;
   int8_t  _rssiCache     = -127;
   uint8_t _wifiModeCache = 0;
   uint8_t _transportMode = DEFAULT_TRANSPORT;
@@ -92,10 +100,13 @@ class ModbusServer {
   // Push all live values into the holding register bank.
   void publish(int8_t rssi, uint8_t wifiMode);
 
+#if ETHERNET_ENABLED
   // ---- Ethernet Modbus TCP handler ----
   void processEthernetModbus();
+#endif
 
   void applyPendingTransportMode();
+  void initializeRegisters();
 };
 
 #endif // MODBUS_SERVER_H
