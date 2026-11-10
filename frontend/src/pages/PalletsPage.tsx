@@ -158,6 +158,44 @@ export default function PalletsPage() {
   const inUsePallets = pallets.filter((p) => p.status !== 'AVAILABLE').length
   const totalStockKg = pallets.reduce((sum, p) => sum + (p.remainingKg || p.weightKg || 0), 0)
 
+  const renderActions = (row: Pallet) => {
+    const isPrinting = printingCode === row.code
+    const canDelete = row.status === 'AVAILABLE' && (row.weightKg || 0) === 0
+    return (
+      <div className="flex items-center justify-end gap-1.5 flex-wrap">
+        <Button
+          variant="outline"
+          size="sm"
+          icon="print"
+          disabled={isPrinting}
+          onClick={() => handlePrint(row.code)}
+          title="Send ESC/POS QR label print job to workstation printer"
+        >
+          {isPrinting ? 'Printing…' : 'Print QR'}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon="eye"
+          onClick={() => setPreviewPallet(row)}
+          title="Preview QR Code & Label"
+        >
+          Preview
+        </Button>
+        {canDelete && (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon="trash"
+            className="text-destructive hover:bg-destructive/10"
+            onClick={() => setConfirmDelete(row)}
+            title="Remove empty physical pallet"
+          />
+        )}
+      </div>
+    )
+  }
+
   const columns: Column<Pallet>[] = [
     {
       key: 'code',
@@ -171,18 +209,9 @@ export default function PalletsPage() {
       ),
     },
     {
-      key: 'tareKg',
-      label: 'Tare Weight',
-      align: 'right',
-      render: (row) => (
-        <span className="font-mono text-xs font-semibold text-muted-foreground">
-          {formatWeight(row.tareKg ?? 15.0)} kg
-        </span>
-      ),
-    },
-    {
       key: 'status',
       label: 'Status',
+      priority: true,
       render: (row) => {
         const isAvail = row.status === 'AVAILABLE'
         const isDepleted = row.status === 'DEPLETED'
@@ -195,6 +224,16 @@ export default function PalletsPage() {
           </Badge>
         )
       },
+    },
+    {
+      key: 'tareKg',
+      label: 'Tare Weight',
+      align: 'right',
+      render: (row) => (
+        <span className="font-mono text-xs font-semibold text-muted-foreground">
+          {formatWeight(row.tareKg ?? 15.0)} kg
+        </span>
+      ),
     },
     {
       key: 'grade',
@@ -235,44 +274,7 @@ export default function PalletsPage() {
       key: 'actions',
       label: 'Actions',
       align: 'right',
-      priority: true,
-      render: (row) => {
-        const isPrinting = printingCode === row.code
-        const canDelete = row.status === 'AVAILABLE' && (row.weightKg || 0) === 0
-        return (
-          <div className="flex items-center justify-end gap-1.5 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              icon="print"
-              disabled={isPrinting}
-              onClick={() => handlePrint(row.code)}
-              title="Send ESC/POS QR label print job to workstation printer"
-            >
-              {isPrinting ? 'Printing…' : 'Print QR'}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon="eye"
-              onClick={() => setPreviewPallet(row)}
-              title="Preview QR Code & Label"
-            >
-              Preview
-            </Button>
-            {canDelete && (
-              <Button
-                variant="ghost"
-                size="sm"
-                icon="trash"
-                className="text-destructive hover:bg-destructive/10"
-                onClick={() => setConfirmDelete(row)}
-                title="Remove empty physical pallet"
-              />
-            )}
-          </div>
-        )
-      },
+      render: renderActions,
     },
   ]
 
@@ -357,6 +359,7 @@ export default function PalletsPage() {
           columns={columns}
           data={filteredPallets}
           rowKey={(p) => p.id || p.code}
+          mobileActions={renderActions}
           emptyTitle="No Pallets Found"
           emptyDescription="Register physical pallets to make them selectable at Station 2: Sorting."
           emptyAction={
