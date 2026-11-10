@@ -32,6 +32,7 @@ export interface GradedBatchRecord {
   shrinkageKg: number
   shrinkagePct: number
   timestamp: string
+  date?: string
 }
 
 export interface FinishedStockItem {
@@ -45,6 +46,7 @@ export interface FinishedStockItem {
   weightKg: number
   totalWeightKg: number
   packedTime: string
+  date?: string
   storageLocation: string
 }
 
@@ -160,6 +162,7 @@ export function usePackhouseStore() {
             shrinkageKg: Number(b.shrinkageKg ?? 0),
             shrinkagePct: Number(b.shrinkagePct ?? 0),
             timestamp: formatSafeTime(b.createdAt || b.sortedAt),
+            date: formatSafeDate(b.createdAt || b.sortedAt),
           }
         })
       }
@@ -175,6 +178,7 @@ export function usePackhouseStore() {
           weightKg: Number(p.weightKg || p.netWeightKg || 1),
           totalWeightKg: Number(p.weightKg || p.netWeightKg || 1),
           packedTime: formatSafeTime(p.createdAt),
+          date: formatSafeDate(p.createdAt),
           storageLocation: p.storageLocation || 'Finished Goods Bay',
         }))
       }
@@ -264,6 +268,7 @@ export function usePackhouseStore() {
       const newBatch: GradedBatchRecord = {
         ...batch,
         id: `b-${Date.now()}`,
+        date: batch.date ?? new Date().toISOString().slice(0, 10),
       }
       const updatedWarings = store.bufferWarings.map((item) =>
         item.code === batch.waringCode ? { ...item, status: 'SORTED' as const } : item,
@@ -298,6 +303,7 @@ export function usePackhouseStore() {
       const newPkg: FinishedStockItem = {
         ...pkg,
         id: `f-${Date.now()}`,
+        date: pkg.date ?? new Date().toISOString().slice(0, 10),
       }
       persist({
         ...store,

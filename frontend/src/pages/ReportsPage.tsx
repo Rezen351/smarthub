@@ -5,9 +5,11 @@ import Button from '../components/shared/Button'
 import Icon, { type IconName } from '../components/shared/Icon'
 import PageHeader from '../components/shared/PageHeader'
 import StatCard from '../components/shared/StatCard'
+import DataTable, { type Column } from '../components/shared/DataTable'
 import { useToast } from '../components/feedback/Toast'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
 import { api } from '../services/api'
+import { formatWeight } from '../lib/utils'
 
 interface Stat {
   label: string
@@ -17,10 +19,21 @@ interface Stat {
   icon: IconName
 }
 
+interface TransactionRow {
+  id: string
+  date: string
+  time: string
+  station: 'Reception' | 'Sorting' | 'Packaging' | 'Dispatch'
+  reference: string
+  description: string
+  quantity: string
+  status: string
+}
+
 export default function ReportsPage() {
   const toast = useToast()
   const [range, setRange] = useState('7d')
-  const [farmerCount, setFarmerCount] = useState<number>(1)
+  const [farmerCount, setFarmerCount] = useState<number>(0)
   const { bufferWarings, sortedBatches, finishedStock, deliveries } = usePackhouseStore()
 
   useEffect(() => {
@@ -84,6 +97,94 @@ export default function ReportsPage() {
       { grade: 'C', kg: Math.round(totalC), share: totalGraded > 0 ? Math.round((totalC / totalGraded) * 100) : 0 },
     ]
   }, [sortedBatches])
+
+  const transactions = useMemo<TransactionRow[]>(() => {
+    const allRows: TransactionRow[] = [
+      ...bufferWarings.map((item) => ({
+        id: `reception-${item.id}`,
+        date: item.date || '—',
+        time: item.intakeTime || '—',
+        station: 'Reception' as const,
+        reference: item.code,
+        description: `${item.farmerName}${item.farmerVillage ? ` · ${item.farmerVillage}` : ''}`,
+        quantity: `${formatWeight(item.grossWeightKg)} kg`,
+        status: item.status,
+      })),
+      ...sortedBatches.map((item) => ({
+        id: `sorting-${item.id}`,
+        date: item.date || '—',
+        time: item.timestamp || '—',
+        station: 'Sorting' as const,
+        reference: item.palletCode,
+        description: `${item.waringCode} · ${item.washingRecord}`,
+        quantity: `${formatWeight(item.totalGradedKg)} kg`,
+        status: 'SORTED',
+      })),
+      ...finishedStock.map((item) => ({
+        id: `packaging-${item.id}`,
+        date: item.date || '—',
+        time: item.packedTime || '—',
+        station: 'Packaging' as const,
+        reference: item.code,
+        description: `${item.packageType} · Grade ${item.grade}`,
+        quantity: `${item.units} units · ${formatWeight(item.totalWeightKg)} kg`,
+        status: 'STORED',
+      })),
+      ...deliveries.map((item) => ({
+        id: `dispatch-${item.id}`,
+        date: item.date || '—',
+        time: item.time || '—',
+        station: 'Dispatch' as const,
+        reference: item.truckPlate,
+        description: `${item.destination} · ${item.driver}`,
+        quantity: `${item.units} units`,
+        status: item.status,
+      })),
+    ]
+
+    const cutoffDays = range === '7d' ? 7 : range === '30d' ? 30 : null
+    const cutoff = cutoffDays === null ? null : Date.now() - cutoffDays * 24 * 60 * 60 * 1000
+    return allRows
+      .filter((row) => {
+        if (cutoff === null || row.date === '—') return true
+        const timestamp = new Date(`${row.date}T00:00:00`).getTime()
+        return Number.isNaN(timestamp) || timestamp >= cutoff
+      })
+      .sort((a, b) => {
+        const aTime = a.date === '—' ? 0 : new Date(`${a.date}T${a.time === '—' ? '00:00' : a.time}`).getTime()
+        const bTime = b.date === '—' ? 0 : new Date(`${b.date}T${b.time === '—' ? '00:00' : b.time}`).getTime()
+        return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime)
+      })
+  }, [bufferWarings, deliveries, finishedStock, range, sortedBatches])
+
+  const transactionColumns: Column<TransactionRow>[] = [
+    {
+      key: 'station',
+      label: 'Station',
+      priority: true,
+      render: (row) => <Badge tone={row.station === 'Sorting' ? 'success' : row.station === 'Dispatch' ? 'warning' : 'accent'}>{row.station}</Badge>,
+    },
+    {
+      key: 'reference',
+      label: 'Reference',
+      priority: true,
+      render: (row) => <span className="font-mono text-xs font-semibold">{row.reference}</span>,
+    },
+    {
+      key: 'date',
+      label: 'Date / Time',
+      priority: true,
+      render: (row) => <span className="font-mono text-xs">{row.date} · {row.time}</span>,
+    },
+    { key: 'description', label: 'Transaction', render: (row) => <span className="text-sm">{row.description}</span> },
+    { key: 'quantity', label: 'Quantity', align: 'right', render: (row) => <span className="font-mono text-xs font-semibold">{row.quantity}</span> },
+    {
+      key: 'status',
+      label: 'Status',
+      align: 'right',
+      render: (row) => <Badge tone={row.status === 'DEPARTED' || row.status === 'DELIVERED' || row.status === 'SORTED' || row.status === 'STORED' ? 'success' : 'neutral'}>{row.status}</Badge>,
+    },
+  ]
 
   const handleExportCsv = () => {
     const rows = [
@@ -226,7 +327,7 @@ export default function ReportsPage() {
             { label: 'Receiving', value: `${bufferWarings.length} weighings`, icon: 'scale' as IconName },
             { label: 'Sorting', value: `${sortedBatches.length} batches`, icon: 'sortir' as IconName },
             { label: 'Packing', value: `${finishedStock.length} units`, icon: 'package' as IconName },
-            { label: 'Warehouse', value: `${Math.min(100, Math.round((totalWeighedKg / 3000) * 100))}% capacity`, icon: 'box' as IconName },
+            { label: 'Warehouse', value: `${finishedStock.reduce((sum, item) => sum + item.units, 0)} stored units`, icon: 'box' as IconName },
           ].map((item) => (
             <div key={item.label} className="row gap-md">
               <span className="icon-tile icon-tile-accent">
@@ -239,6 +340,23 @@ export default function ReportsPage() {
             </div>
           ))}
         </div>
+      </Card>
+
+      <Card
+        title="Transaction Ledger"
+        subtitle="Recorded activity from Reception through Dispatch."
+        action={<Badge tone="neutral">{transactions.length} records</Badge>}
+        padding="none"
+      >
+        <DataTable
+          columns={transactionColumns}
+          data={transactions}
+          rowKey={(row) => row.id}
+          pageSize={10}
+          emptyTitle="No transactions recorded."
+          emptyDescription="Transactions appear after Station 01 records the first intake."
+          caption="Transaction data is sourced from operational records; no sample rows are shown."
+        />
       </Card>
     </div>
   )
