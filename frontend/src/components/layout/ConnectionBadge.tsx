@@ -22,7 +22,6 @@ export default function ConnectionBadge({ state, label }: ConnectionBadgeProps) 
       tone={state === 'connected' ? 'success' : state === 'reconnecting' ? 'warning' : 'neutral'}
       dot
       live={state !== 'disconnected'}
-      className="hide-mobile"
       title={`Server status: ${labels[state]}`}
     >
       {label ?? 'Server'} · {labels[state]}

@@ -6,16 +6,15 @@ interface LogoProps {
 }
 
 /**
- * ENYX-Smart Hub logo dynamically rendered from /logo.svg (or /favicon.svg for markOnly).
- * Directly reflects any file updates in the public/ folder in dev mode without rebuilding.
+ * SmartGeulis logo dynamically rendered from /logo_smartgeulis.png.
  */
-export default function Logo({ className = 'h-8 w-auto', markOnly = false }: LogoProps) {
-  const src = markOnly ? '/favicon.svg' : '/logo.svg'
+export default function Logo({ className = 'h-8 w-auto' }: LogoProps) {
+  const src = '/logo_smartgeulis.png'
 
   return (
     <img
       src={src}
-      alt="ENYX-ENTERPRISE"
+      alt="SmartGeulis"
       className={`${className} object-contain shrink-0`}
     />
   )

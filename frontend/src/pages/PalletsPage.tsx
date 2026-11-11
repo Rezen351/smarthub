@@ -484,7 +484,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
             {/* Simulated ESC/POS Thermal Sticker Preview */}
             <div className="bg-white text-black p-5 border-2 border-dashed border-neutral-400 flex flex-col items-center text-center space-y-2 select-none shadow-inner">
               <div className="text-[10px] uppercase font-bold tracking-widest text-neutral-600">
-                E-Tani Smart Hub · Packhouse
+                SmartGeulis · Packhouse
               </div>
               <div className="text-xs font-extrabold uppercase tracking-wider text-black border-b border-black pb-1 w-full">
                 PHYSICAL PALLET ID

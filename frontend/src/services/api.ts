@@ -90,6 +90,27 @@ export const api = {
       })
       return res.data
     },
+    updateUser: async (id: string, data: any) => {
+      const res = await request<ApiResponse<any>>(`/auth/users/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      })
+      return res.data
+    },
+    changePassword: async (data: { currentPassword: string; newPassword: string }) => {
+      const res = await request<ApiResponse<any>>('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+      return res.data
+    },
+    updateProfile: async (data: { name: string; phone?: string; address?: string; village?: string }) => {
+      const res = await request<ApiResponse<any>>('/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      })
+      return res.data
+    },
     deleteUser: async (id: string) => {
       const res = await request<ApiResponse<any>>(`/auth/users/${id}`, {
         method: 'DELETE',
@@ -339,6 +360,37 @@ export const api = {
         body: JSON.stringify({ jobs }),
       })
       return res.data
+    },
+  },
+
+  // Reports, Analytics & Recaps
+  reports: {
+    dailyRecap: async (date?: string) => {
+      const query = date ? `?date=${encodeURIComponent(date)}` : ''
+      const res = await request<ApiResponse<any>>(`/reports/recap/daily${query}`)
+      return res.data
+    },
+    monthlyRecap: async (month?: string) => {
+      const query = month ? `?month=${encodeURIComponent(month)}` : ''
+      const res = await request<ApiResponse<any>>(`/reports/recap/monthly${query}`)
+      return res.data
+    },
+    farmerRankings: async (limit = 10, period = 'all') => {
+      const res = await request<ApiResponse<{ period: string; grandTotalGross: number; rankings: any[] }>>(
+        `/reports/rankings/farmers?limit=${limit}&period=${period}`
+      )
+      return res.data
+    },
+    downloadDailyCsvUrl: (date?: string) => {
+      const d = date || new Date().toISOString().slice(0, 10)
+      return `/api/v1/reports/recap/daily?date=${encodeURIComponent(d)}&format=csv`
+    },
+    downloadMonthlyCsvUrl: (month?: string) => {
+      const m = month || new Date().toISOString().slice(0, 7)
+      return `/api/v1/reports/recap/monthly?month=${encodeURIComponent(m)}&format=csv`
+    },
+    downloadRankingsCsvUrl: (limit = 10, period = 'all') => {
+      return `/api/v1/reports/rankings/farmers?limit=${limit}&period=${period}&format=csv`
     },
   },
 }

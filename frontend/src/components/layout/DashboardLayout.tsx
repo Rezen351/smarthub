@@ -15,6 +15,7 @@ interface MenuItem {
   path: string
   icon: IconName
   end?: boolean
+  external?: boolean
 }
 
 const roleMenu: Record<string, MenuItem[]> = {
@@ -28,6 +29,7 @@ const roleMenu: Record<string, MenuItem[]> = {
     { label: 'Users', path: '/dashboard/users', icon: 'users' },
     { label: 'Reports', path: '/dashboard/reports', icon: 'reports' },
     { label: 'Settings', path: '/dashboard/settings', icon: 'settings' },
+    { label: 'OpenAPI Redoc', path: '/docs', icon: 'clipboard', external: true },
   ],
   OPERATOR: [
     { label: 'Workstation Hub', path: '/dashboard', icon: 'dashboard', end: true },
@@ -145,19 +147,35 @@ export default function DashboardLayout() {
   const navLinks = (
         <nav className="sidebar-nav" aria-label="Main navigation">
           <p className="sidebar-section">{user ? roleLabel[user.role] ?? 'Menu' : 'Menu'}</p>
-          {menu.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.end}
-              className={({ isActive }) => `sidebar-link ${isActive ? 'is-active' : ''}`}
-            >
-              <span className="sidebar-link-icon">
-                <Icon name={item.icon} size={17} />
-              </span>
-              {item.label}
-            </NavLink>
-          ))}
+          {menu.map((item) =>
+            item.external ? (
+              <a
+                key={item.path}
+                href={item.path}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="sidebar-link"
+              >
+                <span className="sidebar-link-icon">
+                  <Icon name={item.icon} size={17} />
+                </span>
+                <span className="flex-1">{item.label}</span>
+                <span className="text-[10px] text-text-light font-mono">↗</span>
+              </a>
+            ) : (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end={item.end}
+                className={({ isActive }) => `sidebar-link ${isActive ? 'is-active' : ''}`}
+              >
+                <span className="sidebar-link-icon">
+                  <Icon name={item.icon} size={17} />
+                </span>
+                {item.label}
+              </NavLink>
+            )
+          )}
         </nav>
   )
 
@@ -181,8 +199,8 @@ export default function DashboardLayout() {
       </Link>
       <div className="pt-2 border-t border-border flex flex-col gap-0.5 text-text-light font-mono text-[11px]">
         <div className="flex items-center justify-between">
-          <span className="font-semibold text-text">ENYX-ENTERPRISE</span>
-          <span className="bg-bg-alt px-1.5 py-0.5 rounded-none text-[9px] font-mono tracking-wider">ENTERPRISE</span>
+          <span className="font-semibold text-text">SmartGeulis</span>
+          <span className="bg-bg-alt px-1.5 py-0.5 rounded-none text-[9px] font-mono tracking-wider">TRACEABILITY</span>
         </div>
         <span className="text-[10px]">Traceability System v1.0.0</span>
       </div>
@@ -198,12 +216,12 @@ export default function DashboardLayout() {
             to="/dashboard"
             className="flex items-center gap-3 text-inherit group"
             style={{ textDecoration: 'none' }}
-            aria-label="ENYX-ENTERPRISE home"
+            aria-label="SmartGeulis home"
           >
             <Logo className="h-8 w-auto" markOnly />
             <div className="min-w-0">
               <div className="font-display text-xl leading-none tracking-wider text-text flex items-center gap-1.5">
-                ENYX-ENTERPRISE
+                SmartGeulis
               </div>
               <div className="font-mono-custom text-[9px] text-text-light tracking-[0.22em] uppercase mt-0.5 hidden xs:block sm:block">
                 <span className="hidden sm:inline">TRACEABILITY SYSTEM</span>
@@ -211,12 +229,6 @@ export default function DashboardLayout() {
               </div>
             </div>
           </Link>
-        </div>
-        <div className="px-3 pt-2 pb-1">
-          <div className="flex items-center gap-2 font-mono text-[10px] text-emerald-900 bg-emerald-50/80 border border-emerald-200/80 px-2.5 py-1 rounded-none">
-            <span className={`w-1.5 h-1.5 rounded-full ${serverState === 'connected' ? 'bg-emerald-600' : 'bg-amber-600'}`}></span>
-            <span className="tracking-wider">SERVER {serverState === 'connected' ? 'ONLINE' : serverState === 'reconnecting' ? 'CHECKING' : 'OFFLINE'}</span>
-          </div>
         </div>
         {navLinks}
         {userCard}
@@ -243,12 +255,12 @@ export default function DashboardLayout() {
             to="/dashboard"
             className="hide-desktop flex items-center gap-2 text-inherit group min-w-0"
             style={{ textDecoration: 'none' }}
-            aria-label="ENYX-ENTERPRISE home"
+            aria-label="SmartGeulis home"
           >
             <Logo className="h-6 w-auto shrink-0" markOnly />
             <div className="min-w-0">
               <div className="font-display text-sm leading-none tracking-wider text-text truncate">
-                ENYX-ENTERPRISE
+                SmartGeulis
               </div>
               <div className="font-mono-custom text-[7.5px] text-text-light tracking-[0.16em] uppercase truncate">
                 TRACEABILITY
@@ -296,20 +308,24 @@ export default function DashboardLayout() {
                 </div>
                 <div className="divider" style={{ margin: '8px 0' }} />
                 <div className="stack-xs">
-                  {user?.role === 'FARMER' && (
-                    <Link to="/dashboard/profile" className="sidebar-link" role="menuitem">
-                      <span className="sidebar-link-icon">
-                        <Icon name="user" size={16} />
-                      </span>
-                      Profile
-                    </Link>
-                  )}
+                  <Link to="/dashboard/profile" className="sidebar-link" role="menuitem">
+                    <span className="sidebar-link-icon">
+                      <Icon name="user" size={16} />
+                    </span>
+                    Profile & Security
+                  </Link>
                   <Link to="/traceability" className="sidebar-link" role="menuitem">
                     <span className="sidebar-link-icon">
                       <Icon name="search" size={16} />
                     </span>
                     Public traceability
                   </Link>
+                  <a href="/docs" target="_blank" rel="noopener noreferrer" className="sidebar-link" role="menuitem">
+                    <span className="sidebar-link-icon">
+                      <Icon name="clipboard" size={16} />
+                    </span>
+                    OpenAPI Docs (Redoc) ↗
+                  </a>
                   <button
                     type="button"
                     className="sidebar-link"

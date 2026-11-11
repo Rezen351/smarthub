@@ -3,8 +3,10 @@ import { useAuth } from '../hooks/useAuth'
 import { api } from '../services/api'
 import Icon from '../components/shared/Icon'
 import Button from '../components/shared/Button'
+import Card from '../components/shared/Card'
+import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
-import OfflineQrCode from '../components/shared/OfflineQrCode'
+import { IdCard, exportIdCardToPng, printIdCard, type IdCardData } from '../components/shared/IdCard'
 
 type Farmer = {
   id: string
@@ -19,6 +21,8 @@ export default function FarmerQRPage() {
   const toast = useToast()
   const [farmerData, setFarmerData] = useState<Farmer | null>(null)
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const farmerId = farmerData?.code || user?.farmerId
 
   useEffect(() => {
     if (user?.farmerId) {
@@ -31,113 +35,136 @@ export default function FarmerQRPage() {
     try {
       const data = await api.farmers.get(farmerId)
       setFarmerData(data)
-    } catch (error) {
+    } catch {
       toast.error('Failed to load farmer profile')
     } finally {
       setLoading(false)
     }
   }
 
-  const downloadQR = () => {
-    if (!user?.farmerId) return
-    const canvas = document.createElement('canvas')
-    const svg = document.querySelector(`svg[aria-label="QR Code for ${user.farmerId}"]`)
-    if (!svg) return
-    
-    const svgData = new XMLSerializer().serializeToString(svg)
-    const img = new Image()
-    img.onload = () => {
-      canvas.width = img.width
-      canvas.height = img.height
-      const ctx = canvas.getContext('2d')
-      if (ctx) {
-        ctx.fillStyle = 'white'
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-        ctx.drawImage(img, 0, 0)
-        const link = document.createElement('a')
-        link.download = `farmer-${user.farmerId}-qr.png`
-        link.href = canvas.toDataURL()
-        link.click()
-      }
-    }
-    img.src = 'data:image/svg+xml;base64,' + btoa(svgData)
+  const cardData: IdCardData = {
+    id: user?.id,
+    name: farmerData?.name || user?.name || 'Farmer',
+    role: 'FARMER',
+    code: farmerId || 'FMR-001',
+    domicile: farmerData?.village || user?.farmerProfile?.village || 'Garut, Jawa Barat',
+    issuedAt: farmerData?.createdAt,
   }
 
-  if (!user?.farmerId) {
+  const handleExportPng = async () => {
+    try {
+      setExporting(true)
+      await exportIdCardToPng(cardData)
+      toast.success('ID Card PNG exported successfully.')
+    } catch {
+      toast.error('Failed to export ID Card image.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handlePrint = () => {
+    printIdCard(cardData)
+  }
+
+  if (!farmerId) {
     return (
-      <div className="container py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">My Farmer ID Card</h1>
-          <p className="text-muted-foreground mt-2">
-            No farmer profile linked to your account
-          </p>
-        </div>
+      <div className="container py-8 max-w-xl mx-auto">
+        <Card>
+          <div className="text-center py-8 stack-sm">
+            <Icon name="user" size={36} className="text-text-secondary mx-auto" />
+            <h1 className="t-h2">My Farmer ID Card</h1>
+            <p className="t-small text-text-secondary">
+              No registered farmer profile is linked to your account. Please contact the administrator.
+            </p>
+          </div>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="container py-8">
-      <div className="max-w-md mx-auto space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">My Farmer ID Card</h1>
-          <p className="text-muted-foreground mt-2">
-            Scan this QR code at Station 01 for quick identification
-          </p>
-        </div>
+    <div className="stack stack-lg" style={{ maxWidth: 760 }}>
+      <PageHeader
+        title="My Farmer ID Card"
+        subtitle="Official identity pass for Station 01 Reception weighing check-in."
+        actions={
+          <div className="row gap-xs">
+            <Button variant="outline" size="sm" icon="print" onClick={handlePrint}>
+              Print ID Card
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              icon="download"
+              disabled={exporting}
+              onClick={handleExportPng}
+            >
+              {exporting ? 'Exporting...' : 'Export to PNG'}
+            </Button>
+          </div>
+        }
+      />
 
-        <div className="bg-white border rounded-lg p-6 text-center">
-          <div className="space-y-4">
+      {/* Main Official ID Card Display */}
+      <Card
+        title="Official Laminated Badge"
+        subtitle="Registered identity badge for packhouse intake check-in"
+      >
+        <div className="flex flex-col sm:flex-row items-center gap-6 justify-between p-2">
+          <div className="shrink-0 flex justify-center w-full sm:w-auto">
+            {loading ? (
+              <div
+                className="flex items-center justify-center bg-muted/40 rounded-lg border border-border"
+                style={{ width: 320, height: 220 }}
+              >
+                <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <IdCard data={cardData} />
+            )}
+          </div>
+
+          <div className="stack-sm text-xs text-text-secondary flex-1">
             <div>
-              <p className="text-sm text-muted-foreground">Farmer ID</p>
-              <p className="text-2xl font-bold font-mono">{user.farmerId}</p>
+              <p className="font-semibold text-text text-sm">Station 01 Weighing Check-In</p>
+              <p className="mt-1">
+                Show this official card to the operator at Station 01 Reception or scan the QR code directly at the intake station.
+              </p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Name</p>
-              <p className="text-lg">{farmerData?.name || user.name}</p>
+
+            <div className="bg-bg-alt p-3 rounded border border-border space-y-1">
+              <div className="flex justify-between">
+                <span className="font-medium text-text">Farmer Name:</span>
+                <span className="font-semibold text-text">{cardData.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium text-text">Farmer ID:</span>
+                <span className="font-mono font-bold text-accent">{cardData.code}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium text-text">Domicile:</span>
+                <span>{cardData.domicile}</span>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Village</p>
-              <p className="text-lg">{farmerData?.village || '-'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Registration Date</p>
-              <p className="text-lg">{farmerData?.createdAt ? new Date(farmerData.createdAt).toLocaleDateString() : '-'}</p>
+
+            <div className="pt-2 flex flex-wrap gap-2">
+              <Button size="sm" variant="primary" icon="print" onClick={handlePrint}>
+                Print ID Card
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                icon="download"
+                disabled={exporting}
+                onClick={handleExportPng}
+              >
+                {exporting ? 'Exporting...' : 'Export PNG'}
+              </Button>
             </div>
           </div>
         </div>
-
-        <div className="bg-white border rounded-lg p-6 text-center">
-          <h2 className="text-lg font-semibold mb-4">Farmer QR Code</h2>
-          {loading ? (
-            <div className="flex justify-center">
-              <div className="w-32 h-32 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex justify-center">
-                <OfflineQrCode 
-                  value={user.farmerId}
-                  size={192}
-                />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Scan this QR code at Station 01 Reception
-              </p>
-              <Button onClick={downloadQR} variant="outline" size="sm">
-                <Icon name="download" size={16} />
-                Download QR
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <div className="text-xs text-muted-foreground text-center">
-          <p>
-            Present this QR code to the operator at Station 01 for faster harvest weighing process.
-          </p>
-        </div>
-      </div>
+      </Card>
     </div>
   )
 }

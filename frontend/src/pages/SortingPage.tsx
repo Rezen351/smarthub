@@ -95,15 +95,18 @@ export default function SortingPage() {
       .then((data) => {
         if (!active || !Array.isArray(data)) return
         setRegisteredPallets(data)
-        if (data.length >= 1) {
-          setGradeAPalletQr(data[0].code)
-          setPalletCode(data[0].code)
+        const available = data.filter(
+          (p) => p.status === 'AVAILABLE' || (!p.status && (p.remainingKg ?? 0) <= 0),
+        )
+        if (available.length >= 1) {
+          setGradeAPalletQr(available[0].code)
+          setPalletCode(available[0].code)
         }
-        if (data.length >= 2) {
-          setGradeBPalletQr(data[1].code)
+        if (available.length >= 2) {
+          setGradeBPalletQr(available[1].code)
         }
-        if (data.length >= 3) {
-          setGradeCPalletQr(data[2].code)
+        if (available.length >= 3) {
+          setGradeCPalletQr(available[2].code)
         }
       })
       .catch(() => {})
@@ -114,15 +117,15 @@ export default function SortingPage() {
 
   /* Grade A */
   const [gradeAKg, setGradeAKg] = useState('0.0')
-  const [gradeAPalletQr, setGradeAPalletQr] = useState('PLT-001')
+  const [gradeAPalletQr, setGradeAPalletQr] = useState('')
 
   /* Grade B */
   const [gradeBKg, setGradeBKg] = useState('0.0')
-  const [gradeBPalletQr, setGradeBPalletQr] = useState('PLT-002')
+  const [gradeBPalletQr, setGradeBPalletQr] = useState('')
 
   /* Grade C */
   const [gradeCKg, setGradeCKg] = useState('0.0')
-  const [gradeCPalletQr, setGradeCPalletQr] = useState('PLT-003')
+  const [gradeCPalletQr, setGradeCPalletQr] = useState('')
 
   /* ── Camera Scanner State ── */
   const [cameraModalMode, setCameraModalMode] = useState<'WARING' | 'PALLET' | null>(null)
@@ -178,6 +181,13 @@ export default function SortingPage() {
   const shrinkagePct = gGross > 0 ? (shrinkageKg / gGross) * 100 : 0
   const yieldPct = gGross > 0 ? (totalGraded / gGross) * 100 : 0
 
+  const otherGradesWeight = activeGradeTab === 'A'
+    ? gB + gC
+    : activeGradeTab === 'B'
+    ? gA + gC
+    : gA + gB
+  const maxAllowedForActiveGrade = Math.max(0, Number((gGross - otherGradesWeight).toFixed(3)))
+
   /* Select Waring Handler */
   const handleSelectWaring = (item: BufferWaringItem) => {
     setWaringCode(item.code)
@@ -217,26 +227,35 @@ export default function SortingPage() {
   }
 
   /* Assign Live Weight from Scale 02 */
-  const handleAssignLiveWeight = () => {
-    const val = liveScaleWeight.trim()
-    if (!val || Number(val) <= 0) {
-      toast.error('Place potatoes on Scale 02 first.')
+  const handleAssignLiveWeight = (explicitVal?: string) => {
+    const rawVal = explicitVal !== undefined ? explicitVal : liveScaleWeight
+    const val = rawVal.trim()
+    const numVal = Number(val)
+    if (val === '' || isNaN(numVal) || numVal < 0) {
+      toast.error('Enter a valid weight (0 or higher).')
+      return
+    }
+
+    if (numVal > maxAllowedForActiveGrade + 0.005) {
+      toast.error(
+        `Weight ${numVal.toFixed(3)} kg exceeds remaining intake capacity of ${maxAllowedForActiveGrade.toFixed(3)} kg for this waring.`,
+      )
       return
     }
 
     if (activeGradeTab === 'A') {
       setGradeAKg(val)
-      toast.success(`Grade A weight set to ${val} kg`)
+      toast.success(numVal === 0 ? 'Grade A set to 0 kg (None)' : `Grade A weight set to ${val} kg`)
       setActiveGradeTab('B')
-      setLiveScaleWeight(gradeBKg || '15.0')
+      setLiveScaleWeight(gradeBKg || '0')
     } else if (activeGradeTab === 'B') {
       setGradeBKg(val)
-      toast.success(`Grade B weight set to ${val} kg`)
+      toast.success(numVal === 0 ? 'Grade B set to 0 kg (None)' : `Grade B weight set to ${val} kg`)
       setActiveGradeTab('C')
-      setLiveScaleWeight(gradeCKg || '5.0')
+      setLiveScaleWeight(gradeCKg || '0')
     } else {
       setGradeCKg(val)
-      toast.success(`Grade C weight set to ${val} kg`)
+      toast.success(numVal === 0 ? 'Grade C set to 0 kg (None)' : `Grade C weight set to ${val} kg`)
     }
   }
 
@@ -244,6 +263,26 @@ export default function SortingPage() {
   const handleAssignScannedPallet = (scannedCode: string, targetGrade: 'A' | 'B' | 'C') => {
     const code = scannedCode.trim().toUpperCase()
     if (!code) return
+
+    // Prevent re-assigning pallet that is currently IN_USE with existing inventory
+    const matched = registeredPallets.find((p) => p.code.toUpperCase() === code)
+    if (matched && matched.status === 'IN_USE' && (matched.remainingKg ?? 0) > 0) {
+      toast.error(
+        `Pallet "${code}" is currently IN USE with Grade ${matched.grade || 'unspecified'} (${matched.remainingKg} kg). Cannot reuse until Station 03 finishes packaging.`,
+      )
+      return
+    }
+
+    // Check if already assigned to another grade in this active run
+    if (
+      (targetGrade !== 'A' && gradeAPalletQr === code) ||
+      (targetGrade !== 'B' && gradeBPalletQr === code) ||
+      (targetGrade !== 'C' && gradeCPalletQr === code)
+    ) {
+      toast.error(`Pallet "${code}" is already assigned to another grade in this run.`)
+      return
+    }
+
     if (targetGrade === 'A') {
       setGradeAPalletQr(code)
       setPalletCode(code)
@@ -283,19 +322,33 @@ export default function SortingPage() {
       return
     }
 
+    if (totalGraded > gGross + 0.005) {
+      toast.error(
+        `Total graded weight (${totalGraded.toFixed(3)} kg) exceeds waring intake (${gGross.toFixed(3)} kg).`,
+      )
+      return
+    }
+
+    const activePalletCodes: string[] = []
+    if (gA > 0 && gradeAPalletQr.trim()) activePalletCodes.push(gradeAPalletQr.trim())
+    if (gB > 0 && gradeBPalletQr.trim()) activePalletCodes.push(gradeBPalletQr.trim())
+    if (gC > 0 && gradeCPalletQr.trim()) activePalletCodes.push(gradeCPalletQr.trim())
+
+    const combinedPalletCode = activePalletCodes.length > 0 ? activePalletCodes.join(', ') : (palletCode || 'PLT-001')
+
     const newBatch = addSortedBatch({
       waringCode,
       farmerName,
       farmerVillage,
-      palletCode,
+      palletCode: combinedPalletCode,
       grossIntakeKg: gGross,
       washingRecord,
       gradeAKg: gA,
-      gradeAPalletQr: gradeAPalletQr.trim(),
+      gradeAPalletQr: gradeAPalletQr.trim() || 'PLT-001',
       gradeBKg: gB,
-      gradeBPalletQr: gradeBPalletQr.trim(),
+      gradeBPalletQr: gradeBPalletQr.trim() || 'PLT-002',
       gradeCKg: gC,
-      gradeCPalletQr: gradeCPalletQr.trim(),
+      gradeCPalletQr: gradeCPalletQr.trim() || 'PLT-003',
       totalGradedKg: totalGraded,
       shrinkageKg,
       shrinkagePct: Number(shrinkagePct.toFixed(1)),
@@ -308,13 +361,24 @@ export default function SortingPage() {
 
   /* Reset for next waring */
   const handleStartNextWaring = () => {
-    const pA = registeredPallets[0]?.code || 'PLT-001'
-    const pB = registeredPallets[1]?.code || 'PLT-002'
-    const pC = registeredPallets[2]?.code || 'PLT-003'
-    setPalletCode(pA)
-    setGradeAPalletQr(pA)
-    setGradeBPalletQr(pB)
-    setGradeCPalletQr(pC)
+    api.pallets
+      .list()
+      .then((data) => {
+        if (!Array.isArray(data)) return
+        setRegisteredPallets(data)
+        const available = data.filter(
+          (p) => p.status === 'AVAILABLE' || (!p.status && (p.remainingKg ?? 0) <= 0),
+        )
+        const pA = available[0]?.code || ''
+        const pB = available[1]?.code || ''
+        const pC = available[2]?.code || ''
+        setPalletCode(pA)
+        setGradeAPalletQr(pA)
+        setGradeBPalletQr(pB)
+        setGradeCPalletQr(pC)
+      })
+      .catch(() => {})
+
     setGradeAKg('')
     setGradeBKg('')
     setGradeCKg('')
@@ -330,7 +394,45 @@ export default function SortingPage() {
       key: 'palletCode',
       label: 'Pallet ID',
       priority: true,
-      render: (r) => <span className="font-mono font-bold text-xs">{r.palletCode}</span>,
+      render: (r) => {
+        const badges: { grade: string; code: string; tone: string }[] = []
+        if (r.gradeAKg > 0 && r.gradeAPalletQr) {
+          badges.push({ grade: 'A', code: r.gradeAPalletQr, tone: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950 border-emerald-200' })
+        }
+        if (r.gradeBKg > 0 && r.gradeBPalletQr) {
+          badges.push({ grade: 'B', code: r.gradeBPalletQr, tone: 'text-blue-700 bg-blue-50 dark:bg-blue-950 border-blue-200' })
+        }
+        if (r.gradeCKg > 0 && r.gradeCPalletQr) {
+          badges.push({ grade: 'C', code: r.gradeCPalletQr, tone: 'text-amber-700 bg-amber-50 dark:bg-amber-950 border-amber-200' })
+        }
+
+        if (badges.length === 0) {
+          const codes = (r.palletCode || '').split(',').map((c) => c.trim()).filter(Boolean)
+          if (codes.length === 0) {
+            return <span className="font-mono text-xs text-muted-foreground">-</span>
+          }
+          return (
+            <div className="flex flex-wrap items-center gap-1">
+              {codes.map((c, i) => (
+                <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded border text-[11px] font-mono font-bold bg-muted/40 border-border">
+                  {c}
+                </span>
+              ))}
+            </div>
+          )
+        }
+
+        return (
+          <div className="flex flex-wrap items-center gap-1">
+            {badges.map((p) => (
+              <span key={p.grade} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-mono font-bold ${p.tone}`}>
+                <span>{p.grade}:</span>
+                <span>{p.code}</span>
+              </span>
+            ))}
+          </div>
+        )
+      },
     },
     {
       key: 'waringCode',
@@ -352,27 +454,42 @@ export default function SortingPage() {
       key: 'gradeAKg',
       label: 'Grade A',
       render: (r) => (
-        <span className="font-mono text-xs font-semibold text-emerald-700">
-          {r.gradeAKg > 0 ? `${formatWeight(r.gradeAKg)} kg` : '—'}
-        </span>
+        <div className="flex flex-col">
+          <span className="font-mono text-xs font-semibold text-emerald-700">
+            {r.gradeAKg > 0 ? `${formatWeight(r.gradeAKg)} kg` : '—'}
+          </span>
+          {r.gradeAKg > 0 && r.gradeAPalletQr && (
+            <span className="font-mono text-[10px] text-muted-foreground">{r.gradeAPalletQr}</span>
+          )}
+        </div>
       ),
     },
     {
       key: 'gradeBKg',
       label: 'Grade B',
       render: (r) => (
-        <span className="font-mono text-xs font-semibold text-blue-700">
-          {r.gradeBKg > 0 ? `${formatWeight(r.gradeBKg)} kg` : '—'}
-        </span>
+        <div className="flex flex-col">
+          <span className="font-mono text-xs font-semibold text-blue-700">
+            {r.gradeBKg > 0 ? `${formatWeight(r.gradeBKg)} kg` : '—'}
+          </span>
+          {r.gradeBKg > 0 && r.gradeBPalletQr && (
+            <span className="font-mono text-[10px] text-muted-foreground">{r.gradeBPalletQr}</span>
+          )}
+        </div>
       ),
     },
     {
       key: 'gradeCKg',
       label: 'Grade C',
       render: (r) => (
-        <span className="font-mono text-xs font-semibold text-amber-700">
-          {r.gradeCKg > 0 ? `${formatWeight(r.gradeCKg)} kg` : '—'}
-        </span>
+        <div className="flex flex-col">
+          <span className="font-mono text-xs font-semibold text-amber-700">
+            {r.gradeCKg > 0 ? `${formatWeight(r.gradeCKg)} kg` : '—'}
+          </span>
+          {r.gradeCKg > 0 && r.gradeCPalletQr && (
+            <span className="font-mono text-[10px] text-muted-foreground">{r.gradeCPalletQr}</span>
+          )}
+        </div>
       ),
     },
     {
@@ -635,9 +752,6 @@ export default function SortingPage() {
                 Weigh Grades
               </h2>
             </div>
-            <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
-              Scale 02 · {scaleOnline ? 'Online' : 'Offline'}
-            </Badge>
           </div>
 
           {/* Grade Switcher Tabs */}
@@ -650,7 +764,11 @@ export default function SortingPage() {
                 <button
                   key={grade}
                   type="button"
-                  onClick={() => setActiveGradeTab(grade)}
+                  onClick={() => {
+                    setActiveGradeTab(grade)
+                    const currentVal = grade === 'A' ? gradeAKg : grade === 'B' ? gradeBKg : gradeCKg
+                    setLiveScaleWeight(currentVal || '0')
+                  }}
                   className={`p-3 text-left border rounded-none transition-all cursor-pointer ${
                     isActive
                       ? 'border-primary bg-primary/10 ring-1 ring-primary'
@@ -677,24 +795,45 @@ export default function SortingPage() {
             <div className="border border-border p-4 bg-card space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-semibold">Weight Reading (Grade {activeGradeTab})</h4>
-                <Badge tone={scaleOnline ? 'success' : 'warning'} dot>
-                  {scaleOnline ? 'Online' : 'Offline'} · Floor Scale{scaleCapacityKg ? ` · ${scaleCapacityKg} kg` : ''}
-                </Badge>
+                <span className="text-xs font-mono text-muted-foreground">
+                  Max: {formatWeight(maxAllowedForActiveGrade)} kg
+                </span>
               </div>
               <ScaleWeightInput
                 stationId="02"
                 value={liveScaleWeight}
                 onChange={setLiveScaleWeight}
                 capacityKg={scaleCapacityKg ?? 0}
+                maxAllowedWeightKg={maxAllowedForActiveGrade}
+                allowZero
+                label={`Grade ${activeGradeTab} Weight`}
               />
-              <Button
-                variant="primary"
-                className="w-full"
-                icon="check"
-                onClick={handleAssignLiveWeight}
-              >
-                Assign {liveScaleWeight} kg to Grade {activeGradeTab}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  className="flex-1"
+                  icon="check"
+                  disabled={
+                    liveScaleWeight === '' ||
+                    Number(liveScaleWeight) < 0 ||
+                    Number(liveScaleWeight) > maxAllowedForActiveGrade + 0.005
+                  }
+                  onClick={() => handleAssignLiveWeight()}
+                >
+                  Assign {liveScaleWeight || '0'} kg to Grade {activeGradeTab}
+                </Button>
+                <Button
+                  variant="outline"
+                  type="button"
+                  title="Mark this grade as 0 kg (no harvest for this grade)"
+                  onClick={() => {
+                    setLiveScaleWeight('0')
+                    handleAssignLiveWeight('0')
+                  }}
+                >
+                  Set 0 kg
+                </Button>
+              </div>
             </div>
 
             {/* Right Column: Pre-attached Pallet QR Linkage */}
@@ -755,22 +894,33 @@ export default function SortingPage() {
                         (activeGradeTab !== 'A' && gradeAPalletQr === p.code) ||
                         (activeGradeTab !== 'B' && gradeBPalletQr === p.code) ||
                         (activeGradeTab !== 'C' && gradeCPalletQr === p.code)
+                      const isInUse = p.status === 'IN_USE' && (p.remainingKg ?? 0) > 0
 
                       return (
                         <button
                           key={p.code}
                           type="button"
-                          onClick={() => handleAssignScannedPallet(p.code, activeGradeTab)}
-                          className={`px-2 py-1 text-xs font-mono border transition-all cursor-pointer flex items-center gap-1.5 ${
+                          disabled={isInUse}
+                          onClick={() => !isInUse && handleAssignScannedPallet(p.code, activeGradeTab)}
+                          title={isInUse ? `In use: Grade ${p.grade || 'A'} (${p.remainingKg} kg remaining)` : undefined}
+                          className={`px-2 py-1 text-xs font-mono border transition-all flex items-center gap-1.5 ${
                             isCurrentGrade
                               ? 'bg-primary text-primary-foreground border-primary font-bold shadow-xs'
+                              : isInUse
+                              ? 'bg-destructive/10 text-destructive/80 border-destructive/30 cursor-not-allowed opacity-60'
                               : isAssignedOther
-                              ? 'bg-muted/40 text-muted-foreground border-border/50 line-through opacity-60'
-                              : 'bg-card text-foreground border-border hover:border-primary/60 hover:bg-primary/5'
+                              ? 'bg-muted/40 text-muted-foreground border-border/50 line-through opacity-60 cursor-not-allowed'
+                              : 'bg-card text-foreground border-border hover:border-primary/60 hover:bg-primary/5 cursor-pointer'
                           }`}
                         >
                           <span>{p.code}</span>
-                          <span className="text-[10px] opacity-75 font-sans">({p.tareKg}kg)</span>
+                          {isInUse ? (
+                            <span className="text-[10px] font-sans font-semibold text-destructive">
+                              (In Use · Grd {p.grade || 'A'})
+                            </span>
+                          ) : (
+                            <span className="text-[10px] opacity-75 font-sans">({p.tareKg}kg)</span>
+                          )}
                         </button>
                       )
                     })
@@ -781,13 +931,29 @@ export default function SortingPage() {
           </div>
 
           {/* Stepper Navigation */}
-          <div className="flex justify-between items-center pt-4 border-t border-border">
-            <Button variant="ghost" onClick={() => setActiveStep(2)}>
-              Back to Sizing
-            </Button>
-            <Button variant="primary" icon="check" touch onClick={() => setActiveStep(4)}>
-              Proceed to Review & Save
-            </Button>
+          <div className="space-y-3 pt-4 border-t border-border">
+            {totalGraded > gGross + 0.005 && (
+              <div className="p-3 bg-destructive/15 border-2 border-destructive/40 rounded text-xs text-destructive font-semibold flex items-center gap-2">
+                <Icon name="alert-triangle" size={16} />
+                <span>
+                  Total graded weight ({formatWeight(totalGraded)} kg) exceeds waring intake weight ({formatWeight(gGross)} kg). Please adjust grade weights before proceeding.
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between items-center">
+              <Button variant="ghost" onClick={() => setActiveStep(2)}>
+                Back to Sizing
+              </Button>
+              <Button
+                variant="primary"
+                icon="check"
+                touch
+                disabled={totalGraded <= 0 || totalGraded > gGross + 0.005}
+                onClick={() => setActiveStep(4)}
+              >
+                Proceed to Review & Save
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -804,17 +970,36 @@ export default function SortingPage() {
                 Review & Save
               </h2>
             </div>
-            <Badge tone="accent">
-              Pallet: {palletCode}
-            </Badge>
+            <div className="flex flex-wrap gap-1 items-center">
+              {gA > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950 border-emerald-200">
+                  A: {gradeAPalletQr || 'PLT-001'}
+                </span>
+              )}
+              {gB > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono font-bold text-blue-700 bg-blue-50 dark:bg-blue-950 border-blue-200">
+                  B: {gradeBPalletQr || 'PLT-002'}
+                </span>
+              )}
+              {gC > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono font-bold text-amber-700 bg-amber-50 dark:bg-amber-950 border-amber-200">
+                  C: {gradeCPalletQr || 'PLT-003'}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Yield Distribution Bar */}
           <div className="border border-border p-4 bg-card space-y-3">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap gap-2">
               <span className="text-xs font-bold uppercase font-mono">Yield Distribution</span>
-              <span className="text-xs font-mono font-semibold">
+              <span
+                className={`text-xs font-mono font-semibold ${
+                  totalGraded > gGross + 0.005 ? 'text-destructive font-bold' : ''
+                }`}
+              >
                 Total Graded: {formatWeight(totalGraded)} kg / {formatWeight(gGross)} kg Gross
+                {totalGraded > gGross + 0.005 && ` (Exceeds by +${formatWeight(totalGraded - gGross)} kg)`}
               </span>
             </div>
 
@@ -908,25 +1093,36 @@ export default function SortingPage() {
           </div>
 
           {/* Commit & Inventory Update Action */}
-          <div className="flex items-center justify-between pt-4 border-t border-border flex-wrap gap-3">
-            <Button variant="ghost" onClick={() => setActiveStep(3)}>
-              Back to Weigh Grades
-            </Button>
-
-            {!savedSuccessBatch ? (
-              <Button
-                variant="primary"
-                touch
-                icon="check"
-                onClick={handleSaveSortingRun}
-              >
-                Commit Batch & Update Inventory
-              </Button>
-            ) : (
-              <Button variant="primary" icon="check" touch onClick={handleStartNextWaring}>
-                Sort Next Waring
-              </Button>
+          <div className="space-y-3 pt-4 border-t border-border">
+            {totalGraded > gGross + 0.005 && (
+              <div className="p-4 bg-destructive/15 border-2 border-destructive/40 rounded text-xs text-destructive font-semibold flex items-center gap-2">
+                <Icon name="alert-triangle" size={16} />
+                <span>
+                  Cannot commit batch: Total graded weight ({formatWeight(totalGraded)} kg) exceeds waring intake weight ({formatWeight(gGross)} kg).
+                </span>
+              </div>
             )}
+            <div className="flex items-center justify-between pt-1 flex-wrap gap-3">
+              <Button variant="ghost" onClick={() => setActiveStep(3)}>
+                Back to Weigh Grades
+              </Button>
+
+              {!savedSuccessBatch ? (
+                <Button
+                  variant="primary"
+                  touch
+                  icon="check"
+                  disabled={totalGraded <= 0 || totalGraded > gGross + 0.005}
+                  onClick={handleSaveSortingRun}
+                >
+                  Commit Batch & Update Inventory
+                </Button>
+              ) : (
+                <Button variant="primary" icon="check" touch onClick={handleStartNextWaring}>
+                  Sort Next Waring
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -947,7 +1143,7 @@ export default function SortingPage() {
         >
           <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
             <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
-              STATION 02 · SORTING · FOCUS MODE
+              STATION 02 · SORTING
             </div>
 
             {/* Stepper Progress inside Focus Mode! */}
@@ -1002,7 +1198,7 @@ export default function SortingPage() {
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale 02 Status</p>
             <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
-            <p className="text-xs text-muted-foreground">{scaleCapacityKg ? `${scaleCapacityKg} kg Floor Scale` : 'Scale capacity unavailable'}</p>
+            <p className="text-xs text-muted-foreground">{scaleCapacityKg ? `${scaleCapacityKg} kg Scale` : 'Scale capacity unavailable'}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Commercial Yield</p>
@@ -1025,9 +1221,6 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <span className="font-semibold text-base text-foreground">Sorting Stepper</span>
             <div className="flex items-center gap-2">
-              <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
-                Scale 02 · {scaleOnline ? 'Online' : 'Offline'}
-              </Badge>
               <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
                 Focus Mode
               </Button>

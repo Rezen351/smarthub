@@ -6,7 +6,7 @@
  *   Step 2: Weigh & Check (Precision Scale 03 reading via Modbus TCP Port 502 with real-time tolerance check)
  *   Step 3: Label & Dispatch (GS1 Digital Link QR / ITF-14 barcode label printing & automated finished goods ledger update)
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
 import Icon from '../components/shared/Icon'
@@ -134,6 +134,29 @@ export default function PackagingPage() {
   const [isPrinting, setIsPrinting] = useState(false)
   const [savedSuccessRecord, setSavedSuccessRecord] = useState<PackageRecord | null>(null)
   const [palletsFromApi, setPalletsFromApi] = useState<AvailablePallet[] | null>(null)
+  const palletInputRef = useRef<HTMLInputElement>(null)
+
+  const refreshPallets = useCallback(async () => {
+    try {
+      const pallets = await api.pallets.list()
+      const mapped = (Array.isArray(pallets) ? pallets : [])
+        .map((p: any): AvailablePallet => ({
+          code: String(p.code || '').trim().toUpperCase(),
+          grade: p.grade === 'B' || p.grade === 'C' ? p.grade : 'A',
+          weightKg: Number(p.weightKg || 0),
+          remainingKg: Number(p.remainingKg || 0),
+          farmerName: p.farmerName || 'Farmer',
+          farmerVillage: p.farmerVillage,
+          waringCode: p.waringCode || '',
+        }))
+        .filter((p) => p.code && p.remainingKg > 0)
+      setPalletsFromApi(mapped)
+      return mapped
+    } catch {
+      setPalletsFromApi(null)
+      return []
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -142,7 +165,7 @@ export default function PackagingPage() {
       .list()
       .then((pallets) => {
         if (cancelled) return
-        const mapped = pallets
+        const mapped = (Array.isArray(pallets) ? pallets : [])
           .map((p: any): AvailablePallet => ({
             code: String(p.code || '').trim().toUpperCase(),
             grade: p.grade === 'B' || p.grade === 'C' ? p.grade : 'A',
@@ -164,6 +187,12 @@ export default function PackagingPage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (activeStep === 1) {
+      palletInputRef.current?.focus()
+    }
+  }, [activeStep])
+
   /* Available sorted pallets list from store (guaranteed 100% unique pallet codes) */
   const seenPalletCodes = new Set<string>()
   const availablePallets: AvailablePallet[] = []
@@ -172,8 +201,12 @@ export default function PackagingPage() {
     const seqStr = String(batchIdx + 1).padStart(2, '0')
 
     const getUniquePalletCode = (rawCode: string, grade: 'A' | 'B' | 'C') => {
-      let code = (rawCode || `PLT-GRD-${grade}-${seqStr}`).trim()
-      // If code was already seen (e.g. duplicate default 'PLT-GRD-A-01' across batches)
+      const trimmed = (rawCode || '').trim().toUpperCase()
+      if (trimmed) {
+        seenPalletCodes.add(trimmed)
+        return trimmed
+      }
+      let code = `PLT-GRD-${grade}-${seqStr}`
       if (seenPalletCodes.has(code)) {
         let seq = batchIdx + 1
         code = `PLT-GRD-${grade}-${String(seq).padStart(2, '0')}`
@@ -220,7 +253,20 @@ export default function PackagingPage() {
       })
     }
   })
-  const effectivePallets = palletsFromApi ?? availablePallets
+  const effectivePallets: AvailablePallet[] = (() => {
+    if (palletsFromApi && palletsFromApi.length > 0) {
+      return palletsFromApi.filter((p) => p.remainingKg > 0)
+    }
+    const list = [...(palletsFromApi ?? [])]
+    const existingCodes = new Set(list.map((p) => p.code.toUpperCase()))
+    for (const p of availablePallets) {
+      if (!existingCodes.has(p.code.toUpperCase()) && p.remainingKg > 0) {
+        list.push(p)
+        existingCodes.add(p.code.toUpperCase())
+      }
+    }
+    return list.filter((p) => p.remainingKg > 0)
+  })()
 
   const handleSelectPallet = (p: AvailablePallet) => {
     setSourcePalletCode(p.code)
@@ -301,12 +347,9 @@ export default function PackagingPage() {
 
   /* ── Packaged Output Ledger ── */
   const [packages, setPackages] = useState<PackageRecord[]>([])
-  const packagedWeightForSelectedPallet = packages
-    .filter((record) => record.sourcePallet?.toLowerCase() === sourcePalletCode.toLowerCase())
-    .reduce((total, record) => total + record.weightKg, 0)
   const remainingPalletKg = sourcePalletRemainingKg === null
     ? 0
-    : Math.max(0, Number((sourcePalletRemainingKg - packagedWeightForSelectedPallet).toFixed(3)))
+    : Math.max(0, Number(sourcePalletRemainingKg.toFixed(3)))
 
   const exitFocusMode = () => {
     setFocusMode(false)
@@ -340,6 +383,28 @@ export default function PackagingPage() {
     .toISOString()
     .slice(0, 10)
     .replace(/-/g, '')}-${String(packages.length + 1).padStart(4, '0')}`
+
+  const handleScanNextPallet = useCallback((openCamera = false) => {
+    const prevPallet = sourcePalletCode
+    setSavedSuccessRecord(null)
+    setSourcePalletCode('')
+    setSourceFarmer('')
+    setSourceWaring('')
+    setSourcePalletRemainingKg(null)
+    setPalletSearch('')
+    setPalletScanError(null)
+    setCurrentWeight('')
+    setActiveStep(1)
+    void refreshPallets()
+    if (prevPallet) {
+      toast.info(`Pallet ${prevPallet} completed. Ready to scan next pallet.`)
+    }
+    if (openCamera) {
+      openCameraModal()
+    } else {
+      window.setTimeout(() => palletInputRef.current?.focus(), 150)
+    }
+  }, [sourcePalletCode, refreshPallets, openCameraModal, toast])
 
   /* Step 3: Print & Dispatch Commitment */
   const handlePrintAndLabel = () => {
@@ -384,6 +449,9 @@ export default function PackagingPage() {
       }
       setPackages((curr) => [newRecord, ...curr])
       setSavedSuccessRecord(newRecord)
+      setSourcePalletRemainingKg((curr) =>
+        curr !== null ? Math.max(0, Number((curr - weightValue).toFixed(3))) : 0,
+      )
 
       // Synchronize to warehouse finished goods store
       addFinishedPackage({
@@ -404,6 +472,29 @@ export default function PackagingPage() {
         storageLocation: packagingMode === 'RETAIL_POUCH' ? 'Rack A-01' : 'Pallet Bay 03',
       })
 
+      // Backend sync: deduct pallet remaining inventory & release pallet when depleted
+      api.packaging
+        .pack({
+          palletCode: sourcePalletCode,
+          packageTypeCode: packagingMode === 'RETAIL_POUCH' ? 'RETAIL_POUCH' : 'EXPORT_CARTON',
+          quantity: 1,
+          totalNetWeightKg: weightValue,
+          storageLocation: packagingMode === 'RETAIL_POUCH' ? 'Rack A-01' : 'Pallet Bay 03',
+        })
+        .then((res: any) => {
+          if (typeof res?.data?.remainingKg === 'number') {
+            setSourcePalletRemainingKg(res.data.remainingKg)
+          }
+          if (
+            res?.data?.palletReleased ||
+            (typeof res?.data?.remainingKg === 'number' && res.data.remainingKg <= 0.05)
+          ) {
+            toast.success(`Pallet ${sourcePalletCode} is fully depleted and returned to AVAILABLE!`)
+          }
+          void refreshPallets()
+        })
+        .catch(() => {})
+
       printThermal(
         {
           type: packagingMode === 'RETAIL_POUCH' ? 'pouch' : 'export',
@@ -417,8 +508,13 @@ export default function PackagingPage() {
         'packaging',
         (error) => {
           setIsPrinting(false)
-          if (error) toast.error(`Packaging label print failed: ${error instanceof Error ? error.message : 'Check the Packaging printer.'}`)
-        }
+          if (error)
+            toast.error(
+              `Packaging label print failed: ${
+                error instanceof Error ? error.message : 'Check the Packaging printer.'
+              }`,
+            )
+        },
       )
 
       toast.success(
@@ -432,19 +528,17 @@ export default function PackagingPage() {
   const handleNextUnit = () => {
     setSavedSuccessRecord(null)
     if (remainingPalletKg <= 0.0005) {
-      setSourcePalletCode('')
-      setSourceFarmer('')
-      setSourceWaring('')
-      setSourcePalletRemainingKg(null)
-      setActiveStep(1)
-      toast.info('Source pallet is depleted. Select another pallet.')
+      handleScanNextPallet()
       return
     }
 
     if (packagingMode === 'RETAIL_POUCH') {
-      setCurrentWeight('1.001')
+      const nextWeight = remainingPalletKg < targetKg ? remainingPalletKg.toFixed(3) : '1.001'
+      setCurrentWeight(nextWeight)
     } else {
-      setCurrentWeight(String(exportTargetKg))
+      const nextWeight =
+        remainingPalletKg < targetKg ? remainingPalletKg.toFixed(3) : String(exportTargetKg)
+      setCurrentWeight(nextWeight)
     }
     setActiveStep(2)
   }
@@ -593,6 +687,7 @@ export default function PackagingPage() {
             {/* Manual Scan Input Form */}
             <form onSubmit={handlePalletScanSubmit} className="flex flex-col sm:flex-row max-w-md mx-auto items-stretch sm:items-center gap-2">
               <Input
+                ref={palletInputRef}
                 type="text"
                 value={palletSearch}
                 onChange={(e) => {
@@ -613,6 +708,29 @@ export default function PackagingPage() {
             </form>
             {palletScanError && <p className="text-xs text-destructive font-mono">{palletScanError}</p>}
 
+            {/* Quick Available Pallets Chips */}
+            {effectivePallets.length > 0 && (
+              <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mr-1">
+                  Active Pallets:
+                </span>
+                {effectivePallets.map((p) => (
+                  <button
+                    key={p.code}
+                    type="button"
+                    onClick={() => handleSelectPallet(p)}
+                    className={`px-2 py-1 text-xs font-mono font-medium border transition-colors flex items-center gap-1 cursor-pointer ${
+                      sourcePalletCode === p.code
+                        ? 'bg-primary text-primary-foreground border-primary font-bold shadow-xs'
+                        : 'bg-muted/70 text-foreground border-border hover:bg-muted'
+                    }`}
+                  >
+                    <span>{p.code}</span>
+                    <span className="text-[10px] opacity-80">({p.remainingKg.toFixed(1)}kg·{p.grade})</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Active Verified Pallet Confirmation Strip */}
@@ -635,15 +753,31 @@ export default function PackagingPage() {
                 {sourcePalletCode && <span className="text-xs text-muted-foreground">({sourceFarmer} · Origin: {sourceWaring})</span>}
               </div>
               {sourcePalletCode && sourcePalletRemainingKg !== null && (
-                <span className="text-xs font-mono text-muted-foreground block">
-                  Remaining: {remainingPalletKg.toFixed(3)} kg
+                <span className={`text-xs font-mono block ${remainingPalletKg <= 0 ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
+                  Remaining: {remainingPalletKg.toFixed(3)} kg {remainingPalletKg <= 0 && '(Depleted)'}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Badge tone={sourcePalletCode ? 'success' : 'warning'} dot live={Boolean(sourcePalletCode)}>
-                {sourcePalletCode ? 'Source Confirmed' : 'Source Required'}
-              </Badge>
+              {sourcePalletCode && remainingPalletKg <= 0 ? (
+                <>
+                  <Badge tone="danger" dot>
+                    Pallet Depleted
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon="scan"
+                    onClick={() => handleScanNextPallet()}
+                  >
+                    Scan Next Pallet
+                  </Button>
+                </>
+              ) : (
+                <Badge tone={sourcePalletCode ? 'success' : 'warning'} dot live={Boolean(sourcePalletCode)}>
+                  {sourcePalletCode ? 'Source Confirmed' : 'Source Required'}
+                </Badge>
+              )}
             </div>
           </div>
 
@@ -741,13 +875,31 @@ export default function PackagingPage() {
           )}
 
           {/* Action Footer */}
-          <div className="flex justify-end pt-4 border-t border-border">
+          <div className="flex items-center justify-between pt-4 border-t border-border">
+            {sourcePalletCode && remainingPalletKg <= 0 ? (
+              <Button
+                variant="outline"
+                icon="scan"
+                onClick={() => handleScanNextPallet()}
+              >
+                Scan Another Pallet
+              </Button>
+            ) : <div />}
             <Button
               variant="primary"
               icon="check"
               touch
               disabled={!sourcePalletCode || sourcePalletRemainingKg === null || remainingPalletKg <= 0}
-              onClick={() => setActiveStep(2)}
+              onClick={() => {
+                if (!currentWeight || Number(currentWeight) <= 0) {
+                  const initialWeight =
+                    remainingPalletKg < targetKg && remainingPalletKg > 0
+                      ? remainingPalletKg.toFixed(3)
+                      : targetKg.toFixed(3)
+                  setCurrentWeight(initialWeight)
+                }
+                setActiveStep(2)
+              }}
             >
               Continue to Weighing
             </Button>
@@ -770,9 +922,6 @@ export default function PackagingPage() {
             <div className="flex items-center gap-2">
               <Badge tone="accent">Pallet: {sourcePalletCode}</Badge>
               <Badge tone="accent">Grade {selectedGrade}</Badge>
-                <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
-                Scale 03 · {scaleOnline ? 'Online' : 'Offline'}
-              </Badge>
             </div>
           </div>
 
@@ -784,6 +933,7 @@ export default function PackagingPage() {
                 value={currentWeight}
                 onChange={setCurrentWeight}
                 capacityKg={scaleCapacityKg ?? 0}
+                maxAllowedWeightKg={remainingPalletKg}
                 label="Package Weight"
               />
 
@@ -849,19 +999,60 @@ export default function PackagingPage() {
           </div>
 
           {/* Action Footer */}
-          <div className="flex items-center justify-between border-t border-border pt-4">
-            <Button variant="outline" onClick={() => setActiveStep(1)}>
-              Back
-            </Button>
-            <Button
-              variant="primary"
-              icon="check"
-              touch
-              disabled={weightValue <= 0 || !sourcePalletCode || sourcePalletRemainingKg === null || weightValue > remainingPalletKg + 0.0005}
-              onClick={() => setActiveStep(3)}
-            >
-              Continue to Label
-            </Button>
+          <div className="space-y-3 pt-4 border-t border-border">
+            {remainingPalletKg <= 0.0005 && (
+              <div className="p-4 bg-amber-500/15 border-2 border-amber-500/30 rounded flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-800 dark:text-amber-400">
+                  <Icon name="alert-triangle" size={16} />
+                  <span>
+                    Pallet {sourcePalletCode} is fully depleted (0.000 kg). Cannot package further units.
+                  </span>
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon="scan"
+                  onClick={() => handleScanNextPallet()}
+                >
+                  Scan Next Pallet
+                </Button>
+              </div>
+            )}
+            {weightValue > remainingPalletKg + 0.0005 && remainingPalletKg > 0.0005 && (
+              <div className="p-3 bg-destructive/10 border border-destructive/30 rounded flex items-center justify-between text-xs text-destructive flex-wrap gap-2">
+                <span>
+                  Package weight ({weightValue.toFixed(3)} kg) exceeds remaining pallet stock ({remainingPalletKg.toFixed(3)} kg).
+                </span>
+                {remainingPalletKg > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCurrentWeight(remainingPalletKg.toFixed(3))}
+                  >
+                    Pack Remaining ({remainingPalletKg.toFixed(3)} kg)
+                  </Button>
+                )}
+              </div>
+            )}
+            {weightValue <= 0 && remainingPalletKg > 0.0005 && (
+              <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-700 dark:text-amber-400">
+                Please lock the reading from Scale 03 or enter a valid package weight.
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <Button variant="outline" onClick={() => setActiveStep(1)}>
+                Back
+              </Button>
+              <Button
+                variant="primary"
+                icon="check"
+                touch
+                disabled={weightValue <= 0 || !sourcePalletCode || sourcePalletRemainingKg === null || weightValue > remainingPalletKg + 0.0005 || remainingPalletKg <= 0}
+                onClick={() => setActiveStep(3)}
+              >
+                Continue to Label
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -950,64 +1141,114 @@ export default function PackagingPage() {
           </div>
 
           {/* Action Footer */}
-          <div className="flex items-center justify-between border-t border-border pt-4 flex-wrap gap-2 no-print">
-            {!savedSuccessRecord ? (
-              <>
-                <Button variant="outline" onClick={() => setActiveStep(2)}>
-                  Back
-                </Button>
+          <div className="flex flex-col gap-3 border-t border-border pt-4 no-print">
+            {savedSuccessRecord && remainingPalletKg <= 0.0005 && (
+              <div className="p-4 bg-emerald-500/10 border-2 border-emerald-500/30 rounded flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded">
+                    <Icon name="check-circle" size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-foreground">Pallet Depleted</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Pallet <span className="font-mono font-bold text-foreground">{sourcePalletCode || savedSuccessRecord.sourcePallet}</span> is fully packaged (0.000 kg remaining). Continue by scanning the next pallet.
+                    </p>
+                  </div>
+                </div>
                 <Button
                   variant="primary"
-                  icon="check"
+                  icon="scan"
                   touch
-                  loading={isPrinting}
-                  disabled={!isWithinTolerance}
-                  onClick={handlePrintAndLabel}
+                  onClick={() => handleScanNextPallet()}
+                  className="w-full sm:w-auto"
                 >
-                  Print Label & Store
+                  Scan Next Pallet
                 </Button>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground font-mono">
-                    Stored: {savedSuccessRecord.code} ({savedSuccessRecord.time})
-                  </span>
-                  <Button
-                    variant="outline"
-                    icon="print"
-                    loading={isPrinting}
-                    onClick={() => {
-                      if (!savedSuccessRecord) return
-                      setIsPrinting(true)
-                      printThermal(
-                        {
-                          type: savedSuccessRecord.mode === 'RETAIL_POUCH' ? 'pouch' : 'export',
-                          code: savedSuccessRecord.code,
-                          farmerName: sourceFarmer,
-                          farmerId: savedSuccessRecord.sourcePallet,
-                          grade: savedSuccessRecord.grade,
-                          weightKg: savedSuccessRecord.weightKg,
-                          stationName: 'Station 03 · Packaging',
-                        },
-                        'packaging',
-                        (error) => {
-                          setIsPrinting(false)
-                          if (error) toast.error(`Packaging label print failed: ${error instanceof Error ? error.message : 'Check the Packaging printer.'}`)
-                        }
-                      )
-                    }}
-                  >
-                    Reprint Label
-                  </Button>
-                </div>
-                <div>
-                  <Button variant="primary" icon="check" touch onClick={handleNextUnit}>
-                    Package Next Unit
-                  </Button>
-                </div>
-              </>
+              </div>
             )}
+            {weightValue > remainingPalletKg + 0.0005 && !savedSuccessRecord && (
+              <div className="p-3 bg-destructive/15 border-2 border-destructive/40 rounded text-xs text-destructive font-semibold flex items-center gap-2">
+                <Icon name="alert-triangle" size={16} />
+                <span>
+                  Cannot print: package weight ({weightValue.toFixed(3)} kg) exceeds remaining pallet stock ({remainingPalletKg.toFixed(3)} kg). Please go back to Step 2 and adjust.
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              {!savedSuccessRecord ? (
+                <>
+                  <Button variant="outline" onClick={() => setActiveStep(2)}>
+                    Back
+                  </Button>
+                  <Button
+                    variant="primary"
+                    icon="check"
+                    touch
+                    loading={isPrinting}
+                    disabled={
+                      !isWithinTolerance ||
+                      isPrinting ||
+                      weightValue <= 0 ||
+                      weightValue > remainingPalletKg + 0.0005
+                    }
+                    onClick={handlePrintAndLabel}
+                  >
+                    Print Label & Store
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground font-mono">
+                      Stored: {savedSuccessRecord.code} ({savedSuccessRecord.time})
+                    </span>
+                    <Button
+                      variant="outline"
+                      icon="print"
+                      loading={isPrinting}
+                      onClick={() => {
+                        if (!savedSuccessRecord) return
+                        setIsPrinting(true)
+                        printThermal(
+                          {
+                            type: savedSuccessRecord.mode === 'RETAIL_POUCH' ? 'pouch' : 'export',
+                            code: savedSuccessRecord.code,
+                            farmerName: sourceFarmer,
+                            farmerId: savedSuccessRecord.sourcePallet,
+                            grade: savedSuccessRecord.grade,
+                            weightKg: savedSuccessRecord.weightKg,
+                            stationName: 'Station 03 · Packaging',
+                          },
+                          'packaging',
+                          (error) => {
+                            setIsPrinting(false)
+                            if (error) toast.error(`Packaging label print failed: ${error instanceof Error ? error.message : 'Check the Packaging printer.'}`)
+                          }
+                        )
+                      }}
+                    >
+                      Reprint Label
+                    </Button>
+                  </div>
+                  <div>
+                    {remainingPalletKg <= 0.0005 ? (
+                      <Button
+                        variant="primary"
+                        icon="scan"
+                        touch
+                        onClick={() => handleScanNextPallet()}
+                      >
+                        Pallet Depleted · Scan Next Pallet
+                      </Button>
+                    ) : (
+                      <Button variant="primary" icon="check" touch onClick={handleNextUnit}>
+                        Package Next Unit
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1026,7 +1267,7 @@ export default function PackagingPage() {
         >
           <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
             <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
-              STATION 03 · PACKAGING · FOCUS MODE
+              STATION 03 · PACKAGING
             </div>
 
             {/* Stepper Progress Bar in Focus Header */}
@@ -1099,14 +1340,9 @@ export default function PackagingPage() {
         <div id="packaging-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <span className="font-semibold text-base text-foreground">Packaging Stepper</span>
-            <div className="flex items-center gap-2">
-              <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
-                Scale 03 · {scaleOnline ? 'Online' : 'Offline'}
-              </Badge>
-              <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-                Focus Mode
-              </Button>
-            </div>
+            <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
+              Focus Mode
+            </Button>
           </div>
 
           {/* Stepper Navigation Bar */}

@@ -51,7 +51,7 @@ export default function LabelPreview({
       className={`printable-label bg-white text-black border border-gray-400 font-mono rounded-none ${screenFit ? 'p-2 space-y-1.5' : 'p-4 space-y-3'} ${compact ? 'text-xs' : ''} ${className}`}
     >
       <div className={`text-center border-b border-dashed border-gray-400 ${screenFit ? 'pb-1' : 'pb-2'}`}>
-        <strong className={`block tracking-wide ${screenFit ? 'text-xs' : 'text-sm'}`}>ENYX-ENTERPRISE</strong>
+        <strong className={`block tracking-wide ${screenFit ? 'text-xs' : 'text-sm'}`}>SMARTGEULIS</strong>
         <span className="block text-xs">{TYPE_LABEL[type]}</span>
       </div>
 

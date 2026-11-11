@@ -1,12 +1,13 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
+import Icon, { type IconName } from './Icon'
 
 interface StatCardProps {
   label: string
   value: React.ReactNode
   sub?: React.ReactNode
   trend?: 'up' | 'down' | 'neutral'
-  icon?: React.ReactNode
+  icon?: React.ReactNode | IconName
   large?: boolean
   onClick?: () => void
 }
@@ -19,7 +20,11 @@ export default function StatCard({ label, value, sub, trend = 'neutral', icon, l
     <>
       <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-        {icon && <span className="text-muted-foreground/80 shrink-0">{icon}</span>}
+        {icon && (
+          <span className="text-muted-foreground/80 shrink-0">
+            {typeof icon === 'string' ? <Icon name={icon} size={18} /> : icon}
+          </span>
+        )}
       </div>
       <div
         className={cn(
@@ -34,7 +39,7 @@ export default function StatCard({ label, value, sub, trend = 'neutral', icon, l
   )
 
   const cardClasses =
-    'rounded-none border border-border bg-card p-4 flex flex-col gap-1.5 shadow-xs transition-all hover:border-[#229856]'
+    'rounded-none border border-border bg-card p-4 flex flex-col gap-1.5 shadow-xs transition-all hover:border-[#ea580c]'
 
   if (onClick) {
     return (

@@ -970,7 +970,7 @@ export default function WeighingPage() {
         <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto" role="dialog" aria-modal="true" aria-label="Weighing Focus Mode">
           <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
             <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
-              STATION 01 · RECEPTION · FOCUS MODE
+              STATION 01 · RECEPTION
             </div>
 
             {/* Stepper Progress */}
@@ -1046,14 +1046,9 @@ export default function WeighingPage() {
         <div id="weighing-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <span className="font-semibold text-base text-foreground">Reception Stepper</span>
-            <div className="flex items-center gap-2">
-              <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
-                Scale 01 · {scaleOnline ? 'Online' : 'Offline'}
-              </Badge>
-              <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-                Focus Mode
-              </Button>
-            </div>
+            <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
+              Focus Mode
+            </Button>
           </div>
 
           {/* Stepper Navigation Bar */}

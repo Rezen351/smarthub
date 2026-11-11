@@ -62,7 +62,7 @@ export interface DeliveryRecord {
   date: string
 }
 
-const STORAGE_KEY = 'enyx_packhouse_store_v2'
+const STORAGE_KEY = 'smartgeulis_packhouse_store_v2'
 
 interface StoreData {
   bufferWarings: BufferWaringItem[]
@@ -144,20 +144,26 @@ export function usePackhouseStore() {
           const gC = Number(b.gradeC_Kg ?? b.gradeCKg ?? 0)
           const totalGraded = b.totalGradedKg ? Number(b.totalGradedKg) : gA + gB + gC
 
+          const pA = b.gradeA_PalletCode || (Array.isArray(b.pallets) && b.pallets[0]) || (gA > 0 ? 'PLT-001' : '')
+          const pB = b.gradeB_PalletCode || (Array.isArray(b.pallets) && b.pallets[1]) || (gB > 0 ? 'PLT-002' : '')
+          const pC = b.gradeC_PalletCode || (Array.isArray(b.pallets) && b.pallets[2]) || (gC > 0 ? 'PLT-003' : '')
+
+          const combinedPallets = [pA, pB, pC].filter(Boolean)
+
           return {
             id: b.id,
-            palletCode: (Array.isArray(b.pallets) ? b.pallets[0] : b.batchCode) || 'PLT-BATCH',
+            palletCode: combinedPallets.length > 0 ? combinedPallets.join(', ') : ((Array.isArray(b.pallets) && b.pallets.length > 0 ? b.pallets.join(', ') : b.batchCode) || 'PLT-BATCH'),
             waringCode: b.waringCode || b.waring?.code || '',
             farmerName: b.farmerName || b.waring?.farmer?.name || 'Farmer',
             farmerVillage: b.farmerVillage || b.waring?.farmer?.village || '',
             grossIntakeKg: Number(b.grossWeightKg),
             washingRecord: b.washDecision || b.washingRecord || 'WASHED',
             gradeAKg: gA,
-            gradeAPalletQr: (Array.isArray(b.pallets) && b.pallets[0]) || 'PLT-GRD-A',
+            gradeAPalletQr: pA || 'PLT-001',
             gradeBKg: gB,
-            gradeBPalletQr: (Array.isArray(b.pallets) && b.pallets[1]) || 'PLT-GRD-B',
+            gradeBPalletQr: pB || 'PLT-002',
             gradeCKg: gC,
-            gradeCPalletQr: (Array.isArray(b.pallets) && b.pallets[2]) || 'PLT-GRD-C',
+            gradeCPalletQr: pC || 'PLT-003',
             totalGradedKg: totalGraded,
             shrinkageKg: Number(b.shrinkageKg ?? 0),
             shrinkagePct: Number(b.shrinkagePct ?? 0),

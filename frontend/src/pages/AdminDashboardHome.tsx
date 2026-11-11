@@ -40,9 +40,19 @@ const quickActions = [
   { label: 'Station 02: Sorting', path: '/dashboard/sorting', icon: 'sortir' as IconName, description: 'Grade yield and pallet linkage' },
   { label: 'Station 03: Packaging', path: '/dashboard/packaging', icon: 'package' as IconName, description: 'Finished package production' },
   { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box' as IconName, description: 'Buffer and finished inventory' },
-  { label: 'Deliveries', path: '/dashboard/deliveries', icon: 'truck' as IconName, description: 'Outbound loading and dispatch' },
-  { label: 'Reports', path: '/dashboard/reports', icon: 'reports' as IconName, description: 'Operational transaction ledger' },
+  { label: 'Reports & Recaps', path: '/dashboard/reports', icon: 'reports' as IconName, description: 'Daily/monthly recap and CSV exports' },
+  { label: 'API Docs (Redoc)', path: '/docs', icon: 'clipboard' as IconName, description: 'Interactive OpenAPI 3.0 specification & schema', external: true },
 ]
+
+export interface FarmerRankingItem {
+  rank: number
+  code: string
+  name: string
+  village: string
+  totalWarings: number
+  totalKg: number
+  sharePct: number
+}
 
 export default function AdminDashboardHome() {
   const { user } = useAuth()
@@ -54,16 +64,29 @@ export default function AdminDashboardHome() {
   const [userCount, setUserCount] = useState(0)
   const [farmerCount, setFarmerCount] = useState(0)
   const [scales, setScales] = useState<ScaleState[]>(defaultScales)
+  const [dbRankings, setDbRankings] = useState<FarmerRankingItem[]>([])
 
   const loadSystemData = useCallback(async () => {
-    const [usersResult, farmersResult, scalesResult] = await Promise.allSettled([
+    const [usersResult, farmersResult, scalesResult, rankingsResult] = await Promise.allSettled([
       api.auth.users(),
       api.farmers.list(),
       api.scales.list(),
+      api.reports.farmerRankings(10),
     ])
 
     if (usersResult.status === 'fulfilled' && Array.isArray(usersResult.value)) setUserCount(usersResult.value.length)
     if (farmersResult.status === 'fulfilled' && Array.isArray(farmersResult.value)) setFarmerCount(farmersResult.value.length)
+    if (rankingsResult.status === 'fulfilled' && rankingsResult.value?.rankings) {
+      setDbRankings(rankingsResult.value.rankings.map((r: any) => ({
+        rank: r.rank,
+        code: r.farmerCode,
+        name: r.farmerName,
+        village: r.village,
+        totalWarings: r.totalWarings,
+        totalKg: r.totalGrossKg,
+        sharePct: r.sharePct,
+      })))
+    }
     if (scalesResult.status === 'fulfilled' && Array.isArray(scalesResult.value)) {
       setScales(defaultScales.map((station) => {
         const scale = scalesResult.value.find((item: any) => item.stationId === station.stationId)
@@ -76,7 +99,7 @@ export default function AdminDashboardHome() {
         }
       }))
     }
-    setDataOnline([usersResult, farmersResult, scalesResult].some((result) => result.status === 'fulfilled'))
+    setDataOnline([usersResult, farmersResult, scalesResult, rankingsResult].some((result) => result.status === 'fulfilled'))
     setLoading(false)
   }, [])
 
@@ -127,6 +150,37 @@ export default function AdminDashboardHome() {
       onlineScales: scales.filter((item) => item.online).length,
     }
   }, [bufferWarings, deliveries, finishedStock, scales, sortedBatches])
+
+  const liveRankings = useMemo<FarmerRankingItem[]>(() => {
+    if (bufferWarings.length === 0 && dbRankings.length > 0) return dbRankings
+    const map = new Map<string, { code: string; name: string; village: string; totalWarings: number; totalKg: number }>()
+    let totalAllKg = 0
+
+    bufferWarings.forEach((w) => {
+      const code = w.farmerId || 'FMR-?'
+      const name = w.farmerName || 'Farmer'
+      const village = w.farmerVillage || ''
+      const kg = Number(w.grossWeightKg) || 0
+      totalAllKg += kg
+
+      const key = `${code}-${name}`
+      const existing = map.get(key)
+      if (existing) {
+        existing.totalWarings += 1
+        existing.totalKg += kg
+      } else {
+        map.set(key, { code, name, village, totalWarings: 1, totalKg: kg })
+      }
+    })
+
+    const sorted = Array.from(map.values()).sort((a, b) => b.totalKg - a.totalKg)
+    if (sorted.length === 0 && dbRankings.length > 0) return dbRankings
+    return sorted.map((item, idx) => ({
+      rank: idx + 1,
+      ...item,
+      sharePct: totalAllKg > 0 ? (item.totalKg / totalAllKg) * 100 : 0,
+    }))
+  }, [bufferWarings, dbRankings])
 
   const activities = useMemo<Activity[]>(() => {
     const reception = bufferWarings.slice(0, 2).map((item) => ({
@@ -239,14 +293,66 @@ export default function AdminDashboardHome() {
               </div>
             </section>
 
-            <section className="col-span-8 border border-white/10 bg-white/[0.04] p-5">
-              <div className="mb-3 flex items-center justify-between"><div><h2 className="text-lg font-bold">Recent Activity</h2><p className="text-xs text-white/50">Station 01 through final dispatch</p></div><span className="font-mono text-xs text-white/40">{activities.length} events</span></div>
-              {activities.length === 0 ? <p className="border-t border-white/10 py-8 text-center text-sm text-white/45">No operational activity recorded.</p> : (
-                <div className="grid grid-cols-2 gap-x-6">
-                  {activities.slice(0, 8).map((activity) => (
-                    <div key={activity.id} className="flex min-w-0 items-center gap-3 border-t border-white/10 py-3">
-                      <span className="flex size-9 shrink-0 items-center justify-center bg-emerald-400/10 text-emerald-300"><Icon name={activity.icon} size={17} /></span>
-                      <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">{activity.stage} · {activity.time}</p><p className="truncate text-sm text-white/80">{activity.action}</p></div>
+            {/* ── Farmer Ranking Leaderboard (Rangking Petani) ── */}
+            <section className="col-span-5 border border-white/10 bg-white/[0.04] p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <span>Farmer Leaderboard</span>
+                    <span className="text-[10px] bg-[#ea580c]/20 border border-[#ea580c]/40 text-[#f97316] px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider">
+                      Rangking Petani
+                    </span>
+                  </h2>
+                  <p className="text-xs text-white/50">Top harvest contributors by gross weight</p>
+                </div>
+                <span className="font-mono text-xs text-emerald-400 font-bold">{liveRankings.length} Active</span>
+              </div>
+              {liveRankings.length === 0 ? (
+                <p className="border-t border-white/10 py-8 text-center text-sm text-white/45">No farmer intake recorded yet.</p>
+              ) : (
+                <div className="divide-y divide-white/10">
+                  {liveRankings.slice(0, 5).map((f) => (
+                    <div key={`${f.code}-${f.rank}`} className="py-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span
+                            className={`flex size-7 shrink-0 items-center justify-center text-xs font-black ${
+                              f.rank === 1
+                                ? 'bg-amber-400 text-black shadow-sm'
+                                : f.rank === 2
+                                ? 'bg-slate-300 text-black'
+                                : f.rank === 3
+                                ? 'bg-amber-700 text-white'
+                                : 'border border-white/20 text-white/70'
+                            }`}
+                          >
+                            {f.rank === 1 ? '1 🥇' : f.rank === 2 ? '2 🥈' : f.rank === 3 ? '3 🥉' : `#${f.rank}`}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 truncate">
+                              <span className="font-bold text-sm text-white truncate">{f.name}</span>
+                              <span className="font-mono text-[11px] text-[#f97316] shrink-0">{f.code}</span>
+                            </div>
+                            <p className="text-[11px] text-white/45 truncate">
+                              {f.village || 'Garut'} · {f.totalWarings} Warings
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-mono text-base font-bold text-emerald-300 tabular-nums">
+                            {formatWeight(f.totalKg)} kg
+                          </p>
+                          <p className="text-[10px] font-mono text-white/40">
+                            {f.sharePct.toFixed(1)}% share
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-1.5 h-1 w-full bg-white/10 overflow-hidden rounded-full">
+                        <div
+                          className="h-full bg-emerald-400 transition-all duration-500"
+                          style={{ width: `${Math.min(100, Math.max(5, f.sharePct))}%` }}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -254,6 +360,20 @@ export default function AdminDashboardHome() {
             </section>
 
             <section className="col-span-4 border border-white/10 bg-white/[0.04] p-5">
+              <div className="mb-3 flex items-center justify-between"><div><h2 className="text-lg font-bold">Recent Activity</h2><p className="text-xs text-white/50">Station 01 through final dispatch</p></div><span className="font-mono text-xs text-white/40">{activities.length} events</span></div>
+              {activities.length === 0 ? <p className="border-t border-white/10 py-8 text-center text-sm text-white/45">No operational activity recorded.</p> : (
+                <div className="divide-y divide-white/10">
+                  {activities.slice(0, 5).map((activity) => (
+                    <div key={activity.id} className="flex min-w-0 items-center gap-3 py-2.5">
+                      <span className="flex size-8 shrink-0 items-center justify-center bg-emerald-400/10 text-emerald-300"><Icon name={activity.icon} size={15} /></span>
+                      <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">{activity.stage} · {activity.time}</p><p className="truncate text-xs text-white/80">{activity.action}</p></div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="col-span-3 border border-white/10 bg-white/[0.04] p-5">
               <h2 className="text-lg font-bold">Scale Network</h2><p className="mb-3 text-xs text-white/50">Live Modbus TCP nodes</p>
               <div className="divide-y divide-white/10">
                 {scales.map((scale) => (
@@ -269,7 +389,28 @@ export default function AdminDashboardHome() {
       )}
 
       <div className="space-y-6">
-        <PageHeader title={`Operations Dashboard${user?.name ? ` · ${user.name}` : ''}`} subtitle="Live operational status from Reception through Dispatch." actions={<Button variant="primary" icon="expand" onClick={enterPresentationMode}>Presentation Mode</Button>} />
+        <PageHeader
+          title={`Operations Dashboard${user?.name ? ` · ${user.name}` : ''}`}
+          subtitle="Live operational status from Reception through Dispatch."
+          actions={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                icon="clipboard"
+                onClick={() => window.open('/docs', '_blank')}
+              >
+                OpenAPI Docs
+              </Button>
+              <Button
+                variant="primary"
+                icon="expand"
+                onClick={enterPresentationMode}
+              >
+                Presentation Mode
+              </Button>
+            </div>
+          }
+        />
 
         <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-card px-4 py-3">
           <div className="flex items-center gap-3"><Badge tone={dataOnline ? 'success' : 'warning'} dot live>{dataOnline ? 'Data Connected' : 'Data Unavailable'}</Badge><span className="text-xs text-muted-foreground">Last refresh {currentTime.toLocaleTimeString('en-GB')}</span></div>
@@ -295,7 +436,53 @@ export default function AdminDashboardHome() {
         </Card>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-          <Card title="Recent Activity" subtitle="Station 01 through final dispatch." className="xl:col-span-2">{activityFeed}</Card>
+          <Card title="Farmer Leaderboard" subtitle="Top growers by intake volume.">
+            {liveRankings.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                <Icon name="users" size={22} className="mx-auto text-muted-foreground mb-2" />
+                <p>No intake records available.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {liveRankings.slice(0, 5).map((f) => (
+                  <div key={`${f.code}-${f.rank}`} className="py-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span
+                          className={`flex size-6 shrink-0 items-center justify-center text-xs font-bold ${
+                            f.rank === 1
+                              ? 'bg-amber-400 text-black'
+                              : f.rank === 2
+                              ? 'bg-slate-300 text-black'
+                              : f.rank === 3
+                              ? 'bg-amber-700 text-white'
+                              : 'border border-border text-muted-foreground'
+                          }`}
+                        >
+                          {f.rank}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold truncate text-foreground">{f.name}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">
+                            {f.code} · {f.village || 'Garut'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-mono text-xs font-bold text-foreground">
+                          {formatWeight(f.totalKg)} kg
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {f.totalWarings} Warings
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+          <Card title="Recent Activity" subtitle="Station 01 through final dispatch.">{activityFeed}</Card>
           <Card title="Scale Network" subtitle="Live Modbus TCP status.">
             <div className="divide-y divide-border">
               {scales.map((scale) => (

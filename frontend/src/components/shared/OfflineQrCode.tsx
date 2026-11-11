@@ -5,6 +5,7 @@ interface OfflineQrCodeProps {
   value: string
   size?: number
   className?: string
+  dataAttribute?: string
 }
 
 const QUIET_ZONE = 4
@@ -13,7 +14,7 @@ const QUIET_ZONE = 4
  * Offline SVG QR Code (ISO/IEC 18004, ECC level M).
  * Works with zero network calls on local LAN / offline packhouses.
  */
-export default function OfflineQrCode({ value, size = 180, className = '' }: OfflineQrCodeProps) {
+export default function OfflineQrCode({ value, size = 180, className = '', dataAttribute }: OfflineQrCodeProps) {
   const { path, dim } = useMemo(() => {
     try {
       const matrix = encodeQr(value)
@@ -48,6 +49,7 @@ export default function OfflineQrCode({ value, size = 180, className = '' }: Off
       style={{ width: size, height: size, aspectRatio: '1 / 1', display: 'block' }}
       role="img"
       aria-label={`QR Code for ${value}`}
+      data-farmer-qr={dataAttribute}
     >
       <rect width={dim} height={dim} fill="#ffffff" />
       <path d={path} fill="#000000" />

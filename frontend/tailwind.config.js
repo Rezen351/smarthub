@@ -12,8 +12,8 @@ const config: Config = {
           hover: '#333333',
         },
         accent: {
-          DEFAULT: '#0070f3',
-          hover: '#0051a8',
+          DEFAULT: '#ea580c',
+          hover: '#c2410c',
         },
         danger: {
           DEFAULT: '#e00',

@@ -96,8 +96,8 @@ export default function FarmerDashboardHome() {
       {/* Hero: total deposits */}
       <section className="notch-corner border border-[#eaeaea] bg-black text-white p-6 md:p-8 rounded-none flex flex-col gap-5 md:flex-row md:items-end md:justify-between shadow-xs">
         <div className="flex flex-col gap-1">
-          <div className="inline-flex items-center gap-2 font-mono-custom text-[11px] text-[#93c749] tracking-[0.2em] uppercase font-semibold">
-            <span className="w-2 h-2 rounded-none bg-[#229856]"></span>
+          <div className="inline-flex items-center gap-2 font-mono-custom text-[11px] text-[#f59e0b] tracking-[0.2em] uppercase font-semibold">
+            <span className="w-2 h-2 rounded-none bg-[#ea580c]"></span>
             <span>TOTAL APPROVED DEPOSITS · PACKHOUSE INTAKE</span>
           </div>
           {loading ? (
@@ -113,7 +113,7 @@ export default function FarmerDashboardHome() {
         </div>
         <Link
           to="/dashboard/farmer-qr"
-          className="pulse-btn inline-flex items-center justify-center gap-2 rounded-none bg-[#15803d] text-white font-heading tracking-wider uppercase text-xs px-5 min-h-[44px] hover:bg-[#16a34a] transition-all font-semibold"
+          className="pulse-btn inline-flex items-center justify-center gap-2 rounded-none bg-[#ea580c] text-white font-heading tracking-wider uppercase text-xs px-5 min-h-[44px] hover:bg-[#c2410c] transition-all font-semibold"
         >
           <Icon name="qr" size={16} />
           Show my QR
@@ -172,7 +172,7 @@ export default function FarmerDashboardHome() {
             <Link
               key={action.label}
               to={action.path}
-              className="group flex flex-col gap-2 rounded-none border border-border bg-card p-4 min-h-[112px] transition-all hover:border-[#229856] hover:bg-[#f0fdf4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="group flex flex-col gap-2 rounded-none border border-border bg-card p-4 min-h-[112px] transition-all hover:border-[#ea580c] hover:bg-[#fff7ed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="icon-tile icon-tile-accent rounded-none">
                 <Icon name={action.icon} size={18} />
@@ -182,7 +182,7 @@ export default function FarmerDashboardHome() {
                 <Icon
                   name="chevron-right"
                   size={14}
-                  className="text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-[#229856]"
+                  className="text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-[#ea580c]"
                 />
               </span>
               <span className="text-xs text-muted-foreground">{action.desc}</span>
