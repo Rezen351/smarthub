@@ -113,8 +113,8 @@ export default function FarmerProfilePage() {
     id: user?.id,
     name: name || user?.name || 'User Name',
     role: user?.role || 'OPERATOR',
-    code: user?.farmerId || ((user as any)?.farmerProfile?.code) || (user?.role === 'ADMIN' ? 'ADM-001' : user?.role === 'OPERATOR' ? 'OPR-001' : 'USER-01'),
-    domicile: location || address || (user?.role === 'FARMER' ? 'Garut, Jawa Barat' : 'SmartGeulis Facility'),
+    code: user?.farmerId || user?.farmerProfile?.code || user?.cardCode || (user?.role === 'ADMIN' ? 'ADM-001' : user?.role === 'OPERATOR' ? 'OPR-001' : 'USER-01'),
+    domicile: location || address || user?.address || (user?.role === 'FARMER' ? 'Garut, Jawa Barat' : 'SmartGeulis Facility'),
     email: user?.email,
     phone: phone,
   }

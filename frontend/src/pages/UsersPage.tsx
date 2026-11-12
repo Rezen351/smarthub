@@ -29,6 +29,7 @@ type User = {
   createdAt?: string
   farmerCode?: string
   farmerId?: string
+  cardCode?: string
   phone?: string
   village?: string
   address?: string
@@ -70,8 +71,8 @@ export default function UsersPage() {
       id: u.id,
       name: u.name,
       role: u.role,
-      code: u.farmerCode || u.farmerId || (u.role === 'ADMIN' ? 'ADM-001' : u.role === 'OPERATOR' ? 'OPR-001' : 'USER-01'),
-      domicile: u.village || u.address || (u.role === 'FARMER' ? 'Garut, Jawa Barat' : 'SmartGeulis Facility'),
+      code: u.farmerCode || u.farmerId || u.cardCode || (u.role === 'ADMIN' ? 'ADM-001' : u.role === 'OPERATOR' ? 'OPR-001' : 'USER-01'),
+      domicile: u.address || u.village || (u.role === 'FARMER' ? 'Garut, Jawa Barat' : 'SmartGeulis Facility'),
       email: u.email,
       phone: u.phone,
     })

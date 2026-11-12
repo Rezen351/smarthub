@@ -230,14 +230,15 @@ func (s *server) auth(w http.ResponseWriter, r *http.Request, p []string) {
 			return
 		}
 		var id, email, name, role, hash string
-		var farmerCode, farmerPhone, farmerAddress, farmerVillage *string
+		var farmerCode, farmerPhone, farmerAddress, farmerVillage, cardCode *string
 		var created time.Time
 		err := s.db.QueryRow(r.Context(), `
-			SELECT u.id,u.email,u.name,u.role,u.password,u."createdAt",f.code,f.phone,f.address,f.village
+			SELECT u.id,u.email,u.name,u.role,u.password,u."createdAt",f.code,f.phone,
+			       COALESCE(f.address,u.address),COALESCE(f.village,u.village),u."cardCode"
 			FROM users u
 			LEFT JOIN farmers f ON f."userId"=u.id
 			WHERE u.email=$1
-		`, strings.ToLower(strings.TrimSpace(v.Email))).Scan(&id, &email, &name, &role, &hash, &created, &farmerCode, &farmerPhone, &farmerAddress, &farmerVillage)
+		`, strings.ToLower(strings.TrimSpace(v.Email))).Scan(&id, &email, &name, &role, &hash, &created, &farmerCode, &farmerPhone, &farmerAddress, &farmerVillage, &cardCode)
 		if err != nil || bcrypt.CompareHashAndPassword([]byte(hash), []byte(v.Password)) != nil {
 			fail(w, 401, "INVALID_CREDENTIALS", "Invalid email or password")
 			return
@@ -247,7 +248,7 @@ func (s *server) auth(w http.ResponseWriter, r *http.Request, p []string) {
 			fail(w, 500, "TOKEN_GENERATION_FAILED", "Failed to create authentication token")
 			return
 		}
-		write(w, map[string]any{"success": true, "data": map[string]any{"token": tok, "user": authUser(id, email, name, role, created, farmerCode, farmerPhone, farmerAddress, farmerVillage)}})
+		write(w, map[string]any{"success": true, "data": map[string]any{"token": tok, "user": authUser(id, email, name, role, created, farmerCode, farmerPhone, farmerAddress, farmerVillage, cardCode)}})
 		return
 	}
 	if len(p) == 1 && p[0] == "me" && r.Method == "GET" {
@@ -257,14 +258,15 @@ func (s *server) auth(w http.ResponseWriter, r *http.Request, p []string) {
 			return
 		}
 		var email, name, role string
-		var farmerCode, farmerPhone, farmerAddress, farmerVillage *string
+		var farmerCode, farmerPhone, farmerAddress, farmerVillage, cardCode *string
 		var created time.Time
 		err = s.db.QueryRow(r.Context(), `
-			SELECT u.email,u.name,u.role,u."createdAt",f.code,f.phone,f.address,f.village
+			SELECT u.email,u.name,u.role,u."createdAt",f.code,f.phone,
+			       COALESCE(f.address,u.address),COALESCE(f.village,u.village),u."cardCode"
 			FROM users u
 			LEFT JOIN farmers f ON f."userId"=u.id
 			WHERE u.id=$1
-		`, id).Scan(&email, &name, &role, &created, &farmerCode, &farmerPhone, &farmerAddress, &farmerVillage)
+		`, id).Scan(&email, &name, &role, &created, &farmerCode, &farmerPhone, &farmerAddress, &farmerVillage, &cardCode)
 		if err == pgx.ErrNoRows {
 			fail(w, 404, "USER_NOT_FOUND", "Authenticated user was not found")
 			return
@@ -273,7 +275,7 @@ func (s *server) auth(w http.ResponseWriter, r *http.Request, p []string) {
 			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to load authenticated user")
 			return
 		}
-		write(w, map[string]any{"success": true, "data": authUser(id, email, name, role, created, farmerCode, farmerPhone, farmerAddress, farmerVillage)})
+		write(w, map[string]any{"success": true, "data": authUser(id, email, name, role, created, farmerCode, farmerPhone, farmerAddress, farmerVillage, cardCode)})
 		return
 	}
 	if len(p) == 1 && p[0] == "change-password" && r.Method == "POST" {
@@ -377,8 +379,10 @@ func (s *server) auth(w http.ResponseWriter, r *http.Request, p []string) {
 	if len(p) == 1 && p[0] == "users" && r.Method == "GET" {
 		rows, err := s.db.Query(r.Context(), `
 			SELECT u.id, u.name, u.email, u.role, u."createdAt",
-			       f.code, f.phone, f.village, f.address, f.nik, f.gender, f.age,
-			       f."landStatus", f.district, f."landArea", f."landAreaUnit", f."joinYear", f."averageProduction"
+			       f.code, f.phone, COALESCE(f.village, u.village), COALESCE(f.address, u.address),
+			       COALESCE(f.nik, u.nik), f.gender, f.age,
+			       f."landStatus", COALESCE(f.district, u.district), f."landArea", f."landAreaUnit", f."joinYear", f."averageProduction",
+			       u."cardCode"
 			FROM users u
 			LEFT JOIN farmers f ON f."userId" = u.id
 			ORDER BY u."createdAt"
@@ -392,9 +396,9 @@ func (s *server) auth(w http.ResponseWriter, r *http.Request, p []string) {
 		for rows.Next() {
 			var id, name, email, role string
 			var at time.Time
-			var code, phone, village, address, nik, gender, landStatus, district, landArea, landAreaUnit, joinYear, avgProd *string
+			var code, phone, village, address, nik, gender, landStatus, district, landArea, landAreaUnit, joinYear, avgProd, cardCode *string
 			var age *int
-			if rows.Scan(&id, &name, &email, &role, &at, &code, &phone, &village, &address, &nik, &gender, &age, &landStatus, &district, &landArea, &landAreaUnit, &joinYear, &avgProd) == nil {
+			if rows.Scan(&id, &name, &email, &role, &at, &code, &phone, &village, &address, &nik, &gender, &age, &landStatus, &district, &landArea, &landAreaUnit, &joinYear, &avgProd, &cardCode) == nil {
 				item := map[string]any{
 					"id":        id,
 					"name":      name,
@@ -406,6 +410,9 @@ func (s *server) auth(w http.ResponseWriter, r *http.Request, p []string) {
 				if code != nil {
 					item["farmerCode"] = *code
 					item["farmerId"] = *code
+				}
+				if cardCode != nil {
+					item["cardCode"] = *cardCode
 				}
 				if phone != nil {
 					item["phone"] = *phone
@@ -844,8 +851,14 @@ func (s *server) auth(w http.ResponseWriter, r *http.Request, p []string) {
 	fail(w, 404, "NOT_FOUND", "Route not found")
 }
 
-func authUser(id, email, name, role string, created time.Time, farmerCode, phone, address, village *string) map[string]any {
+func authUser(id, email, name, role string, created time.Time, farmerCode, phone, address, village, cardCode *string) map[string]any {
 	user := map[string]any{"id": id, "email": email, "name": name, "role": role, "createdAt": created}
+	if cardCode != nil {
+		user["cardCode"] = *cardCode
+	}
+	if address != nil {
+		user["address"] = *address
+	}
 	if farmerCode != nil && strings.TrimSpace(*farmerCode) != "" {
 		code := strings.TrimSpace(*farmerCode)
 		user["farmerId"] = code

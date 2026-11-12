@@ -7,6 +7,8 @@ export interface User {
   email: string
   name: string
   role: 'ADMIN' | 'OPERATOR' | 'FARMER'
+  cardCode?: string
+  address?: string
   farmerId?: string
   farmerProfile?: {
     code?: string
@@ -32,6 +34,8 @@ function toUser(raw: any): User {
     email: raw.email,
     name: raw.name,
     role: raw.role,
+    cardCode: raw.cardCode,
+    address: raw.address,
     farmerId: resolveFarmerId(raw),
     farmerProfile: raw.farmerProfile,
   }

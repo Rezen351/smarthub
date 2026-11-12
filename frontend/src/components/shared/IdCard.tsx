@@ -38,42 +38,42 @@ export const ROLE_THEMES: Record<
 > = {
   FARMER: {
     name: 'Registered Farmer',
-    roleBadge: 'PETANI / FARMER',
+    roleBadge: 'FARMER',
     accentColor: '#16a34a',
     accentBg: '#f0fdf4',
     accentBorder: '#86efac',
     accentText: '#14532d',
     indicatorColor: '#22c55e',
-    headerBg: '#14532d', // Deep Forest Emerald Green (Eptilu Agriculture)
+    headerBg: '#15803d', // Hijau (Green - Agriculture & Eptilu)
     headerText: '#ffffff',
     headerSub: '#86efac', // Crisp Light Mint Green for ultra-clear readability
     borderLine: '#16a34a',
   },
   OPERATOR: {
     name: 'Plant Operator',
-    roleBadge: 'OPERATOR PABRIK',
-    accentColor: '#ea580c',
-    accentBg: '#fff7ed',
-    accentBorder: '#fed7aa',
-    accentText: '#9a3412',
-    indicatorColor: '#f97316',
-    headerBg: '#9a3412', // Rich Dark Orange (SmartGeulis Brand)
+    roleBadge: 'OPERATOR',
+    accentColor: '#2563eb',
+    accentBg: '#eff6ff',
+    accentBorder: '#bfdbfe',
+    accentText: '#1e40af',
+    indicatorColor: '#38bdf8',
+    headerBg: '#1e40af', // Biru (Blue - Plant Operations)
     headerText: '#ffffff',
-    headerSub: '#fed7aa', // Light Peach Cream for ultra-clear readability
-    borderLine: '#ea580c',
+    headerSub: '#bfdbfe', // Soft Ice/Sky Blue for ultra-clear readability
+    borderLine: '#2563eb',
   },
   ADMIN: {
     name: 'System Administrator',
     roleBadge: 'ADMINISTRATOR',
-    accentColor: '#f0aa00',
-    accentBg: '#fefce8',
-    accentBorder: '#fde047',
-    accentText: '#713f12',
-    indicatorColor: '#eab308',
-    headerBg: '#0f172a', // Executive Midnight Slate (UNPAD Executive)
+    accentColor: '#18181b',
+    accentBg: '#f4f4f5',
+    accentBorder: '#e4e4e7',
+    accentText: '#18181b',
+    indicatorColor: '#22c55e',
+    headerBg: '#0a0a0a', // Hitam (Black - Executive System Administrator)
     headerText: '#ffffff',
-    headerSub: '#fde047', // Vibrant UNPAD Gold for ultra-clear readability
-    borderLine: '#f0aa00',
+    headerSub: '#e4e4e7', // Crisp Silver White for ultra-clear readability
+    borderLine: '#18181b',
   },
 }
 
@@ -83,6 +83,11 @@ export function formatUserCode(data: IdCardData): string {
   if (data.role === 'OPERATOR') return 'OPR-001'
   if (data.role === 'ADMIN') return 'ADM-001'
   return data.id ? data.id.substring(0, 8).toUpperCase() : 'USER-01'
+}
+
+export function formatUserName(rawName?: string): string {
+  if (!rawName || !rawName.trim()) return 'User Name'
+  return rawName.replace(/\s*\([^)]*\)/g, '').trim() || rawName.trim()
 }
 
 /**
@@ -156,7 +161,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <img
-            src="/logo_smartgeulis.png"
+            src="/Smart%20Geulis.png"
             alt="Logo"
             style={{ height: '20px', width: 'auto', objectFit: 'contain' }}
             onError={(e) => {
@@ -230,7 +235,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
       >
         {/* Subtle Watermark Logo Background */}
         <img
-          src="/logo_smartgeulis.png"
+          src="/Smart%20Geulis.png"
           alt=""
           aria-hidden="true"
           style={{
@@ -275,9 +280,9 @@ export function IdCard({ data, className = '' }: IdCardProps) {
                 whiteSpace: 'nowrap',
                 marginTop: '1px',
               }}
-              title={data.name}
+              title={formatUserName(data.name)}
             >
-              {data.name || 'User Name'}
+              {formatUserName(data.name)}
             </div>
           </div>
 
@@ -430,7 +435,7 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
 
   // Load logo for header & watermark background
   const logoImg = new Image()
-  logoImg.src = '/logo_smartgeulis.png'
+  logoImg.src = '/Smart%20Geulis.png'
   await new Promise((resolve) => {
     logoImg.onload = resolve
     logoImg.onerror = resolve
@@ -503,7 +508,7 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
   ctx.fillStyle = '#171717'
   ctx.font = 'bold 36px Inter, sans-serif'
   const maxNameWidth = 490
-  let displayName = data.name || 'User Name'
+  let displayName = formatUserName(data.name)
   if (ctx.measureText(displayName).width > maxNameWidth) {
     while (ctx.measureText(displayName + '...').width > maxNameWidth && displayName.length > 0) {
       displayName = displayName.slice(0, -1)
@@ -662,12 +667,13 @@ export function printIdCard(data: IdCardData): void {
 
   const printWindow = window.open('', '_blank', 'width=800,height=600')
   if (!printWindow) return
+  const logoUrl = `${window.location.origin}/Smart%20Geulis.png`
 
   const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>SmartGeulis ID Card - ${data.name}</title>
+  <title>SmartGeulis ID Card - ${formatUserName(data.name)}</title>
   <style>
     @page {
       size: 80mm 55mm landscape;
@@ -872,7 +878,7 @@ export function printIdCard(data: IdCardData): void {
     <div class="corner-br"></div>
     <div class="header">
       <div style="display:flex;align-items:center;gap:2mm;">
-        <img src="/logo_smartgeulis.png" style="height:5.5mm;width:auto;" alt="" />
+        <img src="${logoUrl}" style="height:5.5mm;width:auto;" alt="" />
         <div>
           <div class="header-title">SmartGeulis</div>
           <div class="header-sub">TRACEABILITY SYSTEM</div>
@@ -884,10 +890,10 @@ export function printIdCard(data: IdCardData): void {
       </div>
     </div>
     <div class="body">
-      <img class="watermark" src="/logo_smartgeulis.png" alt="" />
+      <img class="watermark" src="${logoUrl}" alt="" />
       <div class="content-left">
         <div class="field-label">Full Name</div>
-        <div class="field-name">${data.name}</div>
+        <div class="field-name">${formatUserName(data.name)}</div>
         <div class="field-label">Identification Code</div>
         <div class="code-chip">${code}</div>
         <div class="field-label">Domicile / Facility</div>
@@ -937,6 +943,9 @@ export function IdCardModal({
 
   if (!open || !data) return null
 
+  const role = (data.role || 'OPERATOR').toUpperCase()
+  const theme = ROLE_THEMES[role] || ROLE_THEMES.OPERATOR
+
   const handleExport = async () => {
     try {
       setExporting(true)
@@ -964,7 +973,7 @@ export function IdCardModal({
               Card Preview
             </div>
             <h2 className="font-display text-xl font-bold text-[#171717] tracking-tight">
-              {data.name}
+              {formatUserName(data.name)}
             </h2>
           </div>
           <button
@@ -990,7 +999,16 @@ export function IdCardModal({
           </div>
           <div className="flex justify-between items-center">
             <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">User ID:</span>
-            <span className="font-mono text-xs font-bold text-[#ea580c] bg-[#fff7ed] px-2 py-0.5 border border-[#ffedd5]">{formatUserCode(data)}</span>
+            <span
+              className="font-mono text-xs font-bold px-2 py-0.5 border"
+              style={{
+                color: theme.accentText,
+                backgroundColor: theme.accentBg,
+                borderColor: theme.accentBorder,
+              }}
+            >
+              {formatUserCode(data)}
+            </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">Domicile:</span>

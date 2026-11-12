@@ -13,7 +13,7 @@ func TestAuthUserIncludesFarmerIdentity(t *testing.T) {
 	phone := "08123456789"
 	addr := "Jl. Raya Garut"
 	village := "Bayongbong"
-	user := authUser("usr-1", "farmer@example.com", "Farmer", "FARMER", time.Now(), &code, &phone, &addr, &village)
+	user := authUser("usr-1", "farmer@example.com", "Farmer", "FARMER", time.Now(), &code, &phone, &addr, &village, nil)
 	if user["farmerId"] != "FMR-001" {
 		t.Fatalf("expected farmerId FMR-001, got %v", user["farmerId"])
 	}
