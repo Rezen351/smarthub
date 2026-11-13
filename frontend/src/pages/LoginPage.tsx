@@ -43,62 +43,8 @@ export default function LoginPage() {
         aria-hidden="true"
       />
 
-      {/* ── Scoped CSS Styles ── */}
+      {/* ── Scoped Button Animation ── */}
       <style>{`
-        .font-display { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.02em; }
-        .font-heading { font-family: 'Oswald', sans-serif; }
-        .font-mono-custom { font-family: 'JetBrains Mono', monospace; }
-
-        .notch-corner {
-          position: relative;
-        }
-        .notch-corner::before,
-        .notch-corner::after {
-          content: '';
-          position: absolute;
-          width: 14px;
-          height: 14px;
-          border: 2px solid #ea580c;
-          pointer-events: none;
-        }
-        .notch-corner::before {
-          top: -1px;
-          left: -1px;
-          border-right: none;
-          border-bottom: none;
-        }
-        .notch-corner::after {
-          bottom: -1px;
-          right: -1px;
-          border-left: none;
-          border-top: none;
-        }
-
-        .notch-dark {
-          position: relative;
-        }
-        .notch-dark::before,
-        .notch-dark::after {
-          content: '';
-          position: absolute;
-          width: 14px;
-          height: 14px;
-          border: 2px solid rgba(234, 88, 12, 0.7);
-          pointer-events: none;
-        }
-        .notch-dark::before {
-          top: -1px;
-          left: -1px;
-          border-right: none;
-          border-bottom: none;
-        }
-        .notch-dark::after {
-          bottom: -1px;
-          right: -1px;
-          border-left: none;
-          border-top: none;
-        }
-
         @keyframes pulse-btn-glow {
           0%, 100% {
             box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.45), 0 4px 12px rgba(234, 88, 12, 0.25);
@@ -128,16 +74,12 @@ export default function LoginPage() {
           </Link>
 
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 font-mono-custom text-[11px] text-[#666666] border border-[#eaeaea] bg-[#f5f5f5] px-3 py-1.5 rounded-none">
-              <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse"></span>
-              <span>SYSTEM ONLINE</span>
-            </div>
             <Link
               to="/"
               className="inline-flex items-center gap-1.5 font-heading text-xs uppercase tracking-wider text-[#666666] hover:text-[#171717] transition-colors"
             >
               <Icon name="arrow-left" size={13} />
-              <span>SmartGeulis</span>
+              <span>Back to Home</span>
             </Link>
             <Link
               to="/traceability"
@@ -251,7 +193,7 @@ export default function LoginPage() {
 
             {/* ── RIGHT COLUMN: Papan Nama Showcase (Signboard Showcase) ── */}
             <div className="lg:col-span-7 flex flex-col justify-center">
-              <div className="notch-dark border border-[#262626] bg-[#0f1115] text-white p-6 sm:p-8 shadow-xl rounded-none flex flex-col justify-between h-full relative overflow-hidden">
+              <div className="notch-corner border border-[#262626] bg-[#0f1115] text-white p-6 sm:p-8 shadow-xl rounded-none flex flex-col justify-between h-full relative overflow-hidden">
                 {/* Subtle Ambient Radial Glow */}
                 <div
                   className="absolute -top-32 -right-32 w-96 h-96 bg-[#ea580c]/15 rounded-full blur-3xl pointer-events-none"
