@@ -23,12 +23,22 @@ import (
 )
 
 type server struct {
-	db        *pgxpool.Pool
-	jwtSecret []byte
-	scaleMu   sync.RWMutex
-	scales    map[string]scale
-	printerMu sync.RWMutex
-	printers  map[string]printerSettings
+	db           *pgxpool.Pool
+	jwtSecret    []byte
+	scaleMu      sync.RWMutex
+	scales       map[string]scale
+	scaleCliMu   sync.Mutex
+	scaleClients map[string]*scaleClient
+	printerMu    sync.RWMutex
+	printers     map[string]printerSettings
+}
+type scaleClient struct {
+	mu         sync.Mutex
+	conn       net.Conn
+	targetHost string
+	targetPort int
+	lastData   map[string]any
+	lastSeen   time.Time
 }
 type scale struct {
 	ID, Name, Host string
@@ -81,7 +91,7 @@ func Run(ctx context.Context) error {
 	if err = p.Ping(ctx); err != nil {
 		return err
 	}
-	s := &server{db: p, jwtSecret: []byte(env("JWT_SECRET", "change-me")), scales: map[string]scale{}}
+	s := &server{db: p, jwtSecret: []byte(env("JWT_SECRET", "change-me")), scales: map[string]scale{}, scaleClients: map[string]*scaleClient{}}
 	if err = s.loadScales(ctx); err != nil {
 		return err
 	}
@@ -1027,11 +1037,23 @@ func (s *server) scalesHandler(w http.ResponseWriter, r *http.Request, p []strin
 		id = fmt.Sprintf("%02s", id)
 	}
 	if r.Method == "GET" && len(p) == 0 {
-		out := []any{}
-		for _, id := range []string{"01", "02", "03"} {
-			snapshot, ok := s.scaleSnapshot(r.Context(), id)
-			if ok {
-				out = append(out, snapshot)
+		stations := []string{"01", "02", "03"}
+		snapshots := make([]any, len(stations))
+		var wg sync.WaitGroup
+		for i, stID := range stations {
+			wg.Add(1)
+			go func(idx int, id string) {
+				defer wg.Done()
+				if snapshot, ok := s.scaleSnapshot(r.Context(), id); ok {
+					snapshots[idx] = snapshot
+				}
+			}(i, stID)
+		}
+		wg.Wait()
+		out := make([]any, 0, len(stations))
+		for _, snap := range snapshots {
+			if snap != nil {
+				out = append(out, snap)
 			}
 		}
 		write(w, map[string]any{"success": true, "data": out})
@@ -1073,6 +1095,16 @@ func (s *server) scalesHandler(w http.ResponseWriter, r *http.Request, p []strin
 		v.UnitID, v.WeightRegister, v.StatusRegister = x.UnitID, x.WeightRegister, x.StatusRegister
 		s.scales[id] = v
 		s.scaleMu.Unlock()
+		s.scaleCliMu.Lock()
+		if cli, exists := s.scaleClients[id]; exists {
+			cli.mu.Lock()
+			if cli.conn != nil {
+				_ = cli.conn.Close()
+				cli.conn = nil
+			}
+			cli.mu.Unlock()
+		}
+		s.scaleCliMu.Unlock()
 		write(w, map[string]any{"success": true, "data": map[string]any{"stationId": id, "host": v.Host, "port": v.Port, "unitId": v.UnitID, "weightRegister": v.WeightRegister, "statusRegister": v.StatusRegister, "online": false, "message": "Scale configuration accepted"}})
 		return
 	}
@@ -1185,25 +1217,93 @@ func decodeScaleRegisters(body []byte, v scale, start, quantity int) (float64, u
 	return weightGrams, binary.BigEndian.Uint16(registers[statusIndex:]), nil
 }
 
+func (s *server) getScaleClient(id string) *scaleClient {
+	s.scaleCliMu.Lock()
+	defer s.scaleCliMu.Unlock()
+	if s.scaleClients == nil {
+		s.scaleClients = make(map[string]*scaleClient)
+	}
+	cli, ok := s.scaleClients[id]
+	if !ok {
+		cli = &scaleClient{}
+		s.scaleClients[id] = cli
+	}
+	return cli
+}
+
+func cloneScaleMap(in map[string]any) map[string]any {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]any, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
+}
+
 func (s *server) scaleTelemetry(ctx context.Context, v scale) (map[string]any, error) {
 	start, quantity, err := scaleRegisterWindow(v)
 	if err != nil {
 		return nil, err
 	}
-	dialer := net.Dialer{Timeout: 1200 * time.Millisecond}
-	conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(v.Host, strconv.Itoa(v.Port)))
-	if err != nil {
-		return nil, fmt.Errorf("connect scale %s: %w", v.ID, err)
-	}
-	defer conn.Close()
-	_ = conn.SetDeadline(time.Now().Add(1500 * time.Millisecond))
 
+	client := s.getScaleClient(v.ID)
+	client.mu.Lock()
+	defer client.mu.Unlock()
+
+	// If host or port changed, close prior connection
+	if client.conn != nil && (client.targetHost != v.Host || client.targetPort != v.Port) {
+		_ = client.conn.Close()
+		client.conn = nil
+	}
+
+	data, err := s.executeScaleQuery(ctx, client, v, start, quantity)
+	if err != nil {
+		// Connection failed or broken: close connection and attempt 1 immediate reconnect
+		if client.conn != nil {
+			_ = client.conn.Close()
+			client.conn = nil
+		}
+		data, err = s.executeScaleQuery(ctx, client, v, start, quantity)
+	}
+
+	if err == nil {
+		client.lastData = cloneScaleMap(data)
+		client.lastSeen = time.Now()
+		return data, nil
+	}
+
+	// Soft-offline grace window: if failure is brief (< 2500ms), return last valid telemetry with isStable=false
+	if client.lastData != nil && time.Since(client.lastSeen) < 2500*time.Millisecond {
+		fallback := cloneScaleMap(client.lastData)
+		fallback["isStable"] = false
+		fallback["timestamp"] = time.Now().UTC()
+		return fallback, nil
+	}
+
+	return nil, err
+}
+
+func (s *server) executeScaleQuery(ctx context.Context, client *scaleClient, v scale, start, quantity int) (map[string]any, error) {
+	if client.conn == nil {
+		dialer := net.Dialer{Timeout: 1500 * time.Millisecond, KeepAlive: 15 * time.Second}
+		conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(v.Host, strconv.Itoa(v.Port)))
+		if err != nil {
+			return nil, fmt.Errorf("connect scale %s (%s:%d): %w", v.ID, v.Host, v.Port, err)
+		}
+		client.conn = conn
+		client.targetHost = v.Host
+		client.targetPort = v.Port
+	}
+
+	_ = client.conn.SetDeadline(time.Now().Add(1800 * time.Millisecond))
 	request := buildScaleReadRequest(v, start, quantity)
-	if _, err = conn.Write(request); err != nil {
+	if _, err := client.conn.Write(request); err != nil {
 		return nil, fmt.Errorf("request scale %s: %w", v.ID, err)
 	}
 	header := make([]byte, 7)
-	if _, err = io.ReadFull(conn, header); err != nil {
+	if _, err := io.ReadFull(client.conn, header); err != nil {
 		return nil, fmt.Errorf("read scale %s header: %w", v.ID, err)
 	}
 	if binary.BigEndian.Uint16(header[2:4]) != 0 || header[6] != byte(v.UnitID) {
@@ -1214,7 +1314,7 @@ func (s *server) scaleTelemetry(ctx context.Context, v scale) (map[string]any, e
 		return nil, fmt.Errorf("invalid scale response length %d", length)
 	}
 	body := make([]byte, length)
-	if _, err = io.ReadFull(conn, body); err != nil {
+	if _, err := io.ReadFull(client.conn, body); err != nil {
 		return nil, fmt.Errorf("read scale %s body: %w", v.ID, err)
 	}
 	weightGrams, status, err := decodeScaleRegisters(body, v, start, quantity)
