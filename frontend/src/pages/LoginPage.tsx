@@ -2,26 +2,7 @@ import { useState, FormEvent } from 'react'
 import { useNavigate, Navigate, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import Logo from '../components/shared/Logo'
-import Icon, { type IconName } from '../components/shared/Icon'
-
-const demoAccounts = [
-  { email: 'alif.muhammad.rizky@smartgeulisunpad.com', role: 'System Admin', desc: 'Alif Muhammad Rizky (Admin)', password: 'admin123' },
-  { email: 'operator@smartgeulisunpad.com', role: 'Plant Operator', desc: 'Workstation Hub & Operations', password: 'operator123' },
-  { email: 'farmer@smartgeulisunpad.com', role: 'Farmer', desc: 'Deposits & Farmer QR', password: 'farmer123' },
-]
-
-const getRoleIcon = (role: string): IconName => {
-  switch (role) {
-    case 'System Admin':
-      return 'shield'
-    case 'Plant Operator':
-      return 'dashboard'
-    case 'Farmer':
-      return 'leaf'
-    default:
-      return 'user'
-  }
-}
+import Icon from '../components/shared/Icon'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -157,7 +138,7 @@ export default function LoginPage() {
               OPERATOR SIGN IN
             </h1>
             <p className="text-xs sm:text-sm text-[#666666] font-body mb-6 leading-relaxed">
-              Select an authorized station profile below or enter credentials to access your terminal.
+              Enter your credentials to access your terminal.
             </p>
 
             {/* Error Message */}
@@ -221,45 +202,6 @@ export default function LoginPage() {
                 <Icon name="arrow-right" size={16} />
               </button>
             </form>
-
-            {/* Quick Demo Accounts Selection */}
-            <div className="mt-8 pt-6 border-t border-[#eaeaea]">
-              <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between mb-3">
-                <span className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase font-semibold flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-[#ea580c]"></span>
-                  AUTHORIZED STATIONS (AUTO-FILL CREDENTIALS)
-                </span>
-                <span className="font-mono-custom text-[10px] text-[#999999] uppercase tracking-wider">
-                  CLICK TO AUTO-FILL
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {demoAccounts.map((account) => (
-                  <button
-                    key={account.email}
-                    type="button"
-                    onClick={() => {
-                      setEmail(account.email)
-                      setPassword(account.password)
-                    }}
-                    className="p-3 rounded-none border border-[#eaeaea] bg-[#fafafa] hover:border-[#ea580c] hover:bg-[#fff7ed] text-left transition-all cursor-pointer group flex items-start gap-3"
-                  >
-                    <div className="w-7 h-7 bg-white border border-[#eaeaea] group-hover:border-[#ea580c] group-hover:text-[#ea580c] flex items-center justify-center shrink-0 text-[#666666] transition-colors rounded-none mt-0.5">
-                      <Icon name={getRoleIcon(account.role)} size={13} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-heading text-xs uppercase tracking-wider text-[#171717] group-hover:text-[#c2410c] font-semibold truncate">
-                        {account.role}
-                      </div>
-                      <div className="font-mono-custom text-[10px] text-[#666666] group-hover:text-[#ea580c] truncate mt-0.5">
-                        {account.email}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </main>
