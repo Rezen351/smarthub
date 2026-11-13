@@ -117,11 +117,29 @@ export default function PackagingPage() {
 
   useEffect(() => {
     let active = true
+    let consecutiveFails = 0
     const checkPrinter = () => {
       api.printers
         .test('packaging')
-        .then((result) => active && setPrinterOnline(result?.online === true))
-        .catch(() => active && setPrinterOnline(false))
+        .then((result) => {
+          if (!active) return
+          if (result?.online === true) {
+            consecutiveFails = 0
+            setPrinterOnline(true)
+          } else {
+            consecutiveFails++
+            if (consecutiveFails >= 2) {
+              setPrinterOnline(false)
+            }
+          }
+        })
+        .catch(() => {
+          if (!active) return
+          consecutiveFails++
+          if (consecutiveFails >= 2) {
+            setPrinterOnline(false)
+          }
+        })
     }
     checkPrinter()
     const timer = window.setInterval(checkPrinter, 5000)
