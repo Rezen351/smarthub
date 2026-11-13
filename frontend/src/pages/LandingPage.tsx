@@ -1674,16 +1674,60 @@ export default function LandingPage() {
                 </h4>
               </div>
               <p className="text-xs text-[#666666] font-body max-w-lg leading-relaxed">
-                SmartGeulis Traceability System is co-developed and validated through active collaboration between Universitas Padjadjaran (UNPAD), Eptilu Garut Agro-Tourism & Fresh Produce, and research consortia.
+                SmartGeulis Traceability System is co-developed and supported through active collaboration with the Ministry of Agriculture of the Republic of Indonesia, the ICARE program, Universitas Padjadjaran (UNPAD), and Eptilu Garut.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+              {/* Ministry of Agriculture of the Republic of Indonesia */}
+              <div className="p-6 border border-[#eaeaea] bg-[#fafafa] hover:border-[#ea580c] hover:bg-white transition-all flex items-center gap-5 group rounded-none">
+                <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
+                  <img
+                    src="/Ministry of Agriculture of the Republic of Indonesia.png"
+                    alt="Ministry of Agriculture of the Republic of Indonesia"
+                    className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
+                    Government Ministry
+                  </span>
+                  <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
+                    Ministry of Agriculture
+                  </div>
+                  <div className="text-xs text-[#666666] mt-1 leading-snug">
+                    National agricultural policy and horticulture governance support.
+                  </div>
+                </div>
+              </div>
+
+              {/* ICARE Program */}
+              <div className="p-6 border border-[#eaeaea] bg-[#fafafa] hover:border-[#ea580c] hover:bg-white transition-all flex items-center gap-5 group rounded-none">
+                <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
+                  <img
+                    src="/I Care.png"
+                    alt="ICARE Program"
+                    className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
+                    Development Program
+                  </span>
+                  <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
+                    ICARE
+                  </div>
+                  <div className="text-xs text-[#666666] mt-1 leading-snug">
+                    Integrated farming competitiveness and resilient ecosystem initiative.
+                  </div>
+                </div>
+              </div>
+
               {/* Universitas Padjadjaran (UNPAD) */}
               <div className="p-6 border border-[#eaeaea] bg-[#fafafa] hover:border-[#ea580c] hover:bg-white transition-all flex items-center gap-5 group rounded-none">
                 <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
                   <img
-                    src="/logo-unpad.png"
+                    src="/Unpad.png"
                     alt="Universitas Padjadjaran (UNPAD)"
                     className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
                   />
@@ -1696,7 +1740,7 @@ export default function LandingPage() {
                     Universitas Padjadjaran
                   </div>
                   <div className="text-xs text-[#666666] mt-1 leading-snug">
-                    Lead research institution powering agricultural IoT innovation.
+                    Lead research institution advancing agricultural traceability.
                   </div>
                 </div>
               </div>
@@ -1705,7 +1749,7 @@ export default function LandingPage() {
               <div className="p-6 border border-[#eaeaea] bg-[#fafafa] hover:border-[#ea580c] hover:bg-white transition-all flex items-center gap-5 group rounded-none">
                 <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
                   <img
-                    src="/Logo Eptilu_High res.jpeg"
+                    src="/Eptilu.jpeg"
                     alt="Eptilu Fresh Produce"
                     className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform rounded-sm"
                   />
@@ -1719,28 +1763,6 @@ export default function LandingPage() {
                   </div>
                   <div className="text-xs text-[#666666] mt-1 leading-snug">
                     Agro-tourism & commercial packhouse partner in Garut highlands.
-                  </div>
-                </div>
-              </div>
-
-              {/* Partner Consortium */}
-              <div className="sm:col-span-2 lg:col-span-1 p-6 border border-[#eaeaea] bg-[#fafafa] hover:border-[#ea580c] hover:bg-white transition-all flex items-center gap-5 group rounded-none">
-                <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
-                  <img
-                    src="/Kumpulan Logo.png"
-                    alt="Ecosystem Consortium Partners"
-                    className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
-                  />
-                </div>
-                <div className="min-w-0">
-                  <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
-                    Consortium Ecosystem
-                  </span>
-                  <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
-                    Consortium Partners
-                  </div>
-                  <div className="text-xs text-[#666666] mt-1 leading-snug">
-                    Supported by collaborative national agriculture & tech partners.
                   </div>
                 </div>
               </div>

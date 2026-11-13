@@ -6,10 +6,10 @@ interface LogoProps {
 }
 
 /**
- * SmartGeulis logo dynamically rendered from /logo_smartgeulis.png.
+ * SmartGeulis logo dynamically rendered from /Smart Geulis.png.
  */
 export default function Logo({ className = 'h-8 w-auto' }: LogoProps) {
-  const src = '/logo_smartgeulis.png'
+  const src = '/Smart Geulis.png'
 
   return (
     <img
