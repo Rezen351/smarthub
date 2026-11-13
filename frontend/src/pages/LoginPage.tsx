@@ -273,38 +273,18 @@ export default function LoginPage() {
                 </div>
 
                 {/* Papan Nama Image Showcase Frame */}
-                <div className="relative z-10 border border-white/15 bg-black/60 p-2 sm:p-3 overflow-hidden group mb-5">
+                <div className="relative z-10 border border-white/15 bg-black/60 p-2 sm:p-3 overflow-hidden group mb-6">
                   <div className="relative overflow-hidden bg-black/40">
                     <img
                       src="/Papan Nama Warehouse.png"
                       alt="SmartGeulis Packhouse and Warehouse Signboard"
-                      className="w-full h-auto max-h-[380px] object-contain mx-auto transition-transform duration-700 group-hover:scale-[1.02]"
+                      className="w-full h-auto max-h-[420px] object-contain mx-auto transition-transform duration-700 group-hover:scale-[1.02]"
                     />
                     {/* Badge Overlay on Image */}
                     <div className="absolute bottom-3 left-3 bg-black/85 backdrop-blur-md border border-white/20 text-white px-3 py-1 text-[10px] font-mono-custom uppercase tracking-wider flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#ea580c]"></span>
                       <span>Garut Highland Packhouse & Warehouse</span>
                     </div>
-                  </div>
-                </div>
-
-                {/* Facility Technical Specifications */}
-                <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5 border-y border-white/10 py-4">
-                  <div>
-                    <div className="font-mono-custom text-[10px] text-white/50 uppercase tracking-wider">Facility Type</div>
-                    <div className="font-heading text-xs uppercase tracking-wider text-white font-medium mt-0.5">Central Packhouse</div>
-                  </div>
-                  <div>
-                    <div className="font-mono-custom text-[10px] text-white/50 uppercase tracking-wider">Elevation</div>
-                    <div className="font-heading text-xs uppercase tracking-wider text-white font-medium mt-0.5">1,240m ASL · Papandayan</div>
-                  </div>
-                  <div>
-                    <div className="font-mono-custom text-[10px] text-white/50 uppercase tracking-wider">Trace System</div>
-                    <div className="font-heading text-xs uppercase tracking-wider text-[#ea580c] font-medium mt-0.5">SmartGeulis Core</div>
-                  </div>
-                  <div>
-                    <div className="font-mono-custom text-[10px] text-white/50 uppercase tracking-wider">Compliance</div>
-                    <div className="font-heading text-xs uppercase tracking-wider text-white font-medium mt-0.5">ISO 22005 / GS1</div>
                   </div>
                 </div>
 
