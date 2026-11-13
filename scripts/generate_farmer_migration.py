@@ -35,7 +35,7 @@ def generate():
             
             clean_name = ' '.join(w.capitalize() for w in name.split())
             if 'istri pak suryana' in name.lower():
-                clean_name = 'Nina (Istri Pak Suryana)'
+                clean_name = 'Nina'
                 
             clean_village = ' '.join(w.capitalize() for w in village.split())
             if 'ci gedung' in village.lower():

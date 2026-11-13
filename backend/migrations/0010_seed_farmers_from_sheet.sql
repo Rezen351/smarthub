@@ -33,7 +33,7 @@ VALUES
     (gen_random_uuid()::TEXT, 'rustandi@smartgeulisunpad.com', 'Rustandi', '$2a$10$riKn1A7MMC/khxuLGjDffei/VfxRWh2oYxKJN6n4bow8HabUEVZO6', 'FARMER', NOW(), NOW()),
     (gen_random_uuid()::TEXT, 'iwan@smartgeulisunpad.com', 'Iwan', '$2a$10$riKn1A7MMC/khxuLGjDffei/VfxRWh2oYxKJN6n4bow8HabUEVZO6', 'FARMER', NOW(), NOW()),
     (gen_random_uuid()::TEXT, 'rajib.hu@smartgeulisunpad.com', 'Rajib Hu', '$2a$10$riKn1A7MMC/khxuLGjDffei/VfxRWh2oYxKJN6n4bow8HabUEVZO6', 'FARMER', NOW(), NOW()),
-    (gen_random_uuid()::TEXT, 'nina.istri.pak.suryana@smartgeulisunpad.com', 'Nina (Istri Pak Suryana)', '$2a$10$riKn1A7MMC/khxuLGjDffei/VfxRWh2oYxKJN6n4bow8HabUEVZO6', 'FARMER', NOW(), NOW()),
+    (gen_random_uuid()::TEXT, 'nina.istri.pak.suryana@smartgeulisunpad.com', 'Nina', '$2a$10$riKn1A7MMC/khxuLGjDffei/VfxRWh2oYxKJN6n4bow8HabUEVZO6', 'FARMER', NOW(), NOW()),
     (gen_random_uuid()::TEXT, 'yusuf@smartgeulisunpad.com', 'Yusuf', '$2a$10$riKn1A7MMC/khxuLGjDffei/VfxRWh2oYxKJN6n4bow8HabUEVZO6', 'FARMER', NOW(), NOW())
 ON CONFLICT ("email") DO UPDATE SET "name" = EXCLUDED."name", "updatedAt" = NOW();
 
@@ -78,7 +78,7 @@ VALUES
     (gen_random_uuid()::TEXT, 'FMR-018', 'Rustandi', NULL, 'Sukahurip', 'Desa Sukahurip, Kec. Cigedug, Kab. Garut', (SELECT id FROM users WHERE email = 'rustandi@smartgeulisunpad.com'), '3205182712910002', 'Laki-laki', 34, 'Sewa', 'Cigedug', '125.0', 'tumbak', '2026', '3 ton', NOW(), NOW()),
     (gen_random_uuid()::TEXT, 'FMR-019', 'Iwan', NULL, 'Cigedug', 'Desa Cigedug, Kec. Cigedug, Kab. Garut', (SELECT id FROM users WHERE email = 'iwan@smartgeulisunpad.com'), '32051807011820002', 'Laki-laki', 34, 'Sewa', 'Cigedug', '12.0', 'tumbak', '2021', '3.0', NOW(), NOW()),
     (gen_random_uuid()::TEXT, 'FMR-020', 'Rajib Hu', NULL, 'Cigedug', 'Desa Cigedug, Kec. Cigedug, Kab. Garut', (SELECT id FROM users WHERE email = 'rajib.hu@smartgeulisunpad.com'), '3205180107900242', 'Laki-laki', 3, NULL, 'Cigedug', '0,5', 'hektar', '2021', '10ton', NOW(), NOW()),
-    (gen_random_uuid()::TEXT, 'FMR-021', 'Nina (Istri Pak Suryana)', NULL, 'Barusuda', 'Desa Barusuda, Kec. Cigedug, Kab. Garut', (SELECT id FROM users WHERE email = 'nina.istri.pak.suryana@smartgeulisunpad.com'), NULL, 'Perempuan', 42, 'Sewa', 'Cigedug', '0,5', 'hektar', NULL, NULL, NOW(), NOW()),
+    (gen_random_uuid()::TEXT, 'FMR-021', 'Nina', NULL, 'Barusuda', 'Desa Barusuda, Kec. Cigedug, Kab. Garut', (SELECT id FROM users WHERE email = 'nina.istri.pak.suryana@smartgeulisunpad.com'), NULL, 'Perempuan', 42, 'Sewa', 'Cigedug', '0,5', 'hektar', NULL, NULL, NOW(), NOW()),
     (gen_random_uuid()::TEXT, 'FMR-022', 'Yusuf', NULL, 'Cigedug', 'Desa Cigedug, Kec. Cigedug, Kab. Garut', (SELECT id FROM users WHERE email = 'yusuf@smartgeulisunpad.com'), '3205171304820006', 'Laki-laki', 42, 'Milik Sendiri', 'Cigedug', '10.0', 'Patok', '2021', '10.0', NOW(), NOW())
 ON CONFLICT ("code") DO UPDATE SET
     "name" = EXCLUDED."name",
