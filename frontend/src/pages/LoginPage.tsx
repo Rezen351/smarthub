@@ -156,116 +156,96 @@ export default function LoginPage() {
             
             {/* ── LEFT COLUMN: Form Login ── */}
             <div className="lg:col-span-5 flex flex-col justify-center">
-              <div className="notch-corner border border-[#eaeaea] bg-white p-6 sm:p-10 shadow-sm rounded-none h-full flex flex-col justify-between">
-                <div>
-                  {/* Station Authentication Tag */}
-                  <div className="flex items-start gap-2.5 font-mono-custom text-[10px] sm:text-xs text-[#ea580c] tracking-[0.08em] sm:tracking-[0.25em] uppercase mb-2">
-                    <span className="w-6 h-[2px] bg-[#ea580c] shrink-0 mt-2"></span>
-                    <span className="min-w-0">STATION AUTHENTICATION · PACKHOUSE NETWORK</span>
-                  </div>
-
-                  <h1 className="font-display text-4xl sm:text-5xl tracking-tight text-[#171717] leading-none mb-2">
-                    OPERATOR SIGN IN
-                  </h1>
-                  <p className="text-xs sm:text-sm text-[#666666] font-body mb-6 leading-relaxed">
-                    Enter your credentials to access your terminal.
-                  </p>
-
-                  {/* Error Message */}
-                  {error && (
-                    <div
-                      className="border border-red-200 border-l-4 border-l-red-600 bg-red-50 text-red-900 p-3.5 text-xs font-mono rounded-none flex items-center gap-2.5 mb-5"
-                      role="alert"
-                    >
-                      <Icon name="alert" size={16} className="text-red-600 shrink-0" />
-                      <span>{error}</span>
-                    </div>
-                  )}
-
-                  {/* Login Form */}
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                      <label
-                        htmlFor="email"
-                        className="block font-mono-custom text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666666] mb-1.5"
-                      >
-                        Operator Email Address
-                      </label>
-                      <div className="relative">
-                        <input
-                          id="email"
-                          type="email"
-                          inputMode="email"
-                          autoComplete="username"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="admin@smartgeulisunpad.com"
-                          required
-                          className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#ea580c] focus:ring-2 focus:ring-[#ea580c]/20 transition-all pr-10"
-                        />
-                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#999999] pointer-events-none">
-                          <Icon name="user" size={16} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="password"
-                        className="block font-mono-custom text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666666] mb-1.5"
-                      >
-                        Station Password
-                      </label>
-                      <div className="relative">
-                        <input
-                          id="password"
-                          type={showPassword ? 'text' : 'password'}
-                          autoComplete="current-password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="••••••••"
-                          required
-                          className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#ea580c] focus:ring-2 focus:ring-[#ea580c]/20 transition-all pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#171717] transition-colors focus:outline-none"
-                          aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        >
-                          <Icon name="eye" size={16} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="pulse-btn w-full bg-[#000000] text-white py-3.5 font-heading text-sm uppercase tracking-[0.2em] hover:bg-[#ea580c] transition-all flex items-center justify-center gap-2 rounded-none font-semibold cursor-pointer disabled:opacity-50 mt-6"
-                    >
-                      <span>{loading ? 'AUTHENTICATING…' : 'SIGN IN TO STATION'}</span>
-                      <Icon name="arrow-right" size={16} />
-                    </button>
-                  </form>
+              <div className="notch-corner border border-[#eaeaea] bg-white p-6 sm:p-10 shadow-sm rounded-none">
+                {/* Station Authentication Tag */}
+                <div className="flex items-start gap-2.5 font-mono-custom text-[10px] sm:text-xs text-[#ea580c] tracking-[0.08em] sm:tracking-[0.25em] uppercase mb-2">
+                  <span className="w-6 h-[2px] bg-[#ea580c] shrink-0 mt-2"></span>
+                  <span className="min-w-0">STATION AUTHENTICATION · PACKHOUSE NETWORK</span>
                 </div>
 
-                {/* Left Footer Security / Protocol Badges */}
-                <div className="mt-8 pt-6 border-t border-[#eaeaea]">
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="border border-[#f0f0f0] bg-[#fafafa] p-2">
-                      <div className="font-mono-custom text-[9px] text-[#999999] uppercase tracking-wider">PROTOCOL</div>
-                      <div className="font-heading text-xs text-[#171717] uppercase tracking-wider font-semibold mt-0.5">TLS 1.3</div>
-                    </div>
-                    <div className="border border-[#f0f0f0] bg-[#fafafa] p-2">
-                      <div className="font-mono-custom text-[9px] text-[#999999] uppercase tracking-wider">TELEMETRY</div>
-                      <div className="font-heading text-xs text-[#171717] uppercase tracking-wider font-semibold mt-0.5">MODBUS RTU</div>
-                    </div>
-                    <div className="border border-[#f0f0f0] bg-[#fafafa] p-2">
-                      <div className="font-mono-custom text-[9px] text-[#999999] uppercase tracking-wider">STANDARDS</div>
-                      <div className="font-heading text-xs text-[#171717] uppercase tracking-wider font-semibold mt-0.5">GS1 DIGITAL</div>
+                <h1 className="font-display text-4xl sm:text-5xl tracking-tight text-[#171717] leading-none mb-2">
+                  OPERATOR SIGN IN
+                </h1>
+                <p className="text-xs sm:text-sm text-[#666666] font-body mb-6 leading-relaxed">
+                  Enter your credentials to access your terminal.
+                </p>
+
+                {/* Error Message */}
+                {error && (
+                  <div
+                    className="border border-red-200 border-l-4 border-l-red-600 bg-red-50 text-red-900 p-3.5 text-xs font-mono rounded-none flex items-center gap-2.5 mb-5"
+                    role="alert"
+                  >
+                    <Icon name="alert" size={16} className="text-red-600 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                {/* Login Form */}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="email"
+                      className="block font-mono-custom text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666666] mb-1.5"
+                    >
+                      Operator Email Address
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="email"
+                        type="email"
+                        inputMode="email"
+                        autoComplete="username"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="admin@smartgeulisunpad.com"
+                        required
+                        className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#ea580c] focus:ring-2 focus:ring-[#ea580c]/20 transition-all pr-10"
+                      />
+                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#999999] pointer-events-none">
+                        <Icon name="user" size={16} />
+                      </div>
                     </div>
                   </div>
-                </div>
+
+                  <div>
+                    <label
+                      htmlFor="password"
+                      className="block font-mono-custom text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666666] mb-1.5"
+                    >
+                      Station Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#ea580c] focus:ring-2 focus:ring-[#ea580c]/20 transition-all pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#171717] transition-colors focus:outline-none"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        <Icon name="eye" size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="pulse-btn w-full bg-[#000000] text-white py-3.5 font-heading text-sm uppercase tracking-[0.2em] hover:bg-[#ea580c] transition-all flex items-center justify-center gap-2 rounded-none font-semibold cursor-pointer disabled:opacity-50 mt-6"
+                  >
+                    <span>{loading ? 'AUTHENTICATING…' : 'SIGN IN TO STATION'}</span>
+                    <Icon name="arrow-right" size={16} />
+                  </button>
+                </form>
               </div>
             </div>
 
