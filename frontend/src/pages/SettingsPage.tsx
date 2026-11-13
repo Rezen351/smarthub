@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
+import Icon, { type IconName } from '../components/shared/Icon'
 import { Field, Input } from '../components/shared/Form'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import { api } from '../services/api'
+import PalletsPage from './PalletsPage'
 
 export interface ScaleConfig {
   ip: string
@@ -48,7 +51,7 @@ export const INITIAL_SETTINGS: SystemSettings = {
     port: '',
     slaveId: '1',
     weightRegister: '40001',
-    statusRegister: '40002',
+    statusRegister: '40011',
     capacityKg: '',
     stabilityGrams: '20',
   },
@@ -57,7 +60,7 @@ export const INITIAL_SETTINGS: SystemSettings = {
     port: '',
     slaveId: '1',
     weightRegister: '40001',
-    statusRegister: '40002',
+    statusRegister: '40011',
     capacityKg: '',
     stabilityGrams: '10',
   },
@@ -66,7 +69,7 @@ export const INITIAL_SETTINGS: SystemSettings = {
     port: '',
     slaveId: '1',
     weightRegister: '40001',
-    statusRegister: '40002',
+    statusRegister: '40011',
     capacityKg: '',
     stabilityGrams: '2',
     pouchToleranceGrams: '5',
@@ -98,6 +101,65 @@ export const INITIAL_SETTINGS: SystemSettings = {
 const STORAGE_KEY = 'smarthub_settings'
 
 export default function SettingsPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeSection = searchParams.get('section') === 'pallets' ? 'pallets' : 'devices'
+  const sections: Array<{ id: 'devices' | 'pallets'; label: string; icon: IconName }> = [
+    { id: 'devices', label: 'Devices', icon: 'settings' },
+    { id: 'pallets', label: 'Pallet Registry', icon: 'pallet' },
+  ]
+
+  const selectSection = (section: 'devices' | 'pallets') => {
+    setSearchParams({ section }, { replace: true })
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Settings"
+        subtitle="Manage connected devices and reusable pallets."
+      />
+
+      <div
+        className="inline-flex w-full border border-border bg-muted/40 p-1 sm:w-auto"
+        role="tablist"
+        aria-label="Settings sections"
+      >
+        {sections.map((section) => {
+          const isActive = activeSection === section.id
+          return (
+            <button
+              key={section.id}
+              id={`settings-tab-${section.id}`}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`settings-panel-${section.id}`}
+              onClick={() => selectSection(section.id)}
+              className={`flex min-h-10 flex-1 items-center justify-center gap-2 px-4 text-sm font-semibold transition-colors sm:flex-none ${
+                isActive
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
+              }`}
+            >
+              <Icon name={section.icon} size={16} />
+              {section.label}
+            </button>
+          )
+        })}
+      </div>
+
+      <section
+        id={`settings-panel-${activeSection}`}
+        role="tabpanel"
+        aria-labelledby={`settings-tab-${activeSection}`}
+      >
+        {activeSection === 'devices' ? <DeviceSettings /> : <PalletsPage embedded />}
+      </section>
+    </div>
+  )
+}
+
+function DeviceSettings() {
   const toast = useToast()
   const [form, setForm] = useState<SystemSettings>(() => {
     try {
@@ -149,6 +211,9 @@ export default function SettingsPage() {
               ip: s1.ip || next.intake.ip,
               port: String(s1.port || next.intake.port),
               capacityKg: String(s1.capacityKg || next.intake.capacityKg),
+              slaveId: String(s1.unitId || next.intake.slaveId),
+              weightRegister: String(s1.weightRegister || next.intake.weightRegister),
+              statusRegister: String(s1.statusRegister || next.intake.statusRegister),
             }
           }
           if (s2) {
@@ -157,6 +222,9 @@ export default function SettingsPage() {
               ip: s2.ip || next.grading.ip,
               port: String(s2.port || next.grading.port),
               capacityKg: String(s2.capacityKg || next.grading.capacityKg),
+              slaveId: String(s2.unitId || next.grading.slaveId),
+              weightRegister: String(s2.weightRegister || next.grading.weightRegister),
+              statusRegister: String(s2.statusRegister || next.grading.statusRegister),
             }
           }
           if (s3) {
@@ -165,6 +233,9 @@ export default function SettingsPage() {
               ip: s3.ip || next.packaging.ip,
               port: String(s3.port || next.packaging.port),
               capacityKg: String(s3.capacityKg || next.packaging.capacityKg),
+              slaveId: String(s3.unitId || next.packaging.slaveId),
+              weightRegister: String(s3.weightRegister || next.packaging.weightRegister),
+              statusRegister: String(s3.statusRegister || next.packaging.statusRegister),
             }
           }
           return next
@@ -220,21 +291,30 @@ export default function SettingsPage() {
 
   const handleTestConnection = async (stationId: string, stationLabel: string, ip: string, port: string) => {
     setTestingTarget(stationId)
+    const trimmedIp = (ip || '').trim()
+    const numPort = Number(port) || 502
+
+    if (!trimmedIp) {
+      toast.error(`Please enter an IP address for ${stationLabel} before testing.`)
+      setTestingTarget(null)
+      return
+    }
+
     try {
       // Test direct physical Modbus TCP socket connection via backend
-      const res = await api.scales.testConnection(stationId)
+      const res = await api.scales.testConnection(stationId, { ip: trimmedIp, port: numPort })
       if (res && res.online) {
         const normalizedStation = stationId.replace(/\D/g, '') as '01' | '02' | '03'
         if (normalizedStation in scaleOnline) {
           setScaleOnline((prev) => ({ ...prev, [normalizedStation]: true }))
         }
-      toast.success(res.message || `${stationLabel} is ready at ${ip}:${port}`)
+        toast.success(res.message || `${stationLabel} is ready at ${trimmedIp}:${numPort}`)
       } else {
         const normalizedStation = stationId.replace(/\D/g, '') as '01' | '02' | '03'
         if (normalizedStation in scaleOnline) {
           setScaleOnline((prev) => ({ ...prev, [normalizedStation]: false }))
         }
-      toast.warning(res?.message || `Could not reach ${stationLabel} at ${ip}:${port}`)
+        toast.warning(res?.message || `Could not reach ${stationLabel} at ${trimmedIp}:${numPort}`)
       }
     } catch (err: any) {
       toast.error(`Scale check failed: ${err.message || 'Scale unavailable'}`)
@@ -251,8 +331,9 @@ export default function SettingsPage() {
       return
     }
 
-    if (Object.values(form.printers).some((printer) => !printer.ip.trim() || Number(printer.port) <= 0 || Number(printer.port) > 65535)) {
-      toast.error('Valid Ethernet addresses and ports are required for both thermal printers.')
+    const configuredPrinters = Object.entries(form.printers).filter(([, printer]) => printer.ip.trim())
+    if (configuredPrinters.some(([, printer]) => Number(printer.port) <= 0 || Number(printer.port) > 65535)) {
+      toast.error('Configured thermal printers require a valid TCP port.')
       return
     }
 
@@ -265,16 +346,41 @@ export default function SettingsPage() {
       return
     }
 
+    const scales = [form.intake, form.grading, form.packaging]
+    if (scales.some((scale) => Number(scale.slaveId) < 1 || Number(scale.slaveId) > 247)) {
+      toast.error('Modbus Unit ID must be between 1 and 247.')
+      return
+    }
+    if (scales.some((scale) => Number(scale.weightRegister) < 40001 || Number(scale.weightRegister) > 40030)) {
+      toast.error('Weight Start Register must be between 40001 and 40030.')
+      return
+    }
+    if (scales.some((scale) => Number(scale.statusRegister) < 40001 || Number(scale.statusRegister) > 40031)) {
+      toast.error('Status Register must be between 40001 and 40031.')
+      return
+    }
+
     setSaving(true)
     try {
       // Update backend Modbus TCP configuration for each station
-      await Promise.all([
-        api.scales.updateConfig('01', form.intake.ip.trim(), Number(form.intake.port), Number(form.intake.capacityKg)),
-        api.scales.updateConfig('02', form.grading.ip.trim(), Number(form.grading.port), Number(form.grading.capacityKg)),
-        api.scales.updateConfig('03', form.packaging.ip.trim(), Number(form.packaging.port), Number(form.packaging.capacityKg)),
-        api.printers.update('reception', form.printers.reception.ip.trim(), Number(form.printers.reception.port)),
-        api.printers.update('packaging', form.printers.packaging.ip.trim(), Number(form.printers.packaging.port)),
-      ])
+      const scaleUpdates = [
+        api.scales.updateConfig('01', {
+          host: form.intake.ip.trim(), port: Number(form.intake.port), capacityKg: Number(form.intake.capacityKg),
+          unitId: Number(form.intake.slaveId), weightRegister: Number(form.intake.weightRegister), statusRegister: Number(form.intake.statusRegister),
+        }),
+        api.scales.updateConfig('02', {
+          host: form.grading.ip.trim(), port: Number(form.grading.port), capacityKg: Number(form.grading.capacityKg),
+          unitId: Number(form.grading.slaveId), weightRegister: Number(form.grading.weightRegister), statusRegister: Number(form.grading.statusRegister),
+        }),
+        api.scales.updateConfig('03', {
+          host: form.packaging.ip.trim(), port: Number(form.packaging.port), capacityKg: Number(form.packaging.capacityKg),
+          unitId: Number(form.packaging.slaveId), weightRegister: Number(form.packaging.weightRegister), statusRegister: Number(form.packaging.statusRegister),
+        }),
+      ]
+      const printerUpdates = configuredPrinters.map(([station, printer]) =>
+        api.printers.update(station as 'reception' | 'packaging', printer.ip.trim(), Number(printer.port)),
+      )
+      await Promise.all([...scaleUpdates, ...printerUpdates])
 
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(form))
@@ -302,11 +408,21 @@ export default function SettingsPage() {
 
   const handleTestPrinter = async (station: 'reception' | 'packaging') => {
     setTestingTarget(`printer-${station}`)
+    const printer = form.printers[station]
+    const ip = (printer.ip || '').trim()
+    const port = Number(printer.port) || 9100
+
+    if (!ip) {
+      toast.error('Please enter a printer IP address before testing.')
+      setTestingTarget(null)
+      return
+    }
+
     try {
-      const result = await api.printers.test(station)
+      const result = await api.printers.test(station, { ip, port })
       setForm((prev) => ({ ...prev, printers: { ...prev.printers, [station]: { ...prev.printers[station], status: result?.online ? 'ONLINE' : 'OFFLINE' } } }))
-      if (result?.online) toast.success(`${station === 'reception' ? 'Reception' : 'Packaging'} printer is online.`)
-      else toast.warning(`${station === 'reception' ? 'Reception' : 'Packaging'} printer is offline.`)
+      if (result?.online) toast.success(`${station === 'reception' ? 'Reception' : 'Packaging'} printer is online at ${ip}:${port}.`)
+      else toast.warning(`${station === 'reception' ? 'Reception' : 'Packaging'} printer is offline at ${ip}:${port}.`)
     } catch (err: any) {
       toast.error(`Printer check failed: ${err.message || 'Printer unavailable'}`)
     } finally {
@@ -383,58 +499,15 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Settings"
-        subtitle="Scale connections and thermal printer configuration."
-        actions={
+      <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Device Settings</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Scale and thermal printer connections.</p>
+        </div>
+        <div>
           <Badge tone="success" dot live>
             3 Stations · 2 Printers
           </Badge>
-        }
-      />
-
-      {/* Station overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-3">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Station 01 · Reception</p>
-          <div>
-            <p className="text-xs text-muted-foreground">Scale</p>
-            <p className="font-bold font-mono tracking-tight text-foreground">{form.intake.ip}:{form.intake.port}</p>
-            <p className="text-xs text-muted-foreground">{form.intake.capacityKg || '—'} kg Floor Scale</p>
-          </div>
-          <div className="border-t border-border pt-3">
-            <p className="text-xs text-muted-foreground">Printer</p>
-            <p className="font-bold font-mono tracking-tight text-foreground">{form.printers.reception.ip || 'Not configured'}</p>
-            <p className="text-xs text-muted-foreground">{form.printers.reception.model} · {form.printers.reception.paperWidthMm} mm · {form.printers.reception.status === 'ONLINE' ? 'Online' : 'Offline'}</p>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-3">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Station 02 · Sorting</p>
-          <div>
-            <p className="text-xs text-muted-foreground">Scale</p>
-            <p className="font-bold font-mono tracking-tight text-foreground">{form.grading.ip}:{form.grading.port}</p>
-            <p className="text-xs text-muted-foreground">{form.grading.capacityKg || '—'} kg Floor Scale</p>
-          </div>
-          <div className="border-t border-border pt-3">
-            <p className="text-xs text-muted-foreground">Printer</p>
-            <p className="font-bold tracking-tight text-foreground">Not assigned</p>
-            <p className="text-xs text-muted-foreground">No thermal printer</p>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-3">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Station 03 · Packaging</p>
-          <div>
-            <p className="text-xs text-muted-foreground">Scale</p>
-            <p className="font-bold font-mono tracking-tight text-foreground">{form.packaging.ip}:{form.packaging.port}</p>
-            <p className="text-xs text-muted-foreground">{form.packaging.capacityKg || '—'} kg Bench Scale</p>
-          </div>
-          <div className="border-t border-border pt-3">
-            <p className="text-xs text-muted-foreground">Printer</p>
-            <p className="font-bold font-mono tracking-tight text-foreground">{form.printers.packaging.ip || 'Not configured'}</p>
-            <p className="text-xs text-muted-foreground">{form.printers.packaging.model} · {form.printers.packaging.paperWidthMm} mm · {form.printers.packaging.status === 'ONLINE' ? 'Online' : 'Offline'}</p>
-          </div>
         </div>
       </div>
 
@@ -482,10 +555,12 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Device Number" htmlFor="intake-slave">
+            <Field label="Modbus Unit ID" htmlFor="intake-slave" hint="Valid range: 1–247">
               <Input
                 id="intake-slave"
                 type="number"
+                min="1"
+                max="247"
                 mono
                 value={form.intake.slaveId}
                 onChange={(e) =>
@@ -497,10 +572,12 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Weight Reading" htmlFor="intake-reg-weight" required>
+            <Field label="Weight Start Register" htmlFor="intake-reg-weight" required hint="FLOAT32 uses this register and the next word">
               <Input
                 id="intake-reg-weight"
                 type="number"
+                min="40001"
+                max="40030"
                 mono
                 value={form.intake.weightRegister}
                 onChange={(e) =>
@@ -512,10 +589,12 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Status Reading" htmlFor="intake-reg-status">
+            <Field label="Status Register" htmlFor="intake-reg-status" hint="Firmware default: 40011">
               <Input
                 id="intake-reg-status"
                 type="number"
+                min="40001"
+                max="40031"
                 mono
                 value={form.intake.statusRegister}
                 onChange={(e) =>
@@ -616,10 +695,12 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Device Number" htmlFor="grading-slave">
+            <Field label="Modbus Unit ID" htmlFor="grading-slave" hint="Valid range: 1–247">
               <Input
                 id="grading-slave"
                 type="number"
+                min="1"
+                max="247"
                 mono
                 value={form.grading.slaveId}
                 onChange={(e) =>
@@ -631,10 +712,12 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Weight Reading" htmlFor="grading-reg-weight" required>
+            <Field label="Weight Start Register" htmlFor="grading-reg-weight" required hint="FLOAT32 uses this register and the next word">
               <Input
                 id="grading-reg-weight"
                 type="number"
+                min="40001"
+                max="40030"
                 mono
                 value={form.grading.weightRegister}
                 onChange={(e) =>
@@ -646,10 +729,12 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Status Reading" htmlFor="grading-reg-status">
+            <Field label="Status Register" htmlFor="grading-reg-status" hint="Firmware default: 40011">
               <Input
                 id="grading-reg-status"
                 type="number"
+                min="40001"
+                max="40031"
                 mono
                 value={form.grading.statusRegister}
                 onChange={(e) =>
@@ -749,10 +834,12 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Device Number" htmlFor="pkg-slave">
+            <Field label="Modbus Unit ID" htmlFor="pkg-slave" hint="Valid range: 1–247">
               <Input
                 id="pkg-slave"
                 type="number"
+                min="1"
+                max="247"
                 mono
                 value={form.packaging.slaveId}
                 onChange={(e) =>
@@ -764,10 +851,12 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Weight Reading" htmlFor="pkg-reg-weight" required>
+            <Field label="Weight Start Register" htmlFor="pkg-reg-weight" required hint="FLOAT32 uses this register and the next word">
               <Input
                 id="pkg-reg-weight"
                 type="number"
+                min="40001"
+                max="40030"
                 mono
                 value={form.packaging.weightRegister}
                 onChange={(e) =>
@@ -779,10 +868,12 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Status Reading" htmlFor="pkg-reg-status">
+            <Field label="Status Register" htmlFor="pkg-reg-status" hint="Firmware default: 40011">
               <Input
                 id="pkg-reg-status"
                 type="number"
+                min="40001"
+                max="40031"
                 mono
                 value={form.packaging.statusRegister}
                 onChange={(e) =>

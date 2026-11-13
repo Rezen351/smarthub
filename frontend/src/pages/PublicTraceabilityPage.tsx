@@ -67,7 +67,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
       harvestDate: formatSafeDate(w.receivedAt),
       intakeDate: formatSafeDateTime(w.receivedAt),
       packDate: w.approvedAt ? formatSafeDateTime(w.approvedAt) : 'Pending Sorting',
-      gs1Uri: `https://id.enyx.io/01/08901234567890/21/${w.code || code}`,
+      gs1Uri: `https://id.smartgeulis.id/01/08901234567890/21/${w.code || code}`,
       gtin: '08901234567890',
       batchLot: w.code || code,
       serialNumber: w.code || code,
@@ -84,7 +84,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
         },
         {
           stage: 'Station 01: Reception & Weighing',
-          location: 'Smart Hub Reception Bay (Scale #01)',
+          location: 'SmartGeulis Reception Bay (Scale #01)',
           timestamp: formatSafeDateTime(w.receivedAt),
           operator: 'Operator',
           completed: true,
@@ -131,7 +131,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
       harvestDate: formatSafeDate(intake.receivedAt),
       intakeDate: formatSafeDateTime(intake.receivedAt),
       packDate: formatSafeDateTime(pkg.packedAt),
-      gs1Uri: `https://id.enyx.io/01/08901234567890/21/${pkg.code || code}`,
+      gs1Uri: `https://id.smartgeulis.id/01/08901234567890/21/${pkg.code || code}`,
       gtin: '08901234567890',
       batchLot: pallet.code || pkg.code,
       serialNumber: pkg.code,
@@ -148,7 +148,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
         },
         {
           stage: 'Station 01: Reception & Intake',
-          location: 'Smart Hub Reception Bay',
+          location: 'SmartGeulis Reception Bay',
           timestamp: formatSafeDateTime(intake.receivedAt),
           operator: 'Receiving Operator',
           completed: true,
@@ -200,7 +200,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
     harvestDate: formatSafeDate(intake.receivedAt),
     intakeDate: formatSafeDateTime(intake.receivedAt),
     packDate: formatSafeDateTime(pallet.createdAt),
-    gs1Uri: `https://id.enyx.io/01/08901234567890/21/${pallet.code || code}`,
+    gs1Uri: `https://id.smartgeulis.id/01/08901234567890/21/${pallet.code || code}`,
     gtin: '08901234567890',
     batchLot: pallet.code || code,
     serialNumber: pallet.code || code,
@@ -217,7 +217,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
       },
       {
         stage: 'Station 01: Reception & Intake',
-        location: 'Smart Hub Reception Bay',
+        location: 'SmartGeulis Reception Bay',
         timestamp: formatSafeDateTime(intake.receivedAt),
         operator: 'Receiving Operator',
         completed: true,
@@ -306,15 +306,15 @@ export default function PublicTraceabilityPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa] text-[#171717] font-['Archivo',sans-serif] selection:bg-[#f0fdf4] selection:text-[#15803d] flex flex-col">
+    <div className="min-h-screen bg-[#fafafa] text-[#171717] font-['Archivo',sans-serif] selection:bg-[#fff7ed] selection:text-[#ea580c] flex flex-col">
       {/* ── Top Header Bar ── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#eaeaea]">
         <div className="public-trace-header max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="public-trace-brand flex items-center gap-3 group min-w-0" aria-label="ENYX-ENTERPRISE home">
+          <Link to="/" className="public-trace-brand flex items-center gap-3 group min-w-0" aria-label="SmartGeulis home">
             <Logo className="h-8 w-auto" markOnly />
             <div className="public-trace-brand-copy min-w-0">
               <div className="public-trace-brand-title font-display text-2xl leading-none tracking-wider text-[#171717] flex items-center gap-2">
-                ENYX-ENTERPRISE
+                SmartGeulis
               </div>
               <div className="public-trace-brand-subtitle font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
                 TRACEABILITY SYSTEM
@@ -369,7 +369,7 @@ export default function PublicTraceabilityPage() {
                   value={queryCode}
                   onChange={(e) => setQueryCode(e.target.value)}
                   placeholder="e.g. PCH-PLT-20260914-0001-001 or PLT-20261011-0042"
-                  className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#229856] focus:ring-2 focus:ring-[#229856]/20 transition-all"
+                  className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#ea580c] focus:ring-2 focus:ring-[#ea580c]/20 transition-all"
                 />
                 {queryCode && (
                   <button
@@ -413,7 +413,7 @@ export default function PublicTraceabilityPage() {
             <button
               type="button"
               onClick={() => handleSelectSampleCode('WRG-20261026-0001')}
-              className="text-xs font-mono bg-[#f0fdf4] text-[#15803d] hover:bg-[#dcfce7] border border-[#bbf7d0] px-2.5 py-1 rounded-none transition-colors"
+              className="text-xs font-mono bg-[#fff7ed] text-[#ea580c] hover:bg-[#ffedd5] border border-[#fed7aa] px-2.5 py-1 rounded-none transition-colors"
             >
               Intake Waring (WRG-20261026-0001)
             </button>
@@ -481,7 +481,7 @@ export default function PublicTraceabilityPage() {
                     {result.code}
                   </h2>
                   <p className="text-xs text-[#666666] font-mono mt-1">
-                    Product Link: <a href={result.gs1Uri} target="_blank" rel="noreferrer" className="text-[#15803d] hover:underline">Open link</a>
+                    Product Link: <a href={result.gs1Uri} target="_blank" rel="noreferrer" className="text-[#ea580c] hover:underline">Open link</a>
                   </p>
                 </div>
 
@@ -591,7 +591,7 @@ export default function PublicTraceabilityPage() {
                     <div
                       className={`absolute -left-[31px] sm:-left-[39px] top-1 w-6 h-6 rounded-none flex items-center justify-center text-xs font-bold transition-all ${
                         step.completed
-                          ? 'bg-[#15803d] text-white shadow-[0_0_0_4px_#f0fdf4]'
+                          ? 'bg-[#ea580c] text-white shadow-[0_0_0_4px_#fff7ed]'
                           : 'bg-[#e5e7eb] text-[#9ca3af]'
                       }`}
                     >
@@ -606,10 +606,9 @@ export default function PublicTraceabilityPage() {
                         </span>
                       </div>
 
-                      <p className="text-xs font-medium text-[#15803d]">
+                      <p className="text-xs font-medium text-[#ea580c]">
                         {step.location} · <span className="text-[#666666]">{step.operator}</span>
                       </p>
-
                       {step.details && (
                         <p className="text-xs text-[#525252] bg-[#f9fafb] p-2.5 rounded-none border border-[#f3f4f6] mt-1.5">
                           {step.details}
@@ -649,15 +648,15 @@ export default function PublicTraceabilityPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-[#eaeaea] bg-white py-6 text-xs text-[#666666] mt-auto">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} ENYX-ENTERPRISE. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} SmartGeulis. All rights reserved.</p>
           <div className="flex items-center gap-3">
             <span className="bg-[#f5f5f5] px-2 py-0.5 rounded-none font-mono border border-[#eaeaea]">
-              Type: enyx-enterprise
+              Type: smartgeulis
             </span>
             <span>Traceability System v1.0.0</span>
           </div>
-          <Link to="/" className="text-[#15803d] hover:underline font-medium">
-            Smart Hub Overview
+          <Link to="/" className="text-[#ea580c] hover:underline font-medium">
+            SmartGeulis Overview
           </Link>
         </div>
       </footer>

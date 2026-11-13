@@ -1,5 +1,5 @@
 % ============================================================================
-% Laporan Sistem ENYX-Smart Hub
+% Laporan Sistem SmartGeulis
 %
 % KOMPILASI (terverifikasi 25 Oktober 2026):
 %   cd docs && pdflatex -interaction=nonstopmode laporan.tex && pdflatex -interaction=nonstopmode laporan.tex
@@ -34,10 +34,10 @@
 \definecolor{rowgray}{HTML}{F3F4F6}
 
 \title{%
-  \textbf{Laporan Sistem ENYX-Smart Hub}\\[6pt]
+  \textbf{Laporan Sistem SmartGeulis}\\[6pt]
   \large Tata Kelola Pascapanen \& Pengemasan Kentang Berbasis IoT\\ dengan Tiga Konsol Stasiun Kerja Fisik, Palet Grade Ber-QR Tertempel,\\ Mesin Fisik Mandiri, Traceability GS1, Timbang Susut, \& RBAC Terpadu%
 }
-\author{ENYX-Smart Hub --- Tim Pengembangan}
+\author{SmartGeulis --- Tim Pengembangan}
 \date{Versi 4.1 --- 25 Oktober 2026}
 
 \begin{document}
@@ -46,7 +46,7 @@
 
 \begin{abstract}
 \noindent
-Laporan ini menyajikan spesifikasi arsitektur dan keputusan desain sistem ENYX-Smart Hub Versi 4.1: platform tata kelola penanganan pascapanen dan pengemasan kentang berbasis IoT yang disederhanakan ke dalam tiga konsol stasiun kerja fisik utama. Ketiga konsol ini berpadanan langsung 1:1 dengan tiga unit timbangan digital industri berprotokol Modbus TCP port 502, yaitu Konsol 01 Penerimaan (Timbangan 01), Konsol 02 Sortir dan Grading (Timbangan 02), serta Konsol 03 Pengepakan dan Pengiriman (Timbangan 03). Integrasi ini mencakup pelabelan waring intake, gudang penyangga antrean tertib FIFO, penyortiran bertaut palet, pemilahan ukuran mekanis fisik mandiri, pencatatan status pencucian pasca-sortir, kalkulasi otomatis penyusutan bobot, penautan kode QR fisik yang sudah tertempel secara permanen pada palet grade tanpa memerlukan pencetakan label tambahan, pelabelan ganda produksi pouch retail berstandar QR GS1 Digital Link dan kemasan ekspor barcode GS1 ITF-14, serta pengelolaan gudang produk jadi. Seluruh mesin pemilah dan pencucian beroperasi secara mandiri (\emph{stand-alone}), di mana sistem perangkat lunak murni bertindak sebagai pencatat (\emph{recorder}). Antarmuka \emph{Focus Mode} dioptimalkan menjadi sangat ringkas untuk meminimalkan beban kognitif operator. Sistem menerapkan model RBAC 3-role (Admin, Operator terpadu dengan navigasi modular stasiun kerja, dan Petani) serta akses penelusuran publik untuk konsumen tanpa login. Seluruh diagram visual, alur kerja operasional, dan skema basis data dikelola pada dokumen \texttt{docs/DIAGRAM.md}.
+Laporan ini menyajikan spesifikasi arsitektur dan keputusan desain sistem SmartGeulis Versi 4.1: platform tata kelola penanganan pascapanen dan pengemasan kentang berbasis IoT yang disederhanakan ke dalam tiga konsol stasiun kerja fisik utama. Ketiga konsol ini berpadanan langsung 1:1 dengan tiga unit timbangan digital industri berprotokol Modbus TCP port 502, yaitu Konsol 01 Penerimaan (Timbangan 01), Konsol 02 Sortir dan Grading (Timbangan 02), serta Konsol 03 Pengepakan dan Pengiriman (Timbangan 03). Integrasi ini mencakup pelabelan waring intake, gudang penyangga antrean tertib FIFO, penyortiran bertaut palet, pemilahan ukuran mekanis fisik mandiri, pencatatan status pencucian pasca-sortir, kalkulasi otomatis penyusutan bobot, penautan kode QR fisik yang sudah tertempel secara permanen pada palet grade tanpa memerlukan pencetakan label tambahan, pelabelan ganda produksi pouch retail berstandar QR GS1 Digital Link dan kemasan ekspor barcode GS1 ITF-14, serta pengelolaan gudang produk jadi. Seluruh mesin pemilah dan pencucian beroperasi secara mandiri (\emph{stand-alone}), di mana sistem perangkat lunak murni bertindak sebagai pencatat (\emph{recorder}). Antarmuka \emph{Focus Mode} dioptimalkan menjadi sangat ringkas untuk meminimalkan beban kognitif operator. Sistem menerapkan model RBAC 3-role (Admin, Operator terpadu dengan navigasi modular stasiun kerja, dan Petani) serta akses penelusuran publik untuk konsumen tanpa login. Seluruh diagram visual, alur kerja operasional, dan skema basis data dikelola pada dokumen \texttt{docs/DIAGRAM.md}.
 \end{abstract}
 
 \tableofcontents
@@ -59,7 +59,7 @@ Laporan ini menyajikan spesifikasi arsitektur dan keputusan desain sistem ENYX-S
 \subsection{Latar Belakang}
 Rantai pasok komoditas hortikultura kentang menghadapi tantangan nyata pada penanganan pascapanen: pencatatan setoran petani sering kali tidak transparan, penyusutan bobot akibat tanah, lumpur, dan kentang afkir tidak terukur secara objektif, serta penelusuran asal-usul produk belum terintegrasi dari kebun hingga konsumen akhir. Selain itu, pasar ritel modern dan pasar ekspor menuntut identitas produk berstandar global GS1 serta konsistensi mutu yang terjamin.
 
-ENYX-Smart Hub mendigitalkan seluruh tahapan operasional fasilitas pengemasan kentang melalui konsolidasi praktis menjadi \textbf{3 Konsol Stasiun Kerja Fisik} yang menaungi fungsi operasional inti:
+SmartGeulis mendigitalkan seluruh tahapan operasional fasilitas pengemasan kentang melalui konsolidasi praktis menjadi \textbf{3 Konsol Stasiun Kerja Fisik} yang menaungi fungsi operasional inti:
 \begin{enumerate}
   \item \textbf{Konsol 01: Penerimaan \& Waring Intake} (Timbangan 01 kapasitas 150 kg):
   Identifikasi petani melalui kartu QR, penimbangan bruto panen, penerbitan label identitas waring (\texttt{WRG-\ldots}), pencetakan struk tanda terima resmi, dan pencatatan otomatis ke dalam antrean gudang penyangga berbasis sistem FIFO.
@@ -85,7 +85,7 @@ Sistem beroperasi penuh untuk \textbf{komoditas Kentang} (Grade A, B, C, Reject)
 \section{Keputusan Desain}
 % ============================================================================
 
-Tabel berikut merangkum keputusan desain utama sistem ENYX-Smart Hub:
+Tabel berikut merangkum keputusan desain utama sistem SmartGeulis:
 
 \begin{longtable}{@{}>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}p{6.2cm}>{\raggedright\arraybackslash}p{4.6cm}@{}}
 \toprule
@@ -136,14 +136,14 @@ Application Level & PC Server lokal fasilitas: Nginx, Express Backend, Modbus TC
 \hline
 Cloud Level & Database Cloud (Neon / Supabase) & Cadangan terjadwal berkala dan pemulihan data aman \\
 \hline
-Enterprise Level & Domain HTTPS publik (\texttt{trace.enyx.id}), RBAC 3-Role, dan halaman penelusuran publik & Portal manajemen eksekutif, konsol stasiun kerja operator, portal petani, dan verifikasi konsumen \\
+Enterprise Level & Domain HTTPS publik (\texttt{trace.smartgeulis.id}), RBAC 3-Role, dan halaman penelusuran publik & Portal manajemen eksekutif, konsol stasiun kerja operator, portal petani, dan verifikasi konsumen \\
 \bottomrule
 \end{longtable}
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{arsitektur}
-  \caption{Diagram arsitektur sistem ENYX-Smart Hub 5-Layer dengan 3 titik timbangan Modbus TCP dan model RBAC 3-role.\newline
+  \caption{Diagram arsitektur sistem SmartGeulis 5-Layer dengan 3 titik timbangan Modbus TCP dan model RBAC 3-role.\newline
   (Sumber: \texttt{docs/DIAGRAM.md})}
 \end{figure}
 
@@ -244,7 +244,7 @@ Kemasan Ekspor & \texttt{\{GTIN-14\}} & Barcode GS1 ITF-14 pada kardus/karung ek
 URI pada label QR kemasan pouch retail mengikuti struktur resmi GS1 Digital Link:
 {\scriptsize
 \begin{verbatim}
-https://trace.enyx.id/01/899001000001/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001
+https://trace.smartgeulis.id/01/899001000001/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001
                    |                |                    |
                  AI 01            AI 10                 AI 21
                (GTIN-13)       (batch/lot)           (serial unik)
@@ -261,7 +261,7 @@ Basis data relasional PostgreSQL mengelola data transaksi dari penerimaan hingga
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.72\textwidth]{database}
-  \caption{Diagram relasi entitas basis data ENYX-Smart Hub.\newline (Sumber: \texttt{docs/DIAGRAM.md})}
+  \caption{Diagram relasi entitas basis data SmartGeulis.\newline (Sumber: \texttt{docs/DIAGRAM.md})}
 \end{figure}
 
 \subsection{Daftar Entitas Inti}
@@ -435,6 +435,6 @@ Peluncuran MVP dinyatakan berhasil apabila memenuhi indikator kinerja utama:
 \section{Penutup}
 % ============================================================================
 
-Laporan resmi Versi 4.1 ini mendokumentasikan pembaruan menyeluruh sistem ENYX-Smart Hub dengan konsolidasi praktis menjadi 3 konsol stasiun kerja fisik yang berpadanan langsung dengan 3 unit timbangan Modbus TCP port 502, pemanfaatan palet ber-QR permanen tanpa pencetakan label grade berulang, pemisahan kendali fisik mesin yang mandiri dengan sistem sebagai pencatat data, Focus Mode yang ringkas, kalkulasi penyusutan bobot otomatis, serta model RBAC 3-role yang efisien bagi operator lapangan. Dengan integrasi label standar internasional GS1 Digital Link dan ITF-14, fasilitas pengemasan kentang memiliki kapabilitas tinggi untuk memenuhi standar mutu pasar ritel modern dan ekspor internasional.
+Laporan resmi Versi 4.1 ini mendokumentasikan pembaruan menyeluruh sistem SmartGeulis dengan konsolidasi praktis menjadi 3 konsol stasiun kerja fisik yang berpadanan langsung dengan 3 unit timbangan Modbus TCP port 502, pemanfaatan palet ber-QR permanen tanpa pencetakan label grade berulang, pemisahan kendali fisik mesin yang mandiri dengan sistem sebagai pencatat data, Focus Mode yang ringkas, kalkulasi penyusutan bobot otomatis, serta model RBAC 3-role yang efisien bagi operator lapangan. Dengan integrasi label standar internasional GS1 Digital Link dan ITF-14, fasilitas pengemasan kentang memiliki kapabilitas tinggi untuk memenuhi standar mutu pasar ritel modern dan ekspor internasional.
 
 \end{document}

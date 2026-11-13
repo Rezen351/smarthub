@@ -1,12 +1,21 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react'
 import { api } from '../services/api'
+import { resolveFarmerId } from '../lib/authUser'
 
 export interface User {
   id: string
   email: string
   name: string
   role: 'ADMIN' | 'OPERATOR' | 'FARMER'
+  cardCode?: string
+  address?: string
   farmerId?: string
+  farmerProfile?: {
+    code?: string
+    phone?: string
+    address?: string
+    village?: string
+  }
 }
 
 interface AuthContextType {
@@ -14,6 +23,7 @@ interface AuthContextType {
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => void
+  refreshUser: () => Promise<User | null>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -24,7 +34,10 @@ function toUser(raw: any): User {
     email: raw.email,
     name: raw.name,
     role: raw.role,
-    farmerId: raw.farmerProfile?.code || undefined,
+    cardCode: raw.cardCode,
+    address: raw.address,
+    farmerId: resolveFarmerId(raw),
+    farmerProfile: raw.farmerProfile,
   }
 }
 
@@ -73,8 +86,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }
 
+  const refreshUser = async () => {
+    try {
+      const data = await api.auth.me()
+      if (data) {
+        const u = toUser(data)
+        setUser(u)
+        localStorage.setItem('user', JSON.stringify(u))
+        return u
+      }
+    } catch {
+      // ignore
+    }
+    return null
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

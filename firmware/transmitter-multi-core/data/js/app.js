@@ -1,5 +1,5 @@
 /**
- * E-Tani Smart Hub - Weight Transmitter Client Application
+ * enyx-weight-transmitter Client Application
  * Communicates with ESP32 WebPortal endpoints via JSON API.
  */
 
@@ -36,6 +36,12 @@
     wifiFields: el('wifiFields'),
     ethernetFields: el('ethernetFields'),
     wifiMode: el('wifiMode'),
+    wifiDhcp: el('wifiDhcp'),
+    wifiStaticFields: el('wifiStaticFields'),
+    wifiStaticIp: el('wifiStaticIp'),
+    wifiStaticGateway: el('wifiStaticGateway'),
+    wifiStaticSubnet: el('wifiStaticSubnet'),
+    wifiStaticDns: el('wifiStaticDns'),
     w5500Dhcp: el('w5500Dhcp'),
     w5500StaticIp: el('w5500StaticIp'),
     w5500StaticGateway: el('w5500StaticGateway'),
@@ -49,6 +55,7 @@
 
     knownKg: el('knownKg'),
     btnTare: el('btnTare'),
+    btnZero: el('btnZero'),
     btnCapturePoint: el('btnCapturePoint'),
     btnApplyMulti: el('btnApplyMulti'),
     btnClearPoints: el('btnClearPoints'),
@@ -221,12 +228,19 @@
       });
 
       ui.calibPointsBody.querySelectorAll('button[data-idx]').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
           const idx = parseInt(btn.getAttribute('data-idx'), 10);
-          calibPoints.splice(idx, 1);
-          saveCalibPointsToStorage();
-          updateAverage();
-          renderCalibPoints();
+          btn.disabled = true;
+          const res = await apiCall(`/api/calibration/delete?index=${encodeURIComponent(idx)}`, {
+            method: 'POST'
+          });
+          if (!res || !res.ok) {
+            btn.disabled = false;
+            showToast((res && res.message) || 'Failed to delete calibration point', true);
+            return;
+          }
+          await loadCalibrationPoints();
+          showToast(res.message || 'Calibration point deleted');
         });
       });
     }
@@ -282,12 +296,25 @@
   }
 
   function validateNetworkForm() {
-    const useDhcp = ui.w5500Dhcp ? ui.w5500Dhcp.value === 'false' : false;
+    const selected = document.querySelector('input[name="transportMode"]:checked');
+    const isEthernet = selected && selected.value === '1';
+    const useDhcp = isEthernet
+      ? (!ui.w5500Dhcp || ui.w5500Dhcp.value === 'true')
+      : (!ui.wifiDhcp || ui.wifiDhcp.value === 'true');
     if (useDhcp) return true;
-    const ip = ui.w5500StaticIp ? ui.w5500StaticIp.value.trim() : '';
-    const gw = ui.w5500StaticGateway ? ui.w5500StaticGateway.value.trim() : '';
-    const sn = ui.w5500StaticSubnet ? ui.w5500StaticSubnet.value.trim() : '';
-    const dns = ui.w5500StaticDns ? ui.w5500StaticDns.value.trim() : '';
+
+    const ip = isEthernet
+      ? (ui.w5500StaticIp ? ui.w5500StaticIp.value.trim() : '')
+      : (ui.wifiStaticIp ? ui.wifiStaticIp.value.trim() : '');
+    const gw = isEthernet
+      ? (ui.w5500StaticGateway ? ui.w5500StaticGateway.value.trim() : '')
+      : (ui.wifiStaticGateway ? ui.wifiStaticGateway.value.trim() : '');
+    const sn = isEthernet
+      ? (ui.w5500StaticSubnet ? ui.w5500StaticSubnet.value.trim() : '')
+      : (ui.wifiStaticSubnet ? ui.wifiStaticSubnet.value.trim() : '');
+    const dns = isEthernet
+      ? (ui.w5500StaticDns ? ui.w5500StaticDns.value.trim() : '')
+      : (ui.wifiStaticDns ? ui.wifiStaticDns.value.trim() : '');
     if (!isValidIp(ip)) {
       showToast('Invalid static IP address. Use format: 192.168.1.100', true);
       return false;
@@ -386,7 +413,7 @@
     }
 
     if (ui.valWifiAp) {
-      ui.valWifiAp.textContent = `${w.apSsid || 'ENYX-SMARTHUB'} @ ${w.apIp || '192.168.4.1'}`;
+      ui.valWifiAp.textContent = `${w.apSsid || 'SMARTGEULIS-HUB'} @ ${w.apIp || '192.168.4.1'}`;
     }
 
     if (ui.valTransportMode) {
@@ -447,6 +474,11 @@
     if (ui.eid) ui.eid.value = cfg.entIdentity || '';
     if (ui.eusr) ui.eusr.value = cfg.entUsername || '';
     if (ui.epwd) ui.epwd.value = cfg.entPassword || '';
+    if (ui.wifiDhcp) ui.wifiDhcp.value = cfg.wifiUseDhcp ? 'true' : 'false';
+    if (ui.wifiStaticIp) ui.wifiStaticIp.value = cfg.wifiStaticIp || '';
+    if (ui.wifiStaticGateway) ui.wifiStaticGateway.value = cfg.wifiStaticGateway || '';
+    if (ui.wifiStaticSubnet) ui.wifiStaticSubnet.value = cfg.wifiStaticSubnet || '';
+    if (ui.wifiStaticDns) ui.wifiStaticDns.value = cfg.wifiStaticDns || '';
 
     if (ui.transportMode) {
       const modeVal = String(cfg.transportMode || 0);
@@ -486,12 +518,23 @@
     if (ui.pskGroup) {
       ui.pskGroup.style.display = isEnterprise ? 'none' : 'block';
     }
+    updateWifiIpVisibility();
+  }
+
+  function updateWifiIpVisibility() {
+    if (!ui.wifiStaticFields) return;
+    const uplinkEnabled = !ui.wifiMode || ui.wifiMode.value !== '0';
+    const useStatic = ui.wifiDhcp && ui.wifiDhcp.value === 'false';
+    ui.wifiStaticFields.style.display = uplinkEnabled && useStatic ? 'block' : 'none';
   }
 
   // Event Listeners Setup
   function initEvents() {
     if (ui.wifiMode) {
       ui.wifiMode.addEventListener('change', updateModeVisibility);
+    }
+    if (ui.wifiDhcp) {
+      ui.wifiDhcp.addEventListener('change', updateWifiIpVisibility);
     }
 
     document.querySelectorAll('input[name="transportMode"]').forEach(radio => {
@@ -511,13 +554,18 @@
         const eid  = encodeURIComponent(ui.eid.value.trim());
         const eusr = encodeURIComponent(ui.eusr.value.trim());
         const epwd = encodeURIComponent(ui.epwd.value);
+        const wifiUseDhcp = ui.wifiDhcp ? ui.wifiDhcp.value : 'true';
+        const wifiStaticIp = encodeURIComponent(ui.wifiStaticIp ? ui.wifiStaticIp.value.trim() : '');
+        const wifiStaticGateway = encodeURIComponent(ui.wifiStaticGateway ? ui.wifiStaticGateway.value.trim() : '');
+        const wifiStaticSubnet = encodeURIComponent(ui.wifiStaticSubnet ? ui.wifiStaticSubnet.value.trim() : '');
+        const wifiStaticDns = encodeURIComponent(ui.wifiStaticDns ? ui.wifiStaticDns.value.trim() : '');
         const w5500UseDhcp = ui.w5500Dhcp ? ui.w5500Dhcp.value : 'true';
         const w5500StaticIp = encodeURIComponent(ui.w5500StaticIp.value.trim());
         const w5500StaticGateway = encodeURIComponent(ui.w5500StaticGateway.value.trim());
         const w5500StaticSubnet = encodeURIComponent(ui.w5500StaticSubnet.value.trim());
         const w5500StaticDns = encodeURIComponent(ui.w5500StaticDns.value.trim());
 
-        const body = `transportMode=${transportMode}&wifiMode=${wifiMode}&ssid=${ssid}&psk=${psk}&eid=${eid}&eusr=${eusr}&epwd=${epwd}&w5500UseDhcp=${w5500UseDhcp}&w5500StaticIp=${w5500StaticIp}&w5500StaticGateway=${w5500StaticGateway}&w5500StaticSubnet=${w5500StaticSubnet}&w5500StaticDns=${w5500StaticDns}`;
+        const body = `transportMode=${transportMode}&wifiMode=${wifiMode}&ssid=${ssid}&psk=${psk}&eid=${eid}&eusr=${eusr}&epwd=${epwd}&wifiUseDhcp=${wifiUseDhcp}&wifiStaticIp=${wifiStaticIp}&wifiStaticGateway=${wifiStaticGateway}&wifiStaticSubnet=${wifiStaticSubnet}&wifiStaticDns=${wifiStaticDns}&w5500UseDhcp=${w5500UseDhcp}&w5500StaticIp=${w5500StaticIp}&w5500StaticGateway=${w5500StaticGateway}&w5500StaticSubnet=${w5500StaticSubnet}&w5500StaticDns=${w5500StaticDns}`;
 
         setBusy(ui.btnSaveNetwork, true, 'Saving...', 'Save Configuration');
 
@@ -578,6 +626,29 @@
       });
     }
 
+    if (ui.btnZero) {
+      ui.btnZero.addEventListener('click', async () => {
+        ui.btnZero.disabled = true;
+        try {
+          const res = await apiCall('/api/zero', { method: 'POST' });
+          if (!res) {
+            showToast('Failed to zero: network error', true);
+            return;
+          }
+          if (!res.ok) {
+            showToast(res.message || 'Zero failed', true);
+            return;
+          }
+          showToast(res.message || 'ADC zero offset captured', false);
+        } catch (e) {
+          showToast('Error issuing zero command', true);
+        } finally {
+          ui.btnZero.disabled = false;
+          refreshStatus();
+        }
+      });
+    }
+
     if (ui.btnCapturePoint) {
       ui.btnCapturePoint.addEventListener('click', async () => {
         const kg = parseFloat(ui.knownKg.value);
@@ -589,15 +660,15 @@
         ui.btnCapturePoint.disabled = true;
         ui.btnCapturePoint.textContent = 'Capturing...';
 
-        const data = await apiCall('/api/status');
-        if (!data || data.raw === undefined) {
-          showToast('Failed to read sensor data', true);
+        const res = await apiCall(`/api/calibration/capture?kg=${encodeURIComponent(kg.toFixed(4))}`, {
+          method: 'POST'
+        });
+        if (!res || !res.ok) {
+          showToast((res && res.message) || 'Failed to capture calibration point', true);
         } else {
-          calibPoints.push({ weightKg: kg, rawCounts: data.raw, timestamp: Date.now() });
-          saveCalibPointsToStorage();
-          updateAverage();
-          renderCalibPoints();
-          showToast(`Captured point ${calibPoints.length}: ${kg.toFixed(3)} kg @ ${Math.round(data.raw).toLocaleString()} counts`);
+          await loadCalibrationPoints();
+          const captured = res.data || {};
+          showToast(`Captured point ${captured.pointCount || calibPoints.length}: ${kg.toFixed(3)} kg @ ${Math.round(captured.rawCounts || 0).toLocaleString()} counts`);
         }
 
         ui.btnCapturePoint.disabled = false;
@@ -636,13 +707,16 @@
     }
 
     if (ui.btnClearPoints) {
-      ui.btnClearPoints.addEventListener('click', () => {
-        calibPoints = [];
-        avgCalibration = null;
-        saveCalibPointsToStorage();
-        updateAverage();
-        renderCalibPoints();
-        showToast('All calibration points cleared');
+      ui.btnClearPoints.addEventListener('click', async () => {
+        ui.btnClearPoints.disabled = true;
+        const res = await apiCall('/api/calibration/start', { method: 'POST' });
+        if (!res || !res.ok) {
+          ui.btnClearPoints.disabled = false;
+          showToast((res && res.message) || 'Failed to clear calibration points', true);
+          return;
+        }
+        await loadCalibrationPoints();
+        showToast('All calibration points cleared from device memory');
       });
     }
 
@@ -680,7 +754,12 @@
         const eid  = encodeURIComponent(ui.eid.value.trim());
         const eusr = encodeURIComponent(ui.eusr.value.trim());
         const epwd = encodeURIComponent(ui.epwd.value);
-        const body = `mode=${mode}&ssid=${ssid}&psk=${psk}&eid=${eid}&eusr=${eusr}&epwd=${epwd}`;
+        const useDhcp = ui.wifiDhcp ? ui.wifiDhcp.value : 'true';
+        const staticIp = encodeURIComponent(ui.wifiStaticIp ? ui.wifiStaticIp.value.trim() : '');
+        const staticGateway = encodeURIComponent(ui.wifiStaticGateway ? ui.wifiStaticGateway.value.trim() : '');
+        const staticSubnet = encodeURIComponent(ui.wifiStaticSubnet ? ui.wifiStaticSubnet.value.trim() : '');
+        const staticDns = encodeURIComponent(ui.wifiStaticDns ? ui.wifiStaticDns.value.trim() : '');
+        const body = `mode=${mode}&ssid=${ssid}&psk=${psk}&eid=${eid}&eusr=${eusr}&epwd=${epwd}&useDhcp=${useDhcp}&staticIp=${staticIp}&staticGateway=${staticGateway}&staticSubnet=${staticSubnet}&staticDns=${staticDns}`;
 
         setBusy(ui.btnSaveWifi, true, 'Applying...', 'Apply Configuration');
 
@@ -764,8 +843,9 @@
 
   async function loadCalibrationPoints() {
     const data = await apiCall('/api/calibration/points');
-    if (data && data.ok && Array.isArray(data.data.points) && data.data.points.length > 0) {
+    if (data && data.ok && data.data && Array.isArray(data.data.points)) {
       calibPoints = data.data.points.map(p => ({ weightKg: p.kg, rawCounts: p.counts, timestamp: Date.now() }));
+      saveCalibPointsToStorage();
     } else {
       const stored = localStorage.getItem('calibPoints');
       if (stored) {

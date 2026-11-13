@@ -18,7 +18,7 @@ skinparam StartColor #2E7D32
 skinparam EndColor #C62828
 skinparam ConditionStyle diamond
 
-title Alur Kerja Terpadu 3 Konsol Stasiun Fisik\nENYX-Smart Hub — v5
+title Alur Kerja Terpadu 3 Konsol Stasiun Fisik\nSmartGeulis — v5
 
 |Petani|
 start
@@ -62,20 +62,20 @@ end note
 
 |Konsol 02: Sortir, Sizing & Grading (Timbangan 02)|
 :Step 1: Scan QR Waring (WRG-…) dari Antrean Buffer FIFO\n(atau pilih langsung dari antrean);
-:Step 2: Masukkan Kentang ke Mesin Grading Mekanis\n(Mesin beroperasi fisik mandiri / stand-alone);
+:Step 2: Masukkan Kentang ke Mesin Sorting Mekanis\n(Mesin beroperasi fisik mandiri / stand-alone);
 :Sortir Mekanis Pemisahan Fraksi Ukuran\n(Grade A, Grade B, Grade C, dan pemisahan reject/kotoran);
-if (Step 3: Cuci atau Tidak?) then (WASHED - Perlu Cuci)
+if (Step 2: Cuci atau Tidak?) then (WASHED - Perlu Cuci)
   :Jalur Cuci & Kering Fisik (Catat: WASHED);
 else (UNWASHED - Sudah Bersih)
   :Bypass Kering Langsung ke Penimbangan (Catat: UNWASHED);
 endif
 
 :Pemisahan Reject Fisik (Tanpa Ditimbang);\nReject & kotoran langsung disisihkan;
-:Step 4: Timbang Setiap Grade Komersial (Grade A, B, C) di Timbangan 02;
+:Step 3: Timbang Setiap Grade Komersial (Grade A, B, C) di Timbangan 02;
 :Scan QR Palet Grade Fisik Tertempel (PLT-GRD-…)\n& Tautkan Grade serta Berat (kg) ke Palet Tersebut;
 
 |Sistem (Otomasi Buffer & Silsilah)|
-:Step 5: Review Susut Bobot & Selesai Menuju Packaging;
+:Step 4: Review Susut Bobot & Selesai Menuju Packaging;
 :Kalkulasi Otomatis Penyusutan Bobot (Shrinkage Engine);
 note right
   Susut & Reject (kg) = Berat Bruto Waring - Σ(Grade A + B + C).
@@ -103,7 +103,7 @@ end note
 
 |Konsol 03: Pengepakan & Dispatch (Timbangan 03)|
 :Permintaan Order / Manifest Muat Truk Pengiriman;
-:Scan Verifikasi Barcode Muatan Truk (ITF-14 / QR);
+:Scan Verifikasi Setiap Barcode Kemasan Muatan Truk (ITF-14 / QR);
 :Konfirmasi Muat Barang ke Bak Truk;
 
 |Sistem (Otomasi Buffer & Silsilah)|
@@ -120,7 +120,7 @@ stop
 
 ## Deskripsi Rinci Alur Kerja (3 Konsol Terpadu Berbasis 3 Timbangan Fisik)
 
-Sistem tata kelola pengemasan kentang ENYX-Smart Hub menyederhanakan alur operasional ke dalam **3 Konsol Stasiun Fisik** yang masing-masing terhubung langsung (*1:1 hardware mapping*) dengan unit timbangan digital:
+Sistem tata kelola pengemasan kentang SmartGeulis menyederhanakan alur operasional ke dalam **3 Konsol Stasiun Fisik** yang masing-masing terhubung langsung (*1:1 hardware mapping*) dengan unit timbangan digital:
 
 ### 1. Konsol 01: Penerimaan & Waring Intake — *Area Intake (Timbangan 01)*
 - **Perangkat Keras**: Timbangan Lantai RS485 kapasitas 150 kg, barcode scanner, dan printer thermal IW-J300H 80 mm Ethernet untuk Reception.
@@ -132,12 +132,11 @@ Sistem tata kelola pengemasan kentang ENYX-Smart Hub menyederhanakan alur operas
 
 ### 2. Konsol 02: Sortir, Sizing, Cuci & Grading Mutu — *Area Sortir & Grading (Timbangan 02)*
 - **Perangkat Keras**: Timbangan Lantai RS485 kapasitas 100 kg, barcode scanner 2D. (Mesin sortir mekanis dan unit cuci/pengering beroperasi secara fisik mandiri / *stand-alone*; sistem web murni bertindak sebagai pencatat / *recorder* data proses).
-- **Fungsi Terpadu (Proses Sekuensial 5 Langkah)**:
+- **Fungsi Terpadu (Proses Sekuensial 4 Langkah)**:
   1. *Step 1: Scan QR Waring*: Operator memindai QR code waring intake (`WRG-...`) atau memilih dari antrean buffer FIFO. Sistem memuat identitas petani asal, desa, dan berat bruto intake waring.
-  2. *Step 2: Masukkan ke Mesin Grading*: Operator menuangkan umbi kentang ke dalam hopper mesin sortir mekanis (alat pemilah ukuran beroperasi fisik mandiri / *stand-alone*). Umbi terpilah secara mekanis ke fraksi ukuran Grade A (>55mm), Grade B (40-55mm), Grade C (<40mm), serta pemisahan reject/kotoran awal.
-  3. *Step 3: Cuci atau Tidak (Washing Decision)*: Operator mencatat opsi pencucian pasca-alat sortir (`WASHED` jika melalui lini pencucian & pengeringan fisik, atau `UNWASHED` jika umbi kering langsung ditimbang).
-  4. *Step 4: Timbangan Grade & Scan QR Palet*: Operator memilih channel grade komersial yang sedang berada di atas Timbangan 02 (Grade A, Grade B, atau Grade C; umbi reject disisihkan tanpa ditimbang). Operator mengunci bobot timbangan dan memindai QR fisik yang telah tertempel permanen di palet grade tersebut (`PLT-GRD-...`) untuk mengaitkan grade dan kuantitas kilogram ke palet bersangkutan.
-  5. *Step 5: Review Susut Bobot & Selesai Menuju Packaging*: Sistem menampilkan ringkasan bobot bruto waring, total komersial tergradasi, formula susut otomatis, dan persentase yield komersial. Operator menekan konfirmasi final dan palet siap dialirkan ke Konsol 03 (Packaging).
+  2. *Step 2: Sizing & Wash*: Operator menuangkan umbi kentang ke mesin Sorting fisik, lalu mencatat `WASHED` atau `UNWASHED`.
+  3. *Step 3: Weigh Grades*: Operator mencatat bobot aktual atau 0 kg untuk Grade A, B, dan C, lalu mengaitkan setiap grade berbobot ke palet fisik terdaftar.
+  4. *Step 4: Review & Save*: Sistem menampilkan bobot bruto, total grade, susut, dan yield. Operator mengonfirmasi hasil sebelum data disimpan dan palet tersedia untuk Packaging.
      $$\text{Susut (kg)} = \text{Berat Bruto Intake Waring} - \sum (\text{Berat Bersih Grade A + B + C})$$
      $$\text{Persentase Susut (\%)} = \left(\frac{\text{Susut (kg)}}{\text{Berat Bruto Intake Waring}}\right) \times 100\%$$
 - **Keunggulan**: Mengadopsi workflow sekuensial terarah seperti Konsol 01 yang mencegah kesalahan tahapan operator di lapangan (*poka-yoke*), tanpa kerumitan kontrol mesin di aplikasi web, dan tanpa pencetakan stiker palet baru.
@@ -146,9 +145,10 @@ Sistem tata kelola pengemasan kentang ENYX-Smart Hub menyederhanakan alur operas
 - **Perangkat Keras**: Timbangan Meja Presisi RS485 kapasitas 30 kg, printer thermal IW-J300H 80 mm Ethernet untuk Packaging, dan wireless barcode scanner pengiriman.
 - **Fungsi Terpadu**:
   1. *Pengepakan Retail Pouch 1 kg*: Ditimbang presisi dengan toleransi ketat $\pm$5 g pada target 1.000 g, lalu dicetak **Label Produksi: QR GS1 Digital Link + Barcode EAN-13**.
-  2. *Pengepakan Ekspor / Bulk*: Ditimbang pada target 10 kg atau 50 kg, lalu dicetak **Label Ekspor: Barcode GS1 ITF-14 & QR Ekspor**.
-  3. *Otomasi Saldo Gudang Jadi*: Kemasan yang selesai diberi label otomatis menambah saldo inventori barang jadi per grade (*Finished Goods Ledger*).
-  4. *Verifikasi Muat Truk (*Dispatch Scan*)*: Saat pengiriman tiba, operator memindai barcode kemasan yang dimuat ke bak truk untuk mencocokkan manifest pengiriman dan otomatis memotong saldo stok gudang saat armada diberangkatkan.
+  2. *Pengepakan Ekspor / Bulk*: Ditimbang pada target 10 kg; opsi 50 kg tersedia jika kapasitas timbangan Packaging minimal 50 kg. Kemasan diberi **Label Ekspor: Barcode GS1 ITF-14 & QR Ekspor**.
+  3. *Penanganan Sisa Palet & Pelepasan (*Close & Release*)*: Jika sisa stok palet lebih kecil dari target kemasan saat ini ($\ge 1\text{ kg}$), operator disarankan menurunkan ukuran kemasan (mis. $50\text{ kg} \rightarrow 10\text{ kg} / 1\text{ kg}$). Sisa $\le 0{,}05\text{ kg}$ dilepas otomatis sebagai toleransi penimbangan, sedangkan sisa di bawah $1\text{ kg}$ (atau sisa yang tidak dikemas) diselesaikan melalui **Close & Release Pallet** dengan pencatatan disposisi audit (`SHRINKAGE_LOSS`, `LOOSE_RESERVE`, `CULL_REJECT`, `SAMPLE_USE`) agar palet fisik langsung kembali berstatus `AVAILABLE` untuk digunakan ulang di Konsol 02.
+  4. *Otomasi Saldo Gudang Jadi*: Kemasan yang selesai diberi label otomatis menambah saldo inventori barang jadi per grade (*Finished Goods Ledger*).
+  5. *Verifikasi Muat Truk (*Dispatch Scan*)*: Operator memilih grade dan jumlah unit untuk manifest, lalu memindai setiap kode kemasan yang dialokasikan. Keberangkatan dapat dikonfirmasi setelah seluruh unit terverifikasi; stok gudang berkurang saat armada diberangkatkan.
 - **Keunggulan**: Mengintegrasikan proses pengemasan presisi dengan pencatatan inventori barang jadi dan kepatuhan manifest logistik ekspor tanpa disparitas data.
 
 ---
@@ -284,7 +284,7 @@ rectangle "**[ CLOUD LEVEL ]**\nSinkronisasi Data, Cadangan, & Disaster Recovery
 rectangle "**[ ENTERPRISE LEVEL ]**\nHak Akses Pengguna Terpadu (RBAC 3-Role) & Konsumen Publik" as ENT #E8F5E9 {
 
   node "Gateway Internet / Domain Publik" as internet {
-    component [HTTPS Domain\n(trace.enyx.id)] as domain
+    component [HTTPS Domain\n(trace.smartgeulis.id)] as domain
   }
 
   actor "Admin\n(Hak Akses Penuh)" as admin
@@ -349,6 +349,20 @@ domain --> consumer    : Publik Tanpa Login (GS1 Traceability Pouch)
 
 ---
 
+## Konfigurasi Register Timbangan
+
+Setiap stasiun menyimpan konfigurasi Modbus TCP secara terpisah di `scale_settings`: alamat perangkat, port, Unit ID, kapasitas, Weight Start Register, dan Status Register. Backend membentuk window pembacaan FC03 dari alamat yang tersimpan; perubahan melalui Settings berlaku langsung tanpa restart backend.
+
+| Konfigurasi | Rentang | Default firmware |
+|-------------|---------|------------------|
+| Unit ID | `1–247` | `1` |
+| Weight Start Register | `40001–40030`, `FLOAT32` dua word | `40001` (live) atau `40003` (stable) |
+| Status Register | `40001–40031`, `UINT16` | `40011` |
+
+Status stabil dibaca dari bit `0x0010` pada Status Register yang dikonfigurasi. Alamat `40002` adalah word kedua dari nilai berat `FLOAT32` pada `40001–40002`, bukan status register.
+
+---
+
 ## Manajemen Akses Pengguna (RBAC 3-Role + Publik)
 
 Sistem menyederhanakan hak akses menjadi **3 peran pengguna terautentikasi** ditambah **1 akses publik tanpa autentikasi**:
@@ -373,7 +387,7 @@ skinparam ArrowFontName Arial
 skinparam DefaultFontName Arial
 skinparam DefaultFontSize 11
 
-title Skema Database Relasional — ENYX-Smart Hub\n(Waring Intake, Pairing Palet, Timbang Susut, & Dual Warehouse)
+title Skema Database Relasional — SmartGeulis\n(Waring Intake, Pairing Palet, Timbang Susut, & Dual Warehouse)
 
 ' ============================================================
 ' CORE MODELS
@@ -636,7 +650,7 @@ Semua entitas fisik lapangan menggunakan standar identifier berikut:
    - Contoh: `GRD-PLT-20261025-0001-A`
    - Penanda fisik wadah hasil grading per mutu.
 5. **Pouch QR GS1 Digital Link (`https://{domain}/01/{GTIN-13}/10/{LOT}/21/{SERIAL}`)**:
-   - Contoh: `https://trace.enyx.id/01/899001000001/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001`
+   - Contoh: `https://trace.smartgeulis.id/01/899001000001/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001`
    - AI 01: GTIN-13 (EAN-13 produk ritel)
    - AI 10: Batch/Lot (Pallet Code + Grade)
    - AI 21: Serial Pouch Unik

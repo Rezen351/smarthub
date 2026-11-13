@@ -5,9 +5,9 @@ import Logo from '../components/shared/Logo'
 import Icon, { type IconName } from '../components/shared/Icon'
 
 const demoAccounts = [
-  { email: 'admin@enyx.local', role: 'System Admin', desc: 'Master Ledger & Admin', password: 'admin123' },
-  { email: 'operator@enyx.local', role: 'Plant Operator', desc: 'Workstation Hub & Operations', password: 'operator123' },
-  { email: 'farmer@enyx.local', role: 'Farmer', desc: 'Deposits & Farmer QR', password: 'farmer123' },
+  { email: 'alif.muhammad.rizky@smartgeulisunpad.com', role: 'System Admin', desc: 'Alif Muhammad Rizky (Admin)', password: 'admin123' },
+  { email: 'operator@smartgeulisunpad.com', role: 'Plant Operator', desc: 'Workstation Hub & Operations', password: 'operator123' },
+  { email: 'farmer@smartgeulisunpad.com', role: 'Farmer', desc: 'Deposits & Farmer QR', password: 'farmer123' },
 ]
 
 const getRoleIcon = (role: string): IconName => {
@@ -51,7 +51,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa] text-[#171717] font-['Archivo',sans-serif] selection:bg-[#f0fdf4] selection:text-[#15803d] flex flex-col justify-between relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#fafafa] text-[#171717] font-['Archivo',sans-serif] selection:bg-[#fff7ed] selection:text-[#ea580c] flex flex-col justify-between relative overflow-x-hidden">
       {/* ── Sub-pixel Grain Overlay ── */}
       <div
         className="fixed inset-[-10%] pointer-events-none z-[190] opacity-[0.04] mix-blend-multiply"
@@ -76,7 +76,7 @@ export default function LoginPage() {
           position: absolute;
           width: 14px;
           height: 14px;
-          border: 2px solid #229856;
+          border: 2px solid #ea580c;
           pointer-events: none;
         }
         .notch-corner::before {
@@ -94,10 +94,10 @@ export default function LoginPage() {
 
         @keyframes pulse-btn-glow {
           0%, 100% {
-            box-shadow: 0 0 0 0 rgba(34, 152, 86, 0.45), 0 4px 12px rgba(34, 152, 86, 0.25);
+            box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.45), 0 4px 12px rgba(234, 88, 12, 0.25);
           }
           50% {
-            box-shadow: 0 0 0 14px rgba(34, 152, 86, 0), 0 4px 12px rgba(34, 152, 86, 0.25);
+            box-shadow: 0 0 0 14px rgba(234, 88, 12, 0), 0 4px 12px rgba(234, 88, 12, 0.25);
           }
         }
         .pulse-btn {
@@ -108,11 +108,11 @@ export default function LoginPage() {
       {/* ── Top Header Bar ── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#eaeaea]">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group" aria-label="ENYX-ENTERPRISE home">
+          <Link to="/" className="flex items-center gap-3 group" aria-label="SmartGeulis home">
             <Logo className="h-8 w-auto" markOnly />
             <div>
               <div className="font-display text-2xl leading-none tracking-wider text-[#171717] flex items-center gap-2">
-                ENYX-ENTERPRISE
+                SmartGeulis
               </div>
               <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
                 TRACEABILITY SYSTEM
@@ -122,7 +122,7 @@ export default function LoginPage() {
 
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center gap-2 font-mono-custom text-[11px] text-[#666666] border border-[#eaeaea] bg-[#f5f5f5] px-3 py-1.5 rounded-none">
-              <span className="w-2 h-2 rounded-full bg-[#15803d] animate-pulse"></span>
+              <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse"></span>
               <span>SYSTEM ONLINE</span>
             </div>
             <Link
@@ -130,11 +130,11 @@ export default function LoginPage() {
               className="inline-flex items-center gap-1.5 font-heading text-xs uppercase tracking-wider text-[#666666] hover:text-[#171717] transition-colors"
             >
               <Icon name="arrow-left" size={13} />
-              <span>Smart Hub</span>
+              <span>SmartGeulis</span>
             </Link>
             <Link
               to="/traceability"
-              className="hidden md:inline-flex items-center gap-1.5 font-heading text-xs uppercase tracking-wider text-[#15803d] hover:text-[#0E5030] font-semibold transition-colors"
+              className="hidden md:inline-flex items-center gap-1.5 font-heading text-xs uppercase tracking-wider text-[#ea580c] hover:text-[#c2410c] font-semibold transition-colors"
             >
               <span>Public Trace</span>
             </Link>
@@ -148,8 +148,8 @@ export default function LoginPage() {
           {/* Industrial Sharp Card with Corner Brackets */}
           <div className="notch-corner border border-[#eaeaea] bg-white p-6 sm:p-10 shadow-sm rounded-none">
             {/* Station Authentication Tag */}
-            <div className="flex items-start gap-2.5 font-mono-custom text-[10px] sm:text-xs text-[#15803d] tracking-[0.08em] sm:tracking-[0.25em] uppercase mb-2">
-              <span className="w-6 h-[2px] bg-[#229856] shrink-0 mt-2"></span>
+            <div className="flex items-start gap-2.5 font-mono-custom text-[10px] sm:text-xs text-[#ea580c] tracking-[0.08em] sm:tracking-[0.25em] uppercase mb-2">
+              <span className="w-6 h-[2px] bg-[#ea580c] shrink-0 mt-2"></span>
               <span className="min-w-0">STATION AUTHENTICATION · PACKHOUSE NETWORK</span>
             </div>
 
@@ -187,9 +187,9 @@ export default function LoginPage() {
                   autoComplete="username"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@enyx.local"
+                  placeholder="admin@smartgeulisunpad.com"
                   required
-                  className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#229856] focus:ring-2 focus:ring-[#229856]/20 transition-all"
+                  className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#ea580c] focus:ring-2 focus:ring-[#ea580c]/20 transition-all"
                 />
               </div>
 
@@ -208,14 +208,14 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#229856] focus:ring-2 focus:ring-[#229856]/20 transition-all"
+                  className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#ea580c] focus:ring-2 focus:ring-[#ea580c]/20 transition-all"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="pulse-btn w-full bg-[#000000] text-white py-3.5 font-heading text-sm uppercase tracking-[0.2em] hover:bg-[#15803d] transition-all flex items-center justify-center gap-2 rounded-none font-semibold cursor-pointer disabled:opacity-50 mt-6"
+                className="pulse-btn w-full bg-[#000000] text-white py-3.5 font-heading text-sm uppercase tracking-[0.2em] hover:bg-[#ea580c] transition-all flex items-center justify-center gap-2 rounded-none font-semibold cursor-pointer disabled:opacity-50 mt-6"
               >
                 <span>{loading ? 'AUTHENTICATING…' : 'SIGN IN TO STATION'}</span>
                 <Icon name="arrow-right" size={16} />
@@ -225,8 +225,8 @@ export default function LoginPage() {
             {/* Quick Demo Accounts Selection */}
             <div className="mt-8 pt-6 border-t border-[#eaeaea]">
               <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between mb-3">
-                <span className="font-mono-custom text-[11px] text-[#15803d] tracking-[0.2em] uppercase font-semibold flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-[#229856]"></span>
+                <span className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase font-semibold flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-[#ea580c]"></span>
                   AUTHORIZED STATIONS (AUTO-FILL CREDENTIALS)
                 </span>
                 <span className="font-mono-custom text-[10px] text-[#999999] uppercase tracking-wider">
@@ -243,16 +243,16 @@ export default function LoginPage() {
                       setEmail(account.email)
                       setPassword(account.password)
                     }}
-                    className="p-3 rounded-none border border-[#eaeaea] bg-[#fafafa] hover:border-[#229856] hover:bg-[#f0fdf4] text-left transition-all cursor-pointer group flex items-start gap-3"
+                    className="p-3 rounded-none border border-[#eaeaea] bg-[#fafafa] hover:border-[#ea580c] hover:bg-[#fff7ed] text-left transition-all cursor-pointer group flex items-start gap-3"
                   >
-                    <div className="w-7 h-7 bg-white border border-[#eaeaea] group-hover:border-[#229856] group-hover:text-[#229856] flex items-center justify-center shrink-0 text-[#666666] transition-colors rounded-none mt-0.5">
+                    <div className="w-7 h-7 bg-white border border-[#eaeaea] group-hover:border-[#ea580c] group-hover:text-[#ea580c] flex items-center justify-center shrink-0 text-[#666666] transition-colors rounded-none mt-0.5">
                       <Icon name={getRoleIcon(account.role)} size={13} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="font-heading text-xs uppercase tracking-wider text-[#171717] group-hover:text-[#0E5030] font-semibold truncate">
+                      <div className="font-heading text-xs uppercase tracking-wider text-[#171717] group-hover:text-[#c2410c] font-semibold truncate">
                         {account.role}
                       </div>
-                      <div className="font-mono-custom text-[10px] text-[#666666] group-hover:text-[#15803d] truncate mt-0.5">
+                      <div className="font-mono-custom text-[10px] text-[#666666] group-hover:text-[#ea580c] truncate mt-0.5">
                         {account.email}
                       </div>
                     </div>
@@ -267,14 +267,14 @@ export default function LoginPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-[#eaeaea] bg-white py-5 text-xs text-[#666666]">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© {new Date().getFullYear()} ENYX-ENTERPRISE. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} SmartGeulis. All rights reserved.</p>
           <div className="flex flex-wrap items-center justify-center gap-3 font-mono-custom text-[11px]">
             <span className="bg-[#f5f5f5] px-2 py-0.5 border border-[#eaeaea] text-[#171717]">
-              Type: enyx-enterprise
+              Type: smartgeulis
             </span>
             <span>Traceability System v1.0.0</span>
           </div>
-          <Link to="/traceability" className="text-[#15803d] hover:underline font-medium">
+          <Link to="/traceability" className="text-[#ea580c] hover:underline font-medium">
             Public Traceability Portal
           </Link>
         </div>

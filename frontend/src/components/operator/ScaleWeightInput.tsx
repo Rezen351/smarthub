@@ -15,7 +15,7 @@ import { api } from '../../services/api'
  * Stability bit 0x0010 and hardware Tare/Zero are fully supported.
  */
 
-const MODE_KEY = 'enyx.scale-mode'
+const MODE_KEY = 'smartgeulis.scale-mode'
 const SETTINGS_STORAGE_KEY = 'smarthub_settings'
 const POLL_MS = 600
 
@@ -35,6 +35,8 @@ interface ScaleWeightInputProps {
   targetKg?: number
   toleranceKg?: number
   capacityKg?: number
+  maxAllowedWeightKg?: number
+  allowZero?: boolean
 }
 
 function readMode(): Mode {
@@ -74,6 +76,8 @@ export default function ScaleWeightInput({
   targetKg,
   toleranceKg = 0.005,
   capacityKg = 150,
+  maxAllowedWeightKg,
+  allowZero = false,
 }: ScaleWeightInputProps) {
   const [mode, setMode] = useState<Mode>(readMode)
   const [connection, setConnection] = useState<Connection>('reconnecting')
@@ -161,13 +165,38 @@ export default function ScaleWeightInput({
   const withinTarget =
     targetKg !== undefined && Number.isFinite(numericValue) && Math.abs(numericValue - targetKg) <= toleranceKg
   const overCapacity = Number.isFinite(numericValue) && numericValue > capacityKg
-  const invalid = Boolean(error) || overCapacity || (value !== '' && !(numericValue > 0))
+  const exceedsMaxAllowed =
+    maxAllowedWeightKg !== undefined && Number.isFinite(numericValue) && numericValue > maxAllowedWeightKg + 0.0005
+  const readingExceedsMax =
+    maxAllowedWeightKg !== undefined && Number.isFinite(reading) && reading > maxAllowedWeightKg + 0.0005
+
+  const effectiveError = error ?? (
+    overCapacity
+      ? `Weight exceeds scale capacity of ${capacityKg} kg.`
+      : exceedsMaxAllowed
+      ? `Weight (${formatKg(numericValue)} kg) exceeds pallet remaining stock (${formatKg(maxAllowedWeightKg)} kg).`
+      : undefined
+  )
+
+  const invalid =
+    Boolean(effectiveError) ||
+    (value !== '' && (allowZero ? !(numericValue >= 0) : !(numericValue > 0)))
 
   const useReading = useCallback(() => {
+    if (reading < 0 || (!allowZero && reading <= 0) || reading > capacityKg) {
+      toast.error('Place potatoes on the scale to read a valid weight.')
+      return
+    }
+    if (maxAllowedWeightKg !== undefined && reading > maxAllowedWeightKg + 0.0005) {
+      toast.error(
+        `Scale reading (${formatKg(reading)} kg) exceeds remaining capacity (${formatKg(maxAllowedWeightKg)} kg).`,
+      )
+      return
+    }
     onChange(formatKg(reading))
     setCaptured(true)
     toast.success(`Weight captured: ${formatKg(reading)} kg`)
-  }, [onChange, reading, toast])
+  }, [allowZero, capacityKg, maxAllowedWeightKg, onChange, reading, toast])
 
   const remaining = useMemo(() => {
     if (targetKg === undefined) return null
@@ -283,12 +312,31 @@ export default function ScaleWeightInput({
               </div>
             )}
 
+            {readingExceedsMax && (
+              <div className="p-2.5 bg-destructive/10 border border-destructive/30 rounded text-xs text-destructive font-semibold">
+                Scale reading ({formatKg(reading)} kg) exceeds remaining pallet stock ({formatKg(maxAllowedWeightKg)} kg).
+              </div>
+            )}
+
             <div className="flex gap-2 flex-wrap items-center">
               <Button
                 variant="primary"
                 icon="check"
-                disabled={connection !== 'connected' || !isStable || !Number.isFinite(reading) || reading <= 0 || reading > capacityKg}
+                disabled={
+                  connection !== 'connected' ||
+                  !isStable ||
+                  !Number.isFinite(reading) ||
+                  (!allowZero && reading <= 0) ||
+                  reading < 0 ||
+                  reading > capacityKg ||
+                  readingExceedsMax
+                }
                 onClick={useReading}
+                title={
+                  readingExceedsMax
+                    ? `Cannot capture: Scale reading exceeds pallet stock (${formatKg(maxAllowedWeightKg)} kg)`
+                    : undefined
+                }
               >
                 Capture Weight
               </Button>
@@ -316,7 +364,7 @@ export default function ScaleWeightInput({
           label={label}
           htmlFor={id}
           hint={hint ?? 'Type the weight shown on the scale indicator.'}
-          error={error ?? (overCapacity ? `Weight exceeds scale capacity of ${capacityKg} kg.` : undefined)}
+          error={effectiveError}
         >
           <Input
             id={id}
@@ -324,7 +372,7 @@ export default function ScaleWeightInput({
             inputMode="decimal"
             step="0.001"
             min="0"
-            max={capacityKg}
+            max={maxAllowedWeightKg ?? capacityKg}
             className="input-lg"
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -340,7 +388,7 @@ export default function ScaleWeightInput({
           label={label ? `Captured ${label}` : 'Captured Weight (kg)'}
           htmlFor={id}
           hint={captured || numericValue > 0 ? 'This weight will be saved. Capture again to update it.' : 'Wait for a stable reading, then select Capture Weight.'}
-          error={error ?? (overCapacity ? `Weight exceeds the maximum load of ${capacityKg} kg.` : undefined)}
+          error={effectiveError}
         >
           <Input
             id={id}
@@ -348,7 +396,7 @@ export default function ScaleWeightInput({
             inputMode="decimal"
             step="0.001"
             min="0"
-            max={capacityKg}
+            max={maxAllowedWeightKg ?? capacityKg}
             className="input-lg"
             value={value}
             readOnly

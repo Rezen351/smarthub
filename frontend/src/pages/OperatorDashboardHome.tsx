@@ -50,7 +50,7 @@ export default function OperatorDashboardHome() {
       id: 'scale-01',
       stationNum: '01',
       stationLabel: 'Reception',
-      scaleRole: 'Floor Scale',
+      scaleRole: 'Scale',
       ip: 'Not configured',
       capacity: 'Not configured',
       status: 'OFFLINE',
@@ -59,7 +59,7 @@ export default function OperatorDashboardHome() {
       id: 'scale-02',
       stationNum: '02',
       stationLabel: 'Sorting',
-      scaleRole: 'Floor Scale',
+      scaleRole: 'Scale',
       ip: 'Not configured',
       capacity: 'Not configured',
       status: 'OFFLINE',
@@ -68,7 +68,7 @@ export default function OperatorDashboardHome() {
       id: 'scale-03',
       stationNum: '03',
       stationLabel: 'Packaging',
-      scaleRole: 'Bench Scale',
+      scaleRole: 'Scale',
       ip: 'Not configured',
       capacity: 'Not configured',
       status: 'OFFLINE',
@@ -149,6 +149,7 @@ export default function OperatorDashboardHome() {
             return {
               ...node,
               ip: `${live.ip}:${live.port}`,
+              capacity: Number(live.capacityKg) > 0 ? `${Number(live.capacityKg)} kg` : 'Not configured',
               status: live.online ? 'ONLINE' : 'OFFLINE',
               liveWeightKg: live.weightKg,
             }
@@ -176,7 +177,7 @@ export default function OperatorDashboardHome() {
       icon: 'scale',
       tag: 'STATION 01',
       badgeTone: 'accent',
-      scaleName: `Floor Scale (${tcpNodes.find((node) => node.stationNum === '01')?.capacity || 'Not configured'})`,
+      scaleName: `Scale (${tcpNodes.find((node) => node.stationNum === '01')?.capacity || 'Not configured'})`,
       metric: `${metrics.grossIntakeKg.toLocaleString()} kg · ${metrics.grossIntakeWarings} Warings`,
     },
     {
@@ -188,7 +189,7 @@ export default function OperatorDashboardHome() {
       icon: 'sortir',
       tag: 'STATION 02',
       badgeTone: 'success',
-      scaleName: `Floor Scale (${tcpNodes.find((node) => node.stationNum === '02')?.capacity || 'Not configured'})`,
+      scaleName: `Scale (${tcpNodes.find((node) => node.stationNum === '02')?.capacity || 'Not configured'})`,
       metric: metrics.hasBatches
         ? `${metrics.yieldPct.toFixed(1)}% Yield · ${metrics.shrinkagePct.toFixed(1)}% Loss`
         : '0 Batches · Ready to Sort',
@@ -202,7 +203,7 @@ export default function OperatorDashboardHome() {
       icon: 'package',
       tag: 'STATION 03',
       badgeTone: 'accent',
-      scaleName: `Bench Scale (${tcpNodes.find((node) => node.stationNum === '03')?.capacity || 'Not configured'})`,
+      scaleName: `Scale (${tcpNodes.find((node) => node.stationNum === '03')?.capacity || 'Not configured'})`,
       metric: `${metrics.finishedPouches} pouches · ${metrics.finishedCartons} crates`,
     },
   ]
@@ -221,92 +222,6 @@ export default function OperatorDashboardHome() {
           </Badge>
         }
       />
-
-      {/* Connected Packhouse Scales Banner */}
-      <div className="border border-border bg-card p-4 rounded-none shadow-xs space-y-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-border/80">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 border border-emerald-300 bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold">
-              <Icon name="scale" size={20} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm text-foreground uppercase tracking-wide">
-                  Packhouse Scales
-                </span>
-                <span
-                  className={`text-[10px] font-mono px-1.5 py-0.5 font-semibold ${
-                    allScalesOnline
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}
-                >
-                  {allScalesOnline ? 'Ready · Online' : onlineScaleCount > 0 ? 'Partial · Online' : 'Offline'}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Scales ready for receiving, sorting, and packaging.
-              </p>
-            </div>
-          </div>
-          <Link to="/dashboard/settings" className="text-xs font-mono text-primary hover:underline">
-                Settings
-          </Link>
-        </div>
-
-        {/* 3 Physical Scale Indicator Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-          {tcpNodes.map((node) => {
-            const isOnline = node.status === 'ONLINE'
-            return (
-              <div
-                key={node.id}
-                className="p-3 bg-muted/20 border border-border/80 flex flex-col justify-between gap-2.5 text-xs"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-5 h-5 bg-background border border-border flex items-center justify-center text-[10px] font-bold text-foreground font-mono">
-                      {node.stationNum}
-                    </span>
-                    <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">
-                      {node.stationLabel}
-                    </span>
-                  </div>
-                  <span
-                    className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 font-semibold font-mono border ${
-                      isOnline
-                        ? 'text-emerald-800 bg-emerald-50 border-emerald-200'
-                        : 'text-amber-800 bg-amber-50 border-amber-200'
-                    }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        isOnline ? 'bg-emerald-600 animate-pulse' : 'bg-amber-500'
-                      }`}
-                    />
-                    {isOnline ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-muted-foreground">
-                    <span>{node.scaleRole}</span>
-                    <span className="font-semibold text-foreground font-mono">Max {node.capacity}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                    <span>Station {node.stationNum}</span>
-                    {node.liveWeightKg !== undefined && (
-                      <span className="font-bold text-emerald-800">
-                        {node.liveWeightKg.toFixed(2)} kg
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
 
       {/* Summary KPI Strip — 100% Real Database Queries */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -365,7 +280,7 @@ export default function OperatorDashboardHome() {
             <Link
               key={ws.id}
               to={ws.path}
-              className="group block border border-border bg-card p-6 rounded-none shadow-xs hover:border-[#229856] hover:shadow-md transition-all flex flex-col justify-between"
+              className="group block border border-border bg-card p-6 rounded-none shadow-xs hover:border-[#ea580c] hover:shadow-md transition-all flex flex-col justify-between"
             >
               <div className="space-y-4">
                 <div className="flex items-start justify-between">

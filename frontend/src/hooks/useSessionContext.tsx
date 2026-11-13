@@ -30,7 +30,7 @@ export interface SessionContextValue {
 }
 
 const TTL_MS = 4 * 60 * 60 * 1000
-const STORAGE_KEY = 'enyx.session-context'
+const STORAGE_KEY = 'smartgeulis.session-context'
 
 interface StoredContext {
   farmer: { id: string; name: string }

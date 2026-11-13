@@ -1,6 +1,6 @@
 {
-  "name": "ENYX-Smart Hub",
-  "short_name": "ENYX",
+  "name": "SmartGeulis Traceability System",
+  "short_name": "SmartGeulis",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -13,7 +13,7 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#166534",
+  "theme_color": "#ea580c",
   "background_color": "#ffffff",
   "display": "standalone"
 }

@@ -16,6 +16,33 @@ static String buildApSsid() {
   return String(AP_SSID_PREFIX) + String(suffix);
 }
 
+static bool configureStaIpv4(const AppSettings& s) {
+  if (s.wifiUseDhcp) {
+    bool ok = WiFi.config(IPAddress(), IPAddress(), IPAddress());
+    LOG_INFO("wifi", "IPv4 mode=dhcp result=%s", ok ? "ok" : "failed");
+    return ok;
+  }
+
+  IPAddress localIp;
+  IPAddress gateway;
+  IPAddress subnet;
+  IPAddress dns;
+  if (!localIp.fromString(s.wifiStaticIp) ||
+      !gateway.fromString(s.wifiStaticGateway) ||
+      !subnet.fromString(s.wifiStaticSubnet) ||
+      !dns.fromString(s.wifiStaticDns)) {
+    LOG_ERROR("wifi", "invalid static IPv4 configuration");
+    return false;
+  }
+
+  bool ok = WiFi.config(localIp, gateway, subnet, dns);
+  LOG_INFO("wifi", "IPv4 mode=static ip=%s gateway=%s subnet=%s dns=%s result=%s",
+           s.wifiStaticIp.c_str(), s.wifiStaticGateway.c_str(),
+           s.wifiStaticSubnet.c_str(), s.wifiStaticDns.c_str(),
+           ok ? "ok" : "failed");
+  return ok;
+}
+
 WifiManager::WifiManager() {}
 
 WifiManager::~WifiManager() {}
@@ -32,6 +59,11 @@ void WifiManager::begin(const AppSettings& s) {
   _pendingCfg.entIdentity  = s.entIdentity;
   _pendingCfg.entUsername  = s.entUsername;
   _pendingCfg.entPassword  = s.entPassword;
+  _pendingCfg.wifiUseDhcp  = s.wifiUseDhcp;
+  _pendingCfg.wifiStaticIp = s.wifiStaticIp;
+  _pendingCfg.wifiStaticGateway = s.wifiStaticGateway;
+  _pendingCfg.wifiStaticSubnet = s.wifiStaticSubnet;
+  _pendingCfg.wifiStaticDns = s.wifiStaticDns;
 
   if (_pendingCfg.wifiMode != WIFI_MODE_NONE &&
       _pendingCfg.wifiMode != WIFI_MODE_PSK &&
@@ -70,6 +102,12 @@ void WifiManager::begin(const AppSettings& s) {
     delay(100);
     apOk = WiFi.softAP(_apSsid.c_str(), AP_SSID_PASSWORD,
                        AP_CHANNEL, AP_HIDDEN, AP_MAX_CONNECTIONS);
+  }
+
+  if (apOk) {
+    if (!WiFi.setTxPower(WIFI_POWER_11dBm)) {
+      LOG_WARN("wifi", "failed to set TX power after softAP startup");
+    }
   }
 
   uint32_t apT0 = millis();
@@ -111,6 +149,12 @@ void WifiManager::startSta(const AppSettings& s) {
   TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
   WiFi.disconnect(false);
   delay(50);
+
+  if (!configureStaIpv4(s)) {
+    WiFi.setAutoReconnect(false);
+    LOG_ERROR("wifi", "STA connection skipped: IPv4 configuration failed");
+    return;
+  }
 
   if (s.wifiMode == WIFI_MODE_PSK) {
     TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
@@ -243,7 +287,7 @@ void WifiManager::loop() {
     }
   }
 
-  if ((int32_t)(millis() - _wifiLastReconnectMs) < 0) {
+  if ((uint32_t)(millis() - _wifiLastReconnectMs) < _wifiReconnectDelayMs) {
     return;
   }
 
@@ -356,7 +400,12 @@ void WifiManager::saveWifiConfigToJson(const AppSettings& s) {
   json += "    \"psk\": \"" + s.wpaPassword + "\",\n";
   json += "    \"entIdentity\": \"" + s.entIdentity + "\",\n";
   json += "    \"entUsername\": \"" + s.entUsername + "\",\n";
-  json += "    \"entPassword\": \"" + s.entPassword + "\"\n";
+  json += "    \"entPassword\": \"" + s.entPassword + "\",\n";
+  json += "    \"useDhcp\": " + String(s.wifiUseDhcp ? "true" : "false") + ",\n";
+  json += "    \"staticIp\": \"" + s.wifiStaticIp + "\",\n";
+  json += "    \"staticGateway\": \"" + s.wifiStaticGateway + "\",\n";
+  json += "    \"staticSubnet\": \"" + s.wifiStaticSubnet + "\",\n";
+  json += "    \"staticDns\": \"" + s.wifiStaticDns + "\"\n";
   json += "  }\n";
   json += "}\n";
 
@@ -384,7 +433,12 @@ void WifiManager::saveNetworkConfigToJson(const AppSettings& s) {
   json += "    \"psk\": \"" + s.wpaPassword + "\",\n";
   json += "    \"entIdentity\": \"" + s.entIdentity + "\",\n";
   json += "    \"entUsername\": \"" + s.entUsername + "\",\n";
-  json += "    \"entPassword\": \"" + s.entPassword + "\"\n";
+  json += "    \"entPassword\": \"" + s.entPassword + "\",\n";
+  json += "    \"useDhcp\": " + String(s.wifiUseDhcp ? "true" : "false") + ",\n";
+  json += "    \"staticIp\": \"" + s.wifiStaticIp + "\",\n";
+  json += "    \"staticGateway\": \"" + s.wifiStaticGateway + "\",\n";
+  json += "    \"staticSubnet\": \"" + s.wifiStaticSubnet + "\",\n";
+  json += "    \"staticDns\": \"" + s.wifiStaticDns + "\"\n";
   json += "  },\n";
   json += "  \"ethernet\": {\n";
   json += "    \"useDhcp\": " + String(s.w5500UseDhcp ? "true" : "false") + ",\n";

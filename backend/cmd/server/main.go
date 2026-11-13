@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/enyx/smarthub/backend/internal/db"
-	"github.com/enyx/smarthub/backend/internal/httpapi"
+	"github.com/smartgeulis/smarthub/backend/internal/db"
+	"github.com/smartgeulis/smarthub/backend/internal/httpapi"
 )
 
 func main() {

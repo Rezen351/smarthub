@@ -6,18 +6,16 @@ import Icon from '../components/shared/Icon'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import PageHeader from '../components/shared/PageHeader'
 import StatCard from '../components/shared/StatCard'
-import { useToast } from '../components/feedback/Toast'
 import { formatWeight } from '../lib/utils'
 import { usePackhouseStore, type BufferWaringItem, type FinishedStockItem } from '../hooks/usePackhouseStore'
 
 type WarehouseZone = 'buffer' | 'finished'
 
 export default function WarehousePage() {
-  const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const initialZone = (searchParams.get('zone') as WarehouseZone) || 'buffer'
   const [activeZone, setActiveZone] = useState<WarehouseZone>(initialZone)
-  const { waitingWarings, finishedStock, markWaringSorted } = usePackhouseStore()
+  const { waitingWarings, finishedStock } = usePackhouseStore()
 
   const bufferItems = waitingWarings
   const finishedItems = finishedStock
@@ -32,11 +30,6 @@ export default function WarehousePage() {
   const handleSwitchZone = (zone: WarehouseZone) => {
     setActiveZone(zone)
     setSearchParams({ zone })
-  }
-
-  const handleDispatchToSorting = (item: { code: string }) => {
-    markWaringSorted(item.code)
-    toast.success(`Waring ${item.code} dispatched to Station 2: Sorting.`)
   }
 
   /* Buffer Metrics */
@@ -96,16 +89,7 @@ export default function WarehousePage() {
       key: 'actions',
       label: 'Action',
       align: 'right',
-      render: (row) => (
-        <Button
-          size="sm"
-          variant="primary"
-          icon="check"
-          onClick={() => handleDispatchToSorting(row)}
-        >
-          Send to Sort
-        </Button>
-      ),
+      render: () => <Link to="/dashboard/sorting"><Button size="sm" variant="outline">Open Sorting</Button></Link>,
     },
   ]
 
@@ -282,7 +266,7 @@ export default function WarehousePage() {
             <StatCard
               label="Queue Order"
               value="Active"
-              sub="Oldest sack: 1.2 hrs"
+              sub={bufferItems.length ? `Oldest: ${bufferItems[bufferItems.length - 1].intakeTime}` : 'No waiting warings'}
               trend="neutral"
               icon={<Icon name="clock" size={16} />}
             />
@@ -330,7 +314,7 @@ export default function WarehousePage() {
             />
             <StatCard
               label="Grade A Stock"
-              value="270 kg"
+              value={`${formatWeight(finishedItems.filter((item) => item.grade === 'A').reduce((sum, item) => sum + item.totalWeightKg, 0))} kg`}
               sub="Pouches & 10kg crates"
               trend="neutral"
               icon={<Icon name="leaf" size={16} />}

@@ -1,7 +1,5 @@
 #include "MatrixScanner.h"
 
-#ifdef ESP32S3
-
 MatrixScanner::MatrixScanner() : activeRow(0) {
     rowPins[0] = BUTTON_ROW_1_PIN;
     rowPins[1] = BUTTON_ROW_2_PIN;
@@ -12,6 +10,7 @@ MatrixScanner::MatrixScanner() : activeRow(0) {
     colPins[2] = BUTTON_COL_3_PIN;
     colPins[3] = BUTTON_COL_4_PIN;
     colPins[4] = BUTTON_COL_5_PIN;
+    colPins[5] = BUTTON_COL_6_PIN;
 }
 
 void MatrixScanner::begin() {
@@ -103,5 +102,3 @@ MatrixEvent MatrixScanner::update() {
     setRowIdle();
     return ev;
 }
-
-#endif // ESP32S3

@@ -38,12 +38,13 @@ static void unlockNvs() {
 bool isValidIp(const String& s) {
   if (s.length() == 0) return false;
 
-  uint8_t a, b, c, d;
-  int n = sscanf(s.c_str(), "%hhu.%hhu.%hhu.%hhu", &a, &b, &c, &d);
+  unsigned int a = 0, b = 0, c = 0, d = 0;
+  int n = sscanf(s.c_str(), "%u.%u.%u.%u", &a, &b, &c, &d);
   if (n != 4) return false;
+  if (a > 255 || b > 255 || c > 255 || d > 255) return false;
 
   char buf[20];
-  snprintf(buf, sizeof(buf), "%u.%u.%u.%u", (unsigned)a, (unsigned)b, (unsigned)c, (unsigned)d);
+  snprintf(buf, sizeof(buf), "%u.%u.%u.%u", a, b, c, d);
   return strcmp(s.c_str(), buf) == 0;
 }
 
@@ -72,6 +73,8 @@ void loadWifiConfigFromJson(AppSettings& s) {
     LOG_INFO("wifi", "no wifi section in config.json");
     return;
   }
+  int wifiEnd = content.indexOf('}', wifiIdx);
+  if (wifiEnd < 0) wifiEnd = content.length();
 
   int modeIdx = content.indexOf("\"mode\"", wifiIdx);
   if (modeIdx >= 0) {
@@ -133,6 +136,30 @@ void loadWifiConfigFromJson(AppSettings& s) {
     }
   }
 
+  int dhcpIdx = content.indexOf("\"useDhcp\"", wifiIdx);
+  if (dhcpIdx >= 0 && dhcpIdx < wifiEnd) {
+    int valueIdx = content.indexOf(':', dhcpIdx);
+    if (valueIdx >= 0) {
+      String value = content.substring(valueIdx + 1);
+      value.trim();
+      s.wifiUseDhcp = value.startsWith("true");
+    }
+  }
+
+  const char* staticKeys[] = {"staticIp", "staticGateway", "staticSubnet", "staticDns"};
+  String* staticValues[] = {&s.wifiStaticIp, &s.wifiStaticGateway,
+                            &s.wifiStaticSubnet, &s.wifiStaticDns};
+  for (uint8_t i = 0; i < 4; ++i) {
+    String key = String("\"") + staticKeys[i] + "\"";
+    int keyIdx = content.indexOf(key, wifiIdx);
+    if (keyIdx < 0 || keyIdx >= wifiEnd) continue;
+    int start = content.indexOf('"', keyIdx + key.length());
+    int end = content.indexOf('"', start + 1);
+    if (start >= 0 && end > start) {
+      *staticValues[i] = content.substring(start + 1, end);
+    }
+  }
+
   LOG_INFO("wifi", "loaded wifi config from JSON: mode=%u ssid='%s'",
            (unsigned)s.wifiMode, s.ssid.c_str());
 }
@@ -142,9 +169,14 @@ static void applyWifiDefaults(AppSettings& s) {
     LOG_WARN("net", "invalid wifiMode=%u, fallback to WIFI_MODE_NONE", (unsigned)s.wifiMode);
     s.wifiMode = WIFI_MODE_NONE;
   }
+  if (!isValidIp(s.wifiStaticIp)) s.wifiStaticIp = WIFI_STATIC_IP;
+  if (!isValidIp(s.wifiStaticGateway)) s.wifiStaticGateway = WIFI_STATIC_GATEWAY;
+  if (!isValidIp(s.wifiStaticSubnet)) s.wifiStaticSubnet = WIFI_STATIC_SUBNET;
+  if (!isValidIp(s.wifiStaticDns)) s.wifiStaticDns = WIFI_STATIC_DNS;
 }
 
 static void applyEthernetDefaults(AppSettings& s) {
+#if ETHERNET_ENABLED
   if (s.transportMode != TRANSPORT_WIFI && s.transportMode != TRANSPORT_ETHERNET) {
     LOG_WARN("net", "invalid transportMode=%u, fallback to DEFAULT_TRANSPORT", (unsigned)s.transportMode);
     s.transportMode = DEFAULT_TRANSPORT;
@@ -165,6 +197,9 @@ static void applyEthernetDefaults(AppSettings& s) {
     LOG_WARN("net", "invalid staticDns='%s', fallback to W5500_STATIC_DNS", s.w5500StaticDns.c_str());
     s.w5500StaticDns = W5500_STATIC_DNS;
   }
+#else
+  s.transportMode = TRANSPORT_WIFI;
+#endif
 }
 
 static void openWrite() {
@@ -192,6 +227,11 @@ void SettingsStore::load(AppSettings& s) {
   s.entIdentity  = _prefs.isKey("eid")      ? _prefs.getString("eid")      : "";
   s.entUsername  = _prefs.isKey("eusr")     ? _prefs.getString("eusr")     : "";
   s.entPassword  = _prefs.isKey("epwd")     ? _prefs.getString("epwd")     : "";
+  s.wifiUseDhcp  = _prefs.isKey("wifiDhcp") ? _prefs.getBool("wifiDhcp")   : WIFI_USE_DHCP;
+  s.wifiStaticIp = _prefs.isKey("wifiIp")   ? _prefs.getString("wifiIp")   : WIFI_STATIC_IP;
+  s.wifiStaticGateway = _prefs.isKey("wifiGw") ? _prefs.getString("wifiGw") : WIFI_STATIC_GATEWAY;
+  s.wifiStaticSubnet = _prefs.isKey("wifiSn") ? _prefs.getString("wifiSn") : WIFI_STATIC_SUBNET;
+  s.wifiStaticDns = _prefs.isKey("wifiDns") ? _prefs.getString("wifiDns") : WIFI_STATIC_DNS;
 
   s.calOffset    = _prefs.isKey("calOff")   ? _prefs.getFloat("calOff")    : 0.0f;
   s.countsPerKg  = _prefs.isKey("cntPerKg") ? _prefs.getFloat("cntPerKg")  : 0.0f;
@@ -262,6 +302,11 @@ void SettingsStore::saveWifi(const AppSettings& s) {
   _prefs.putString("eid", s.entIdentity);
   _prefs.putString("eusr", s.entUsername);
   _prefs.putString("epwd", s.entPassword);
+  _prefs.putBool("wifiDhcp", s.wifiUseDhcp);
+  _prefs.putString("wifiIp", s.wifiStaticIp);
+  _prefs.putString("wifiGw", s.wifiStaticGateway);
+  _prefs.putString("wifiSn", s.wifiStaticSubnet);
+  _prefs.putString("wifiDns", s.wifiStaticDns);
   close();
   unlockNvs();
 }
@@ -435,6 +480,16 @@ void SettingsStore::validate(AppSettings& s) {
     }
   }
 
+  if (!s.wifiUseDhcp) {
+    if (!isValidIp(s.wifiStaticIp) || !isValidIp(s.wifiStaticGateway) ||
+        !isValidIp(s.wifiStaticSubnet) || !isValidIp(s.wifiStaticDns)) {
+      LOG_WARN("net", "invalid WiFi static IPv4 configuration, fallback to DHCP");
+      s.wifiUseDhcp = true;
+      valid = false;
+    }
+  }
+
+#if ETHERNET_ENABLED
   if (s.transportMode != TRANSPORT_WIFI && s.transportMode != TRANSPORT_ETHERNET) {
     LOG_WARN("net", "invalid transportMode=%u, fallback to DEFAULT_TRANSPORT", (unsigned)s.transportMode);
     s.transportMode = DEFAULT_TRANSPORT;
@@ -461,6 +516,9 @@ void SettingsStore::validate(AppSettings& s) {
     s.w5500StaticDns = W5500_STATIC_DNS;
     valid = false;
   }
+#else
+  s.transportMode = TRANSPORT_WIFI;
+#endif
 
   if (valid) {
     LOG_INFO("net", "config validation passed");

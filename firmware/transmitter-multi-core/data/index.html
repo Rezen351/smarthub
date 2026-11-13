@@ -16,7 +16,7 @@
     <!-- Header -->
     <header class="header">
       <div class="header-brand">
-        <img src="logo.svg" alt="ENYX" class="header-logo">
+        <img src="logo.svg" alt="SmartGeulis" class="header-logo">
         <div>
           <h1 class="header-title">Weight Transmitter</h1>
           <p class="header-subtitle">Precision Smart Load Cell Transmitter with Modbus TCP</p>
@@ -66,13 +66,19 @@
           <span class="card-hint">Tare first, then capture known reference masses for average calibration</span>
         </div>
         <div class="card-body">
-          <div class="action-row">
+          <div class="action-row" style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button type="button" class="btn btn-secondary" id="btnTare">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 6v12M6 12h12" />
               </svg>
-              Tare Scale (Zero Empty)
+              Tare Scale
+            </button>
+            <button type="button" class="btn btn-primary" id="btnZero">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v20M2 12h20" />
+              </svg>
+              Zero ADC Offset
             </button>
           </div>
 
@@ -242,6 +248,37 @@
                 <div class="form-group">
                   <label for="epwd" class="form-label">Enterprise Password</label>
                   <input type="password" id="epwd" class="form-input" placeholder="Enterprise password">
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: 12px;">
+                <label for="wifiDhcp" class="form-label">WiFi IPv4 Configuration</label>
+                <select id="wifiDhcp" class="form-select">
+                  <option value="true">DHCP</option>
+                  <option value="false">Static IP</option>
+                </select>
+              </div>
+
+              <div id="wifiStaticFields" style="display: none;">
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="wifiStaticIp" class="form-label">Static IP</label>
+                    <input type="text" id="wifiStaticIp" class="form-input" placeholder="192.168.1.100">
+                  </div>
+                  <div class="form-group flex-1">
+                    <label for="wifiStaticGateway" class="form-label">Gateway</label>
+                    <input type="text" id="wifiStaticGateway" class="form-input" placeholder="192.168.1.1">
+                  </div>
+                </div>
+                <div class="form-row" style="margin-top: 8px;">
+                  <div class="form-group flex-1">
+                    <label for="wifiStaticSubnet" class="form-label">Subnet Mask</label>
+                    <input type="text" id="wifiStaticSubnet" class="form-input" placeholder="255.255.255.0">
+                  </div>
+                  <div class="form-group flex-1">
+                    <label for="wifiStaticDns" class="form-label">DNS Server</label>
+                    <input type="text" id="wifiStaticDns" class="form-input" placeholder="8.8.8.8">
+                  </div>
                 </div>
               </div>
             </div>
@@ -481,8 +518,8 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <p>ENYX SmartHub &bull; Weight Transmitter &bull; by Almuzky v1</p>
-      <span class="badge-type">Type: enyx-smarthub</span>
+      <p>SmartGeulis &bull; Weight Transmitter &bull; by Almuzky v1</p>
+      <span class="badge-type">Type: smartgeulis</span>
     </footer>
   </div>
 

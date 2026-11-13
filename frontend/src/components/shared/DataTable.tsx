@@ -125,35 +125,49 @@ export default function DataTable<T>({
 
       {/* Mobile: rows become cards */}
       <div className="flex flex-col md:hidden divide-y divide-border">
-        {paginatedData.map((row, index) => (
-          <div className="p-3.5 flex flex-col gap-2 min-w-0" key={rowKey(row, index)}>
-            <div className="mobile-table-heading flex items-center justify-between gap-2">
-              <span className="min-w-0 break-words text-sm font-semibold">
-                {mobileTitle
-                  ? mobileTitle(row, index)
-                  : mobileColumns.length > 0 && mobileColumns[0].render
-                    ? mobileColumns[0].render(row, index)
-                    : ''}
-              </span>
-              {mobileColumns.length > 1 && mobileColumns[1].render && (
-                <span className="min-w-0 flex items-center gap-2 break-words">{mobileColumns[1].render(row, index)}</span>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {mobileColumns.slice(mobileTitle ? 0 : 1).map((col) => (
-                <div className="min-w-0 flex flex-col" key={col.key}>
-                  <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                    {col.label}
-                  </span>
-                  <span className="text-sm font-medium tabular-nums text-foreground mt-0.5 break-words">
-                    {col.render ? col.render(row, index) : String((row as Record<string, unknown>)[col.key] ?? '')}
-                  </span>
+        {paginatedData.map((row, index) => {
+          const headingRight = mobileTitle
+            ? mobileColumns.length > 0 && mobileColumns[0].render
+              ? mobileColumns[0].render(row, index)
+              : null
+            : mobileColumns.length > 1 && mobileColumns[1].render
+              ? mobileColumns[1].render(row, index)
+              : null
+
+          const gridColumns = mobileColumns.slice(mobileTitle ? 1 : 2)
+
+          return (
+            <div className="p-3.5 flex flex-col gap-2 min-w-0" key={rowKey(row, index)}>
+              <div className="mobile-table-heading flex items-center justify-between gap-2">
+                <span className="min-w-0 break-words text-sm font-semibold">
+                  {mobileTitle
+                    ? mobileTitle(row, index)
+                    : mobileColumns.length > 0 && mobileColumns[0].render
+                      ? mobileColumns[0].render(row, index)
+                      : ''}
+                </span>
+                {headingRight && (
+                  <span className="min-w-0 flex items-center gap-2 break-words">{headingRight}</span>
+                )}
+              </div>
+              {gridColumns.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {gridColumns.map((col) => (
+                    <div className="min-w-0 flex flex-col" key={col.key}>
+                      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                        {col.label}
+                      </span>
+                      <span className="text-sm font-medium tabular-nums text-foreground mt-0.5 break-words">
+                        {col.render ? col.render(row, index) : String((row as Record<string, unknown>)[col.key] ?? '')}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+              {mobileActions && <div className="mobile-table-actions flex items-center gap-2 flex-wrap mt-1">{mobileActions(row, index)}</div>}
             </div>
-            {mobileActions && <div className="mobile-table-actions flex items-center gap-2 flex-wrap mt-1">{mobileActions(row, index)}</div>}
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <div className="mobile-table-pagination flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-xs text-muted-foreground">

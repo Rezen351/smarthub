@@ -142,75 +142,75 @@ export default function LandingPage() {
 
   const stories = [
     {
-      caseId: 'CASE / 01',
-      badge: '-28% TARE LOSS',
-      farmer: 'SARAH K. · DIENG',
-      duration: '8 MONTHS',
+      caseId: 'FARMER / 01',
+      badge: 'FAIR WEIGHING',
+      farmer: 'KANG ASEP · CIKAJANG, GARUT',
+      duration: '8 MONTHS PARTNER',
       quote:
-        'The live Modbus tare lock eliminated discrepancies between farm delivery and intake receipt. Every single sack is accounted for with zero manual recalculation errors.',
-      metric1: { val: '-28', label: 'Tare Variance' },
-      metric2: { val: '+18%', label: 'Gross Margin' },
+        'Before SmartGeulis, I was never certain if my potato sacks were weighed fairly by roaming buyers. Now, my receipt is printed right before my eyes the second my harvest lands on the scale. That trust means everything to my family.',
+      metric1: { val: '100%', label: 'Fair Payout' },
+      metric2: { val: '+18%', label: 'Family Income' },
       metric3: { val: '8', label: 'Harvest Cycles' },
       img: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=600&q=80',
     },
     {
-      caseId: 'CASE / 02',
-      badge: '+14 TONS LOGGED',
-      farmer: 'DAVID L. · PANGALENGAN',
-      duration: '12 MONTHS',
+      caseId: 'FARMER / 02',
+      badge: 'COMMUNITY PRIDE',
+      farmer: 'BU SITI · CISURUPAN, GARUT',
+      duration: '12 MONTHS PARTNER',
       quote:
-        'Sorting potato harvest into Grade A, B, and C directly onto labelled pallets without rescanning boosted our packhouse throughput by more than threefold.',
-      metric1: { val: '+14', label: 'Tons Certified' },
-      metric2: { val: '120', label: 'Pallets Sealed' },
+        'Seeing our village name appear on people phones when they buy potatoes in supermarkets fills our whole womens group with pride. We are no longer nameless growers—we are respected partners who feed families across Indonesia.',
+      metric1: { val: '+14', label: 'Tons Harvested' },
+      metric2: { val: '100%', label: 'Direct Trace' },
       metric3: { val: '12', label: 'Months Active' },
       img: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=600&q=80',
     },
     {
-      caseId: 'CASE / 03',
-      badge: '42 TONS EXPORTED',
-      farmer: 'MAYA R. · BROMO HIGHLANDS',
-      duration: '14 MONTHS',
+      caseId: 'FARMER / 03',
+      badge: 'ZERO WASTE',
+      farmer: 'PAK ENDANG · BAYONGBONG, GARUT',
+      duration: '14 MONTHS PARTNER',
       quote:
-        'Buyers scan the GS1 QR on each 1 kg pouch and instantly view the whole harvest journey. It unlocked premium export contracts across Southeast Asia.',
-      metric1: { val: '42', label: 'Tons Export' },
-      metric2: { val: '100%', label: 'GS1 Compliant' },
-      metric3: { val: '14', label: 'Months Export' },
+        'Sorting our potatoes into Grade A, B, and C means every single tuber finds its best home. Premium ones go to fresh food stores, while smaller potatoes go directly to local culinary makers. Nothing gets wasted or underpaid.',
+      metric1: { val: '98.5%', label: 'Quality Score' },
+      metric2: { val: '3', label: 'Clean Grades' },
+      metric3: { val: '14', label: 'Months Partner' },
       img: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
     },
     {
-      caseId: 'CASE / 04',
-      badge: 'ZERO PACKING ERRORS',
-      farmer: 'JAMES T. · WONOSOBO CO-OP',
-      duration: '10 MONTHS',
+      caseId: 'TEAM / 04',
+      badge: 'PACKHOUSE TEAM',
+      farmer: 'TEH RINA · GARUT OPERATIONS',
+      duration: '10 MONTHS ACTIVE',
       quote:
-        'Having 3 dedicated packaging stations with channel-isolated scale transmitters allows 3 operators to bag and print labels simultaneously with zero collisions.',
-      metric1: { val: '3,800', label: 'Pouches / Day' },
-      metric2: { val: '0', label: 'Channel Conflict' },
+        'Working in this packhouse is calm and uplifting. The scales are steady, the labels print instantly, and every potato is handled gently. We can prepare thousands of fresh bags every day knowing families will enjoy healthy food.',
+      metric1: { val: '3,800', label: 'Bags / Day' },
+      metric2: { val: '0', label: 'Weight Disputes' },
       metric3: { val: '10', label: 'Months Live' },
       img: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=600&q=80',
     },
     {
-      caseId: 'CASE / 05',
-      badge: '-12% POST-HARVEST',
-      farmer: 'PRIYA N. · TOSARI AGRI',
-      duration: '6 MONTHS',
+      caseId: 'FARMER / 05',
+      badge: 'FAST INTAKE',
+      farmer: 'PAK UJANG · SUKARESMI, GARUT',
+      duration: '6 MONTHS PARTNER',
       quote:
-        'Real-time weight calibration and instant QR pallet label generation turned what used to take 2 hours of manual ledger bookkeeping into a 15-second operation.',
-      metric1: { val: '-12%', label: 'Transit Loss' },
-      metric2: { val: '+24%', label: 'Speed Index' },
-      metric3: { val: '6', label: 'Months Run' },
+        'I used to wait hours in line just to get a handwritten note that easily got torn or lost. With SmartGeulis, I deliver my harvest in the morning, receive my official printed slip in two minutes, and return home with total confidence.',
+      metric1: { val: '2 min', label: 'Average Intake' },
+      metric2: { val: '100%', label: 'Clear Records' },
+      metric3: { val: '6', label: 'Months Partner' },
       img: 'https://images.unsplash.com/photo-1628352081506-83c43123ed6d?auto=format&fit=crop&w=600&q=80',
     },
     {
-      caseId: 'CASE / 06',
-      badge: 'PRO CERTIFIED',
-      farmer: 'CARLOS M. · CIWIDEY VALLEY',
-      duration: '18 MONTHS',
+      caseId: 'FAMILY / 06',
+      badge: 'HAPPY CONSUMER',
+      farmer: 'IBU LILIS · HOME COOK',
+      duration: '18 MONTHS CUSTOMER',
       quote:
-        'The public traceability web viewer built into the system provides full transparency to consumers without requiring them to install any application.',
-      metric1: { val: '18,500', label: 'Consumer Scans' },
-      metric2: { val: '+35%', label: 'Brand Value' },
-      metric3: { val: '18', label: 'Months Tracked' },
+        'Whenever I buy potatoes for my children, scanning the QR code on the pouch shows the actual grower and harvest date. Knowing where my food came from gives me genuine peace of mind and connects my kitchen to real farmers.',
+      metric1: { val: '18,500+', label: 'Family Scans' },
+      metric2: { val: '0', label: 'Apps Required' },
+      metric3: { val: '18', label: 'Months Trust' },
       img: 'https://images.unsplash.com/photo-1516253593875-bd7ba052fbc5?auto=format&fit=crop&w=600&q=80',
     },
   ]
@@ -264,7 +264,7 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#fafafa] text-[#171717] font-['Archivo',sans-serif] selection:bg-[#f0fdf4] selection:text-[#15803d] overflow-x-hidden relative">
+    <div className="min-h-screen bg-[#fafafa] text-[#171717] font-['Archivo',sans-serif] selection:bg-[#fff7ed] selection:text-[#ea580c] overflow-x-hidden relative">
       {/* ── Sub-pixel Grain Overlay ── */}
       <div
         className="fixed inset-[-10%] pointer-events-none z-[190] opacity-[0.04] mix-blend-multiply"
@@ -341,7 +341,7 @@ export default function LandingPage() {
           position: absolute;
           width: 12px;
           height: 12px;
-          border: 1.5px solid #229856;
+          border: 1.5px solid #f97316;
           pointer-events: none;
         }
         .notch-corner::before {
@@ -369,8 +369,8 @@ export default function LandingPage() {
           left: 0;
           width: 48px;
           height: 48px;
-          border-top: 2px solid #229856;
-          border-left: 2px solid #229856;
+          border-top: 2px solid #f97316;
+          border-left: 2px solid #f97316;
           pointer-events: none;
         }
         .booking-frame::after {
@@ -380,8 +380,8 @@ export default function LandingPage() {
           right: 0;
           width: 48px;
           height: 48px;
-          border-bottom: 2px solid #229856;
-          border-right: 2px solid #229856;
+          border-bottom: 2px solid #f97316;
+          border-right: 2px solid #f97316;
           pointer-events: none;
         }
 
@@ -392,7 +392,7 @@ export default function LandingPage() {
         .wave-bar {
           display: inline-block;
           width: 2px;
-          background: #229856;
+          background: #f97316;
           margin: 0 1px;
           height: 3px;
           vertical-align: bottom;
@@ -410,7 +410,7 @@ export default function LandingPage() {
             box-shadow: 0 0 0 0 rgba(34, 152, 86, 0.4), 0 4px 12px rgba(34, 152, 86, 0.2);
           }
           50% {
-            box-shadow: 0 0 0 14px rgba(34, 152, 86, 0), 0 4px 12px rgba(34, 152, 86, 0.2);
+            box-shadow: 0 0 0 14px rgba(234, 88, 12, 0), 0 4px 12px rgba(34, 152, 86, 0.2);
           }
         }
         .pulse-btn {
@@ -425,7 +425,7 @@ export default function LandingPage() {
             <Logo className="h-8 w-auto" markOnly />
             <div>
               <div className="font-display text-2xl leading-none tracking-wider text-[#171717] flex items-center gap-2">
-                ENYX-ENTERPRISE
+                SmartGeulis
               </div>
               <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
                 TRACEABILITY SYSTEM
@@ -434,19 +434,22 @@ export default function LandingPage() {
           </Link>
 
           <nav className="hidden lg:flex items-center gap-8 font-heading text-xs uppercase tracking-[0.18em] text-[#666666]">
+            <a href="#facility" className="hover:text-[#171717] transition-colors">
+              Facility
+            </a>
             <a href="#pipeline" className="hover:text-[#171717] transition-colors">
-              Pipelines
+              Journey
             </a>
             <a href="#hardware" className="hover:text-[#171717] transition-colors">
               Stations
             </a>
             <a href="#stories" className="hover:text-[#171717] transition-colors">
-              Cases
+              Farmers
             </a>
             <a href="#booking" className="hover:text-[#171717] transition-colors">
-              Get Started
+              Connect
             </a>
-            <Link to="/traceability" className="hover:text-[#15803d] text-[#15803d] font-semibold transition-colors">
+            <Link to="/traceability" className="hover:text-[#ea580c] text-[#ea580c] font-semibold transition-colors">
               Public Trace
             </Link>
           </nav>
@@ -456,7 +459,7 @@ export default function LandingPage() {
               <span
                 className={`w-2 h-2 rounded-full ${
                   backendStatus === 'ONLINE'
-                    ? 'bg-[#15803d] animate-pulse'
+                    ? 'bg-[#16a34a] animate-pulse'
                     : backendStatus === 'CHECKING'
                     ? 'bg-amber-500 animate-pulse'
                     : 'bg-red-500'
@@ -513,7 +516,7 @@ export default function LandingPage() {
               <span
                 className={`w-2 h-2 rounded-full ${
                   backendStatus === 'ONLINE'
-                    ? 'bg-[#15803d] animate-ping'
+                    ? 'bg-[#16a34a] animate-ping'
                     : backendStatus === 'CHECKING'
                     ? 'bg-amber-400 animate-pulse'
                     : 'bg-red-500'
@@ -527,22 +530,21 @@ export default function LandingPage() {
 
           {/* Main Headline */}
           <div className="max-w-5xl">
-            <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#15803d] tracking-[0.25em] uppercase mb-4">
-              <span className="w-8 h-[2px] bg-[#15803d]"></span>
-              <span>EST. 2024 · SMART PACKHOUSE</span>
+            <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
+              <span className="w-8 h-[2px] bg-[#ea580c]"></span>
+              <span>EST. 2026 · GARUT HIGHLAND PACKHOUSE</span>
             </div>
 
             <h1 className="font-display text-[13vw] md:text-[9.5vw] lg:text-[7.5vw] leading-[0.85] mb-6 tracking-tight">
-              <span className="block">BUILT BY DATA.</span>
-              <span className="block text-stroke-white">VERIFIED IN SCALE.</span>
+              <span className="block">GROWN WITH CARE.</span>
+              <span className="block text-stroke-white">WEIGHED WITH HONESTY.</span>
               <span className="block">
-                TRACEABLE IN <span className="text-[#15803d]">FULL.</span>
+                TRACEABLE IN <span className="text-[#ea580c]">FULL.</span>
               </span>
             </h1>
 
             <p className="max-w-2xl text-white/80 text-base md:text-lg leading-relaxed font-body">
-              Potato traceability from farm intake through sorting and 1 kg packaging. Clear records, secure labels,
-              and verified handoffs from field to buyer.
+              From the volcanic soils of Garut into caring family kitchens. SmartGeulis connects local highland farmers directly with consumers through open scales, gentle handling, and honest traceability in every bag.
             </p>
           </div>
 
@@ -554,10 +556,10 @@ export default function LandingPage() {
                 <div className="w-11 h-11 rounded-full border-2 border-black bg-[#171717] flex items-center justify-center text-xs font-bold text-white shadow-sm">
                   <Icon name="scale" size={16} />
                 </div>
-                <div className="w-11 h-11 rounded-full border-2 border-black bg-[#15803d] flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                <div className="w-11 h-11 rounded-full border-2 border-black bg-[#ea580c] flex items-center justify-center text-xs font-bold text-white shadow-sm">
                   <Icon name="sortir" size={16} />
                 </div>
-                <div className="w-11 h-11 rounded-full border-2 border-black bg-[#15803d] flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                <div className="w-11 h-11 rounded-full border-2 border-black bg-[#ea580c] flex items-center justify-center text-xs font-bold text-white shadow-sm">
                   <Icon name="package" size={16} />
                 </div>
                 <div className="w-11 h-11 rounded-full border-2 border-black bg-white flex items-center justify-center text-xs font-mono-custom text-black font-bold">
@@ -581,11 +583,11 @@ export default function LandingPage() {
               </div>
               <div className="flex-1 h-[2px] bg-white/20 overflow-hidden rounded-full">
                 <div
-                  className="h-full bg-[#15803d] transition-all duration-75"
+                  className="h-full bg-[#ea580c] transition-all duration-75"
                   style={{ width: `${reelProgress}%` }}
                 />
               </div>
-              <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase">
+              <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase">
                 {reelFrames[currentFrame].subtitle}
               </div>
             </div>
@@ -596,29 +598,29 @@ export default function LandingPage() {
         <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-black/80 backdrop-blur-md py-3 overflow-hidden z-20">
           <div className="marquee-track font-heading text-xs tracking-[0.25em] uppercase text-white/70">
             <span className="px-8">WEIGHED & APPROVED</span>
-            <span className="text-[#15803d]">/</span>
+            <span className="text-[#ea580c]">/</span>
             <span className="px-8">PRODUCT QR LABELS</span>
-            <span className="text-[#15803d]">/</span>
+            <span className="text-[#ea580c]">/</span>
             <span className="px-8">CONNECTED SCALES</span>
-            <span className="text-[#15803d]">/</span>
+            <span className="text-[#ea580c]">/</span>
             <span className="px-8">CLEAR SORTING</span>
-            <span className="text-[#15803d]">/</span>
+            <span className="text-[#ea580c]">/</span>
             <span className="px-8">VERIFIED WEIGHT</span>
-            <span className="text-[#15803d]">/</span>
+            <span className="text-[#ea580c]">/</span>
             <span className="px-8">PUBLIC QR TRACEABILITY</span>
-            <span className="text-[#15803d]">/</span>
+            <span className="text-[#ea580c]">/</span>
             <span className="px-8">FIELD TO EXPORT CONTAINER</span>
-            <span className="text-[#15803d]">/</span>
+            <span className="text-[#ea580c]">/</span>
             <span className="px-8">WEIGHED & APPROVED</span>
-            <span className="text-[#15803d]">/</span>
+            <span className="text-[#ea580c]">/</span>
             <span className="px-8">PRODUCT QR LABELS</span>
-            <span className="text-[#15803d]">/</span>
+            <span className="text-[#ea580c]">/</span>
             <span className="px-8">CONNECTED SCALES</span>
-            <span className="text-[#15803d]">/</span>
+            <span className="text-[#ea580c]">/</span>
             <span className="px-8">CLEAR SORTING</span>
-            <span className="text-[#15803d]">/</span>
+            <span className="text-[#ea580c]">/</span>
             <span className="px-8">VERIFIED WEIGHT</span>
-            <span className="text-[#15803d]">/</span>
+            <span className="text-[#ea580c]">/</span>
           </div>
         </div>
       </section>
@@ -632,16 +634,16 @@ export default function LandingPage() {
                 {counters.years}+
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
-                Operational Hubs
+                Highland Facility
               </div>
             </div>
 
-            <div className="border-l-2 border-[#229856] pl-6">
-              <div className="font-display text-6xl md:text-7xl text-[#15803d] tabular-nums">
+            <div className="border-l-2 border-[#f97316] pl-6">
+              <div className="font-display text-6xl md:text-7xl text-[#ea580c] tabular-nums">
                 {counters.farmers}+
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
-                Registered Farmers
+                Farming Families
               </div>
             </div>
 
@@ -650,7 +652,7 @@ export default function LandingPage() {
                 {counters.tons.toLocaleString()}+
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
-                Tons Net Weighed
+                Kilograms Weighed with Pride
               </div>
             </div>
 
@@ -659,8 +661,84 @@ export default function LandingPage() {
                 {counters.stations}
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
-                Connected Scales
+                Care & Quality Stations
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── PHYSICAL WAREHOUSE & PACKHOUSE FACILITY BANNER ── */}
+      <section className="py-20 lg:py-28 bg-[#fafafa] border-b border-[#eaeaea]" id="facility">
+        <div className="max-w-[1600px] mx-auto px-6 lg:px-10">
+          <div className="grid lg:grid-cols-12 gap-8 mb-12 items-end">
+            <div className="lg:col-span-7">
+              <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4 font-semibold">
+                <span className="w-8 h-[2px] bg-[#ea580c]"></span>
+                <span>01 — Physical Facility & Headquarters</span>
+              </div>
+              <h2 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[0.9] text-[#171717]">
+                THE HEART OF OUR <br />
+                <span className="text-[#ea580c]">HIGHLAND PACKHOUSE.</span>
+              </h2>
+            </div>
+            <div className="lg:col-span-5 flex flex-col justify-end">
+              <p className="text-[#666666] text-base leading-relaxed font-body">
+                Located in the fertile volcanic highlands of Garut, West Java, the SmartGeulis packhouse serves as the physical home where fresh harvests are received directly from local farming families, sorted with care, and prepared for dining tables across the nation.
+              </p>
+            </div>
+          </div>
+
+          {/* Warehouse Signboard Banner Image Showcase */}
+          <div className="notch-corner border border-[#eaeaea] bg-white p-4 sm:p-6 shadow-sm mb-12">
+            <div className="relative overflow-hidden bg-black/5 border border-[#eaeaea] group">
+              <img
+                src="/Papan Nama Warehouse.png"
+                alt="SmartGeulis Packhouse & Warehouse Signboard"
+                className="w-full h-auto max-h-[580px] object-contain mx-auto transition-transform duration-700 group-hover:scale-[1.01]"
+              />
+              {/* Badge Overlays */}
+              <div className="absolute top-4 left-4 bg-black/85 backdrop-blur-md border border-white/20 text-white px-3.5 py-1.5 text-xs font-mono-custom uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#ea580c] animate-pulse"></span>
+                <span>Official Facility Signboard</span>
+              </div>
+              <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-md border border-[#eaeaea] text-[#171717] px-4 py-2 text-xs font-mono-custom tracking-wider hidden sm:flex items-center gap-2 shadow-sm font-semibold">
+                <span className="w-2 h-2 bg-[#ea580c]"></span>
+                <span>Garut Highlands · West Java, Indonesia</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 3 Physical Packhouse Highlights */}
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="p-6 border border-[#eaeaea] bg-white shadow-xs hover:border-[#f97316] transition-all">
+              <div className="w-10 h-10 bg-[#fff7ed] border border-[#ffedd5] text-[#ea580c] flex items-center justify-center mb-4">
+                <Icon name="scale" size={20} />
+              </div>
+              <h3 className="font-display text-2xl text-[#171717] mb-2">OPEN & HONEST INTAKE</h3>
+              <p className="text-xs text-[#666666] leading-relaxed font-body">
+                Local growers arrive every morning with fresh harvest sacks. Digital scales with large bright screens let farmers verify their weight directly with total peace of mind.
+              </p>
+            </div>
+
+            <div className="p-6 border border-[#eaeaea] bg-white shadow-xs hover:border-[#f97316] transition-all">
+              <div className="w-10 h-10 bg-[#fff7ed] border border-[#ffedd5] text-[#ea580c] flex items-center justify-center mb-4">
+                <Icon name="package" size={20} />
+              </div>
+              <h3 className="font-display text-2xl text-[#171717] mb-2">COOL HIGHLAND STORAGE</h3>
+              <p className="text-xs text-[#666666] leading-relaxed font-body">
+                Naturally cooled highland air and clean, ventilated storage bays preserve crispness, moisture, and natural flavor without artificial chemicals or synthetic treatments.
+              </p>
+            </div>
+
+            <div className="p-6 border border-[#eaeaea] bg-white shadow-xs hover:border-[#f97316] transition-all">
+              <div className="w-10 h-10 bg-[#fff7ed] border border-[#ffedd5] text-[#ea580c] flex items-center justify-center mb-4">
+                <Icon name="users" size={20} />
+              </div>
+              <h3 className="font-display text-2xl text-[#171717] mb-2">COMMUNITY & EMPOWERMENT</h3>
+              <p className="text-xs text-[#666666] leading-relaxed font-body">
+                Co-developed with Universitas Padjadjaran and Eptilu, our packhouse serves as an open learning hub for sustainable farming, transparent economics, and fair trade.
+              </p>
             </div>
           </div>
         </div>
@@ -671,28 +749,27 @@ export default function LandingPage() {
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10">
           <div className="grid lg:grid-cols-12 gap-8 mb-16 items-end">
             <div className="lg:col-span-6">
-              <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#15803d] tracking-[0.25em] uppercase mb-4">
-                <span className="w-8 h-[2px] bg-[#15803d]"></span>
+              <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
+                <span className="w-8 h-[2px] bg-[#ea580c]"></span>
                 <span>02 — Operational Pipeline</span>
               </div>
               <h2 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9]">
                 Three stations.<br />
-                <span className="text-stroke">One outcome:</span><br />
-                <span className="text-[#15803d]">100% verified trace.</span>
+                <span className="text-stroke">One commitment:</span><br />
+                <span className="text-[#ea580c]">100% honest quality.</span>
               </h2>
             </div>
 
             <div className="lg:col-span-6 flex flex-col justify-end">
               <p className="text-[#666666] text-lg leading-relaxed mb-6 font-body">
-                Every station keeps the daily work clear and accountable. Explore how receiving, sorting, and
-                packaging work together from one place.
+                From the moment morning harvests arrive to the sealed retail pouch on your dining table. Explore how our three dedicated care stations ensure every potato is weighed honestly, sorted by quality, and packed with pride.
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setActiveCategory('all')}
                   className={`px-4 py-2 font-heading text-xs uppercase tracking-[0.15em] border transition-all ${
                     activeCategory === 'all'
-                      ? 'bg-[#15803d] border-[#229856] text-white font-semibold'
+                      ? 'bg-[#ea580c] border-[#f97316] text-white font-semibold'
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
@@ -702,7 +779,7 @@ export default function LandingPage() {
                   onClick={() => setActiveCategory('weighing')}
                   className={`px-4 py-2 font-heading text-xs uppercase tracking-[0.15em] border transition-all ${
                     activeCategory === 'weighing'
-                      ? 'bg-[#15803d] border-[#229856] text-white font-semibold'
+                      ? 'bg-[#ea580c] border-[#f97316] text-white font-semibold'
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
@@ -712,7 +789,7 @@ export default function LandingPage() {
                   onClick={() => setActiveCategory('sorting')}
                   className={`px-4 py-2 font-heading text-xs uppercase tracking-[0.15em] border transition-all ${
                     activeCategory === 'sorting'
-                      ? 'bg-[#15803d] border-[#229856] text-white font-semibold'
+                      ? 'bg-[#ea580c] border-[#f97316] text-white font-semibold'
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
@@ -722,7 +799,7 @@ export default function LandingPage() {
                   onClick={() => setActiveCategory('packaging')}
                   className={`px-4 py-2 font-heading text-xs uppercase tracking-[0.15em] border transition-all ${
                     activeCategory === 'packaging'
-                      ? 'bg-[#15803d] border-[#229856] text-white font-semibold'
+                      ? 'bg-[#ea580c] border-[#f97316] text-white font-semibold'
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
@@ -736,7 +813,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {/* Card 1: Weighing Station */}
             {(activeCategory === 'all' || activeCategory === 'weighing') && (
-              <article className="notch-corner border border-[#eaeaea] bg-white shadow-xs group transition-all duration-300 hover:shadow-md hover:border-[#229856]">
+              <article className="notch-corner border border-[#eaeaea] bg-white shadow-xs group transition-all duration-300 hover:shadow-md hover:border-[#f97316]">
                 <div className="relative h-64 overflow-hidden bg-black">
                   <img
                     src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80"
@@ -744,50 +821,50 @@ export default function LandingPage() {
                     className="w-full h-full object-cover filter contrast-[1.2] opacity-80 group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#93c749] tracking-[0.2em]">
+                  <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#f59e0b] tracking-[0.2em]">
                     01 / INTAKE WEIGHING
                   </div>
-                  <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#15803d] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
+                  <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#ea580c] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
                     RECEIPT + LABEL
                   </div>
                 </div>
 
                 <div className="p-7">
-                  <h3 className="font-display text-4xl mb-3 text-[#171717]">INTAKE WEIGHING</h3>
+                  <h3 className="font-display text-4xl mb-3 text-[#171717]">HARVEST INTAKE</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Verify the farmer, record the harvest weight, and print a receipt and Waring label.
+                    Greeting local farmers at dawn, recording fresh harvest sacks on clear digital scales, and printing an immediate receipt for the grower with zero guesswork.
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Process
+                        Welcome
                       </div>
-                      <div className="font-heading text-base text-[#171717]">RECEIVING RECORD</div>
+                      <div className="font-heading text-base text-[#171717]">DIRECT GROWER INTAKE</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Capacity
+                        Weighing
                       </div>
-                      <div className="font-heading text-base text-[#171717]">150 KG FLOOR SCALE</div>
+                      <div className="font-heading text-base text-[#171717]">CERTIFIED DIGITAL SCALE</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Reading
+                        Trust
                       </div>
-                      <div className="font-heading text-base text-[#171717]">STABLE WEIGHT</div>
+                      <div className="font-heading text-base text-[#171717]">HONEST TARE SUBTRACTION</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Output
+                        Confirmation
                       </div>
-                      <div className="font-heading text-base text-[#171717]">RECEIPT + WARING LABEL</div>
+                      <div className="font-heading text-base text-[#171717]">PRINTED SLIP + SACK TAG</div>
                     </div>
                   </div>
 
                   <Link
                     to="/dashboard/weighing"
-                    className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#15803d] transition-colors"
+                    className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#ea580c] transition-colors"
                   >
                     <span>Launch Station</span>
                     <Icon name="arrow-right" size={16} />
@@ -798,7 +875,7 @@ export default function LandingPage() {
 
             {/* Card 2: Sorting Station */}
             {(activeCategory === 'all' || activeCategory === 'sorting') && (
-              <article className="notch-corner border border-[#eaeaea] bg-white shadow-xs group transition-all duration-300 hover:shadow-md hover:border-[#229856]">
+              <article className="notch-corner border border-[#eaeaea] bg-white shadow-xs group transition-all duration-300 hover:shadow-md hover:border-[#f97316]">
                 <div className="relative h-64 overflow-hidden bg-black">
                   <img
                     src="https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80"
@@ -806,42 +883,42 @@ export default function LandingPage() {
                     className="w-full h-full object-cover filter contrast-[1.2] opacity-80 group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#93c749] tracking-[0.2em]">
+                  <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#f59e0b] tracking-[0.2em]">
                     02 / CLASSIFICATION
                   </div>
-                  <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#15803d] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
+                  <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#ea580c] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
                     SORTING FLOW
                   </div>
                 </div>
 
                 <div className="p-7">
-                  <h3 className="font-display text-4xl mb-3 text-[#171717]">SORTING STATION</h3>
+                  <h3 className="font-display text-4xl mb-3 text-[#171717]">SORTING & GRADING</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Scan the intake Waring, sort produce into Grade A, B, or C, and link each grade to its pallet.
+                    Carefully selecting potatoes by hand and eye into Grade A, B, and C so premium tubers reach supermarkets and every harvest finds its best home without unnecessary waste.
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Input
+                        Selection
                       </div>
-                      <div className="font-heading text-base text-[#171717]">WARING QR (WRG-...)</div>
+                      <div className="font-heading text-base text-[#171717]">HAND & EYE QUALITY SORT</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Outputs
+                        Categories
                       </div>
                       <div className="font-heading text-base text-[#171717]">GRADE A / B / C</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Tracking
+                        Identification
                       </div>
-                      <div className="font-heading text-base text-[#171717]">PRE-ATTACHED PALLET QR</div>
+                      <div className="font-heading text-base text-[#171717]">PALLET TRACKING TAG</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Handoff
+                        Destination
                       </div>
                       <div className="font-heading text-base text-[#171717]">READY FOR PACKAGING</div>
                     </div>
@@ -849,7 +926,7 @@ export default function LandingPage() {
 
                   <Link
                     to="/dashboard/sorting"
-                    className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#15803d] transition-colors"
+                    className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#ea580c] transition-colors"
                   >
                     <span>Launch Station</span>
                     <Icon name="arrow-right" size={16} />
@@ -860,7 +937,7 @@ export default function LandingPage() {
 
             {/* Card 3: Packaging Station */}
             {(activeCategory === 'all' || activeCategory === 'packaging') && (
-              <article className="notch-corner border border-[#eaeaea] bg-white shadow-xs group transition-all duration-300 hover:shadow-md hover:border-[#229856]">
+              <article className="notch-corner border border-[#eaeaea] bg-white shadow-xs group transition-all duration-300 hover:shadow-md hover:border-[#f97316]">
                 <div className="relative h-64 overflow-hidden bg-black">
                   <img
                     src="https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80"
@@ -868,7 +945,7 @@ export default function LandingPage() {
                     className="w-full h-full object-cover filter contrast-[1.2] opacity-80 group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#93c749] tracking-[0.2em]">
+                  <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#f59e0b] tracking-[0.2em]">
                     03 / RETAIL POUCH
                   </div>
                   <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#171717] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
@@ -877,41 +954,41 @@ export default function LandingPage() {
                 </div>
 
                 <div className="p-7">
-                  <h3 className="font-display text-4xl mb-3 text-[#171717]">PACKAGING STATION</h3>
+                  <h3 className="font-display text-4xl mb-3 text-[#171717]">RETAIL PACKAGING</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Pack Grade A, B, and C produce with clear weight checks, instant approval, and product labels.
+                    Weighing fresh potatoes into clean 1 kg stand-up pouches, sealed with a unique QR code that connects home cooks directly to the grower who nurtured the crop.
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Target Unit
+                        Family Unit
                       </div>
-                      <div className="font-heading text-base text-[#171717]">1.000 KG POUCH</div>
+                      <div className="font-heading text-base text-[#171717]">1 KG RETAIL POUCH</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Tolerance
+                        Freshness
                       </div>
-                      <div className="font-heading text-base text-[#171717]">±5 GRAMS</div>
+                      <div className="font-heading text-base text-[#171717]">BREATHE-EASY PACK</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Label
+                        Transparency
                       </div>
-                      <div className="font-heading text-base text-[#171717]">QR / BARCODE</div>
+                      <div className="font-heading text-base text-[#171717]">SCANNABLE FARMER QR</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Team Size
+                        Packhouse Line
                       </div>
-                      <div className="font-heading text-base text-[#171717]">3 OPERATORS</div>
+                      <div className="font-heading text-base text-[#171717]">DEDICATED GRADE LINES</div>
                     </div>
                   </div>
 
                   <Link
                     to="/dashboard/packaging"
-                    className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#15803d] transition-colors"
+                    className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#ea580c] transition-colors"
                   >
                     <span>Launch Station</span>
                     <Icon name="arrow-right" size={16} />
@@ -928,19 +1005,19 @@ export default function LandingPage() {
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10">
           <div className="grid lg:grid-cols-12 gap-8 mb-16 items-end">
             <div className="lg:col-span-7">
-              <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#15803d] tracking-[0.25em] uppercase mb-4">
-                <span className="w-8 h-[2px] bg-[#15803d]"></span>
+              <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
+                <span className="w-8 h-[2px] bg-[#ea580c]"></span>
                 <span>03 — Stations</span>
               </div>
               <h2 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9]">
-                Systems that <span className="text-[#15803d]">verify</span>,<br />
-                hardware that <span className="text-stroke">endures.</span>
+                Simple, caring tools.<br />
+                Built for <span className="text-[#ea580c]">people</span>,<br />
+                designed for <span className="text-stroke">trust.</span>
               </h2>
             </div>
             <div className="lg:col-span-5 flex flex-col justify-end">
               <p className="text-[#666666] text-base leading-relaxed font-body">
-                Each station is designed for fast work with clear feedback, reliable weight checks, and instant
-                printing. Hover or tap any unit to view its daily features.
+                No complex manuals or confusing jargon. Each packhouse tool is designed for everyday ease, instant clarity, and fair trade for farmers and families. Hover or tap any card below to explore.
               </p>
             </div>
           </div>
@@ -961,7 +1038,7 @@ export default function LandingPage() {
                       alt="Digital Scales"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
-                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#93c749] tracking-[0.2em]">
+                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
                       / 01
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
@@ -970,52 +1047,52 @@ export default function LandingPage() {
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">PRECISION SCALES</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">FAIR DIGITAL SCALES</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        Receiving & Packaging Scales
+                        Honest Weight for Every Farmer
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        INTAKE & PACKAGING
+                        FAIR WEIGHING
                       </span>
-                      <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
-                        DETAILS →
+                      <span className="font-mono-custom text-[10px] text-[#ea580c] tracking-wider font-semibold">
+                        EXPLORE →
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Back */}
-                <div className="flip-face flip-back border border-[#229856] bg-white p-6 flex flex-col justify-between shadow-md">
+                <div className="flip-face flip-back border border-[#f97316] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
-                    <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-3">
-                      / Operational Features
+                    <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-3">
+                      / Everyday Trust
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">STABLE & FAST CAPTURE</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">FAIR NUMBERS YOU TRUST</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Stable readings during weighing</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Large bright display seen by farmer & operator</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>One-touch clear and zero controls</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>One-touch tare deduction for sack weight only</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Clear ready indicator</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Gentle, non-slip platform for fresh potatoes</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Connected for daily work</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Instant confirmation so growers leave confident</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Ready to Record</div>
-                    <div className="font-display text-xl text-[#15803d]">READY IN 2 SEC</div>
-                    <p className="text-[11px] text-[#666666] mt-1">The reading is confirmed before approval.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Complete Honesty</div>
+                    <div className="font-display text-xl text-[#ea580c]">ZERO GUESSWORK</div>
+                    <p className="text-[11px] text-[#666666] mt-1">Clear numbers you can see before any deal is settled.</p>
                   </div>
                 </div>
               </div>
@@ -1035,7 +1112,7 @@ export default function LandingPage() {
                       alt="Pallet QR Label Engine"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
-                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#93c749] tracking-[0.2em]">
+                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
                       / 02
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
@@ -1044,52 +1121,52 @@ export default function LandingPage() {
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">LABEL PRINTER</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">PRINTED PROOF</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        Instant Thermal Receipts & Tags
+                        Immediate Receipts in Hand
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        READY TO PRINT
+                        OFFICIAL SLIPS
                       </span>
-                      <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
-                        DETAILS →
+                      <span className="font-mono-custom text-[10px] text-[#ea580c] tracking-wider font-semibold">
+                        EXPLORE →
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Back */}
-                <div className="flip-face flip-back border border-[#229856] bg-white p-6 flex flex-col justify-between shadow-md">
+                <div className="flip-face flip-back border border-[#f97316] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
-                    <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-3">
-                      / Print Engine Features
+                    <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-3">
+                      / Everyday Confidence
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">CLEAR PACKHOUSE OUTPUTS</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">A RECEIPT TO TAKE HOME</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Farmer receipt</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Instant printed receipt handed to farmer before leaving</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Waring Label: Crisp scannable QR tag</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Weather-resistant tag attached to each mesh waring sack</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Pallet Tags: High-contrast barcode labels</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Clear numbering for simple cooperative accounting</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Works without internet delays</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Operates reliably without depending on internet speed</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Record Codes</div>
-                    <div className="font-display text-xl text-[#15803d]">WRG & PLT CODES</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Each intake and sorting record stays linked.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Permanent Record</div>
+                    <div className="font-display text-xl text-[#ea580c]">PEACE OF MIND</div>
+                    <p className="text-[11px] text-[#666666] mt-1">Tangible printed proof for every single kilogram delivered.</p>
                   </div>
                 </div>
               </div>
@@ -1109,7 +1186,7 @@ export default function LandingPage() {
                       alt="Packaging Lines"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
-                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#93c749] tracking-[0.2em]">
+                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
                       / 03
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
@@ -1118,52 +1195,52 @@ export default function LandingPage() {
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">PACKAGING LINES</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">KITCHEN POUCHES</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        Dedicated Grade Stations
+                        Convenient 1 kg Family Sizing
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        1 KG POUCH
+                        GRADE-SPECIFIC
                       </span>
-                      <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
-                        DETAILS →
+                      <span className="font-mono-custom text-[10px] text-[#ea580c] tracking-wider font-semibold">
+                        EXPLORE →
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Back */}
-                <div className="flip-face flip-back border border-[#229856] bg-white p-6 flex flex-col justify-between shadow-md">
+                <div className="flip-face flip-back border border-[#f97316] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
-                    <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-3">
-                      / Packaging Lines
+                    <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-3">
+                      / Table-Ready Quality
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">INDEPENDENT STATIONS</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">SEALED FOR FRESHNESS</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Grade A Line: Premium supermarket retail pack</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Grade A Line: Hand-selected premium potatoes for fresh markets</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Grade B Line: General consumer standard pack</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Grade B Line: Wholesome, affordable table potatoes for daily cooking</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Grade C Line: Bulk and industrial food processing</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Grade C Line: Consistent quality for food makers and local chefs</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Live target weight bars with instant visual feedback</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Breathe-easy pouches that preserve farm-fresh firmness</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Target Weight</div>
-                    <div className="font-display text-xl text-[#15803d]">1.000 KG TARGET</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Shows ready when the weight is right.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Family Sizing</div>
+                    <div className="font-display text-xl text-[#ea580c]">1 KG POUCH</div>
+                    <p className="text-[11px] text-[#666666] mt-1">Perfect portion for family cooking and easy storage.</p>
                   </div>
                 </div>
               </div>
@@ -1183,7 +1260,7 @@ export default function LandingPage() {
                       alt="Public Traceability Web Engine"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
-                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#93c749] tracking-[0.2em]">
+                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
                       / 04
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
@@ -1192,52 +1269,52 @@ export default function LandingPage() {
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">TRACE ENGINE</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">PHONE SCAN</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        GS1 Digital Link URI Schema
+                        Meet Your Grower with One Tap
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        ZERO-LOGIN SCAN
+                        NO APP NEEDED
                       </span>
-                      <span className="font-mono-custom text-[10px] text-[#15803d] tracking-wider font-semibold">
-                        DETAILS →
+                      <span className="font-mono-custom text-[10px] text-[#ea580c] tracking-wider font-semibold">
+                        EXPLORE →
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Back */}
-                <div className="flip-face flip-back border border-[#229856] bg-white p-6 flex flex-col justify-between shadow-md">
+                <div className="flip-face flip-back border border-[#f97316] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
-                    <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-3">
-                      / Traceability Engine
+                    <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-3">
+                      / Farm-to-Fork Story
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">GS1 DIGITAL LINK</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">MEET YOUR GROWER</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Direct phone camera browser redirection</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Point your normal phone camera to view in seconds</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Farmer profile, elevation, harvest date</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>See the grower name, highland village, and harvest date</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Grading batch certificate & QA approval</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Know your food was grown responsibly and fairly traded</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Icon name="check-circle" size={14} className="text-[#15803d] shrink-0" />
-                        <span>Cold-chain transit & delivery timeline</span>
+                        <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
+                        <span>Celebrate the local farming families who feed us</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">URI Standard</div>
-                    <div className="font-display text-xl text-[#15803d]">/01/GTIN/21/SERIAL</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Conforms to GS1 General Specifications Release 23.0.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Zero Downloads</div>
+                    <div className="font-display text-xl text-[#ea580c]">ANY SMARTPHONE</div>
+                    <p className="text-[11px] text-[#666666] mt-1">Tap the link to immediately view the genuine harvest story.</p>
                   </div>
                 </div>
               </div>
@@ -1251,23 +1328,22 @@ export default function LandingPage() {
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10 mb-14">
           <div className="grid lg:grid-cols-12 gap-8 items-end">
             <div className="lg:col-span-7">
-              <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#15803d] tracking-[0.25em] uppercase mb-4">
-                <span className="w-8 h-[2px] bg-[#15803d]"></span>
-                <span>04 — Verified in the Field</span>
+              <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
+                <span className="w-8 h-[2px] bg-[#ea580c]"></span>
+                <span>04 — Voices from the Soil</span>
               </div>
               <h2 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9]">
                 Real harvests.<br />
-                <span className="text-[#15803d]">Relentless</span> traceability.
+                <span className="text-[#ea580c]">Real families.</span>
               </h2>
             </div>
             <div className="lg:col-span-5 flex flex-col justify-end">
               <p className="text-[#666666] text-base leading-relaxed mb-4 font-body">
-                Every verified record in our database originates from actual IoT scale readings. Explore real harvest
-                batches tracked from the field through the ENYX-Smart Hub ecosystem.
+                Behind every potato is a family of growers who rise before dawn. Meet the farmers and packhouse team of Garut whose livelihoods are protected by honest weighing and genuine community pride.
               </p>
               <div className="flex items-center gap-3 font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                <Icon name="scan" size={13} className="text-[#15803d]" />
-                <span>Swipeable · Interactive Records · Active Batches</span>
+                <Icon name="users" size={13} className="text-[#ea580c]" />
+                <span>Swipeable · Real Stories · Verified Highlands</span>
               </div>
             </div>
           </div>
@@ -1283,7 +1359,7 @@ export default function LandingPage() {
               {stories.map((story) => (
                 <article
                   key={story.caseId}
-                  className="w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] shrink-0 border border-[#eaeaea] bg-white shadow-xs hover:border-[#229856] transition-colors"
+                  className="w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] shrink-0 border border-[#eaeaea] bg-white shadow-xs hover:border-[#f97316] transition-colors"
                 >
                   <div className="relative h-56 overflow-hidden bg-black">
                     <img
@@ -1291,10 +1367,10 @@ export default function LandingPage() {
                       alt={story.farmer}
                       className="w-full h-full object-cover filter contrast-[1.2] brightness-90"
                     />
-                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#93c749] tracking-[0.2em]">
+                    <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
                       {story.caseId}
                     </div>
-                    <div className="absolute bottom-4 right-4 px-2.5 py-1 bg-[#15803d] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
+                    <div className="absolute bottom-4 right-4 px-2.5 py-1 bg-[#ea580c] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
                       {story.badge}
                     </div>
                   </div>
@@ -1313,7 +1389,7 @@ export default function LandingPage() {
 
                     <div className="grid grid-cols-3 gap-2 pt-4 border-t border-[#eaeaea]">
                       <div>
-                        <div className="font-display text-2xl text-[#15803d]">{story.metric1.val}</div>
+                        <div className="font-display text-2xl text-[#ea580c]">{story.metric1.val}</div>
                         <div className="font-mono-custom text-[9px] text-[#666666] tracking-wider uppercase">
                           {story.metric1.label}
                         </div>
@@ -1346,7 +1422,7 @@ export default function LandingPage() {
                   key={i}
                   onClick={() => setStoryIndex(i)}
                   className={`transition-all duration-300 rounded-full h-1 ${
-                    i === storyIndex ? 'w-8 bg-[#15803d]' : 'w-2 bg-[#d1d5db]'
+                    i === storyIndex ? 'w-8 bg-[#ea580c]' : 'w-2 bg-[#d1d5db]'
                   }`}
                   aria-label={`Go to case ${i + 1}`}
                 />
@@ -1357,14 +1433,14 @@ export default function LandingPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePrevStory}
-                className="w-10 h-10 border border-[#eaeaea] bg-white hover:border-[#229856] hover:text-[#15803d] flex items-center justify-center transition-colors shadow-xs"
+                className="w-10 h-10 border border-[#eaeaea] bg-white hover:border-[#f97316] hover:text-[#ea580c] flex items-center justify-center transition-colors shadow-xs"
                 aria-label="Previous case"
               >
                 <Icon name="arrow-left" size={14} />
               </button>
               <button
                 onClick={handleNextStory}
-                className="w-10 h-10 border border-[#eaeaea] bg-white hover:border-[#229856] hover:text-[#15803d] flex items-center justify-center transition-colors shadow-xs"
+                className="w-10 h-10 border border-[#eaeaea] bg-white hover:border-[#f97316] hover:text-[#ea580c] flex items-center justify-center transition-colors shadow-xs"
                 aria-label="Next case"
               >
                 <Icon name="arrow-right" size={14} />
@@ -1378,13 +1454,13 @@ export default function LandingPage() {
       <section className="py-24 lg:py-32 bg-[#fafafa] border-t border-[#eaeaea]" id="booking">
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10">
           <div className="mb-14">
-            <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#15803d] tracking-[0.25em] uppercase mb-4">
-              <span className="w-8 h-[2px] bg-[#15803d]"></span>
-              <span>05 — Begin the Deployment</span>
+            <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
+              <span className="w-8 h-[2px] bg-[#ea580c]"></span>
+              <span>05 — Connect with Our Community</span>
             </div>
             <h2 className="font-display text-6xl md:text-7xl lg:text-[7rem] leading-[0.9]">
-              STOP GUESSING.<br />
-              <span className="text-stroke">START</span> <span className="text-[#15803d]">TRACING.</span>
+              JOIN OUR<br />
+              <span className="text-stroke">GROWING</span> <span className="text-[#ea580c]">COMMUNITY.</span>
             </h2>
           </div>
 
@@ -1392,12 +1468,12 @@ export default function LandingPage() {
             {/* Form Frame */}
             <div className="lg:col-span-7">
               <div className="booking-frame p-8 lg:p-12 shadow-sm">
-                <div className="font-mono-custom text-[11px] text-[#15803d] tracking-[0.2em] uppercase mb-2">
-                  // Packhouse Onboarding Request
+                <div className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase mb-2">
+                  // Connect with SmartGeulis
                 </div>
-                <h3 className="font-display text-4xl mb-2 text-[#171717]">SCHEDULE A SMART HUB DEMO</h3>
+                <h3 className="font-display text-4xl mb-2 text-[#171717]">PLAN A VISIT OR PARTNERSHIP</h3>
                 <p className="text-[#666666] text-sm mb-8 font-body">
-                  Schedule an on-site evaluation, scale transmitter configuration test, and live GS1 packaging workflow.
+                  Whether you are a local farming cooperative, a fresh produce retailer, or a visitor wishing to tour our Garut highland packhouse, our doors are always open.
                 </p>
 
                 <form onSubmit={handleBookingSubmit} className="space-y-6">
@@ -1410,7 +1486,7 @@ export default function LandingPage() {
                         type="text"
                         required
                         placeholder="John Doe"
-                        className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#229856] transition-colors"
+                        className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#f97316] transition-colors"
                       />
                     </div>
                     <div>
@@ -1421,7 +1497,7 @@ export default function LandingPage() {
                         type="tel"
                         required
                         placeholder="+62 812 3456 7890"
-                        className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#229856] transition-colors"
+                        className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#f97316] transition-colors"
                       />
                     </div>
                   </div>
@@ -1434,7 +1510,7 @@ export default function LandingPage() {
                       type="email"
                       required
                       placeholder="packhouse@cooperative.id"
-                      className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#229856] transition-colors"
+                      className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#f97316] transition-colors"
                     />
                   </div>
 
@@ -1456,7 +1532,7 @@ export default function LandingPage() {
                           onClick={() => setSelectedGoal(item.id)}
                           className={`px-3.5 py-1.5 font-heading text-xs uppercase tracking-wider border transition-all ${
                             selectedGoal === item.id
-                              ? 'bg-[#15803d] border-[#229856] text-white font-semibold'
+                              ? 'bg-[#ea580c] border-[#f97316] text-white font-semibold'
                               : 'bg-white border-[#eaeaea] text-[#666666] hover:border-[#d1d5db]'
                           }`}
                         >
@@ -1483,7 +1559,7 @@ export default function LandingPage() {
                           onClick={() => setSelectedShift(shift.id)}
                           className={`cursor-pointer p-3 border text-center transition-all ${
                             selectedShift === shift.id
-                              ? 'bg-[#15803d] border-[#229856] text-white'
+                              ? 'bg-[#ea580c] border-[#f97316] text-white'
                               : 'bg-white border-[#eaeaea] text-[#666666] hover:border-[#d1d5db]'
                           }`}
                         >
@@ -1512,7 +1588,7 @@ export default function LandingPage() {
             {/* Info Panel */}
             <div className="lg:col-span-5 space-y-6">
               <div className="border border-[#eaeaea] bg-white p-7 shadow-xs">
-                <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-2">
+                <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-2">
                   / Hub Locations
                 </div>
                 <h4 className="font-display text-2xl mb-2 text-[#171717]">CENTRAL PACKHOUSE PILOT</h4>
@@ -1520,14 +1596,14 @@ export default function LandingPage() {
                   Pangalengan Agricultural Complex<br />
                   Bandung Regency, West Java 40378
                 </p>
-                <div className="flex items-center gap-2 font-mono-custom text-[11px] text-[#15803d]">
+                <div className="flex items-center gap-2 font-mono-custom text-[11px] text-[#ea580c]">
                   <Icon name="location" size={13} />
                   <span>ELEVATION: 1,420M ASL · FIBER CONNECTED</span>
                 </div>
               </div>
 
               <div className="border border-[#eaeaea] bg-white p-7 shadow-xs">
-                <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-2">
+                <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-2">
                   / Operating Schedule
                 </div>
                 <h4 className="font-display text-2xl mb-3 text-[#171717]">ACTIVE INTAKE WINDOWS</h4>
@@ -1548,24 +1624,24 @@ export default function LandingPage() {
               </div>
 
               <div className="border border-[#eaeaea] bg-white p-7 shadow-xs">
-                <div className="font-mono-custom text-[10px] text-[#15803d] tracking-[0.2em] uppercase mb-2">
+                <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-2">
                   / Direct Engineer Contact
                 </div>
                 <h4 className="font-display text-2xl mb-3 text-[#171717]">TECHNICAL SUPPORT</h4>
                 <div className="space-y-2.5 text-sm font-body">
                   <a
                     href="tel:+62215550100"
-                    className="flex items-center gap-3 hover:text-[#15803d] transition-colors text-[#525252]"
+                    className="flex items-center gap-3 hover:text-[#ea580c] transition-colors text-[#525252]"
                   >
-                    <Icon name="phone" size={14} className="text-[#15803d]" />
+                    <Icon name="phone" size={14} className="text-[#ea580c]" />
                     <span className="font-mono-custom">+62 (21) 555-0100 (Packhouse Ops)</span>
                   </a>
                   <a
-                    href="mailto:support@enyx.local"
-                    className="flex items-center gap-3 hover:text-[#15803d] transition-colors text-[#525252]"
+                    href="mailto:support@smartgeulisunpad.com"
+                    className="flex items-center gap-3 hover:text-[#ea580c] transition-colors text-[#525252]"
                   >
-                    <Icon name="send" size={14} className="text-[#15803d]" />
-                    <span className="font-mono-custom">engineering@enyx.local</span>
+                    <Icon name="send" size={14} className="text-[#ea580c]" />
+                    <span className="font-mono-custom">engineering@smartgeulisunpad.com</span>
                   </a>
                 </div>
               </div>
@@ -1584,14 +1660,121 @@ export default function LandingPage() {
           TRACEABILITY
         </div>
 
-        <div className="relative z-10 max-w-[1600px] mx-auto px-6 lg:px-10">
+                <div className="relative z-10 max-w-[1600px] mx-auto px-6 lg:px-10">
+          {/* ── STRATEGIC PARTNERS & COLLABORATORS ── */}
+          <div className="border-b border-[#eaeaea] pb-12 mb-12">
+            <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 mb-8">
+              <div>
+                <div className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.25em] uppercase font-semibold mb-2 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-[#ea580c]"></span>
+                  STRATEGIC PARTNERS & COLLABORATION
+                </div>
+                <h4 className="font-display text-3xl md:text-4xl tracking-wider text-[#171717]">
+                  SUPPORTED BY ACADEMIC & INDUSTRY LEADERS
+                </h4>
+              </div>
+              <p className="text-xs text-[#666666] font-body max-w-lg leading-relaxed">
+                SmartGeulis Traceability System is co-developed and supported through active collaboration with the Ministry of Agriculture of the Republic of Indonesia, the ICARE program, Universitas Padjadjaran (UNPAD), and Eptilu Garut.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+              {/* Ministry of Agriculture of the Republic of Indonesia */}
+              <div className="p-6 border border-[#eaeaea] bg-[#fafafa] hover:border-[#ea580c] hover:bg-white transition-all flex items-center gap-5 group rounded-none">
+                <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
+                  <img
+                    src="/Ministry of Agriculture of the Republic of Indonesia.png"
+                    alt="Ministry of Agriculture of the Republic of Indonesia"
+                    className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
+                    Government Ministry
+                  </span>
+                  <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
+                    Ministry of Agriculture
+                  </div>
+                  <div className="text-xs text-[#666666] mt-1 leading-snug">
+                    National agricultural policy and horticulture governance support.
+                  </div>
+                </div>
+              </div>
+
+              {/* ICARE Program */}
+              <div className="p-6 border border-[#eaeaea] bg-[#fafafa] hover:border-[#ea580c] hover:bg-white transition-all flex items-center gap-5 group rounded-none">
+                <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
+                  <img
+                    src="/I Care.png"
+                    alt="ICARE Program"
+                    className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
+                    Development Program
+                  </span>
+                  <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
+                    ICARE
+                  </div>
+                  <div className="text-xs text-[#666666] mt-1 leading-snug">
+                    Integrated farming competitiveness and resilient ecosystem initiative.
+                  </div>
+                </div>
+              </div>
+
+              {/* Universitas Padjadjaran (UNPAD) */}
+              <div className="p-6 border border-[#eaeaea] bg-[#fafafa] hover:border-[#ea580c] hover:bg-white transition-all flex items-center gap-5 group rounded-none">
+                <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
+                  <img
+                    src="/Unpad.png"
+                    alt="Universitas Padjadjaran (UNPAD)"
+                    className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
+                    Academic & Research
+                  </span>
+                  <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
+                    Universitas Padjadjaran
+                  </div>
+                  <div className="text-xs text-[#666666] mt-1 leading-snug">
+                    Lead research institution advancing agricultural traceability.
+                  </div>
+                </div>
+              </div>
+
+              {/* Eptilu Garut */}
+              <div className="p-6 border border-[#eaeaea] bg-[#fafafa] hover:border-[#ea580c] hover:bg-white transition-all flex items-center gap-5 group rounded-none">
+                <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
+                  <img
+                    src="/Eptilu.jpeg"
+                    alt="Eptilu Fresh Produce"
+                    className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform rounded-sm"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
+                    Agro-Industry Partner
+                  </span>
+                  <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
+                    Eptilu Garut
+                  </div>
+                  <div className="text-xs text-[#666666] mt-1 leading-snug">
+                    Agro-tourism & commercial packhouse partner in Garut highlands.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="grid md:grid-cols-12 gap-10 mb-12">
             <div className="md:col-span-5">
               <div className="flex items-center gap-3 mb-4">
                 <Logo className="h-8 w-auto" markOnly />
                 <div>
                   <div className="font-display text-2xl leading-none tracking-wider text-[#171717]">
-                    ENYX-ENTERPRISE
+                    SmartGeulis
                   </div>
                   <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
                     TRACEABILITY SYSTEM
@@ -1604,7 +1787,7 @@ export default function LandingPage() {
               </p>
               <div className="flex items-center gap-2">
                 <span className="text-xs bg-[#f5f5f5] text-[#525252] border border-[#eaeaea] px-2.5 py-1 font-mono-custom">
-                  Type: enyx-enterprise
+                  Type: smartgeulis
                 </span>
                 <span className="text-xs text-[#666666] font-mono-custom">
                   v1.0.0 (Production)
@@ -1613,7 +1796,7 @@ export default function LandingPage() {
             </div>
 
             <div className="md:col-span-2">
-              <h5 className="font-mono-custom text-[11px] text-[#15803d] tracking-[0.2em] uppercase mb-4 font-semibold">
+              <h5 className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase mb-4 font-semibold">
                 Workstations
               </h5>
               <ul className="space-y-2 text-sm font-heading tracking-wider uppercase text-[#666666]">
@@ -1641,7 +1824,7 @@ export default function LandingPage() {
             </div>
 
             <div className="md:col-span-2">
-              <h5 className="font-mono-custom text-[11px] text-[#15803d] tracking-[0.2em] uppercase mb-4 font-semibold">
+              <h5 className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase mb-4 font-semibold">
                 Traceability
               </h5>
               <ul className="space-y-2 text-sm font-heading tracking-wider uppercase text-[#666666]">
@@ -1669,7 +1852,7 @@ export default function LandingPage() {
             </div>
 
             <div className="md:col-span-3">
-              <h5 className="font-mono-custom text-[11px] text-[#15803d] tracking-[0.2em] uppercase mb-4 font-semibold">
+              <h5 className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase mb-4 font-semibold">
                 System Updates
               </h5>
               <p className="text-[#666666] text-xs mb-3 font-body">
@@ -1685,7 +1868,7 @@ export default function LandingPage() {
                   setToastVisible(true)
                   setTimeout(() => setToastVisible(false), 4000)
                 }}
-                className="flex border border-[#eaeaea] bg-white focus-within:border-[#229856] transition-colors"
+                className="flex border border-[#eaeaea] bg-white focus-within:border-[#f97316] transition-colors"
               >
                 <input
                   type="email"
@@ -1705,15 +1888,15 @@ export default function LandingPage() {
           </div>
 
           <div className="border-t border-[#eaeaea] pt-6 flex flex-col md:flex-row justify-between gap-4 text-[#666666] font-mono-custom text-[11px] tracking-wider uppercase">
-            <div>© {new Date().getFullYear()} ENYX-ENTERPRISE · TRACEABILITY SYSTEM</div>
+            <div>© {new Date().getFullYear()} SmartGeulis · TRACEABILITY SYSTEM</div>
             <div className="flex gap-6">
-              <Link to="/traceability" className="hover:text-[#15803d] transition-colors">
+              <Link to="/traceability" className="hover:text-[#ea580c] transition-colors">
                 Public Trace
               </Link>
-              <Link to="/login" className="hover:text-[#15803d] transition-colors">
+              <Link to="/login" className="hover:text-[#ea580c] transition-colors">
                 Sign In
               </Link>
-              <a href="#hero" className="hover:text-[#15803d] transition-colors">
+              <a href="#hero" className="hover:text-[#ea580c] transition-colors">
                 Back to Top ↑
               </a>
             </div>
@@ -1723,17 +1906,17 @@ export default function LandingPage() {
 
       {/* ── STICKY CTA BAR ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-500 bg-white/95 backdrop-blur-md border-t border-[#229856]/40 shadow-lg ${
+        className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-500 bg-white/95 backdrop-blur-md border-t border-[#f97316]/40 shadow-lg ${
           stickyVisible ? 'translate-y-0' : 'translate-y-[110%]'
         }`}
       >
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10 py-3.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 font-mono-custom text-[11px] text-[#15803d] tracking-wider font-semibold">
+            <div className="hidden sm:flex items-center gap-2 font-mono-custom text-[11px] text-[#ea580c] tracking-wider font-semibold">
               <span
                 className={`w-2 h-2 rounded-full ${
                   backendStatus === 'ONLINE'
-                    ? 'bg-[#15803d] animate-ping'
+                    ? 'bg-[#16a34a] animate-ping'
                     : backendStatus === 'CHECKING'
                     ? 'bg-amber-500 animate-pulse'
                     : 'bg-red-500'
@@ -1753,7 +1936,7 @@ export default function LandingPage() {
 
           <a
             href="#booking"
-            className="pulse-btn bg-[#15803d] text-white px-6 py-2.5 font-heading text-xs uppercase tracking-[0.18em] hover:bg-[#16a34a] transition-colors flex items-center gap-2 rounded-none shrink-0 font-semibold"
+            className="pulse-btn bg-[#ea580c] text-white px-6 py-2.5 font-heading text-xs uppercase tracking-[0.18em] hover:bg-[#16a34a] transition-colors flex items-center gap-2 rounded-none shrink-0 font-semibold"
           >
             <span>Deploy System</span>
             <Icon name="arrow-right" size={14} />
@@ -1763,13 +1946,13 @@ export default function LandingPage() {
 
       {/* ── SLIDE-IN TOAST NOTIFICATION ── */}
       <div
-        className={`fixed top-20 right-6 z-[160] transition-transform duration-500 bg-white border border-[#229856] border-l-4 border-l-[#229856] p-4 shadow-xl max-w-sm ${
+        className={`fixed top-20 right-6 z-[160] transition-transform duration-500 bg-white border border-[#f97316] border-l-4 border-l-[#f97316] p-4 shadow-xl max-w-sm ${
           toastVisible ? 'translate-x-0' : 'translate-x-[120%]'
         }`}
         role="alert"
       >
         <div className="flex items-start gap-3">
-          <div className="w-7 h-7 bg-[#15803d] text-white flex items-center justify-center shrink-0 rounded-none">
+          <div className="w-7 h-7 bg-[#ea580c] text-white flex items-center justify-center shrink-0 rounded-none">
             <Icon name="check" size={14} />
           </div>
           <div>

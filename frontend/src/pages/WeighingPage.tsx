@@ -456,14 +456,15 @@ export default function WeighingPage() {
     )
   }
 
-  const triggerPrintBoth = (recordOverride?: WeighingRecord | null) => {
+  const triggerPrintBoth = async (recordOverride?: WeighingRecord | null) => {
     const rec = getPrintRecord(recordOverride)
     if (!rec?.waringCode) return
 
     setPrintStatus('Sending receipt and label to printer…')
     setIsPrinting(true)
-    printThermal(
-      [
+    try {
+      // 1. Send receipt print job first (cuts paper after receipt)
+      await api.printers.print('reception', [
         {
           type: 'receipt',
           code: rec.waringCode,
@@ -473,6 +474,11 @@ export default function WeighingPage() {
           date: rec.depositDate || today(),
           time: rec.time,
         },
+      ])
+      // Pause briefly so printer finishes paper cut before receiving next ticket
+      await new Promise((r) => setTimeout(r, 600))
+      // 2. Send waring label print job second (printed on fresh cut ticket)
+      await api.printers.print('reception', [
         {
           type: 'waring',
           code: rec.waringCode,
@@ -482,15 +488,15 @@ export default function WeighingPage() {
           date: rec.depositDate || today(),
           time: rec.time,
         },
-      ],
-      'reception',
-      (error) => {
-        setIsPrinting(false)
-        setPrintStatus(error ? 'Print failed. Intake is saved. Retry below.' : 'Receipt and label sent to printer')
-        if (error) toast.error(`Receipt and Waring label print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
-        else toast.success(`Receipt & Waring label ${rec.waringCode || ''} printed`)
-      }
-    )
+      ])
+      setIsPrinting(false)
+      setPrintStatus('Receipt and label sent to printer')
+      toast.success(`Receipt & Waring label ${rec.waringCode || ''} printed`)
+    } catch (error) {
+      setIsPrinting(false)
+      setPrintStatus('Print failed. Intake is saved. Retry below.')
+      toast.error(`Receipt and Waring label print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
+    }
   }
 
   /* ── Columns for History Table ── */
@@ -655,7 +661,7 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 1 of 3 · Intake Identification
+                Step 1 of 3
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
                 Scan Farmer Card
@@ -728,10 +734,10 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 2 of 3 · Live Harvest Intake
+                Step 2 of 3
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Weigh Crop Platform
+                Weigh Harvest
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -820,10 +826,10 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-2 flex-wrap gap-2 no-print">
             <div>
               <span className="text-[10px] uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 3 of 3 · Final Verification & Print
+                Step 3 of 3
               </span>
               <h2 className="text-xl font-bold tracking-tight text-foreground">
-                Approve & Print Intake Label
+                Approve & Print
               </h2>
             </div>
             {approvedSuccessRecord ? (
@@ -970,7 +976,7 @@ export default function WeighingPage() {
         <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto" role="dialog" aria-modal="true" aria-label="Weighing Focus Mode">
           <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
             <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
-              STATION 01 · RECEPTION · FOCUS MODE
+              STATION 01 · RECEPTION
             </div>
 
             {/* Stepper Progress */}
@@ -1004,19 +1010,14 @@ export default function WeighingPage() {
             title="Station 01: Reception"
             subtitle="Farmer verification, intake weighing, and buffer queue."
             actions={
-              <div className="flex items-center gap-2">
-                <Button variant="primary" icon="expand" touch onClick={enterFocusMode}>
-                  Focus Mode
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  icon="history"
-                  onClick={() => document.getElementById('weighing-records')?.scrollIntoView({ behavior: 'smooth' })}
-                >
-                  Records ({records.length})
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                icon="history"
+                onClick={() => document.getElementById('weighing-records')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                Records ({records.length})
+              </Button>
             }
           />
         </div>
@@ -1050,18 +1051,10 @@ export default function WeighingPage() {
         {/* Sequential Stepper in Standard View */}
         <div id="weighing-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
-            <div className="flex items-center gap-3">
-              <span className="font-semibold text-base text-foreground">Reception Stepper</span>
-              <Badge tone="accent">Step {activeStep} of 3</Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge tone={scaleOnline ? 'success' : 'warning'} dot live>
-                Scale 01 · {scaleOnline ? 'Online' : 'Offline'}
-              </Badge>
-              <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-                Open Focus Mode
-              </Button>
-            </div>
+            <span className="font-semibold text-base text-foreground">Reception Stepper</span>
+            <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
+              Focus Mode
+            </Button>
           </div>
 
           {/* Stepper Navigation Bar */}

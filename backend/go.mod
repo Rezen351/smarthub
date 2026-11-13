@@ -1,4 +1,4 @@
-module github.com/enyx/smarthub/backend
+module github.com/smartgeulis/smarthub/backend
 
 go 1.23
 

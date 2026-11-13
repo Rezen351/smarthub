@@ -1,9 +1,9 @@
 // =====================================================================
-//  E-Tani Smart Hub - Weight Transmitter (HX711 load cell)
+//  enyx-weight-transmitter (HX711 load cell)
 //
 //  Dual-core ESP32-S3 layout:
 //    core 0  -> scale task:   HX711 read + filter + calibration math
-//    core 1  -> network task: captive portal + DNS + Modbus TCP + OLED updates
+//    core 1  -> network task: captive portal + DNS + Modbus TCP + GN6932 display updates
 //  Data crosses cores only through the mutex-guarded SharedState.
 // =====================================================================
 
@@ -17,12 +17,9 @@
 #include "WifiManager.h"
 #include "ModbusServer.h"
 #include "WebPortal.h"
-#include "Display.h"
 #include "Buzzer.h"
-#if DISPLAY_USE_6932
-#include "GN6932Display.h"
+#include "Gn6932Display.h"
 #include "ButtonManager.h"
-#endif
 #include "TaskWatchdog.h"
 #include "StateMachine.h"
 #include "EventBus.h"
@@ -33,21 +30,20 @@
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
 
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
+
 // ---- application singletons ----
-SharedState  gShared;
+SharedState   gShared;
 SettingsStore gSettings;
-ScaleSensor  gScale;
-WifiManager  gWifi;
-ModbusServer gModbus;
-WebPortal    gPortal;
-DisplayManager gDisplay;
-#if DISPLAY_USE_6932
+ScaleSensor   gScale;
+WifiManager   gWifi;
+ModbusServer  gModbus;
+WebPortal     gPortal;
 Gn6932Display g6932(DISPLAY6932_CLK_PIN, DISPLAY6932_DIN_PIN, DISPLAY6932_STB_PIN);
 #if BUZZER_ENABLED
 Buzzer gBuzzer;
 #endif
-// The buzzer is compiled in on every ESP32-S3 build; nullptr keeps
-// ButtonManager usable if BUZZER_ENABLED is ever forced to 0.
 ButtonManager gButtons(&gShared, &gSettings,
 #if BUZZER_ENABLED
                        &gBuzzer
@@ -55,13 +51,11 @@ ButtonManager gButtons(&gShared, &gSettings,
                        nullptr
 #endif
                        );
-#endif
 StateMachine gFsm;
 EventBus     gEventBus;
 
 AppSettings  gAppSettings;
 
-#if DISPLAY_USE_6932
 enum class HardwareTestMode : uint8_t {
   Normal,
   Display,
@@ -181,6 +175,18 @@ static void handleDisplaySerialCommand(char* line) {
     return;
   }
 
+  if (strcmp(command, "zero") == 0) {
+    gShared.requestCommand(CMD_ZERO);
+    Serial.println(F("OK: zero requested (ADC zero offset captured, tare cleared, offset persisted)"));
+    return;
+  }
+
+  if (strcmp(command, "tare") == 0) {
+    gShared.requestCommand(CMD_TARE);
+    Serial.println(F("OK: tare requested"));
+    return;
+  }
+
   if (strcmp(command, "auto") == 0) {
     leaveHardwareTest();
     Serial.println(F("OK: live display resumed"));
@@ -239,8 +245,8 @@ static void handleDisplaySerialCommand(char* line) {
     return;
   }
 
-  Serial.println(F("UNKNOWN command. Use: test display | test keypad | test buzzer | "
-                   "grid <1-16> <mask> | char <1-16> <symbol|DP> | clear | auto | exit"));
+  Serial.println(F("UNKNOWN command. Use: zero | tare | test display | test keypad | test buzzer | "
+                   "section <1-3> | grid <1-16> <mask> | char <1-16> <symbol|DP> | clear | auto | exit"));
 }
 
 static void runDisplayTestTick() {
@@ -337,7 +343,6 @@ static void readDisplaySerialCommands() {
     }
   }
 }
-#endif
 
 // ---- optional boot button: hold to clear WiFi and stay in setup AP ----
 static void checkForceApButton() {
@@ -447,17 +452,14 @@ static void otaSetup() {
 // ---- core 1 : networking ----
 static void networkTask(void* pvParameters) {
   TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
-  uint32_t lastModbus = 0;
   uint32_t lastDisplay = 0;
   uint32_t lastStateLog = 0;
   
   for (;;) {
     TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
-#if DISPLAY_USE_6932
     readDisplaySerialCommands();
     runDisplayTestTick();
     runNetInfoPageTick();
-#endif
     gEventBus.process();
     gPortal.handleClient();
     TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
@@ -465,31 +467,19 @@ static void networkTask(void* pvParameters) {
     TaskWatchdog::feed("net", NET_WATCHDOG_TIMEOUT_MS);
     ArduinoOTA.handle();
 
-    if ((millis() - lastModbus) >= MODBUS_POLL_MS) {
-      lastModbus = millis();
-      gModbus.setRuntime(gWifi.rssi(), gWifi.savedMode());
-      gModbus.loop();
-    }
+    gModbus.setRuntime(gWifi.rssi(), gWifi.savedMode());
+    gModbus.loop();
 
-#if !DISPLAY_USE_6932
-    gDisplay.loop();
-#endif
-#if DISPLAY_USE_6932
     if (gTestMode == HardwareTestMode::Normal && !gNetInfoPageActive &&
         (gLiveDisplayRefreshPending || (millis() - lastDisplay) >= 500)) {
-#else
-    if ((millis() - lastDisplay) >= 500) {
-#endif
       lastDisplay = millis();
       ScaleSnapshot s = gShared.getSnapshot();
-#if DISPLAY_USE_6932
       Gn6932Display::DisplayIndicators ind;
       ind.tare = s.tareActive && !s.atZero;
       ind.zero = s.atZero;
       ind.stab = s.stable;
       g6932.setIndicators(ind);
       g6932.showWeight(s.stableWeightG / 1000.0f);
-#if KEYPAD_ENABLED
       const char* entry = gButtons.entryText();
       if (entry[0] == '\0') {
         g6932.showSectionText(2, "");                                 // blank until typed/recalled
@@ -499,22 +489,13 @@ static void networkTask(void* pvParameters) {
         g6932.showUnitPriceCenti(gButtons.currentUnitPriceCenti());  // fallback: money rule
       }
       g6932.showTotalPriceCenti(gButtons.totalPriceCenti());
-#endif
       gLiveDisplayRefreshPending = false;
-#else
-      String ip = gWifi.transportMode() == TRANSPORT_ETHERNET ? gWifi.ethernetIp().toString() : WiFi.localIP().toString();
-      if (gAppSettings.oledEnabled) {
-        gDisplay.showSimple(ip.c_str(), s.stableWeightG / 1000.0f, gWifi.transportMode());
-      }
-#endif
     }
 
-#if DISPLAY_USE_6932 && KEYPAD_ENABLED
     if (gTestMode == HardwareTestMode::Normal ||
         gTestMode == HardwareTestMode::Keypad) {
       gButtons.update();
     }
-#endif
 #if BUZZER_ENABLED
     gBuzzer.update();
 #endif
@@ -571,13 +552,14 @@ static void scaleTask(void* pvParameters) {
 }
 
 void setup() {
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // disable brownout detector to prevent reset on RF power surge
   Logger::begin();
 #if BUZZER_ENABLED
   // Must be ready before checkBootHealth() so a boot-critical error can
   // beep during the 1 s wait that precedes ESP.restart().
   gBuzzer.begin(BUZZER_PIN);
 #endif
-  LOG_INFO("setup", "E-Tani Weight Transmitter booting");
+  LOG_INFO("setup", "enyx-weight-transmitter booting");
 
   gFsm.transition(SystemState::BOOT);
   gFsm.onEnter();
@@ -592,42 +574,45 @@ void setup() {
   gSettings.begin();              // create the cross-core NVS mutex first
   gSettings.load(gAppSettings);
   gSettings.validate(gAppSettings);
+  LOG_INFO("setup", "Settings loaded & validated");
   checkForceApButton();           // may erase WiFi creds, never calibration
 
   gShared.begin();
+  LOG_INFO("setup", "Shared state initialized");
 
   gEventBus.begin(EVENT_BUS_QUEUE_SIZE);
   gEventBus.post(Event{EventType::SYSTEM_BOOT, EventPriority::PRIO_HIGH, millis(), 0});
+  LOG_INFO("setup", "EventBus initialized");
 
   gScale.begin(&gShared, &gSettings);
+  LOG_INFO("setup", "Scale initialized");
 
   gWifi.begin(gAppSettings);      // soft-AP (captive portal) + uplink STA
+  LOG_INFO("setup", "WiFi initialized");
 #if BUZZER_ENABLED
   if (!gWifi.apActive())     gBuzzer.play(Buzzer::Pattern::Error);   // softAP failed to start
+#if ETHERNET_ENABLED
   if (gWifi.ethNoHardware()) gBuzzer.play(Buzzer::Pattern::Error);   // W5500 not detected
+#endif
 #endif
 
   gModbus.begin(&gShared, &gSettings, TRANSPORT_WIFI);
   gModbus.startServer();          // WiFi :502
+#if ETHERNET_ENABLED
   if (gAppSettings.transportMode == TRANSPORT_ETHERNET) {
     gModbus.startEthernetServer();  // Ethernet :502
   }
+#endif
 
-  gPortal.begin(&gShared, &gSettings, &gWifi, &gModbus, &gDisplay);
+  gPortal.begin(&gShared, &gSettings, &gWifi, &gModbus);
   gPortal.startDns();
 #if BUZZER_ENABLED
   if (!gPortal.fsMounted()) gBuzzer.play(Buzzer::Pattern::Error);    // SPIFFS not mounted
 #endif
 
-#if DISPLAY_USE_6932
   g6932.begin();
-#if KEYPAD_ENABLED
   gButtons.begin();
-#endif
-  Serial.println(F("Serial test ready: 'test display', 'test keypad', 'test buzzer', 'exit'"));
-#else
-  gDisplay.begin();
-#endif
+  Serial.println(F("Serial ready: 'zero', 'tare', 'test display', 'test keypad', 'test buzzer', 'exit'"));
 
 
 
@@ -665,13 +650,8 @@ void setup() {
     String apIp = gWifi.apIP().toString();
     LOG_INFO("scale", "AP: %s @ %s", gWifi.apSsid().c_str(), apIp.c_str());
   }
-  LOG_INFO("setup", "transport=%s display=%s",
-           gAppSettings.transportMode == TRANSPORT_ETHERNET ? "Ethernet" : "WiFi",
-#if DISPLAY_USE_6932
-           "6932");
-#else
-           gAppSettings.oledEnabled ? "oled" : "off");
-#endif
+  LOG_INFO("setup", "transport=%s display=6932",
+           gAppSettings.transportMode == TRANSPORT_ETHERNET ? "Ethernet" : "WiFi");
 }
 
 void loop() {

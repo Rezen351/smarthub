@@ -52,6 +52,11 @@ void ScaleSensor::resetFilter() {
   _filterInitialized = false;
   _stableSince = 0;
   _stableSampleCount = 0;
+  _isLocked = false;
+  _lockedWeightG = 0.0f;
+  _motionUnlockMs = 0;
+  _aztOffsetG = 0.0f;
+  _lastAztMs = 0;
   for (uint8_t i = 0; i < SCALE_MEDIAN_WINDOW; i++) {
     _medianHistory[i] = 0.0f;
   }
@@ -138,19 +143,26 @@ void ScaleSensor::loop() {
       }
       case CMD_ZERO: {
         if (hxPoll(_hx, 500)) {
-          _hx.tare();                               // new zero point = current raw average
+          _hx.tare(HX711_READS);                    // new zero point = current raw average
           _zeroCounts = (float)_hx.get_offset();
           _tareCounts = 0.0f;                       // a fresh zero replaces any tare
           ScaleSnapshot snap = _s->getSnapshot();
+          snap.offsetCounts = _zeroCounts;
           snap.tareActive = false;
-          snap.medianWeightG = 0.0f; snap.stableWeightG = 0.0f; snap.noiseG = 0.0f;
-          snap.stable = false; snap.stableSampleCount = 0;
+          snap.weightG = 0.0f;
+          snap.medianWeightG = 0.0f;
+          snap.stableWeightG = 0.0f;
+          snap.noiseG = 0.0f;
+          snap.stable = true;
+          snap.stableSampleCount = 1;
           resetFilter();
+          _lockedWeightG = 0.0f;
+          _isLocked = true;
           _s->setSnapshot(snap);
           AppSettings a; _st->load(a);
           a.calOffset = _zeroCounts;                // persist zero point, keep calibration values
           _st->saveCalibration(a);
-          LOG_INFO("scale", "zero point captured offsetCounts=%.1f (tare cleared)", _zeroCounts);
+          LOG_INFO("scale", "zero point captured offsetCounts=%.1f (ADC zeroed, tare cleared)", _zeroCounts);
         }
         break;
       }
@@ -242,14 +254,36 @@ void ScaleSensor::loop() {
     float instG = (netRaw - snap.interceptCounts) / snap.countsPerKg * 1000.0f;
     snap.weightG = instG;
     snap.medianWeightG = medianWeight(instG);
-    snap.stableWeightG = filterWeight(snap.medianWeightG);
+    float filtered = filterWeight(snap.medianWeightG);
     snap.noiseG = filterNoise();
 
-    snap.atZero = fabsf(snap.medianWeightG) <= SCALE_ZERO_LAMP_BAND_G;
-    snap.tareActive = (_tareCounts != 0.0f);
+    // ---- Automatic Zero Tracking (AZT) ----
+#if SCALE_AZT_ENABLED
+    if (fabsf(filtered) <= SCALE_AZT_BAND_G) {
+      if (_lastAztMs == 0) _lastAztMs = now;
+      uint32_t dtMs = now - _lastAztMs;
+      _lastAztMs = now;
+      if (dtMs > 0 && dtMs < 1000) {
+        float maxStep = (SCALE_AZT_RATE_G_PER_S * (float)dtMs) / 1000.0f;
+        float diff = filtered - _aztOffsetG;
+        if (fabsf(diff) <= maxStep) {
+          _aztOffsetG = filtered;
+        } else if (diff > 0.0f) {
+          _aztOffsetG += maxStep;
+        } else {
+          _aztOffsetG -= maxStep;
+        }
+      }
+    } else {
+      _lastAztMs = now;
+    }
+#endif
 
+    float netG = filtered - _aztOffsetG;
+
+    // ---- Motion Detection & Stability Evaluation ----
     bool withinRange = snap.noiseG <= SCALE_STABILITY_RANGE_G &&
-                       fabsf(snap.medianWeightG - snap.stableWeightG) <= SCALE_STABILITY_RANGE_G;
+                       fabsf(snap.medianWeightG - filtered) <= SCALE_STABILITY_RANGE_G;
     if (withinRange) {
       if (_stableSince == 0) _stableSince = now;
       if ((now - _stableSince) >= SCALE_STABILITY_HOLD_MS) {
@@ -262,6 +296,52 @@ void ScaleSensor::loop() {
       snap.stable = false;
     }
     snap.stableSampleCount = _stableSampleCount;
+
+    // ---- Deadband Lock & Anti-Drift Clamp ----
+    if (_isLocked) {
+      float deltaFromLock = fabsf(netG - _lockedWeightG);
+      if (deltaFromLock > SCALE_BREAKOUT_THRESHOLD_G) {
+        // Fast intentional weight change: breakout immediately
+        _isLocked = false;
+        _motionUnlockMs = 0;
+      } else if (deltaFromLock > SCALE_DEADBAND_G) {
+        // Exceeds deadband window: verify if sustained motion or transient noise
+        if (_motionUnlockMs == 0) {
+          _motionUnlockMs = now;
+        } else if ((now - _motionUnlockMs) >= 200) {
+          _isLocked = false;
+          _motionUnlockMs = 0;
+        }
+      } else {
+        // Still inside deadband window: maintain rock-solid freeze
+        _motionUnlockMs = 0;
+      }
+    }
+
+    if (!_isLocked && snap.stable) {
+      // Scale has settled: lock onto the quantized division
+      float quantized = roundf(netG / SCALE_DIVISION_G) * SCALE_DIVISION_G;
+      if (fabsf(quantized) < (SCALE_DIVISION_G * 0.75f)) {
+        quantized = 0.0f;
+      }
+      _lockedWeightG = quantized;
+      _isLocked = true;
+      _motionUnlockMs = 0;
+    }
+
+    // Assign final stable weight
+    if (_isLocked) {
+      snap.stableWeightG = _lockedWeightG;
+    } else {
+      float q = roundf(netG / SCALE_DIVISION_G) * SCALE_DIVISION_G;
+      if (fabsf(q) < (SCALE_DIVISION_G * 0.75f)) {
+        q = 0.0f;
+      }
+      snap.stableWeightG = q;
+    }
+
+    snap.atZero = fabsf(snap.stableWeightG) <= SCALE_ZERO_LAMP_BAND_G;
+    snap.tareActive = (_tareCounts != 0.0f);
 
     // Accumulate session totals only from stable positive mass.
     float stable = snap.stableWeightG;

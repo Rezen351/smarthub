@@ -72,7 +72,10 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="pallets" element={<Navigate to="/dashboard/warehouse" replace />} />
+        <Route
+          path="pallets"
+          element={<Navigate to="/dashboard/settings?section=pallets" replace />}
+        />
         <Route
           path="sorting"
           element={

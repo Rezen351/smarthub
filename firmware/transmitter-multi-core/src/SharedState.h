@@ -65,7 +65,8 @@ public:
 
   // ---- calibration points (multi-point regression) ----
   void resetCalibrationPoints();
-  void addCalibrationPoint(float weightKg, float rawCounts);
+  bool addCalibrationPoint(float weightKg, float rawCounts);
+  bool removeCalibrationPoint(uint8_t index);
   uint8_t calibrationPointCount() const;
   CalibrationPoint getCalibrationPoint(uint8_t index) const;
   bool computeLinearRegression(float& slope, float& intercept) const;
