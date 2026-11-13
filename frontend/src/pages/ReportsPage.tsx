@@ -51,6 +51,46 @@ export default function ReportsPage() {
   const [rankings, setRankings] = useState<any[]>([])
   const [rankingsLoading, setRankingsLoading] = useState(false)
 
+  const [dailyDownloading, setDailyDownloading] = useState(false)
+  const [monthlyDownloading, setMonthlyDownloading] = useState(false)
+  const [rankingsDownloading, setRankingsDownloading] = useState(false)
+
+  const handleDownloadDailyCsv = async () => {
+    setDailyDownloading(true)
+    try {
+      await api.reports.downloadDailyCsv(selectedDate)
+      toast.success('Daily recap CSV downloaded successfully')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to download daily recap CSV')
+    } finally {
+      setDailyDownloading(false)
+    }
+  }
+
+  const handleDownloadMonthlyCsv = async () => {
+    setMonthlyDownloading(true)
+    try {
+      await api.reports.downloadMonthlyCsv(selectedMonth)
+      toast.success('Monthly recap CSV downloaded successfully')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to download monthly recap CSV')
+    } finally {
+      setMonthlyDownloading(false)
+    }
+  }
+
+  const handleDownloadRankingsCsv = async () => {
+    setRankingsDownloading(true)
+    try {
+      await api.reports.downloadRankingsCsv(50, rankingPeriod)
+      toast.success('Farmer leaderboard CSV downloaded successfully')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to download farmer leaderboard CSV')
+    } finally {
+      setRankingsDownloading(false)
+    }
+  }
+
   useEffect(() => {
     let active = true
     api.farmers.list()
@@ -363,7 +403,7 @@ export default function ReportsPage() {
     <div className="stack stack-lg">
       <PageHeader
         title="Reports & Analytics"
-        subtitle="Operational recaps per day, per month, farmer rankings, and OpenAPI Redoc."
+        subtitle="Operational recaps per day, per month, farmer rankings, and OpenAPI Documentation."
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -372,7 +412,7 @@ export default function ReportsPage() {
               icon="reports"
               onClick={() => window.open('/docs', '_blank')}
             >
-              OpenAPI Redoc
+              OpenAPI Docs
             </Button>
             <Button
               variant="primary"
@@ -390,8 +430,8 @@ export default function ReportsPage() {
       <div className="tabs border-b border-border" role="tablist" aria-label="Report Views">
         {[
           { id: 'overview', label: 'Overview & Ledger', icon: 'clipboard' as IconName },
-          { id: 'daily', label: 'Daily Recap (Per Hari)', icon: 'calendar' as IconName },
-          { id: 'monthly', label: 'Monthly Recap (Per Bulan)', icon: 'reports' as IconName },
+          { id: 'daily', label: 'Daily Recap', icon: 'calendar' as IconName },
+          { id: 'monthly', label: 'Monthly Recap', icon: 'reports' as IconName },
           { id: 'rankings', label: 'Farmer Leaderboard', icon: 'users' as IconName },
         ].map((tab) => (
           <button
@@ -515,7 +555,7 @@ export default function ReportsPage() {
         </>
       )}
 
-      {/* ── TAB 2: DAILY RECAP (REKAP PER HARI) ── */}
+      {/* ── TAB 2: DAILY RECAP ── */}
       {activeTab === 'daily' && (
         <div className="stack stack-lg">
           <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border bg-card">
@@ -541,16 +581,15 @@ export default function ReportsPage() {
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <a
-                href={api.reports.downloadDailyCsvUrl(selectedDate)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary btn-sm flex items-center gap-2"
-                download={`smartgeulis_daily_recap_${selectedDate}.csv`}
+              <Button
+                variant="primary"
+                size="sm"
+                icon="download"
+                loading={dailyDownloading}
+                onClick={handleDownloadDailyCsv}
               >
-                <Icon name="download" size={14} />
-                <span>Download Daily CSV (API)</span>
-              </a>
+                Download Daily CSV
+              </Button>
             </div>
           </div>
 
@@ -626,7 +665,7 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* ── TAB 3: MONTHLY RECAP (REKAP PER BULAN) ── */}
+      {/* ── TAB 3: MONTHLY RECAP ── */}
       {activeTab === 'monthly' && (
         <div className="stack stack-lg">
           <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border bg-card">
@@ -652,16 +691,15 @@ export default function ReportsPage() {
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <a
-                href={api.reports.downloadMonthlyCsvUrl(selectedMonth)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary btn-sm flex items-center gap-2"
-                download={`smartgeulis_monthly_recap_${selectedMonth}.csv`}
+              <Button
+                variant="primary"
+                size="sm"
+                icon="download"
+                loading={monthlyDownloading}
+                onClick={handleDownloadMonthlyCsv}
               >
-                <Icon name="download" size={14} />
-                <span>Download Monthly CSV (API)</span>
-              </a>
+                Download Monthly CSV
+              </Button>
             </div>
           </div>
 
@@ -791,21 +829,20 @@ export default function ReportsPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <a
-                href={api.reports.downloadRankingsCsvUrl(50, rankingPeriod)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary btn-sm flex items-center gap-2"
-                download={`smartgeulis_farmer_rankings_${rankingPeriod}.csv`}
+              <Button
+                variant="primary"
+                size="sm"
+                icon="download"
+                loading={rankingsDownloading}
+                onClick={handleDownloadRankingsCsv}
               >
-                <Icon name="download" size={14} />
-                <span>Download Leaderboard CSV (API)</span>
-              </a>
+                Download Leaderboard CSV
+              </Button>
             </div>
           </div>
 
           <Card
-            title="Farmer Leaderboard (Rangking Petani)"
+            title="Farmer Leaderboard"
             subtitle="Ranked by total gross kilograms delivered with contribution share"
             padding="none"
           >

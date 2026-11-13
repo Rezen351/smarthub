@@ -37,6 +37,38 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return payload
 }
 
+async function downloadFile(endpoint: string, filename: string): Promise<void> {
+  const headers = getAuthHeader()
+  const response = await fetch(endpoint, { headers })
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user')
+    }
+    let errorMsg = `Download failed with status ${response.status}`
+    try {
+      const payload = await response.json()
+      if (payload?.error?.message) {
+        errorMsg = payload.error.message
+      }
+    } catch {
+      // payload not JSON
+    }
+    throw new Error(errorMsg)
+  }
+
+  const blob = await response.blob()
+  const blobUrl = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = blobUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(blobUrl)
+}
+
 export interface ApiResponse<T> {
   success: boolean
   data: T
@@ -44,6 +76,26 @@ export interface ApiResponse<T> {
     code: string
     message: string
   }
+}
+
+export type CloseoutDisposition =
+  | 'SHRINKAGE_LOSS'
+  | 'CULL_REJECT'
+  | 'LOOSE_RESERVE'
+  | 'SAMPLE_USE'
+
+export type ThermalPrinterStation = 'reception' | 'packaging' | 'pallet'
+
+export interface PalletCloseout {
+  id: string
+  palletCode: string
+  grade?: string | null
+  leftoverKg: number
+  disposition: CloseoutDisposition
+  notes?: string
+  farmerName?: string | null
+  operatorName?: string | null
+  createdAt: string
 }
 
 export interface Pallet {
@@ -231,6 +283,27 @@ export const api = {
       })
       return res.data
     },
+    release: async (idOrCode: string, data: { disposition: CloseoutDisposition; notes?: string }) => {
+      const res = await request<
+        ApiResponse<{
+          closeoutId: string
+          palletCode: string
+          settledKg: number
+          disposition: CloseoutDisposition
+          status: string
+          released: boolean
+          message: string
+        }>
+      >(`/pallets/${encodeURIComponent(idOrCode)}/release`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+      return res.data
+    },
+    closeouts: async () => {
+      const res = await request<ApiResponse<PalletCloseout[]>>('/pallets/closeouts')
+      return res.data
+    },
   },
 
   // Station 03: Packaging
@@ -268,19 +341,21 @@ export const api = {
       const res = await request<ApiResponse<any[]>>('/deliveries')
       return res.data
     },
-    create: async (data: {
-      truckPlate: string
-      driverName: string
-      destination: string
-      items: Array<{
-        packageUnitId: string
-        quantity: number
-      }>
-    }) => {
+    create: async (data: { truckPlate: string; driverName: string; destination: string; grade: 'A' | 'B' | 'C'; units: number }) => {
       const res = await request<ApiResponse<any>>('/deliveries', {
         method: 'POST',
         body: JSON.stringify(data),
       })
+      return res.data
+    },
+    verify: async (id: string, code: string) => {
+      const res = await request<ApiResponse<any>>(`/deliveries/${encodeURIComponent(id)}/verify`, {
+        method: 'POST', body: JSON.stringify({ code }),
+      })
+      return res.data
+    },
+    depart: async (id: string) => {
+      const res = await request<ApiResponse<any>>(`/deliveries/${encodeURIComponent(id)}/depart`, { method: 'POST' })
       return res.data
     },
   },
@@ -329,9 +404,10 @@ export const api = {
       })
       return res.data
     },
-    testConnection: async (stationId: string) => {
+    testConnection: async (stationId: string, config?: { ip?: string; port?: number }) => {
       const res = await request<ApiResponse<any>>(`/scales/${encodeURIComponent(stationId)}/test`, {
         method: 'POST',
+        body: config ? JSON.stringify(config) : undefined,
       })
       return res.data
     },
@@ -343,18 +419,21 @@ export const api = {
       const res = await request<ApiResponse<any[]>>('/printers')
       return res.data
     },
-    update: async (station: 'reception' | 'packaging', ip: string, port: number) => {
+    update: async (station: ThermalPrinterStation, ip: string, port: number) => {
       const res = await request<ApiResponse<any>>(`/printers/${station}`, {
         method: 'PUT',
         body: JSON.stringify({ ip, port }),
       })
       return res.data
     },
-    test: async (station: 'reception' | 'packaging') => {
-      const res = await request<ApiResponse<any>>(`/printers/${station}/test`, { method: 'POST' })
+    test: async (station: ThermalPrinterStation, config?: { ip?: string; port?: number }) => {
+      const res = await request<ApiResponse<any>>(`/printers/${station}/test`, {
+        method: 'POST',
+        body: config ? JSON.stringify(config) : undefined,
+      })
       return res.data
     },
-    print: async (station: 'reception' | 'packaging', jobs: any[]) => {
+    print: async (station: ThermalPrinterStation, jobs: any[]) => {
       const res = await request<ApiResponse<any>>(`/printers/${station}/print`, {
         method: 'POST',
         body: JSON.stringify({ jobs }),
@@ -391,6 +470,17 @@ export const api = {
     },
     downloadRankingsCsvUrl: (limit = 10, period = 'all') => {
       return `/api/v1/reports/rankings/farmers?limit=${limit}&period=${period}&format=csv`
+    },
+    downloadDailyCsv: async (date?: string) => {
+      const d = date || new Date().toISOString().slice(0, 10)
+      return downloadFile(`/api/v1/reports/recap/daily?date=${encodeURIComponent(d)}&format=csv`, `smartgeulis_daily_recap_${d}.csv`)
+    },
+    downloadMonthlyCsv: async (month?: string) => {
+      const m = month || new Date().toISOString().slice(0, 7)
+      return downloadFile(`/api/v1/reports/recap/monthly?month=${encodeURIComponent(m)}&format=csv`, `smartgeulis_monthly_recap_${m}.csv`)
+    },
+    downloadRankingsCsv: async (limit = 50, period = 'all') => {
+      return downloadFile(`/api/v1/reports/rankings/farmers?limit=${limit}&period=${period}&format=csv`, `smartgeulis_farmer_rankings_${period}.csv`)
     },
   },
 }

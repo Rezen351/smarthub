@@ -57,7 +57,7 @@ func (s *server) dailyRecap(w http.ResponseWriter, r *http.Request) {
 		SELECT COUNT(w.id), COALESCE(SUM(w."grossWeightKg"), 0), COALESCE(SUM(w."tareWeightKg"), 0), COALESCE(SUM(w."netWeightKg"), 0), COUNT(DISTINCT w."farmerId")
 		FROM warings w
 		WHERE DATE(w."createdAt") = $1::date
-	`, targetDate).Scan(&totalWarings, &grossKg, &tareKg, &netKg)
+	`, targetDate).Scan(&totalWarings, &grossKg, &tareKg, &netKg, &uniqueFarmers)
 
 	// 2. Sorting batches aggregate
 	var sortingBatches int
@@ -76,6 +76,15 @@ func (s *server) dailyRecap(w http.ResponseWriter, r *http.Request) {
 		FROM package_units pu
 		WHERE DATE(pu."createdAt") = $1::date
 	`, targetDate).Scan(&packagedUnits, &packagedWeightKg)
+
+	// 3b. Pallet closeouts aggregate
+	var palletCloseouts int
+	var palletCloseoutKg float64
+	_ = s.db.QueryRow(ctx, `
+		SELECT COUNT(pc.id), COALESCE(SUM(pc."leftoverKg"), 0)
+		FROM pallet_closeouts pc
+		WHERE DATE(pc."createdAt") = $1::date
+	`, targetDate).Scan(&palletCloseouts, &palletCloseoutKg)
 
 	// 4. Per-farmer breakdown for the day
 	rows, err := s.db.Query(ctx, `
@@ -131,6 +140,8 @@ func (s *server) dailyRecap(w http.ResponseWriter, r *http.Request) {
 		_ = writer.Write([]string{"Sorting Shrinkage (kg)", fmt.Sprintf("%.2f", shrinkageKg)})
 		_ = writer.Write([]string{"Retail Pouches Packaged", strconv.Itoa(packagedUnits)})
 		_ = writer.Write([]string{"Packaged Weight (kg)", fmt.Sprintf("%.2f", packagedWeightKg)})
+		_ = writer.Write([]string{"Pallet Remainder Closeouts", strconv.Itoa(palletCloseouts)})
+		_ = writer.Write([]string{"Pallet Closeout Weight (kg)", fmt.Sprintf("%.2f", palletCloseoutKg)})
 		_ = writer.Write([]string{""})
 
 		_ = writer.Write([]string{"Farmer Code", "Farmer Name", "Village", "Warings", "Gross (kg)", "Tare (kg)", "Net (kg)"})
@@ -164,6 +175,8 @@ func (s *server) dailyRecap(w http.ResponseWriter, r *http.Request) {
 			"shrinkageKg":      shrinkageKg,
 			"packagedUnits":    packagedUnits,
 			"packagedWeightKg": packagedWeightKg,
+			"palletCloseouts":  palletCloseouts,
+			"palletCloseoutKg": palletCloseoutKg,
 			"farmerBreakdown":  farmerRows,
 		},
 	})
@@ -189,7 +202,7 @@ func (s *server) monthlyRecap(w http.ResponseWriter, r *http.Request) {
 		SELECT COUNT(w.id), COALESCE(SUM(w."grossWeightKg"), 0), COALESCE(SUM(w."tareWeightKg"), 0), COALESCE(SUM(w."netWeightKg"), 0), COUNT(DISTINCT w."farmerId")
 		FROM warings w
 		WHERE TO_CHAR(w."createdAt", 'YYYY-MM') = $1
-	`, targetMonth).Scan(&totalWarings, &grossKg, &tareKg, &netKg)
+	`, targetMonth).Scan(&totalWarings, &grossKg, &tareKg, &netKg, &activeFarmers)
 
 	var sortingBatches int
 	var gradeAKg, gradeBKg, gradeCKg, shrinkageKg float64
@@ -206,6 +219,14 @@ func (s *server) monthlyRecap(w http.ResponseWriter, r *http.Request) {
 		FROM package_units pu
 		WHERE TO_CHAR(pu."createdAt", 'YYYY-MM') = $1
 	`, targetMonth).Scan(&packagedUnits, &packagedWeightKg)
+
+	var palletCloseouts int
+	var palletCloseoutKg float64
+	_ = s.db.QueryRow(ctx, `
+		SELECT COUNT(pc.id), COALESCE(SUM(pc."leftoverKg"), 0)
+		FROM pallet_closeouts pc
+		WHERE TO_CHAR(pc."createdAt", 'YYYY-MM') = $1
+	`, targetMonth).Scan(&palletCloseouts, &palletCloseoutKg)
 
 	// 2. Daily breakdown within the month
 	type dailyBreakdownItem struct {
@@ -290,6 +311,8 @@ func (s *server) monthlyRecap(w http.ResponseWriter, r *http.Request) {
 		_ = writer.Write([]string{"Sorting Shrinkage (kg)", fmt.Sprintf("%.2f", shrinkageKg)})
 		_ = writer.Write([]string{"Retail Pouches Packaged", strconv.Itoa(packagedUnits)})
 		_ = writer.Write([]string{"Packaged Weight (kg)", fmt.Sprintf("%.2f", packagedWeightKg)})
+		_ = writer.Write([]string{"Pallet Remainder Closeouts", strconv.Itoa(palletCloseouts)})
+		_ = writer.Write([]string{"Pallet Closeout Weight (kg)", fmt.Sprintf("%.2f", palletCloseoutKg)})
 		_ = writer.Write([]string{""})
 
 		_ = writer.Write([]string{"Date", "Warings", "Gross Intake (kg)", "Net Intake (kg)", "Delivering Farmers"})
@@ -334,6 +357,8 @@ func (s *server) monthlyRecap(w http.ResponseWriter, r *http.Request) {
 			"shrinkageKg":      shrinkageKg,
 			"packagedUnits":    packagedUnits,
 			"packagedWeightKg": packagedWeightKg,
+			"palletCloseouts":  palletCloseouts,
+			"palletCloseoutKg": palletCloseoutKg,
 			"dailyBreakdown":   dailyRows,
 			"topFarmers":       topFarmers,
 		},
