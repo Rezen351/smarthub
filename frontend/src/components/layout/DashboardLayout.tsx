@@ -29,7 +29,7 @@ const roleMenu: Record<string, MenuItem[]> = {
     { label: 'Users', path: '/dashboard/users', icon: 'users' },
     { label: 'Reports', path: '/dashboard/reports', icon: 'reports' },
     { label: 'Settings', path: '/dashboard/settings', icon: 'settings' },
-    { label: 'OpenAPI Redoc', path: '/docs', icon: 'clipboard', external: true },
+    { label: 'OpenAPI Docs', path: '/docs', icon: 'clipboard', external: true },
   ],
   OPERATOR: [
     { label: 'Workstation Hub', path: '/dashboard', icon: 'dashboard', end: true },
@@ -324,7 +324,7 @@ export default function DashboardLayout() {
                     <span className="sidebar-link-icon">
                       <Icon name="clipboard" size={16} />
                     </span>
-                    OpenAPI Docs (Redoc) ↗
+                    OpenAPI Documentation ↗
                   </a>
                   <button
                     type="button"

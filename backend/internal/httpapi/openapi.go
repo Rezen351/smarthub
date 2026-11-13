@@ -4,32 +4,37 @@ import (
 	"net/http"
 )
 
-const redocHTML = `<!DOCTYPE html>
+const docsHTMLPrefix = `<!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>SmartGeulis Traceability System · OpenAPI Redoc</title>
+    <title>SmartGeulis Traceability System · OpenAPI Documentation</title>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css">
     <style>
       body {
         margin: 0;
         padding: 0;
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         background-color: #fafafa;
+        color: #1e293b;
       }
       .custom-header {
         background: #0f172a;
         color: #ffffff;
-        padding: 16px 24px;
+        padding: 14px 24px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         border-bottom: 2px solid #ea580c;
+        position: sticky;
+        top: 0;
+        z-index: 100;
       }
       .brand-title {
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 800;
         letter-spacing: -0.02em;
         display: flex;
@@ -57,6 +62,31 @@ const redocHTML = `<!DOCTYPE html>
       .header-links a:hover {
         color: #f97316;
       }
+      .swagger-ui .topbar { display: none !important; }
+      .swagger-ui .wrapper { max-width: 1200px; padding: 0 20px; margin: 20px auto; }
+      .swagger-ui .info { margin: 20px 0; }
+      .swagger-ui .info .title { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; color: #0f172a; }
+      .swagger-ui .btn.authorize { background-color: #ea580c; border-color: #ea580c; color: #fff; }
+      .swagger-ui .btn.authorize svg { fill: #fff; }
+      .swagger-ui .opblock.opblock-get .opblock-summary-method { background: #2563eb; }
+      .swagger-ui .opblock.opblock-post .opblock-summary-method { background: #16a34a; }
+      .swagger-ui .opblock.opblock-put .opblock-summary-method { background: #d97706; }
+      .swagger-ui .opblock.opblock-delete .opblock-summary-method { background: #dc2626; }
+      
+      /* Offline Fallback Styles */
+      #fallback-ui { display: none; max-width: 1200px; margin: 24px auto; padding: 0 20px 48px; }
+      .fb-tag-section { margin: 28px 0; }
+      .fb-tag-section h2 { font-size: 20px; font-weight: 700; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; color: #0f172a; }
+      .fb-endpoint { margin: 12px 0; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+      .fb-endpoint summary { cursor: pointer; display: flex; gap: 14px; align-items: center; padding: 12px 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+      .fb-method { min-width: 68px; padding: 4px 8px; color: white; text-align: center; font-weight: 700; font-size: 11px; border-radius: 3px; }
+      .fb-method.get { background: #2563eb; }
+      .fb-method.post { background: #16a34a; }
+      .fb-method.put, .fb-method.patch { background: #d97706; }
+      .fb-method.delete { background: #dc2626; }
+      .fb-body { padding: 16px; border-top: 1px solid #f1f5f9; background: #f8fafc; font-size: 13px; color: #334155; }
+      .fb-body pre { overflow: auto; padding: 12px; background: #0f172a; color: #f8fafc; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+      @media (max-width: 640px) { .custom-header { flex-direction: column; align-items: flex-start; gap: 10px; } .header-links a { margin: 0 16px 0 0; } }
     </style>
   </head>
   <body>
@@ -70,28 +100,119 @@ const redocHTML = `<!DOCTYPE html>
         <a href="/dashboard">Return to Dashboard →</a>
       </div>
     </header>
-    <redoc spec-url="/api/v1/openapi.json"
-           theme='{
-             "colors": {
-               "primary": { "main": "#ea580c" },
-               "success": { "main": "#16a34a" },
-               "warning": { "main": "#f59e0b" },
-               "error": { "main": "#dc2626" }
-             },
-             "typography": {
-               "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
-               "headings": { "fontFamily": "\"Plus Jakarta Sans\", sans-serif", "fontWeight": "700" },
-               "code": { "fontFamily": "\"JetBrains Mono\", monospace" }
-             },
-             "sidebar": {
-               "backgroundColor": "#ffffff",
-               "textColor": "#334155"
-             }
-           }'></redoc>
-    <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>
+
+    <div id="swagger-ui"></div>
+    <div id="fallback-ui"></div>
+
+    <script id="openapi-spec" type="application/json">`
+
+const docsHTMLSuffix = `</script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-standalone-preset.min.js"></script>
+    <script>
+      (function() {
+        var specEl = document.getElementById("openapi-spec");
+        var specObj = null;
+        try {
+          if (specEl && specEl.textContent) {
+            specObj = JSON.parse(specEl.textContent);
+          }
+        } catch (e) {
+          console.error("Failed to parse embedded openapi spec", e);
+        }
+
+        function renderFallback(spec) {
+          var fb = document.getElementById("fallback-ui");
+          var sw = document.getElementById("swagger-ui");
+          if (!fb || !spec) return;
+          if (sw) sw.style.display = "none";
+          fb.style.display = "block";
+
+          function esc(v) {
+            return String(v || "").replace(/[&<>"']/g, function(c) {
+              return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+            });
+          }
+
+          var html = '<div style="margin: 20px 0;"><h1>' + esc(spec.info && spec.info.title ? spec.info.title : "API Reference") + '</h1>';
+          html += '<p style="color: #64748b; font-size: 14px;">' + esc(spec.info && spec.info.description ? spec.info.description : "") + '</p></div>';
+
+          var grouped = {};
+          var paths = spec.paths || {};
+          Object.keys(paths).forEach(function(path) {
+            var ops = paths[path];
+            Object.keys(ops).forEach(function(method) {
+              var m = method.toLowerCase();
+              if (["get", "post", "put", "patch", "delete"].indexOf(m) < 0) return;
+              var op = ops[method];
+              var tag = (op.tags && op.tags[0]) ? op.tags[0] : "General";
+              if (!grouped[tag]) grouped[tag] = [];
+              grouped[tag].push({ path: path, method: m.toUpperCase(), op: op });
+            });
+          });
+
+          Object.keys(grouped).forEach(function(tag) {
+            html += '<section class="fb-tag-section"><h2>' + esc(tag) + '</h2>';
+            grouped[tag].forEach(function(item) {
+              var desc = item.op.summary || item.op.description || "";
+              html += '<details class="fb-endpoint"><summary>';
+              html += '<span class="fb-method ' + item.method.toLowerCase() + '">' + item.method + '</span>';
+              html += '<strong>' + esc(item.path) + '</strong>';
+              html += '<span style="color: #64748b; margin-left: auto;">' + esc(desc) + '</span>';
+              html += '</summary><div class="fb-body">';
+              if (item.op.description) {
+                html += '<p><strong>Description:</strong> ' + esc(item.op.description) + '</p>';
+              }
+              if (item.op.parameters && item.op.parameters.length) {
+                html += '<p><strong>Parameters:</strong></p><ul>';
+                item.op.parameters.forEach(function(p) {
+                  html += '<li><code>' + esc(p.name) + '</code> (' + esc(p.in) + ')' + (p.required ? ' <em>required</em>' : '') + ' - ' + esc(p.description || '') + '</li>';
+                });
+                html += '</ul>';
+              }
+              if (item.op.responses) {
+                html += '<p><strong>Responses:</strong></p><pre>' + esc(JSON.stringify(item.op.responses, null, 2)) + '</pre>';
+              }
+              html += '</div></details>';
+            });
+            html += '</section>';
+          });
+
+          fb.innerHTML = html;
+        }
+
+        // Try Swagger UI initialization
+        if (typeof SwaggerUIBundle !== "undefined") {
+          try {
+            window.ui = SwaggerUIBundle({
+              spec: specObj || undefined,
+              url: specObj ? undefined : "/api/v1/openapi.json",
+              dom_id: "#swagger-ui",
+              deepLinking: true,
+              presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIStandalonePreset
+              ],
+              layout: "BaseLayout",
+              defaultModelsExpandDepth: 1,
+              defaultModelExpandDepth: 1,
+              docExpansion: "list",
+              filter: true,
+              showRequestHeaders: true
+            });
+          } catch (err) {
+            console.warn("SwaggerUI initialization failed, falling back to native rendering", err);
+            renderFallback(specObj);
+          }
+        } else {
+          // Fallback if CDN script could not load
+          renderFallback(specObj);
+        }
+      })();
+    </script>
   </body>
-</html>
-`
+</html>`
 
 const openapiJSON = `{
   "openapi": "3.0.3",
@@ -409,6 +530,51 @@ const openapiJSON = `{
         }
       }
     },
+    "/pallets/closeouts": {
+      "get": {
+        "tags": ["Pallet Registry"],
+        "summary": "List Pallet Remainder Closeouts",
+        "responses": {
+          "200": { "description": "Recent audited pallet remainder settlements" }
+        }
+      }
+    },
+    "/pallets/{code}/release": {
+      "post": {
+        "tags": ["Pallet Registry"],
+        "summary": "Close & Release Physical Pallet",
+        "description": "Settles any sub-package remaining weight with an audited disposition and resets the pallet to AVAILABLE for Station 02 Sorting reuse (ADMIN or OPERATOR).",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "code", "in": "path", "required": true, "schema": { "type": "string", "example": "PLT-001" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["disposition"],
+                "properties": {
+                  "disposition": {
+                    "type": "string",
+                    "enum": ["SHRINKAGE_LOSS", "CULL_REJECT", "LOOSE_RESERVE", "SAMPLE_USE"]
+                  },
+                  "notes": { "type": "string", "example": "Moved 0.45 kg edible remainder to loose crate" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Pallet settled and released to AVAILABLE" },
+          "400": { "description": "Invalid disposition or pallet already available" },
+          "401": { "description": "Authentication required" },
+          "403": { "description": "Requires ADMIN or OPERATOR role" },
+          "404": { "description": "Pallet not found" }
+        }
+      }
+    },
     "/scales": {
       "get": {
         "tags": ["Hardware & Scales"],
@@ -431,6 +597,7 @@ const openapiJSON = `{
 }
 `
 
+
 func (s *server) openapiSpec(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -440,6 +607,5 @@ func (s *server) openapiSpec(w http.ResponseWriter, r *http.Request) {
 func (s *server) redocUI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(redocHTML))
+	_, _ = w.Write([]byte(docsHTMLPrefix + openapiJSON + docsHTMLSuffix))
 }
-
