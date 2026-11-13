@@ -1,4 +1,4 @@
-# 🌾 ENYX-Smart Hub
+# 🌾 SmartGeulis
 
 **The complete harvest-to-shipment operating system for modern agriculture.**
 
@@ -8,7 +8,7 @@ Digitize your entire harvest chain — from farmer delivery to export-ready pack
 
 ## ⚡ What It Does
 
-ENYX-Smart Hub transforms traditional agricultural packaging and warehouse operations into a fully digital, traceable, and efficient workflow:
+SmartGeulis transforms traditional agricultural packaging and warehouse operations into a fully digital, traceable, and efficient workflow:
 
 | Stage | What Happens | Tech |
 |-------|--------------|------|
@@ -19,7 +19,7 @@ ENYX-Smart Hub transforms traditional agricultural packaging and warehouse opera
 
 ---
 
-## 🎯 Why ENYX-Smart Hub?
+## 🎯 Why SmartGeulis?
 
 **For Farmers**: Prove your harvest origin, quality, and quantity with digital traceability.  
 **For Operators**: Reduce manual input with smart context auto-fill — scan once, fill everything else automatically.  
@@ -73,7 +73,7 @@ backend/
 ## 🔄 How It Works: The Smart Context Flow
 
 **Traditional way**: Operator manually enters farmer, pallet, grade, weight — 4+ fields, prone to errors.  
-**ENYX way**: Scan once → everything else auto-fills.
+**SmartGeulis way**: Scan once → everything else auto-fills.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -199,7 +199,7 @@ cd backend && go test ./...
 
 ## 📝 License
 
-Proprietary — ENYX-Smart Hub
+Proprietary — SmartGeulis
 
 ---
 

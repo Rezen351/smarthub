@@ -1,6 +1,6 @@
-# ENYX-Smart Hub Backend
+# SmartGeulis Backend
 
-The backend is a Go REST API for ENYX-Smart Hub. It uses PostgreSQL and keeps the `/api/v1` contract used by the React frontend.
+The backend is a Go REST API for SmartGeulis. It uses PostgreSQL and keeps the `/api/v1` contract used by the React frontend.
 
 ## Local development
 

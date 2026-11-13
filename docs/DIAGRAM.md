@@ -18,7 +18,7 @@ skinparam StartColor #2E7D32
 skinparam EndColor #C62828
 skinparam ConditionStyle diamond
 
-title Alur Kerja Terpadu 3 Konsol Stasiun Fisik\nENYX-Smart Hub — v5
+title Alur Kerja Terpadu 3 Konsol Stasiun Fisik\nSmartGeulis — v5
 
 |Petani|
 start
@@ -120,7 +120,7 @@ stop
 
 ## Deskripsi Rinci Alur Kerja (3 Konsol Terpadu Berbasis 3 Timbangan Fisik)
 
-Sistem tata kelola pengemasan kentang ENYX-Smart Hub menyederhanakan alur operasional ke dalam **3 Konsol Stasiun Fisik** yang masing-masing terhubung langsung (*1:1 hardware mapping*) dengan unit timbangan digital:
+Sistem tata kelola pengemasan kentang SmartGeulis menyederhanakan alur operasional ke dalam **3 Konsol Stasiun Fisik** yang masing-masing terhubung langsung (*1:1 hardware mapping*) dengan unit timbangan digital:
 
 ### 1. Konsol 01: Penerimaan & Waring Intake — *Area Intake (Timbangan 01)*
 - **Perangkat Keras**: Timbangan Lantai RS485 kapasitas 150 kg, barcode scanner, dan printer thermal IW-J300H 80 mm Ethernet untuk Reception.
@@ -284,7 +284,7 @@ rectangle "**[ CLOUD LEVEL ]**\nSinkronisasi Data, Cadangan, & Disaster Recovery
 rectangle "**[ ENTERPRISE LEVEL ]**\nHak Akses Pengguna Terpadu (RBAC 3-Role) & Konsumen Publik" as ENT #E8F5E9 {
 
   node "Gateway Internet / Domain Publik" as internet {
-    component [HTTPS Domain\n(trace.enyx.id)] as domain
+    component [HTTPS Domain\n(trace.smartgeulis.id)] as domain
   }
 
   actor "Admin\n(Hak Akses Penuh)" as admin
@@ -387,7 +387,7 @@ skinparam ArrowFontName Arial
 skinparam DefaultFontName Arial
 skinparam DefaultFontSize 11
 
-title Skema Database Relasional — ENYX-Smart Hub\n(Waring Intake, Pairing Palet, Timbang Susut, & Dual Warehouse)
+title Skema Database Relasional — SmartGeulis\n(Waring Intake, Pairing Palet, Timbang Susut, & Dual Warehouse)
 
 ' ============================================================
 ' CORE MODELS
@@ -650,7 +650,7 @@ Semua entitas fisik lapangan menggunakan standar identifier berikut:
    - Contoh: `GRD-PLT-20261025-0001-A`
    - Penanda fisik wadah hasil grading per mutu.
 5. **Pouch QR GS1 Digital Link (`https://{domain}/01/{GTIN-13}/10/{LOT}/21/{SERIAL}`)**:
-   - Contoh: `https://trace.enyx.id/01/899001000001/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001`
+   - Contoh: `https://trace.smartgeulis.id/01/899001000001/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001`
    - AI 01: GTIN-13 (EAN-13 produk ritel)
    - AI 10: Batch/Lot (Pallet Code + Grade)
    - AI 21: Serial Pouch Unik

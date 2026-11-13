@@ -1,6 +1,6 @@
-# Frontend - ENYX-Smart Hub
+# Frontend - SmartGeulis
 
-React + Vite + TypeScript frontend for ENYX-Smart Hub.
+React + Vite + TypeScript frontend for SmartGeulis.
 
 ## 🚀 Quick Start
 
@@ -50,13 +50,13 @@ frontend/
 
 | Email | Password | Role |
 |-------|----------|------|
-| admin@enyx.local | password | ADMIN |
-| weighing@enyx.local | password | WEIGHING_OPERATOR |
-| sorting@enyx.local | password | SORTING_OPERATOR |
-| packaging@enyx.local | password | PACKAGING_OPERATOR |
-| warehouse@enyx.local | password | WAREHOUSE_OPERATOR |
-| delivery@enyx.local | password | DELIVERY_OPERATOR |
-| farmer@enyx.local | password | FARMER |
+| admin@smartgeulisunpad.com | password | ADMIN |
+| weighing@smartgeulisunpad.com | password | WEIGHING_OPERATOR |
+| sorting@smartgeulisunpad.com | password | SORTING_OPERATOR |
+| packaging@smartgeulisunpad.com | password | PACKAGING_OPERATOR |
+| warehouse@smartgeulisunpad.com | password | WAREHOUSE_OPERATOR |
+| delivery@smartgeulisunpad.com | password | DELIVERY_OPERATOR |
+| farmer@smartgeulisunpad.com | password | FARMER |
 
 ## 🛠️ Tech Stack
 

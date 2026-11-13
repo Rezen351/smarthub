@@ -252,7 +252,7 @@ void WebPortal::handleRoot() {
                       "<p>Filesystem image (<code>index.html</code>) not found in SPIFFS.</p>"
                       "<p>Please build and upload the filesystem using: <code>pio run -t uploadfs</code></p>"
                       "<p><a href='/api/status' style='color:#34d399;'>Inspect /api/status JSON &rarr;</a></p>"
-                      "</div><footer class='footer'>ENYX SmartHub &bull; Weight Transmitter &bull; by Almuzky v1</footer></body></html>";
+                      "</div><footer class='footer'>SmartGeulis &bull; Weight Transmitter &bull; by Almuzky v1</footer></body></html>";
     _http.send(200, "text/html", fallback);
   }
 }

@@ -215,7 +215,7 @@ All hardware pin numbers, timing intervals, stack sizes and feature switches are
 | `SCALE_AZT_ENABLED` | 1 | Automatic Zero Tracking enabled |
 | `SCALE_AZT_BAND_G` | 30.0 | Zero drift tracking band (grams) |
 | `SCALE_AZT_RATE_G_PER_S` | 2.0 | Maximum zero drift tracking rate (g/s) |
-| `AP_SSID_PREFIX` | `"ENYX-SMARTHUB-"` | Soft-AP SSID prefix (+ last 3 bytes of MAC) |
+| `AP_SSID_PREFIX` | `"SMARTGEULIS-HUB-"` | Soft-AP SSID prefix (+ last 3 bytes of MAC) |
 | `AP_SSID_PASSWORD` | `""` | Empty = open AP (recommended for captive portal) |
 | `AP_CHANNEL` | 6 | 2.4 GHz channel for the AP |
 | `AP_MAX_CONNECTIONS` | 4 | Max concurrent AP clients |
@@ -656,7 +656,7 @@ Python decode:
 
 | Network | IP | How to reach |
 |---------|-----|-------------|
-| Soft-AP | `192.168.4.1` | Connect to `ENYX-SMARTHUB-AABBCCDDEEFF` (open network) |
+| Soft-AP | `192.168.4.1` | Connect to `SMARTGEULIS-HUB-AABBCCDDEEFF` (open network) |
 | LAN uplink | DHCP-assigned | Browse to device IP when STA is connected |
 
 When a device connects to the Soft-AP and opens any URL, DNS returns `192.168.4.1` for all queries, triggering the OS captive-portal detection flow on iOS, Android, macOS, and Windows.
@@ -744,7 +744,7 @@ Errors carry a machine-readable code and an English message:
     "status": "connected",
     "rssi": -45,
     "staIp": "192.168.1.100",
-    "apSsid": "ENYX-SMARTHUB-AABBCCDDEEFF",
+    "apSsid": "SMARTGEULIS-HUB-AABBCCDDEEFF",
     "apIp": "192.168.4.1"
   },
   "transport": {
@@ -877,7 +877,7 @@ setup()
                       |   mode: WIFI_AP_STA           |
                       |                               |
                +------+ Soft-AP (ALWAYS ON)           |
-                |      |  SSID: ENYX-SMARTHUB-AABBCCDDEEFF    |
+                |      |  SSID: SMARTGEULIS-HUB-AABBCCDDEEFF  |
                |      |  IP:   192.168.4.1            |
                |      |  Open network                 |
                |      +-------------------------------+

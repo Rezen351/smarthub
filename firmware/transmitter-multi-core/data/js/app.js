@@ -413,7 +413,7 @@
     }
 
     if (ui.valWifiAp) {
-      ui.valWifiAp.textContent = `${w.apSsid || 'ENYX-SMARTHUB'} @ ${w.apIp || '192.168.4.1'}`;
+      ui.valWifiAp.textContent = `${w.apSsid || 'SMARTGEULIS-HUB'} @ ${w.apIp || '192.168.4.1'}`;
     }
 
     if (ui.valTransportMode) {
