@@ -242,22 +242,22 @@ export default function AdminDashboardHome() {
   }, [bufferWarings, dbRankings])
 
   const activities = useMemo<Activity[]>(() => {
-    const reception = bufferWarings.slice(0, 3).map((item) => ({
+    const reception = bufferWarings.slice(0, 2).map((item) => ({
       id: `reception-${item.id}`, stage: 'Station 01', time: `${item.date} ${item.intakeTime}`.trim(),
       action: `${item.code} · ${formatWeight(item.grossWeightKg)} kg · ${item.farmerName}`,
       icon: 'scale' as IconName, badge: 'Reception', tone: 'accent' as const,
     }))
-    const sorting = sortedBatches.slice(0, 3).map((item) => ({
+    const sorting = sortedBatches.slice(0, 2).map((item) => ({
       id: `sorting-${item.id}`, stage: 'Station 02', time: `${item.date ?? '—'} ${item.timestamp || '—'}`,
       action: `${item.waringCode} · ${formatWeight(item.totalGradedKg)} kg graded · ${item.palletCode}`,
       icon: 'sortir' as IconName, badge: 'Sorting', tone: 'success' as const,
     }))
-    const packaging = finishedStock.slice(0, 3).map((item) => ({
+    const packaging = finishedStock.slice(0, 2).map((item) => ({
       id: `packaging-${item.id}`, stage: 'Station 03', time: `${item.date ?? '—'} ${item.packedTime || '—'}`,
       action: `${item.code} · ${item.units} units · ${formatWeight(item.totalWeightKg)} kg`,
       icon: 'package' as IconName, badge: 'Packaging', tone: 'accent' as const,
     }))
-    const dispatch = deliveries.slice(0, 3).map((item) => ({
+    const dispatch = deliveries.slice(0, 2).map((item) => ({
       id: `delivery-${item.id}`, stage: 'Dispatch', time: `${item.date} ${item.time}`.trim(),
       action: `${item.truckPlate} · ${item.destination} · ${item.units} units`, icon: 'truck' as IconName,
       badge: item.status, tone: item.status === 'DEPARTED' || item.status === 'DELIVERED' ? 'success' as const : 'warning' as const,
