@@ -2,6 +2,12 @@ import React from 'react'
 import Icon from './Icon'
 import OfflineQrCode from './OfflineQrCode'
 import { encodeQr } from '../../lib/qrEncoder'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 export interface IdCardData {
   id?: string
@@ -941,7 +947,7 @@ export function IdCardModal({
 }) {
   const [exporting, setExporting] = React.useState(false)
 
-  if (!open || !data) return null
+  if (!data) return null
 
   const role = (data.role || 'OPERATOR').toUpperCase()
   const theme = ROLE_THEMES[role] || ROLE_THEMES.OPERATOR
@@ -960,42 +966,40 @@ export function IdCardModal({
   }
 
   return (
-    <div className="modal-backdrop backdrop-blur-xs" onClick={onClose}>
-      <div
-        className="modal-card stack stack-md bg-white border border-[#eaeaea] shadow-xl rounded-none p-6"
-        style={{ maxWidth: 440 }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="max-w-md p-6 bg-white dark:bg-zinc-900 border border-[#eaeaea] dark:border-zinc-800 shadow-2xl rounded-none">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#eaeaea] pb-3">
-          <div>
-            <div className="font-mono-custom text-[9px] text-[#ea580c] tracking-[0.25em] uppercase font-semibold">
-              Card Preview
+        <DialogHeader className="border-b border-[#eaeaea] dark:border-zinc-800 pb-3 text-left">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-mono-custom text-[9px] text-[#ea580c] tracking-[0.25em] uppercase font-semibold">
+                Card Preview
+              </div>
+              <DialogTitle className="font-display text-xl font-bold text-[#171717] dark:text-zinc-100 tracking-tight">
+                {formatUserName(data.name)}
+              </DialogTitle>
             </div>
-            <h2 className="font-display text-xl font-bold text-[#171717] tracking-tight">
-              {formatUserName(data.name)}
-            </h2>
+            <button
+              type="button"
+              className="p-1.5 text-[#888888] hover:text-[#171717] dark:hover:text-zinc-200 transition-colors"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              <Icon name="close" size={18} />
+            </button>
           </div>
-          <button
-            type="button"
-            className="p-1.5 text-[#888888] hover:text-[#171717] transition-colors"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <Icon name="close" size={18} />
-          </button>
-        </div>
+        </DialogHeader>
 
         {/* Card Live Preview Container */}
-        <div className="flex justify-center p-6 bg-[#fafafa] border border-[#eaeaea]">
+        <div className="flex justify-center p-4 bg-[#fafafa] dark:bg-zinc-950/50 border border-[#eaeaea] dark:border-zinc-800">
           <IdCard data={data} />
         </div>
 
         {/* Direct Details Table */}
-        <div className="bg-[#fcfcfc] border border-[#eaeaea] p-3 text-xs text-[#666666] space-y-1.5 font-body">
+        <div className="bg-[#fcfcfc] dark:bg-zinc-900/80 border border-[#eaeaea] dark:border-zinc-800 p-3 text-xs text-[#666666] dark:text-zinc-300 space-y-1.5 font-body">
           <div className="flex justify-between items-center">
             <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">Role:</span>
-            <span className="font-mono-custom text-[11px] font-bold text-[#171717] capitalize">{data.role?.toLowerCase() || 'operator'}</span>
+            <span className="font-mono-custom text-[11px] font-bold text-[#171717] dark:text-zinc-100 capitalize">{data.role?.toLowerCase() || 'operator'}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">User ID:</span>
@@ -1012,15 +1016,15 @@ export function IdCardModal({
           </div>
           <div className="flex justify-between items-center">
             <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">Domicile:</span>
-            <span className="font-medium text-[#171717]">{data.domicile || 'Garut, Jawa Barat'}</span>
+            <span className="font-medium text-[#171717] dark:text-zinc-100">{data.domicile || 'Garut, Jawa Barat'}</span>
           </div>
         </div>
 
-        {/* Action Buttons (Matches Landing Page Black & Hairline Style) */}
-        <div className="row gap-sm pt-2">
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-2 pt-2">
           <button
             type="button"
-            className="flex-1 font-heading text-xs tracking-[0.16em] uppercase text-white bg-[#000000] py-3 hover:bg-[#333333] transition-colors flex items-center justify-center gap-2 font-semibold"
+            className="w-full font-heading text-xs tracking-[0.16em] uppercase text-white bg-[#000000] py-3 hover:bg-[#333333] transition-colors flex items-center justify-center gap-2 font-semibold cursor-pointer"
             onClick={handlePrint}
           >
             <Icon name="print" size={16} />
@@ -1028,7 +1032,7 @@ export function IdCardModal({
           </button>
           <button
             type="button"
-            className="flex-1 font-heading text-xs tracking-[0.16em] uppercase text-[#171717] bg-white border border-[#eaeaea] py-3 hover:bg-[#f5f5f5] transition-colors flex items-center justify-center gap-2 font-semibold"
+            className="w-full font-heading text-xs tracking-[0.16em] uppercase text-[#171717] dark:text-zinc-200 bg-white dark:bg-zinc-800 border border-[#eaeaea] dark:border-zinc-700 py-3 hover:bg-[#f5f5f5] dark:hover:bg-zinc-700 transition-colors flex items-center justify-center gap-2 font-semibold cursor-pointer"
             disabled={exporting}
             onClick={handleExport}
           >
@@ -1036,7 +1040,7 @@ export function IdCardModal({
             <span>{exporting ? 'Exporting...' : 'Export PNG'}</span>
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
