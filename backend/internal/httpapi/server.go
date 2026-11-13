@@ -31,6 +31,7 @@ type server struct {
 	scaleClients map[string]*scaleClient
 	printerMu    sync.RWMutex
 	printers     map[string]printerSettings
+	printerLocks sync.Map
 }
 type scaleClient struct {
 	mu         sync.Mutex
@@ -1434,12 +1435,10 @@ func (s *server) printerHandler(w http.ResponseWriter, r *http.Request, p []stri
 			fail(w, 400, "PRINTER_NOT_CONFIGURED", "Configure a valid Ethernet printer address first")
 			return
 		}
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort(targetIP, strconv.Itoa(targetPort)), 1500*time.Millisecond)
-		if err != nil {
+		if !s.testPrinter(targetIP, targetPort) {
 			write(w, map[string]any{"success": true, "data": map[string]any{"online": false, "message": "Thermal printer is unreachable"}})
 			return
 		}
-		_ = conn.Close()
 		write(w, map[string]any{"success": true, "data": map[string]any{"online": true, "message": "Thermal printer is reachable"}})
 		return
 	}
@@ -1467,22 +1466,60 @@ func (s *server) printerHandler(w http.ResponseWriter, r *http.Request, p []stri
 			fail(w, 400, "PRINT_JOB_INVALID", err.Error())
 			return
 		}
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort(printer.IP, strconv.Itoa(printer.Port)), 2*time.Second)
-		if err != nil {
-			fail(w, 502, "PRINTER_UNREACHABLE", "Thermal printer is unreachable")
-			return
-		}
-		_ = conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
-		err = writeAll(conn, payload)
-		_ = conn.Close()
-		if err != nil {
-			fail(w, 502, "PRINT_FAILED", "Failed to send print job to thermal printer")
+		if err := s.sendPrintPayload(printer.IP, printer.Port, payload); err != nil {
+			fail(w, 502, "PRINT_FAILED", "Failed to send print job to thermal printer: "+err.Error())
 			return
 		}
 		write(w, map[string]any{"success": true, "data": map[string]any{"station": p[0], "jobs": len(input.Jobs), "message": "Print job sent to thermal printer"}})
 		return
 	}
 	fail(w, 404, "NOT_FOUND", "Printer route not found")
+}
+
+func (s *server) testPrinter(ip string, port int) bool {
+	target := net.JoinHostPort(ip, strconv.Itoa(port))
+	conn, err := net.DialTimeout("tcp", target, 2500*time.Millisecond)
+	if err == nil {
+		_ = conn.Close()
+		return true
+	}
+	// Transient Wi-Fi / bridge jitter retry
+	time.Sleep(150 * time.Millisecond)
+	conn, err = net.DialTimeout("tcp", target, 2500*time.Millisecond)
+	if err == nil {
+		_ = conn.Close()
+		return true
+	}
+	return false
+}
+
+func (s *server) sendPrintPayload(ip string, port int, payload []byte) error {
+	target := net.JoinHostPort(ip, strconv.Itoa(port))
+	muVal, _ := s.printerLocks.LoadOrStore(ip, &sync.Mutex{})
+	mu := muVal.(*sync.Mutex)
+	mu.Lock()
+	defer mu.Unlock()
+
+	var lastErr error
+	for attempt := 0; attempt < 2; attempt++ {
+		if attempt > 0 {
+			time.Sleep(200 * time.Millisecond)
+		}
+		conn, err := net.DialTimeout("tcp", target, 3*time.Second)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		_ = conn.SetWriteDeadline(time.Now().Add(4 * time.Second))
+		err = writeAll(conn, payload)
+		_ = conn.Close()
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		return nil
+	}
+	return lastErr
 }
 
 func writeAll(conn net.Conn, payload []byte) error {
@@ -1905,11 +1942,7 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 		if printer.IP != "" && printer.Port > 0 {
 			payload, err := encodePrintJobs([]printJob{job})
 			if err == nil {
-				conn, err := net.DialTimeout("tcp", net.JoinHostPort(printer.IP, strconv.Itoa(printer.Port)), 2*time.Second)
-				if err == nil {
-					_ = conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
-					_ = writeAll(conn, payload)
-					_ = conn.Close()
+				if err := s.sendPrintPayload(printer.IP, printer.Port, payload); err == nil {
 					printed = true
 				}
 			}
