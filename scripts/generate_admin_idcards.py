@@ -21,6 +21,7 @@ MONO_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
 ADMINS = (
     {"name": "Rizal Fahreza", "role": "ADMIN", "code": "ADM-002", "domicile": "Desa Cigedug, Kec. Cigedug"},
     {"name": "Fazrul Falah", "role": "ADMIN", "code": "ADM-003", "domicile": "Desa Cigedug, Kec. Cigedug"},
+    {"name": "Muhamad Ridwan", "role": "ADMIN", "code": "ADM-004", "domicile": "Desa Cigedug, Kec. Cigedug"},
 )
 
 

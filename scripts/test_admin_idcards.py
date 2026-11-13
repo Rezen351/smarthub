@@ -15,7 +15,7 @@ class AdminIdCardsTest(unittest.TestCase):
             stem = f"{admin['code']}_{admin['name'].replace(' ', '_')}"
             html = (OUTPUT / f"{stem}.html").read_text(encoding="utf-8")
             matrices[admin["code"]] = qr_matrix_from_print_html(html)
-        self.assertNotEqual(matrices[ADMINS[0]["code"]], matrices[ADMINS[1]["code"]])
+        self.assertEqual(len({tuple(tuple(r) for r in m) for m in matrices.values()}), len(ADMINS))
 
         for admin in ADMINS:
             code = admin["code"]
@@ -45,7 +45,7 @@ class AdminIdCardsTest(unittest.TestCase):
         self.assertTrue((OUTPUT / "admin_idcards_A4_print.pdf").is_file())
         sheet_html = (OUTPUT / "admin_idcards_A4_print.html").read_text(encoding="utf-8")
         self.assertIn("size: A4", sheet_html)
-        self.assertEqual(sheet_html.count('<div class="card">'), 2)
+        self.assertEqual(sheet_html.count('<div class="card">'), len(ADMINS))
 
 
 if __name__ == "__main__":
