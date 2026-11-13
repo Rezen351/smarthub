@@ -52,7 +52,7 @@ export default function SortingPage() {
   const [farmerName, setFarmerName] = useState(initialWaring.farmerName)
   const [farmerVillage, setFarmerVillage] = useState(initialWaring.farmerVillage || '')
   const [grossIntakeKg, setGrossIntakeKg] = useState(initialWaring.grossWeightKg ? String(initialWaring.grossWeightKg) : '')
-  const [palletCode, setPalletCode] = useState('PLT-001')
+  const [palletCode, setPalletCode] = useState('')
   const scanInputRef = useRef<HTMLInputElement>(null)
 
   /* ── Step 2: Sizing & Wash ── */
@@ -116,15 +116,15 @@ export default function SortingPage() {
   }, [])
 
   /* Grade A */
-  const [gradeAKg, setGradeAKg] = useState('0.0')
+  const [gradeAKg, setGradeAKg] = useState('')
   const [gradeAPalletQr, setGradeAPalletQr] = useState('')
 
   /* Grade B */
-  const [gradeBKg, setGradeBKg] = useState('0.0')
+  const [gradeBKg, setGradeBKg] = useState('')
   const [gradeBPalletQr, setGradeBPalletQr] = useState('')
 
   /* Grade C */
-  const [gradeCKg, setGradeCKg] = useState('0.0')
+  const [gradeCKg, setGradeCKg] = useState('')
   const [gradeCPalletQr, setGradeCPalletQr] = useState('')
 
   /* ── Camera Scanner State ── */
@@ -175,6 +175,7 @@ export default function SortingPage() {
   const gA = Number(gradeAKg) || 0
   const gB = Number(gradeBKg) || 0
   const gC = Number(gradeCKg) || 0
+  const allGradesRecorded = [gradeAKg, gradeBKg, gradeCKg].every((value) => value !== '')
 
   const totalGraded = gA + gB + gC
   const shrinkageKg = Math.max(0, gGross - totalGraded)
@@ -196,14 +197,10 @@ export default function SortingPage() {
     setGrossIntakeKg(String(item.grossWeightKg))
     setWaringScanError(null)
 
-    // Suggest balanced initial allocations
-    const a = (item.grossWeightKg * 0.48).toFixed(1)
-    const b = (item.grossWeightKg * 0.33).toFixed(1)
-    const c = (item.grossWeightKg * 0.12).toFixed(1)
-    setGradeAKg(a)
-    setGradeBKg(b)
-    setGradeCKg(c)
-    setLiveScaleWeight(a)
+    setGradeAKg('')
+    setGradeBKg('')
+    setGradeCKg('')
+    setLiveScaleWeight('')
     toast.success(`Waring ${item.code} loaded from buffer`)
   }
 
@@ -316,7 +313,11 @@ export default function SortingPage() {
 
 
   /* Commit Batch & Save */
-  const handleSaveSortingRun = () => {
+  const handleSaveSortingRun = async () => {
+    if (!allGradesRecorded) {
+      toast.error('Record a weight or 0 kg for each grade.')
+      return
+    }
     if (totalGraded <= 0) {
       toast.error('Cannot save batch with zero graded weight.')
       return
@@ -328,6 +329,10 @@ export default function SortingPage() {
       )
       return
     }
+    if ((gA > 0 && !gradeAPalletQr.trim()) || (gB > 0 && !gradeBPalletQr.trim()) || (gC > 0 && !gradeCPalletQr.trim())) {
+      toast.error('Assign a registered pallet to every grade with weight.')
+      return
+    }
 
     const activePalletCodes: string[] = []
     if (gA > 0 && gradeAPalletQr.trim()) activePalletCodes.push(gradeAPalletQr.trim())
@@ -336,7 +341,8 @@ export default function SortingPage() {
 
     const combinedPalletCode = activePalletCodes.length > 0 ? activePalletCodes.join(', ') : (palletCode || 'PLT-001')
 
-    const newBatch = addSortedBatch({
+    try {
+    const newBatch = await addSortedBatch({
       waringCode,
       farmerName,
       farmerVillage,
@@ -344,11 +350,11 @@ export default function SortingPage() {
       grossIntakeKg: gGross,
       washingRecord,
       gradeAKg: gA,
-      gradeAPalletQr: gradeAPalletQr.trim() || 'PLT-001',
+      gradeAPalletQr: gradeAPalletQr.trim(),
       gradeBKg: gB,
-      gradeBPalletQr: gradeBPalletQr.trim() || 'PLT-002',
+      gradeBPalletQr: gradeBPalletQr.trim(),
       gradeCKg: gC,
-      gradeCPalletQr: gradeCPalletQr.trim() || 'PLT-003',
+      gradeCPalletQr: gradeCPalletQr.trim(),
       totalGradedKg: totalGraded,
       shrinkageKg,
       shrinkagePct: Number(shrinkagePct.toFixed(1)),
@@ -357,6 +363,9 @@ export default function SortingPage() {
 
     setSavedSuccessBatch(newBatch)
     toast.success(`Batch saved. Yield: ${yieldPct.toFixed(1)}%. Pallets ready for packaging.`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save the sorting batch.')
+    }
   }
 
   /* Reset for next waring */
@@ -397,13 +406,13 @@ export default function SortingPage() {
       render: (r) => {
         const badges: { grade: string; code: string; tone: string }[] = []
         if (r.gradeAKg > 0 && r.gradeAPalletQr) {
-          badges.push({ grade: 'A', code: r.gradeAPalletQr, tone: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950 border-emerald-200' })
+          badges.push({ grade: 'A', code: r.gradeAPalletQr, tone: 'text-white bg-emerald-600 dark:bg-emerald-700 border-emerald-500' })
         }
         if (r.gradeBKg > 0 && r.gradeBPalletQr) {
-          badges.push({ grade: 'B', code: r.gradeBPalletQr, tone: 'text-blue-700 bg-blue-50 dark:bg-blue-950 border-blue-200' })
+          badges.push({ grade: 'B', code: r.gradeBPalletQr, tone: 'text-white bg-blue-600 dark:bg-blue-700 border-blue-500' })
         }
         if (r.gradeCKg > 0 && r.gradeCPalletQr) {
-          badges.push({ grade: 'C', code: r.gradeCPalletQr, tone: 'text-amber-700 bg-amber-50 dark:bg-amber-950 border-amber-200' })
+          badges.push({ grade: 'C', code: r.gradeCPalletQr, tone: 'text-white bg-amber-600 dark:bg-amber-700 border-amber-500' })
         }
 
         if (badges.length === 0) {
@@ -414,7 +423,7 @@ export default function SortingPage() {
           return (
             <div className="flex flex-wrap items-center gap-1">
               {codes.map((c, i) => (
-                <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded border text-[11px] font-mono font-bold bg-muted/40 border-border">
+                <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded border text-[11px] font-mono font-bold text-white bg-zinc-700 border-zinc-600">
                   {c}
                 </span>
               ))}
@@ -425,9 +434,9 @@ export default function SortingPage() {
         return (
           <div className="flex flex-wrap items-center gap-1">
             {badges.map((p) => (
-              <span key={p.grade} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-mono font-bold ${p.tone}`}>
-                <span>{p.grade}:</span>
-                <span>{p.code}</span>
+              <span key={p.grade} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-mono font-bold text-white ${p.tone}`}>
+                <span className="text-white font-extrabold">{p.grade}:</span>
+                <span className="text-white font-bold">{p.code}</span>
               </span>
             ))}
           </div>
@@ -455,11 +464,11 @@ export default function SortingPage() {
       label: 'Grade A',
       render: (r) => (
         <div className="flex flex-col">
-          <span className="font-mono text-xs font-semibold text-emerald-700">
+          <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
             {r.gradeAKg > 0 ? `${formatWeight(r.gradeAKg)} kg` : '—'}
           </span>
           {r.gradeAKg > 0 && r.gradeAPalletQr && (
-            <span className="font-mono text-[10px] text-muted-foreground">{r.gradeAPalletQr}</span>
+            <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{r.gradeAPalletQr}</span>
           )}
         </div>
       ),
@@ -469,11 +478,11 @@ export default function SortingPage() {
       label: 'Grade B',
       render: (r) => (
         <div className="flex flex-col">
-          <span className="font-mono text-xs font-semibold text-blue-700">
+          <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">
             {r.gradeBKg > 0 ? `${formatWeight(r.gradeBKg)} kg` : '—'}
           </span>
           {r.gradeBKg > 0 && r.gradeBPalletQr && (
-            <span className="font-mono text-[10px] text-muted-foreground">{r.gradeBPalletQr}</span>
+            <span className="font-mono text-[10px] font-bold text-blue-600 dark:text-blue-400">{r.gradeBPalletQr}</span>
           )}
         </div>
       ),
@@ -483,18 +492,18 @@ export default function SortingPage() {
       label: 'Grade C',
       render: (r) => (
         <div className="flex flex-col">
-          <span className="font-mono text-xs font-semibold text-amber-700">
+          <span className="font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">
             {r.gradeCKg > 0 ? `${formatWeight(r.gradeCKg)} kg` : '—'}
           </span>
           {r.gradeCKg > 0 && r.gradeCPalletQr && (
-            <span className="font-mono text-[10px] text-muted-foreground">{r.gradeCPalletQr}</span>
+            <span className="font-mono text-[10px] font-bold text-amber-600 dark:text-amber-400">{r.gradeCPalletQr}</span>
           )}
         </div>
       ),
     },
     {
       key: 'shrinkageKg',
-      label: 'Loss / Susut',
+      label: 'Shrinkage / Loss',
       render: (r) => (
         <span className="font-mono text-xs text-red-600">
           {formatWeight(r.shrinkageKg)} kg ({r.shrinkagePct}%)
@@ -948,7 +957,7 @@ export default function SortingPage() {
                 variant="primary"
                 icon="check"
                 touch
-                disabled={totalGraded <= 0 || totalGraded > gGross + 0.005}
+                disabled={!allGradesRecorded || totalGraded <= 0 || totalGraded > gGross + 0.005}
                 onClick={() => setActiveStep(4)}
               >
                 Proceed to Review & Save
@@ -972,17 +981,17 @@ export default function SortingPage() {
             </div>
             <div className="flex flex-wrap gap-1 items-center">
               {gA > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950 border-emerald-200">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800">
                   A: {gradeAPalletQr || 'PLT-001'}
                 </span>
               )}
               {gB > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono font-bold text-blue-700 bg-blue-50 dark:bg-blue-950 border-blue-200">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800">
                   B: {gradeBPalletQr || 'PLT-002'}
                 </span>
               )}
               {gC > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono font-bold text-amber-700 bg-amber-50 dark:bg-amber-950 border-amber-200">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800">
                   C: {gradeCPalletQr || 'PLT-003'}
                 </span>
               )}
@@ -1031,7 +1040,7 @@ export default function SortingPage() {
                   <div
                     style={{ width: `${(shrinkageKg / gGross) * 100}%` }}
                     className="bg-red-600 flex items-center justify-center text-xs font-bold font-mono text-white"
-                    title={`Loss/Susut: ${shrinkageKg.toFixed(1)} kg (${shrinkagePct.toFixed(1)}%)`}
+                    title={`Shrinkage: ${shrinkageKg.toFixed(1)} kg (${shrinkagePct.toFixed(1)}%)`}
                   >
                     {shrinkageKg > 0 && `Loss: ${formatWeight(shrinkageKg)} kg`}
                   </div>
@@ -1112,7 +1121,7 @@ export default function SortingPage() {
                   variant="primary"
                   touch
                   icon="check"
-                  disabled={totalGraded <= 0 || totalGraded > gGross + 0.005}
+                  disabled={!allGradesRecorded || totalGraded <= 0 || totalGraded > gGross + 0.005}
                   onClick={handleSaveSortingRun}
                 >
                   Commit Batch & Update Inventory

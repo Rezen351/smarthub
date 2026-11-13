@@ -456,14 +456,15 @@ export default function WeighingPage() {
     )
   }
 
-  const triggerPrintBoth = (recordOverride?: WeighingRecord | null) => {
+  const triggerPrintBoth = async (recordOverride?: WeighingRecord | null) => {
     const rec = getPrintRecord(recordOverride)
     if (!rec?.waringCode) return
 
     setPrintStatus('Sending receipt and label to printer…')
     setIsPrinting(true)
-    printThermal(
-      [
+    try {
+      // 1. Send receipt print job first (cuts paper after receipt)
+      await api.printers.print('reception', [
         {
           type: 'receipt',
           code: rec.waringCode,
@@ -473,6 +474,11 @@ export default function WeighingPage() {
           date: rec.depositDate || today(),
           time: rec.time,
         },
+      ])
+      // Pause briefly so printer finishes paper cut before receiving next ticket
+      await new Promise((r) => setTimeout(r, 600))
+      // 2. Send waring label print job second (printed on fresh cut ticket)
+      await api.printers.print('reception', [
         {
           type: 'waring',
           code: rec.waringCode,
@@ -482,15 +488,15 @@ export default function WeighingPage() {
           date: rec.depositDate || today(),
           time: rec.time,
         },
-      ],
-      'reception',
-      (error) => {
-        setIsPrinting(false)
-        setPrintStatus(error ? 'Print failed. Intake is saved. Retry below.' : 'Receipt and label sent to printer')
-        if (error) toast.error(`Receipt and Waring label print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
-        else toast.success(`Receipt & Waring label ${rec.waringCode || ''} printed`)
-      }
-    )
+      ])
+      setIsPrinting(false)
+      setPrintStatus('Receipt and label sent to printer')
+      toast.success(`Receipt & Waring label ${rec.waringCode || ''} printed`)
+    } catch (error) {
+      setIsPrinting(false)
+      setPrintStatus('Print failed. Intake is saved. Retry below.')
+      toast.error(`Receipt and Waring label print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
+    }
   }
 
   /* ── Columns for History Table ── */

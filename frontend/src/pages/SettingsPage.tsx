@@ -291,21 +291,30 @@ function DeviceSettings() {
 
   const handleTestConnection = async (stationId: string, stationLabel: string, ip: string, port: string) => {
     setTestingTarget(stationId)
+    const trimmedIp = (ip || '').trim()
+    const numPort = Number(port) || 502
+
+    if (!trimmedIp) {
+      toast.error(`Please enter an IP address for ${stationLabel} before testing.`)
+      setTestingTarget(null)
+      return
+    }
+
     try {
       // Test direct physical Modbus TCP socket connection via backend
-      const res = await api.scales.testConnection(stationId)
+      const res = await api.scales.testConnection(stationId, { ip: trimmedIp, port: numPort })
       if (res && res.online) {
         const normalizedStation = stationId.replace(/\D/g, '') as '01' | '02' | '03'
         if (normalizedStation in scaleOnline) {
           setScaleOnline((prev) => ({ ...prev, [normalizedStation]: true }))
         }
-      toast.success(res.message || `${stationLabel} is ready at ${ip}:${port}`)
+        toast.success(res.message || `${stationLabel} is ready at ${trimmedIp}:${numPort}`)
       } else {
         const normalizedStation = stationId.replace(/\D/g, '') as '01' | '02' | '03'
         if (normalizedStation in scaleOnline) {
           setScaleOnline((prev) => ({ ...prev, [normalizedStation]: false }))
         }
-      toast.warning(res?.message || `Could not reach ${stationLabel} at ${ip}:${port}`)
+        toast.warning(res?.message || `Could not reach ${stationLabel} at ${trimmedIp}:${numPort}`)
       }
     } catch (err: any) {
       toast.error(`Scale check failed: ${err.message || 'Scale unavailable'}`)
@@ -399,11 +408,21 @@ function DeviceSettings() {
 
   const handleTestPrinter = async (station: 'reception' | 'packaging') => {
     setTestingTarget(`printer-${station}`)
+    const printer = form.printers[station]
+    const ip = (printer.ip || '').trim()
+    const port = Number(printer.port) || 9100
+
+    if (!ip) {
+      toast.error('Please enter a printer IP address before testing.')
+      setTestingTarget(null)
+      return
+    }
+
     try {
-      const result = await api.printers.test(station)
+      const result = await api.printers.test(station, { ip, port })
       setForm((prev) => ({ ...prev, printers: { ...prev.printers, [station]: { ...prev.printers[station], status: result?.online ? 'ONLINE' : 'OFFLINE' } } }))
-      if (result?.online) toast.success(`${station === 'reception' ? 'Reception' : 'Packaging'} printer is online.`)
-      else toast.warning(`${station === 'reception' ? 'Reception' : 'Packaging'} printer is offline.`)
+      if (result?.online) toast.success(`${station === 'reception' ? 'Reception' : 'Packaging'} printer is online at ${ip}:${port}.`)
+      else toast.warning(`${station === 'reception' ? 'Reception' : 'Packaging'} printer is offline at ${ip}:${port}.`)
     } catch (err: any) {
       toast.error(`Printer check failed: ${err.message || 'Printer unavailable'}`)
     } finally {

@@ -195,7 +195,7 @@ export function usePackhouseStore() {
           truckPlate: d.truckPlate,
           destination: d.destination,
           driver: d.driverName,
-          units: d.items?.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0) || (d.packageCount || 0),
+          units: Number(d.units || 0),
           grade: 'A',
           status: d.status,
           time: formatSafeTime(d.createdAt || d.departedAt),
@@ -228,52 +228,22 @@ export function usePackhouseStore() {
     return () => window.removeEventListener('storage', handleStorage)
   }, [])
 
-  /* ── 1. Reception / Intake Actions ── */
-  const addBufferWaring = useCallback(
-    (waring: Omit<BufferWaringItem, 'id'>) => {
-      const newItem: BufferWaringItem = {
-        ...waring,
-        id: `w-${Date.now()}`,
-      }
-      persist({
-        ...store,
-        bufferWarings: [newItem, ...store.bufferWarings],
-      })
-
-      // Backend sync
-      if (waring.farmerId) {
-        api.weighing
-          .create({
-            farmerCode: waring.farmerId,
-            grossWeightKg: waring.grossWeightKg,
-          })
-          .catch(() => {})
-      }
-
-      return newItem
-    },
-    [persist, store],
-  )
-
-  /* ── 2. Sorting Actions ── */
-  const markWaringSorted = useCallback(
-    (waringCode: string) => {
-      const updated = store.bufferWarings.map((item) =>
-        item.code === waringCode ? { ...item, status: 'SORTED' as const } : item,
-      )
-      persist({
-        ...store,
-        bufferWarings: updated,
-      })
-    },
-    [persist, store],
-  )
-
+  /* ── Sorting Actions ── */
   const addSortedBatch = useCallback(
-    (batch: Omit<GradedBatchRecord, 'id'>) => {
+    async (batch: Omit<GradedBatchRecord, 'id'>) => {
+      const saved = await api.sorting.process({
+        waringCode: batch.waringCode,
+        washingRecord: batch.washingRecord,
+        grades: [
+          { gradeCode: 'A', weightKg: batch.gradeAKg, palletCode: batch.gradeAPalletQr },
+          { gradeCode: 'B', weightKg: batch.gradeBKg, palletCode: batch.gradeBPalletQr },
+          { gradeCode: 'C', weightKg: batch.gradeCKg, palletCode: batch.gradeCPalletQr },
+        ].filter((g) => g.weightKg > 0),
+      })
+      if (!saved?.batchId) throw new Error('The server did not confirm the sorting batch.')
       const newBatch: GradedBatchRecord = {
         ...batch,
-        id: `b-${Date.now()}`,
+        id: saved.batchId,
         date: batch.date ?? new Date().toISOString().slice(0, 10),
       }
       const updatedWarings = store.bufferWarings.map((item) =>
@@ -285,132 +255,10 @@ export function usePackhouseStore() {
         sortedBatches: [newBatch, ...store.sortedBatches],
       })
 
-      // Backend sync
-      api.sorting
-        .process({
-          waringCode: batch.waringCode,
-          washingRecord: batch.washingRecord,
-          grades: [
-            { gradeCode: 'A', weightKg: batch.gradeAKg, palletCode: batch.gradeAPalletQr },
-            { gradeCode: 'B', weightKg: batch.gradeBKg, palletCode: batch.gradeBPalletQr },
-            { gradeCode: 'C', weightKg: batch.gradeCKg, palletCode: batch.gradeCPalletQr },
-          ].filter((g) => g.weightKg > 0),
-        })
-        .catch(() => {})
-
       return newBatch
     },
     [persist, store],
   )
-
-  /* ── 3. Packaging Actions ── */
-  const addFinishedPackage = useCallback(
-    (pkg: Omit<FinishedStockItem, 'id'>) => {
-      const newPkg: FinishedStockItem = {
-        ...pkg,
-        id: `f-${Date.now()}`,
-        date: pkg.date ?? new Date().toISOString().slice(0, 10),
-      }
-      persist({
-        ...store,
-        finishedStock: [newPkg, ...store.finishedStock],
-      })
-
-      // Backend sync
-      api.packaging
-        .pack({
-          palletCode: pkg.sourcePalletCode || pkg.code,
-          packageTypeCode:
-            pkg.mode === 'BULK_EXPORT'
-              ? pkg.packageType.includes('50')
-                ? 'CARTON-50KG'
-                : 'CARTON-10KG'
-              : 'POUCH-1KG',
-          quantity: pkg.units,
-          totalNetWeightKg: pkg.totalWeightKg,
-          storageLocation: pkg.storageLocation,
-        })
-        .catch(() => {})
-
-      return newPkg
-    },
-    [persist, store],
-  )
-
-  /* ── 4. Delivery & Dispatch Actions ── */
-  const addDelivery = useCallback(
-    (delivery: Omit<DeliveryRecord, 'id'>) => {
-      const newDelivery: DeliveryRecord = {
-        ...delivery,
-        id: `d-${Date.now()}`,
-      }
-      persist({
-        ...store,
-        deliveries: [newDelivery, ...store.deliveries],
-      })
-      return newDelivery
-    },
-    [persist, store],
-  )
-
-  const departDelivery = useCallback(
-    (deliveryId: string) => {
-      const target = store.deliveries.find((d) => d.id === deliveryId)
-      if (!target) return
-
-      const updatedDeliveries = store.deliveries.map((d) =>
-        d.id === deliveryId ? { ...d, status: 'DEPARTED' as const } : d,
-      )
-
-      let remainingDeduct = target.units
-      const updatedStock = store.finishedStock
-        .map((stock) => {
-          if (remainingDeduct <= 0) return stock
-          const matchGrade = !target.grade || stock.grade === target.grade
-          if (!matchGrade) return stock
-
-          const deduct = Math.min(stock.units, remainingDeduct)
-          remainingDeduct -= deduct
-          const newUnits = stock.units - deduct
-          return {
-            ...stock,
-            units: newUnits,
-            totalWeightKg: Number((newUnits * stock.weightKg).toFixed(1)),
-          }
-        })
-        .filter((stock) => stock.units > 0)
-
-      persist({
-        ...store,
-        deliveries: updatedDeliveries,
-        finishedStock: updatedStock,
-      })
-    },
-    [persist, store],
-  )
-
-  const markDeliveryReady = useCallback(
-    (deliveryId: string) => {
-      const updatedDeliveries = store.deliveries.map((d) =>
-        d.id === deliveryId ? { ...d, status: 'READY' as const } : d,
-      )
-      persist({
-        ...store,
-        deliveries: updatedDeliveries,
-      })
-    },
-    [persist, store],
-  )
-
-  /* Reset all to clean defaults */
-  const resetToDefaults = useCallback(() => {
-    persist({
-      bufferWarings: [],
-      sortedBatches: [],
-      finishedStock: [],
-      deliveries: [],
-    })
-  }, [persist])
 
   return {
     bufferWarings: store.bufferWarings,
@@ -418,14 +266,7 @@ export function usePackhouseStore() {
     sortedBatches: store.sortedBatches,
     finishedStock: store.finishedStock,
     deliveries: store.deliveries,
-    addBufferWaring,
-    markWaringSorted,
     addSortedBatch,
-    addFinishedPackage,
-    addDelivery,
-    markDeliveryReady,
-    departDelivery,
-    resetToDefaults,
     syncWithBackend,
   }
 }

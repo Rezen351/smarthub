@@ -26,7 +26,7 @@ const testCases: { name: string; payload: LabelPayload }[] = [
     payload: {
       type: 'pouch',
       code: 'PCH-20261110-0001',
-      title: 'ENYX-ENTERPRISE',
+      title: 'SMARTGEULIS',
       subtitle: '1 KG RETAIL POUCH',
       grade: 'A',
       weightKg: 1.000,
@@ -35,7 +35,7 @@ const testCases: { name: string; payload: LabelPayload }[] = [
       farmerCode: 'FMR-001',
       sourcePalletCode: 'PLT-GRD-A-01',
       barcode: '8991234567890',
-      traceabilityUrl: 'https://enyx1.almuzky.my.id/traceability/PCH-20261110-0001',
+      traceabilityUrl: 'https://id.smartgeulis.id/traceability/PCH-20261110-0001',
     },
   },
   {
@@ -43,7 +43,7 @@ const testCases: { name: string; payload: LabelPayload }[] = [
     payload: {
       type: 'waring',
       code: 'WRG-20261110-0001',
-      title: 'ENYX-ENTERPRISE',
+      title: 'SMARTGEULIS',
       subtitle: 'RAW HARVEST WARING',
       badge: 'INTAKE',
       grossWeightKg: 42.50,
@@ -60,7 +60,7 @@ const testCases: { name: string; payload: LabelPayload }[] = [
     payload: {
       type: 'pallet',
       code: 'PLT-GRD-A-01',
-      title: 'ENYX-ENTERPRISE',
+      title: 'SMARTGEULIS',
       subtitle: 'SORTED PALLET',
       grade: 'A',
       weightKg: 100.00,
@@ -75,7 +75,7 @@ const testCases: { name: string; payload: LabelPayload }[] = [
     payload: {
       type: 'farmer',
       code: 'FMR-001',
-      title: 'ENYX SMART HUB',
+      title: 'SMARTGEULIS',
       subtitle: 'REGISTERED FARMER',
       badge: 'PRODUCER',
       farmerName: 'Ahmad Santoso',

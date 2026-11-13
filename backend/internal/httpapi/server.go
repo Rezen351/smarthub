@@ -203,7 +203,7 @@ func (s *server) handle(w http.ResponseWriter, r *http.Request) {
 		case "reports":
 			s.reportsHandler(w, r, parts[1:])
 		case "deliveries":
-			s.empty(w, "deliveries")
+			s.deliveriesHandler(w, r, parts[1:])
 		case "traceability":
 			s.empty(w, "traceability")
 		case "labels":
@@ -878,9 +878,14 @@ func authUser(id, email, name, role string, created time.Time, farmerCode, phone
 }
 
 func (s *server) authenticatedUserID(r *http.Request) (string, error) {
+	id, _, err := s.authenticatedClaims(r)
+	return id, err
+}
+
+func (s *server) authenticatedClaims(r *http.Request) (string, string, error) {
 	parts := strings.Fields(r.Header.Get("Authorization"))
 	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-		return "", fmt.Errorf("authorization header is missing")
+		return "", "", fmt.Errorf("authorization header is missing")
 	}
 	token, err := jwt.Parse(parts[1], func(token *jwt.Token) (any, error) {
 		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
@@ -889,17 +894,18 @@ func (s *server) authenticatedUserID(r *http.Request) (string, error) {
 		return s.jwtSecret, nil
 	})
 	if err != nil || !token.Valid {
-		return "", fmt.Errorf("token is invalid")
+		return "", "", fmt.Errorf("token is invalid")
 	}
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return "", fmt.Errorf("token claims are invalid")
+		return "", "", fmt.Errorf("token claims are invalid")
 	}
 	id, ok := claims["id"].(string)
 	if !ok || strings.TrimSpace(id) == "" {
-		return "", fmt.Errorf("token user ID is missing")
+		return "", "", fmt.Errorf("token user ID is missing")
 	}
-	return id, nil
+	role, _ := claims["role"].(string)
+	return id, strings.ToUpper(strings.TrimSpace(role)), nil
 }
 func (s *server) farmers(w http.ResponseWriter, r *http.Request, p []string) {
 	if r.Method != "GET" {
@@ -1071,7 +1077,20 @@ func (s *server) scalesHandler(w http.ResponseWriter, r *http.Request, p []strin
 		return
 	}
 	if len(p) > 1 && p[1] == "test" && r.Method == "POST" {
-		if _, err := s.scaleTelemetry(r.Context(), v); err != nil {
+		testScale := v
+		var input struct {
+			IP   string `json:"ip"`
+			Port int    `json:"port"`
+		}
+		if decode(r, &input) {
+			if trimmedIP := strings.TrimSpace(input.IP); trimmedIP != "" {
+				testScale.Host = trimmedIP
+			}
+			if input.Port >= 1 && input.Port <= 65535 {
+				testScale.Port = input.Port
+			}
+		}
+		if _, err := s.scaleTelemetry(r.Context(), testScale); err != nil {
 			write(w, map[string]any{"success": true, "data": map[string]any{"stationId": id, "online": false, "message": "Scale is unreachable"}})
 			return
 		}
@@ -1239,7 +1258,7 @@ func (s *server) printerHandler(w http.ResponseWriter, r *http.Request, p []stri
 	if len(p) == 0 && r.Method == "GET" {
 		s.printerMu.RLock()
 		printers := make([]printerSettings, 0, len(s.printers))
-		for _, station := range []string{"reception", "packaging"} {
+		for _, station := range []string{"reception", "packaging", "pallet"} {
 			if printer, ok := s.printers[station]; ok {
 				printers = append(printers, printer)
 			}
@@ -1249,7 +1268,7 @@ func (s *server) printerHandler(w http.ResponseWriter, r *http.Request, p []stri
 		return
 	}
 	station := ""
-	if len(p) == 1 && (p[0] == "reception" || p[0] == "packaging") {
+	if len(p) == 1 && (p[0] == "reception" || p[0] == "packaging" || p[0] == "pallet") {
 		station = p[0]
 	}
 	if station != "" && r.Method == "GET" {
@@ -1286,7 +1305,7 @@ func (s *server) printerHandler(w http.ResponseWriter, r *http.Request, p []stri
 		write(w, map[string]any{"success": true, "data": printer})
 		return
 	}
-	if len(p) == 2 && (p[0] == "reception" || p[0] == "packaging") && p[1] == "test" && r.Method == "POST" {
+	if len(p) == 2 && (p[0] == "reception" || p[0] == "packaging" || p[0] == "pallet") && p[1] == "test" && r.Method == "POST" {
 		s.printerMu.RLock()
 		printer, ok := s.printers[p[0]]
 		s.printerMu.RUnlock()
@@ -1294,11 +1313,28 @@ func (s *server) printerHandler(w http.ResponseWriter, r *http.Request, p []stri
 			fail(w, 404, "PRINTER_NOT_FOUND", "Thermal printer not found")
 			return
 		}
-		if net.ParseIP(printer.IP) == nil || printer.Port < 1 || printer.Port > 65535 {
+
+		targetIP := printer.IP
+		targetPort := printer.Port
+
+		var input struct {
+			IP   string `json:"ip"`
+			Port int    `json:"port"`
+		}
+		if decode(r, &input) {
+			if trimmedIP := strings.TrimSpace(input.IP); trimmedIP != "" {
+				targetIP = trimmedIP
+			}
+			if input.Port >= 1 && input.Port <= 65535 {
+				targetPort = input.Port
+			}
+		}
+
+		if net.ParseIP(targetIP) == nil || targetPort < 1 || targetPort > 65535 {
 			fail(w, 400, "PRINTER_NOT_CONFIGURED", "Configure a valid Ethernet printer address first")
 			return
 		}
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort(printer.IP, strconv.Itoa(printer.Port)), 1500*time.Millisecond)
+		conn, err := net.DialTimeout("tcp", net.JoinHostPort(targetIP, strconv.Itoa(targetPort)), 1500*time.Millisecond)
 		if err != nil {
 			write(w, map[string]any{"success": true, "data": map[string]any{"online": false, "message": "Thermal printer is unreachable"}})
 			return
@@ -1307,7 +1343,7 @@ func (s *server) printerHandler(w http.ResponseWriter, r *http.Request, p []stri
 		write(w, map[string]any{"success": true, "data": map[string]any{"online": true, "message": "Thermal printer is reachable"}})
 		return
 	}
-	if len(p) == 2 && (p[0] == "reception" || p[0] == "packaging") && p[1] == "print" && r.Method == "POST" {
+	if len(p) == 2 && (p[0] == "reception" || p[0] == "packaging" || p[0] == "pallet") && p[1] == "print" && r.Method == "POST" {
 		s.printerMu.RLock()
 		printer, ok := s.printers[p[0]]
 		s.printerMu.RUnlock()
@@ -1374,52 +1410,85 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 		"pouch":   "POUCH LABEL",
 		"export":  "EXPORT LABEL",
 	}
-	for index, job := range jobs {
+	for _, job := range jobs {
 		label, ok := labels[job.Type]
 		if !ok || job.Code == "" {
 			return nil, fmt.Errorf("print job type and code are required")
-		}
-		if index > 0 {
-			out = append(out, 0x1b, 0x64, 0x04)
 		}
 		out = append(out, 0x1b, 0x61, 0x01)
 		out = appendText(out, "SMARTGEULIS\n")
 		out = appendText(out, label+"\n")
 		out = appendText(out, "--------------------------------\n")
 		out = append(out, 0x1b, 0x61, 0x00)
-		if job.FarmerName != "" {
-			out = appendText(out, "Farmer: "+job.FarmerName+"\n")
-		}
-		if job.FarmerID != "" {
-			out = appendText(out, "Farmer ID: "+job.FarmerID+"\n")
-		}
-		if job.Grade != "" {
-			out = appendText(out, "Grade: "+job.Grade+"\n")
-		}
+
+		hasMeta := false
 		if job.Type == "receipt" {
+			if job.FarmerName != "" {
+				out = appendText(out, "Farmer: "+job.FarmerName+"\n")
+				hasMeta = true
+			}
+			if job.FarmerID != "" {
+				out = appendText(out, "Farmer ID: "+job.FarmerID+"\n")
+				hasMeta = true
+			}
 			commodity := job.Commodity
 			if commodity == "" {
 				commodity = "Potatoes"
 			}
 			out = appendText(out, "Commodity: "+commodity+"\n")
+			hasMeta = true
+			if job.Station != "" {
+				out = appendText(out, "Station: "+job.Station+"\n")
+				hasMeta = true
+			}
+		} else if job.Type == "waring" {
+			// Waring: Farmer & Farmer ID directly, station removed
+			if job.FarmerName != "" {
+				out = appendText(out, "Farmer: "+job.FarmerName+"\n")
+				hasMeta = true
+			}
+			if job.FarmerID != "" {
+				out = appendText(out, "Farmer ID: "+job.FarmerID+"\n")
+				hasMeta = true
+			}
+		} else if job.Type == "pouch" || job.Type == "export" {
+			// Pouch & Export: Grade directly, farmer and station removed
+			if job.Grade != "" {
+				out = appendText(out, "Grade: "+job.Grade+"\n")
+				hasMeta = true
+			}
 		}
-		if job.Station != "" {
-			out = appendText(out, "Station: "+job.Station+"\n")
-		}
+
 		out = append(out, 0x1b, 0x61, 0x01)
-		out = appendText(out, "--------------------------------\n")
-		if job.WeightKg > 0 {
+		if hasMeta {
+			out = appendText(out, "--------------------------------\n")
+		}
+
+		if job.WeightKg > 0 && job.Type != "pallet" {
 			out = appendText(out, fmt.Sprintf("%.3f kg\n", job.WeightKg))
 		}
 		out = appendText(out, job.Code+"\n")
 		out = appendText(out, "--------------------------------\n")
-		if job.Type != "receipt" {
+
+		if job.Type == "waring" {
+			// Waring label uses 2D QR Code only
+			out = appendQR(out, job.Code)
+		} else if job.Type != "receipt" {
+			// Pallet, Pouch, and Export use both Code128 barcode and QR Code
 			out = appendCode128(out, job.Code)
 			out = appendText(out, "\n")
 			out = appendQR(out, job.Code)
 		}
-		if job.Date != "" || job.Time != "" {
-			out = appendText(out, strings.TrimSpace(job.Date+" "+job.Time)+"\n")
+
+		dateStr := job.Date
+		timeStr := job.Time
+		if dateStr == "" && timeStr == "" {
+			now := time.Now()
+			dateStr = now.Format("2006-01-02")
+			timeStr = now.Format("15:04:05")
+		}
+		if dateStr != "" || timeStr != "" {
+			out = appendText(out, strings.TrimSpace(dateStr+" "+timeStr)+"\n")
 		}
 		if job.Type == "receipt" {
 			out = appendText(out, "BUFFER_WAITING\n")
@@ -1427,8 +1496,9 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 			out = appendText(out, "PRINTED\n")
 		}
 		out = appendText(out, "\n")
+		// Cut paper after each job so multi-ticket print jobs (e.g. receipt + waring) are cut separately
+		out = append(out, 0x1d, 0x56, 0x42, 0x03)
 	}
-	out = append(out, 0x1d, 0x56, 0x42, 0x03)
 	return out, nil
 }
 
@@ -1452,8 +1522,8 @@ func appendQR(dst []byte, value string) []byte {
 	data := []byte(value)
 	length := len(data) + 3
 	dst = append(dst, 0x1d, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00)
-	// Use the normal module size so the QR fits within the label's 80 mm paper width.
-	dst = append(dst, 0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, 0x0a)
+	// Normal module size 5 (0x05) ensures clean, un-stretched 1:1 square QR on 80 mm ESC/POS paper
+	dst = append(dst, 0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, 0x05)
 	dst = append(dst, 0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x31)
 	dst = append(dst, 0x1d, 0x28, 0x6b, byte(length), byte(length>>8), 0x31, 0x50, 0x30)
 	dst = append(dst, data...)
@@ -1554,6 +1624,46 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 		return
 	}
 
+	// GET /api/v1/pallets/closeouts - List recent pallet remainder closeout records
+	if r.Method == "GET" && len(p) == 1 && strings.EqualFold(p[0], "closeouts") {
+		rows, err := s.db.Query(r.Context(), `
+			SELECT pc.id, pc."palletCode", pc.grade, pc."leftoverKg", pc.disposition, pc.notes,
+			       f.name, u.name, pc."createdAt"
+			FROM pallet_closeouts pc
+			LEFT JOIN farmers f ON f.id = pc."farmerId"
+			LEFT JOIN users u ON u.id = pc."operatorId"
+			ORDER BY pc."createdAt" DESC
+			LIMIT 100
+		`)
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to list pallet closeouts")
+			return
+		}
+		defer rows.Close()
+		out := []any{}
+		for rows.Next() {
+			var id, palletCode, disposition, notes string
+			var grade, farmerName, operatorName *string
+			var leftoverKg float64
+			var createdAt time.Time
+			if err := rows.Scan(&id, &palletCode, &grade, &leftoverKg, &disposition, &notes, &farmerName, &operatorName, &createdAt); err == nil {
+				out = append(out, map[string]any{
+					"id":           id,
+					"palletCode":   palletCode,
+					"grade":        grade,
+					"leftoverKg":   leftoverKg,
+					"disposition":  disposition,
+					"notes":        notes,
+					"farmerName":   farmerName,
+					"operatorName": operatorName,
+					"createdAt":    createdAt,
+				})
+			}
+		}
+		write(w, map[string]any{"success": true, "data": out})
+		return
+	}
+
 	// GET /api/v1/pallets/:code
 	if r.Method == "GET" && len(p) == 1 {
 		q := strings.TrimSpace(p[0])
@@ -1624,6 +1734,12 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 			fail(w, 400, "PALLET_IN_USE", "Cannot delete pallet referenced by finished packages")
 			return
 		}
+		var closeoutCount int
+		_ = s.db.QueryRow(r.Context(), `SELECT COUNT(*) FROM pallet_closeouts WHERE "palletId"=$1`, id).Scan(&closeoutCount)
+		if closeoutCount > 0 {
+			fail(w, 400, "PALLET_IN_USE", "Cannot delete pallet referenced by closeout history")
+			return
+		}
 		_, err = s.db.Exec(r.Context(), `DELETE FROM pallets WHERE id=$1`, id)
 		if err != nil {
 			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to delete pallet")
@@ -1675,9 +1791,13 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 		}
 
 		s.printerMu.RLock()
-		printer, ok := s.printers["reception"]
+		// Dedicated Pallet printer for pallet QR labels, fallback to packaging, then reception
+		printer, ok := s.printers["pallet"]
 		if !ok || printer.IP == "" {
-			printer = s.printers["packaging"]
+			printer, ok = s.printers["packaging"]
+			if !ok || printer.IP == "" {
+				printer = s.printers["reception"]
+			}
 		}
 		s.printerMu.RUnlock()
 
@@ -1707,8 +1827,150 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 		return
 	}
 
+	// POST /api/v1/pallets/:code/release - Settle remaining pallet weight and release pallet for reuse
+	if r.Method == "POST" && len(p) == 2 && p[1] == "release" {
+		userID, role, err := s.authenticatedClaims(r)
+		if err != nil {
+			fail(w, 401, "UNAUTHORIZED", "A valid authentication token is required")
+			return
+		}
+		if role != "ADMIN" && role != "OPERATOR" {
+			fail(w, 403, "FORBIDDEN", "Only administrators and operators may release pallets")
+			return
+		}
+
+		var input struct {
+			Disposition string `json:"disposition"`
+			Notes       string `json:"notes"`
+		}
+		if !decode(r, &input) {
+			fail(w, 400, "VALIDATION_ERROR", "A valid closeout disposition payload is required")
+			return
+		}
+		disposition, err := validateCloseoutDisposition(input.Disposition)
+		if err != nil {
+			fail(w, 400, "VALIDATION_ERROR", err.Error())
+			return
+		}
+
+		q := strings.TrimSpace(p[0])
+		tx, err := s.db.Begin(r.Context())
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to start database transaction")
+			return
+		}
+		defer tx.Rollback(r.Context())
+
+		var palletID, palletCode, status string
+		var grade, farmerID, sortingBatchID *string
+		var remainingKg float64
+		err = tx.QueryRow(r.Context(), `
+			SELECT id, code, grade, status, "remainingKg", "farmerId", "sortingBatchId"
+			FROM pallets
+			WHERE id=$1 OR UPPER(code)=UPPER($1)
+			LIMIT 1
+			FOR UPDATE
+		`, q).Scan(&palletID, &palletCode, &grade, &status, &remainingKg, &farmerID, &sortingBatchID)
+		if err == pgx.ErrNoRows {
+			fail(w, 404, "PALLET_NOT_FOUND", fmt.Sprintf("Pallet '%s' not found", q))
+			return
+		}
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to query pallet: "+err.Error())
+			return
+		}
+		if status != "IN_USE" && remainingKg <= 0 {
+			fail(w, 400, "PALLET_ALREADY_AVAILABLE", fmt.Sprintf("Pallet '%s' is already available with no remaining inventory", palletCode))
+			return
+		}
+
+		var closeoutID string
+		notes := strings.TrimSpace(input.Notes)
+		err = tx.QueryRow(r.Context(), `
+			INSERT INTO pallet_closeouts (id, "palletId", "palletCode", "sortingBatchId", "farmerId", "operatorId", grade, "leftoverKg", disposition, notes, "createdAt")
+			VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+			RETURNING id
+		`, palletID, palletCode, sortingBatchID, farmerID, nullIfEmpty(userID), grade, remainingKg, disposition, notes).Scan(&closeoutID)
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to log pallet closeout: "+err.Error())
+			return
+		}
+
+		_, err = tx.Exec(r.Context(), `
+			UPDATE pallets
+			SET "remainingKg"=0, "weightKg"=0, status='AVAILABLE', grade=NULL, "farmerId"=NULL, "sortingBatchId"=NULL, "updatedAt"=NOW()
+			WHERE id=$1
+		`, palletID)
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to reset pallet state: "+err.Error())
+			return
+		}
+
+		if err = tx.Commit(r.Context()); err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to commit pallet release")
+			return
+		}
+
+		write(w, map[string]any{
+			"success": true,
+			"data": map[string]any{
+				"closeoutId":  closeoutID,
+				"palletCode":  palletCode,
+				"settledKg":   remainingKg,
+				"disposition": disposition,
+				"status":      "AVAILABLE",
+				"released":    true,
+				"message":     fmt.Sprintf("Pallet %s settled (%.3f kg) and released for reuse", palletCode, remainingKg),
+			},
+		})
+		return
+	}
+
 	fail(w, 404, "NOT_FOUND", "Pallet route not found")
 }
+
+func validateCloseoutDisposition(raw string) (string, error) {
+	switch strings.ToUpper(strings.TrimSpace(raw)) {
+	case "SHRINKAGE_LOSS", "CULL_REJECT", "LOOSE_RESERVE", "SAMPLE_USE":
+		return strings.ToUpper(strings.TrimSpace(raw)), nil
+	default:
+		return "", fmt.Errorf("Disposition must be SHRINKAGE_LOSS, CULL_REJECT, LOOSE_RESERVE, or SAMPLE_USE")
+	}
+}
+
+type sortingGradeInput struct {
+	GradeCode  string  `json:"gradeCode"`
+	WeightKg   float64 `json:"weightKg"`
+	PalletCode string  `json:"palletCode"`
+}
+
+func validateSortingGrades(grades []sortingGradeInput) error {
+	if len(grades) == 0 || len(grades) > 3 {
+		return fmt.Errorf("One to three commercial grades are required")
+	}
+	seenGrades := map[string]bool{}
+	seenPallets := map[string]bool{}
+	for _, grade := range grades {
+		code := strings.ToUpper(strings.TrimSpace(grade.GradeCode))
+		pallet := strings.ToUpper(strings.TrimSpace(grade.PalletCode))
+		if code != "A" && code != "B" && code != "C" {
+			return fmt.Errorf("Grade must be A, B, or C")
+		}
+		if grade.WeightKg <= 0 || math.IsNaN(grade.WeightKg) || math.IsInf(grade.WeightKg, 0) {
+			return fmt.Errorf("Grade weight must be positive and finite")
+		}
+		if pallet == "" {
+			return fmt.Errorf("Each graded weight requires a registered pallet code")
+		}
+		if seenGrades[code] || seenPallets[pallet] {
+			return fmt.Errorf("Grades and pallet codes must be unique within a sorting batch")
+		}
+		seenGrades[code] = true
+		seenPallets[pallet] = true
+	}
+	return nil
+}
+
 func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []string) {
 	if len(p) == 0 {
 		fail(w, 404, "NOT_FOUND", "Route not found")
@@ -1833,16 +2095,16 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 	// POST /api/v1/sorting/process
 	if r.Method == "POST" && p[0] == "process" {
 		var input struct {
-			WaringCode    string `json:"waringCode"`
-			WashingRecord string `json:"washingRecord"`
-			Grades        []struct {
-				GradeCode  string  `json:"gradeCode"`
-				WeightKg   float64 `json:"weightKg"`
-				PalletCode string  `json:"palletCode"`
-			} `json:"grades"`
+			WaringCode    string              `json:"waringCode"`
+			WashingRecord string              `json:"washingRecord"`
+			Grades        []sortingGradeInput `json:"grades"`
 		}
 		if !decode(r, &input) || strings.TrimSpace(input.WaringCode) == "" {
 			fail(w, 400, "VALIDATION_ERROR", "Waring code is required")
+			return
+		}
+		if err := validateSortingGrades(input.Grades); err != nil {
+			fail(w, 400, "VALIDATION_ERROR", err.Error())
 			return
 		}
 
@@ -1889,6 +2151,14 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 			var existingRemaining float64
 			var existingGrade *string
 			err := s.db.QueryRow(r.Context(), `SELECT status, "remainingKg", grade FROM pallets WHERE UPPER(code)=UPPER($1)`, pCode).Scan(&existingStatus, &existingRemaining, &existingGrade)
+			if err == pgx.ErrNoRows {
+				fail(w, 400, "PALLET_NOT_REGISTERED", fmt.Sprintf("Pallet '%s' is not registered", pCode))
+				return
+			}
+			if err != nil {
+				fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to check pallet status")
+				return
+			}
 			if err == nil && existingStatus == "IN_USE" && existingRemaining > 0 {
 				grd := "unspecified"
 				if existingGrade != nil && *existingGrade != "" {
@@ -1940,9 +2210,13 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 			return
 		}
 
-		_, err = tx.Exec(r.Context(), `UPDATE warings SET status='SORTED' WHERE id=$1`, waringID)
+		updated, err := tx.Exec(r.Context(), `UPDATE warings SET status='SORTED' WHERE id=$1 AND status IN ('PENDING','APPROVED')`, waringID)
 		if err != nil {
 			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to update waring status: "+err.Error())
+			return
+		}
+		if updated.RowsAffected() != 1 {
+			fail(w, 409, "WARING_ALREADY_SORTED", "Waring has already been sorted")
 			return
 		}
 
@@ -2008,6 +2282,7 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 			       COALESCE(p.code, '') AS pallet_code
 			FROM package_units pu
 			LEFT JOIN pallets p ON p.id = pu."sourcePalletId"
+			WHERE pu.status = 'STORED'
 			ORDER BY pu."createdAt" DESC
 		`)
 		if err != nil {
@@ -2053,13 +2328,21 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 		}
 
 		pCode := strings.ToUpper(strings.TrimSpace(input.PalletCode))
+		tx, err := s.db.Begin(r.Context())
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to start database transaction")
+			return
+		}
+		defer tx.Rollback(r.Context())
 		var palletID, grade, status string
+		var farmerID, sortingBatchID *string
 		var remainingKg float64
-		err := s.db.QueryRow(r.Context(), `
-			SELECT id, COALESCE(grade, 'A'), status, "remainingKg"
+		err = tx.QueryRow(r.Context(), `
+			SELECT id, COALESCE(grade, 'A'), status, "remainingKg", "farmerId", "sortingBatchId"
 			FROM pallets
 			WHERE UPPER(code)=UPPER($1)
-		`, pCode).Scan(&palletID, &grade, &status, &remainingKg)
+			FOR UPDATE
+		`, pCode).Scan(&palletID, &grade, &status, &remainingKg, &farmerID, &sortingBatchID)
 		if err == pgx.ErrNoRows {
 			fail(w, 404, "PALLET_NOT_FOUND", fmt.Sprintf("Pallet '%s' not found", pCode))
 			return
@@ -2079,41 +2362,46 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 			return
 		}
 
-		tx, err := s.db.Begin(r.Context())
-		if err != nil {
-			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to start database transaction")
-			return
-		}
-		defer tx.Rollback(r.Context())
-
 		format := "RETAIL_POUCH"
 		if strings.Contains(strings.ToUpper(input.PackageTypeCode), "CARTON") || strings.Contains(strings.ToUpper(input.PackageTypeCode), "EXPORT") {
 			format = "EXPORT_CARTON"
 		}
 
 		dateStr := time.Now().Format("20060102")
-		var count int
-		_ = tx.QueryRow(r.Context(), `SELECT COUNT(*) FROM package_units WHERE code LIKE $1`, "%"+dateStr+"%").Scan(&count)
+		var sequence int64
+		if err := tx.QueryRow(r.Context(), `SELECT nextval('package_code_seq')`).Scan(&sequence); err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to allocate package code")
+			return
+		}
 		prefix := "PCH"
 		if format == "EXPORT_CARTON" {
 			prefix = "EXP"
 		}
-		packageCode := fmt.Sprintf("%s-%s-%04d", prefix, dateStr, count+1)
-		barcode := fmt.Sprintf("01%013d21%s", 9312345000000+int64(count+1), packageCode)
+		packageCode := fmt.Sprintf("%s-%s-%04d", prefix, dateStr, sequence)
+		barcode := fmt.Sprintf("01%013d21%s", 9312345000000+sequence, packageCode)
 
 		unitID := "pkg-" + strings.ToLower(packageCode)
 		_, err = tx.Exec(r.Context(), `
-			INSERT INTO package_units (id, code, format, grade, "weightKg", barcode, "sourcePalletId", status, "createdAt")
-			VALUES ($1, $2, $3::"PackageFormat", $4, $5, $6, $7, 'STORED'::"PackageStatus", NOW())
-		`, unitID, packageCode, format, grade, input.TotalNetWeightKg, barcode, palletID)
+			INSERT INTO package_units (id, code, format, grade, "weightKg", barcode, "sourcePalletId", "sortingBatchId", status, "createdAt")
+			VALUES ($1, $2, $3::"PackageFormat", $4, $5, $6, $7, $8, 'STORED'::"PackageStatus", NOW())
+		`, unitID, packageCode, format, grade, input.TotalNetWeightKg, barcode, palletID, sortingBatchID)
 		if err != nil {
 			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to record package unit: "+err.Error())
 			return
 		}
 
+		const autoReleaseThresholdKg = 0.05
+		const minStandardPackageKg = 0.995
 		newRemaining := math.Max(0, remainingKg-input.TotalNetWeightKg)
 		newStatus := "IN_USE"
-		if newRemaining <= 0.05 {
+		if newRemaining <= autoReleaseThresholdKg {
+			if newRemaining > 0.001 {
+				operatorID, _, _ := s.authenticatedClaims(r)
+				_, _ = tx.Exec(r.Context(), `
+					INSERT INTO pallet_closeouts (id, "palletId", "palletCode", "sortingBatchId", "farmerId", "operatorId", grade, "leftoverKg", disposition, notes, "createdAt")
+					VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, 'SHRINKAGE_LOSS', 'Auto-released residual weight within 0.05 kg tolerance', NOW())
+				`, palletID, pCode, sortingBatchID, farmerID, nullIfEmpty(operatorID), grade, newRemaining)
+			}
 			newRemaining = 0
 			newStatus = "AVAILABLE"
 			_, err = tx.Exec(r.Context(), `
@@ -2138,14 +2426,17 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 			return
 		}
 
+		belowMinPackage := newRemaining > autoReleaseThresholdKg && newRemaining < minStandardPackageKg
 		writeStatus(w, 201, map[string]any{
 			"success": true,
 			"data": map[string]any{
-				"packageCode":    packageCode,
-				"palletCode":     pCode,
-				"remainingKg":    newRemaining,
-				"palletStatus":   newStatus,
-				"palletReleased": newStatus == "AVAILABLE",
+				"packageCode":     packageCode,
+				"palletCode":      pCode,
+				"remainingKg":     newRemaining,
+				"palletStatus":    newStatus,
+				"palletReleased":  newStatus == "AVAILABLE",
+				"belowMinPackage": belowMinPackage,
+				"minPackageKg":    minStandardPackageKg,
 			},
 		})
 		return
@@ -2163,7 +2454,23 @@ func nullIfEmpty(s string) *string {
 }
 
 func (s *server) warehouse(w http.ResponseWriter, r *http.Request) {
-	write(w, map[string]any{"success": true, "data": map[string]any{"totalPallets": 0, "totalPackages": 0, "totalWeightKg": 0}})
+	if r.Method != http.MethodGet {
+		fail(w, 405, "METHOD_NOT_ALLOWED", "Method not allowed")
+		return
+	}
+	var bufferCount, finishedUnits, pouches, cartons int
+	var bufferKg, finishedKg float64
+	err := s.db.QueryRow(r.Context(), `SELECT COUNT(*), COALESCE(SUM("grossWeightKg"),0) FROM warings WHERE status IN ('PENDING','APPROVED')`).Scan(&bufferCount, &bufferKg)
+	if err != nil {
+		fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to load buffer inventory")
+		return
+	}
+	err = s.db.QueryRow(r.Context(), `SELECT COUNT(*), COALESCE(SUM("weightKg"),0), COUNT(*) FILTER (WHERE format='RETAIL_POUCH'), COUNT(*) FILTER (WHERE format='EXPORT_CARTON') FROM package_units WHERE status='STORED'`).Scan(&finishedUnits, &finishedKg, &pouches, &cartons)
+	if err != nil {
+		fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to load finished inventory")
+		return
+	}
+	write(w, map[string]any{"success": true, "data": map[string]any{"bufferZone": map[string]any{"waringCount": bufferCount, "totalWeightKg": bufferKg}, "finishedGoodsZone": map[string]any{"totalUnits": finishedUnits, "totalWeightKg": finishedKg, "pouchCount": pouches, "cartonCount": cartons}}})
 }
 func (s *server) empty(w http.ResponseWriter, name string) {
 	write(w, map[string]any{"success": true, "data": []any{}})

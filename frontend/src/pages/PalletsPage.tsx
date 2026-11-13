@@ -9,8 +9,9 @@ import PageHeader from '../components/shared/PageHeader'
 import StatCard from '../components/shared/StatCard'
 import ConfirmDialog from '../components/feedback/ConfirmDialog'
 import { useToast } from '../components/feedback/Toast'
-import OfflineQrCode from '../components/shared/OfflineQrCode'
-import { api, type Pallet } from '../services/api'
+import LabelPreview from '../components/operator/LabelPreview'
+import PalletCloseoutModal from '../components/shared/PalletCloseoutModal'
+import { api, type Pallet, type PalletCloseout, type CloseoutDisposition } from '../services/api'
 import { formatWeight } from '../lib/utils'
 
 interface PalletsPageProps {
@@ -41,19 +42,83 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
   // Print Action Loading State
   const [printingCode, setPrintingCode] = useState<string | null>(null)
 
+  // Pallet Thermal Printer Configuration
+  const [printerModalOpen, setPrinterModalOpen] = useState(false)
+  const [palletPrinter, setPalletPrinter] = useState<{
+    station: string
+    model: string
+    paperWidthMm: string
+    connection: string
+    ip: string
+    port: string
+    status: 'ONLINE' | 'OFFLINE'
+  }>({
+    station: 'PALLET',
+    model: 'IW-J300H',
+    paperWidthMm: '80',
+    connection: 'Ethernet',
+    ip: '',
+    port: '9100',
+    status: 'OFFLINE',
+  })
+  const [testingPrinter, setTestingPrinter] = useState(false)
+  const [savingPrinter, setSavingPrinter] = useState(false)
+
+  // Release & Closeout Audit State
+  const [releaseTarget, setReleaseTarget] = useState<Pallet | null>(null)
+  const [closeouts, setCloseouts] = useState<PalletCloseout[]>([])
+
   const fetchPallets = async () => {
     try {
-      const data = await api.pallets.list()
-      if (Array.isArray(data)) {
-        setPallets(data)
+      const [palletsRes, closeoutsRes] = await Promise.allSettled([
+        api.pallets.list(),
+        api.pallets.closeouts(),
+      ])
+      if (palletsRes.status === 'fulfilled' && Array.isArray(palletsRes.value)) {
+        setPallets(palletsRes.value)
+      }
+      if (closeoutsRes.status === 'fulfilled' && Array.isArray(closeoutsRes.value)) {
+        setCloseouts(closeoutsRes.value)
       }
     } catch (err: any) {
       toast.error(err?.message || 'Failed to load pallets')
     }
   }
 
+  const fetchPalletPrinter = async () => {
+    try {
+      const printers = await api.printers.get()
+      if (Array.isArray(printers)) {
+        const p = printers.find((item: any) => item.station?.toLowerCase() === 'pallet')
+        if (p) {
+          setPalletPrinter((prev) => ({
+            ...prev,
+            station: p.station || 'PALLET',
+            model: p.model || 'IW-J300H',
+            paperWidthMm: String(p.paperWidthMm || '80'),
+            connection: p.connection || 'Ethernet',
+            ip: p.ip || '',
+            port: String(p.port || '9100'),
+          }))
+          if (p.ip) {
+            api.printers.test('pallet')
+              .then((res: any) => {
+                setPalletPrinter((prev) => ({ ...prev, status: res?.online ? 'ONLINE' : 'OFFLINE' }))
+              })
+              .catch(() => {
+                setPalletPrinter((prev) => ({ ...prev, status: 'OFFLINE' }))
+              })
+          }
+        }
+      }
+    } catch {
+      // Ignore silent error
+    }
+  }
+
   useEffect(() => {
     fetchPallets()
+    fetchPalletPrinter()
   }, [])
 
   // Auto-suggest next pallet code (e.g., PLT-011)
@@ -109,11 +174,60 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
     }
   }
 
+  const handleTestPrinter = async () => {
+    const ip = (palletPrinter.ip || '').trim()
+    const port = Number(palletPrinter.port) || 9100
+    if (!ip) {
+      toast.warning('Please enter a printer IP address before testing.')
+      return
+    }
+    setTestingPrinter(true)
+    try {
+      const res = await api.printers.test('pallet', { ip, port })
+      const isOnline = Boolean(res?.online)
+      setPalletPrinter((prev) => ({ ...prev, status: isOnline ? 'ONLINE' : 'OFFLINE' }))
+      if (isOnline) {
+        toast.success(`Pallet printer is online at ${ip}:${port}.`)
+      } else {
+        toast.warning(`Pallet printer is offline at ${ip}:${port}.`)
+      }
+    } catch (err: any) {
+      setPalletPrinter((prev) => ({ ...prev, status: 'OFFLINE' }))
+      toast.error(`Printer test failed: ${err?.message || 'Connection timeout'}`)
+    } finally {
+      setTestingPrinter(false)
+    }
+  }
+
+  const handleSavePrinter = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const ip = (palletPrinter.ip || '').trim()
+    const port = Number(palletPrinter.port) || 9100
+    setSavingPrinter(true)
+    try {
+      await api.printers.update('pallet', ip, port)
+      toast.success('Pallet printer settings saved.')
+      setPrinterModalOpen(false)
+      if (ip) {
+        void handleTestPrinter()
+      }
+    } catch (err: any) {
+      toast.error(`Failed to save printer settings: ${err?.message || 'Error'}`)
+    } finally {
+      setSavingPrinter(false)
+    }
+  }
+
   const handlePrint = async (code: string) => {
+    if (!palletPrinter.ip) {
+      toast.warning('Pallet printer is not configured. Please set the printer IP in Printer Settings.')
+      setPrinterModalOpen(true)
+      return
+    }
     setPrintingCode(code)
     try {
       const res = await api.pallets.print(code)
-      toast.success(res?.message || `Print job for pallet ${code} dispatched to station printer.`)
+      toast.success(res?.message || `Print job for pallet ${code} dispatched to Pallet Printer.`)
     } catch (err: any) {
       toast.error(err?.message || `Failed to print label for ${code}`)
     } finally {
@@ -162,18 +276,37 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
   const inUsePallets = pallets.filter((p) => p.status !== 'AVAILABLE').length
   const totalStockKg = pallets.reduce((sum, p) => sum + (p.remainingKg || p.weightKg || 0), 0)
 
+  const DISPOSITION_LABELS: Record<CloseoutDisposition, string> = {
+    SHRINKAGE_LOSS: 'Shrinkage Loss',
+    LOOSE_RESERVE: 'Loose Crate',
+    CULL_REJECT: 'Quality Reject',
+    SAMPLE_USE: 'Sample / QC',
+  }
+
   const renderActions = (row: Pallet) => {
     const isPrinting = printingCode === row.code
+    const canRelease = row.status === 'IN_USE' || (row.remainingKg ?? 0) > 0
     const canDelete = row.status === 'AVAILABLE' && (row.weightKg || 0) === 0
     return (
       <div className="flex items-center justify-end gap-1.5 flex-wrap">
+        {canRelease && (
+          <Button
+            variant="outline"
+            size="sm"
+            icon="check"
+            onClick={() => setReleaseTarget(row)}
+            title="Settle remaining stock and release pallet for Sorting reuse"
+          >
+            Release
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
           icon="print"
           disabled={isPrinting}
           onClick={() => handlePrint(row.code)}
-          title="Send ESC/POS QR label print job to workstation printer"
+          title="Send ESC/POS QR label print job to Pallet Printer"
         >
           {isPrinting ? 'Printing…' : 'Print QR'}
         </Button>
@@ -287,21 +420,48 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
       {embedded ? (
         <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Pallet Registry</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-foreground">Pallet Registry</h2>
+              <Badge tone={palletPrinter.status === 'ONLINE' ? 'success' : 'warning'} dot>
+                {palletPrinter.status === 'ONLINE' ? `Printer Online (${palletPrinter.ip})` : 'Printer Offline'}
+              </Badge>
+            </div>
             <p className="mt-1 text-sm text-muted-foreground">Register pallets, set tare weights, and print QR labels.</p>
           </div>
-          <Button variant="primary" icon="plus" touch onClick={handleOpenRegister}>
-            Register Pallet
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              icon="settings"
+              touch
+              onClick={() => setPrinterModalOpen(true)}
+              title="Configure dedicated Pallet thermal printer"
+            >
+              Printer Settings
+            </Button>
+            <Button variant="primary" icon="plus" touch onClick={handleOpenRegister}>
+              Register Pallet
+            </Button>
+          </div>
         </div>
       ) : (
         <PageHeader
           title="Pallet Registry"
           subtitle="Register pallets, set tare weights, and print QR labels."
           actions={
-            <Button variant="primary" icon="plus" touch onClick={handleOpenRegister}>
-              Register Pallet
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                icon="settings"
+                touch
+                onClick={() => setPrinterModalOpen(true)}
+                title="Configure dedicated Pallet thermal printer"
+              >
+                Printer Settings
+              </Button>
+              <Button variant="primary" icon="plus" touch onClick={handleOpenRegister}>
+                Register Pallet
+              </Button>
+            </div>
           }
         />
       )}
@@ -386,6 +546,67 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
         />
       </Card>
 
+      {/* Recent Pallet Remainder Closeouts */}
+      {closeouts.length > 0 && (
+        <Card padding="none">
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Recent Remainder Closeouts</h3>
+              <p className="text-xs text-muted-foreground">Audited pallet releases returning stock to Available.</p>
+            </div>
+            <Badge tone="neutral">{closeouts.length} records</Badge>
+          </div>
+          <DataTable<PalletCloseout>
+            rowKey={(row) => row.id}
+            data={closeouts.slice(0, 15)}
+            columns={[
+              {
+                key: 'palletCode',
+                label: 'Pallet',
+                priority: true,
+                render: (row) => <span className="font-mono font-bold text-foreground">{row.palletCode}</span>,
+              },
+              {
+                key: 'grade',
+                label: 'Grade',
+                render: (row) => (row.grade ? <Badge tone="accent">Grade {row.grade}</Badge> : <span className="text-muted-foreground">—</span>),
+              },
+              {
+                key: 'leftoverKg',
+                label: 'Settled Weight',
+                align: 'right',
+                priority: true,
+                render: (row) => <span className="font-mono font-bold text-amber-700 dark:text-amber-400">{formatWeight(row.leftoverKg)} kg</span>,
+              },
+              {
+                key: 'disposition',
+                label: 'Disposition',
+                render: (row) => <Badge tone="neutral">{DISPOSITION_LABELS[row.disposition] || row.disposition}</Badge>,
+              },
+              {
+                key: 'operatorName',
+                label: 'Released By',
+                render: (row) => <span className="text-xs text-muted-foreground">{row.operatorName || 'System'}</span>,
+              },
+              {
+                key: 'notes',
+                label: 'Notes',
+                render: (row) => <span className="text-xs text-muted-foreground truncate max-w-xs block">{row.notes || '—'}</span>,
+              },
+              {
+                key: 'createdAt',
+                label: 'Time',
+                render: (row) => (
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {new Date(row.createdAt).toLocaleString('en-GB', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                ),
+              },
+            ]}
+          />
+        </Card>
+      )}
+
       {/* ── REGISTER PALLET MODAL ── */}
       {registerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
@@ -446,7 +667,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                   className="rounded-none border-border"
                 />
                 <span className="text-xs font-semibold text-foreground">
-                  Print QR label on station printer immediately upon registration
+                  Print QR label on Pallet Printer immediately upon registration
                 </span>
               </label>
 
@@ -481,30 +702,20 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
               </button>
             </div>
 
-            {/* Simulated ESC/POS Thermal Sticker Preview */}
-            <div className="bg-white text-black p-5 border-2 border-dashed border-neutral-400 flex flex-col items-center text-center space-y-2 select-none shadow-inner">
-              <div className="text-[10px] uppercase font-bold tracking-widest text-neutral-600">
-                SmartGeulis · Packhouse
-              </div>
-              <div className="text-xs font-extrabold uppercase tracking-wider text-black border-b border-black pb-1 w-full">
-                PHYSICAL PALLET ID
-              </div>
-
-              <div className="py-2">
-                <OfflineQrCode value={previewPallet.code} size={150} />
-              </div>
-
-              <div className="font-mono text-xl font-black tracking-widest text-black">
-                {previewPallet.code}
-              </div>
-
-              <div className="font-mono text-xs font-bold text-neutral-800">
-                TARE: {formatWeight(previewPallet.tareKg ?? 15.0)} KG
-              </div>
-
-              <div className="text-[9px] uppercase tracking-tight text-neutral-500 pt-1 border-t border-neutral-300 w-full">
-                Scan at Station 2 (Sorting) or Station 3 (Packaging)
-              </div>
+            {/* ESC/POS Thermal Label Preview */}
+            <div className="flex justify-center">
+              <LabelPreview
+                type="pallet"
+                code={previewPallet.code}
+                grade={previewPallet.grade as 'A' | 'B' | 'C' | undefined}
+                weightKg={previewPallet.weightKg > 0 ? previewPallet.weightKg : undefined}
+                farmerName={previewPallet.farmerName || undefined}
+                stationName="Pallet Management"
+                date={previewPallet.createdAt ? previewPallet.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10)}
+                time={previewPallet.createdAt ? previewPallet.createdAt.slice(11, 16) : 'Live'}
+                screenFit
+                className="w-full"
+              />
             </div>
 
             {/* Modal Actions */}
@@ -516,12 +727,103 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                 disabled={printingCode === previewPallet.code}
                 onClick={() => handlePrint(previewPallet.code)}
               >
-                {printingCode === previewPallet.code ? 'Printing Label…' : 'Print ESC/POS Label'}
+                {printingCode === previewPallet.code ? 'Printing Label…' : 'Print ESC/POS Label (Pallet Printer)'}
               </Button>
               <Button variant="ghost" onClick={() => setPreviewPallet(null)} className="w-full">
                 Close Preview
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── PALLET PRINTER CONFIGURATION MODAL ── */}
+      {printerModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-card border border-border p-6 shadow-xl max-w-md w-full space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between border-b border-border pb-3">
+              <div>
+                <h3 className="text-base font-bold text-foreground">Pallet Printer Settings</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Dedicated thermal printer for Pallet QR labels</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPrinterModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"
+              >
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-muted/20 border border-border">
+              <div>
+                <div className="text-xs font-semibold text-foreground">Connection Status</div>
+                <div className="text-xs text-muted-foreground font-mono">
+                  {palletPrinter.ip ? `${palletPrinter.ip}:${palletPrinter.port}` : 'Not configured'}
+                </div>
+              </div>
+              <Badge tone={palletPrinter.status === 'ONLINE' ? 'success' : 'warning'} dot>
+                {palletPrinter.status === 'ONLINE' ? 'Online' : 'Offline'}
+              </Badge>
+            </div>
+
+            <form onSubmit={handleSavePrinter} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Model">
+                  <Input value={palletPrinter.model} readOnly className="font-mono bg-muted/30" />
+                </Field>
+                <Field label="Paper Width">
+                  <Input value={`${palletPrinter.paperWidthMm} mm`} readOnly className="font-mono bg-muted/30" />
+                </Field>
+              </div>
+
+              <Field label="Connection Protocol">
+                <Input value={`${palletPrinter.connection} (RAW TCP)`} readOnly className="font-mono bg-muted/30" />
+              </Field>
+
+              <Field label="Printer IP Address" required hint="e.g. 192.168.8.115">
+                <Input
+                  value={palletPrinter.ip}
+                  onChange={(e) => setPalletPrinter((prev) => ({ ...prev, ip: e.target.value }))}
+                  placeholder="192.168.8.115"
+                  required
+                  className="font-mono"
+                />
+              </Field>
+
+              <Field label="TCP Port" required hint="Default raw thermal port is 9100">
+                <Input
+                  type="number"
+                  min="1"
+                  max="65535"
+                  value={palletPrinter.port}
+                  onChange={(e) => setPalletPrinter((prev) => ({ ...prev, port: e.target.value }))}
+                  placeholder="9100"
+                  required
+                  className="font-mono"
+                />
+              </Field>
+
+              <div className="flex items-center justify-between pt-3 border-t border-border">
+                <Button
+                  type="button"
+                  variant="outline"
+                  icon="refresh"
+                  disabled={testingPrinter || !palletPrinter.ip}
+                  onClick={handleTestPrinter}
+                >
+                  {testingPrinter ? 'Testing…' : 'Test Connection'}
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="ghost" onClick={() => setPrinterModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="primary" icon="check" disabled={savingPrinter}>
+                    {savingPrinter ? 'Saving…' : 'Save Settings'}
+                  </Button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -535,6 +837,20 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
         tone="danger"
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}
+      />
+
+      {/* ── RELEASE / CLOSEOUT MODAL ── */}
+      <PalletCloseoutModal
+        open={releaseTarget !== null}
+        palletCode={releaseTarget?.code || ''}
+        grade={releaseTarget?.grade}
+        farmerName={releaseTarget?.farmerName}
+        remainingKg={releaseTarget?.remainingKg ?? releaseTarget?.weightKg ?? 0}
+        onClose={() => setReleaseTarget(null)}
+        onReleased={() => {
+          setReleaseTarget(null)
+          void fetchPallets()
+        }}
       />
     </div>
   )

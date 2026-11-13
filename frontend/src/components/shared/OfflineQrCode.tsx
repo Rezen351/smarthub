@@ -45,8 +45,15 @@ export default function OfflineQrCode({ value, size = 180, className = '', dataA
       viewBox={`0 0 ${dim} ${dim}`}
       preserveAspectRatio="xMidYMid meet"
       shapeRendering="crispEdges"
-      className={`bg-white select-none ${className}`}
-      style={{ width: size, height: size, aspectRatio: '1 / 1', display: 'block' }}
+      className={`bg-white select-none shrink-0 ${className}`}
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        maxWidth: `${size}px`,
+        maxHeight: `${size}px`,
+        aspectRatio: '1 / 1',
+        display: 'block',
+      }}
       role="img"
       aria-label={`QR Code for ${value}`}
       data-farmer-qr={dataAttribute}
