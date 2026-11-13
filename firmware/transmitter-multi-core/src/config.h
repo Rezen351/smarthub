@@ -191,8 +191,8 @@
 // Hostname used for mDNS / OTA discovery.
 // Empty string = fallback to AP_SSID_PREFIX + last 6 of MAC.
 #define OTA_HOSTNAME       ""
-// Password for OTA uploads. Empty = no auth.
-#define OTA_PASSWORD       "enyx-weight-transmitter"
+// Password for OTA uploads. Empty = no auth (recommended: set locally in production).
+#define OTA_PASSWORD       ""
 // TCP port for OTA (default 3232).
 #define OTA_PORT           3232
 // Maximum OTA binary size in bytes. Leave 0 to use default partition size.
