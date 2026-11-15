@@ -588,11 +588,11 @@ export default function SortingPage() {
         <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
-              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 1 of 4
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 1 of 4">
+                Langkah 1 dari 4
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Scan Waring
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Scan Waring">
+                Pindai Waring
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
@@ -665,11 +665,11 @@ export default function SortingPage() {
         <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
-              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 2 of 4
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 2 of 4">
+                Langkah 2 dari 4
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Size & Wash
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Size & Wash">
+                Sortir Ukuran & Cuci
               </h2>
             </div>
             <Badge tone="accent">
@@ -754,11 +754,11 @@ export default function SortingPage() {
         <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
-              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 3 of 4
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 3 of 4">
+                Langkah 3 dari 4
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Weigh Grades
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Weigh Grades">
+                Timbang Grade
               </h2>
             </div>
           </div>
@@ -880,60 +880,70 @@ export default function SortingPage() {
               {/* Active Pallet Shortcuts */}
               <div className="station-secondary-panel space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-mono text-muted-foreground">Select Physical Pallet</span>
+                  <span className="text-[10px] uppercase font-mono text-muted-foreground" aria-label="Select Physical Pallet">
+                    Pilih Palet Fisik
+                  </span>
                   <Link
-                    to="/dashboard/pallets"
+                    to="/dashboard/settings?section=pallets"
                     target="_blank"
                     className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
                   >
                     <Icon name="pallet" size={13} />
-                    Pallet Registry / Reprint
+                    Daftar Palet
                   </Link>
                 </div>
                 <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1.5 bg-muted/20 border border-border">
-                  {registeredPallets.length === 0 ? (
-                    <span className="text-xs text-muted-foreground p-1">No physical pallets loaded.</span>
-                  ) : (
-                    registeredPallets.map((p) => {
+                  {(() => {
+                    const usablePallets = registeredPallets.filter((p) => {
                       const isCurrentGrade =
                         (activeGradeTab === 'A' && gradeAPalletQr === p.code) ||
                         (activeGradeTab === 'B' && gradeBPalletQr === p.code) ||
                         (activeGradeTab === 'C' && gradeCPalletQr === p.code)
+                      if (isCurrentGrade) return true
+
                       const isAssignedOther =
                         (activeGradeTab !== 'A' && gradeAPalletQr === p.code) ||
                         (activeGradeTab !== 'B' && gradeBPalletQr === p.code) ||
                         (activeGradeTab !== 'C' && gradeCPalletQr === p.code)
-                      const isInUse = p.status === 'IN_USE' && (p.remainingKg ?? 0) > 0
+                      if (isAssignedOther) return false
+
+                      const isOccupied = p.status === 'IN_USE' && (p.remainingKg ?? 0) > 0
+                      if (isOccupied) return false
+
+                      return p.status === 'AVAILABLE' || (!p.status && (p.remainingKg ?? 0) <= 0)
+                    })
+
+                    if (usablePallets.length === 0) {
+                      return (
+                        <span className="text-xs text-muted-foreground p-1">
+                          Tidak ada palet kosong tersedia. Selesaikan pengemasan atau daftarkan palet baru.
+                        </span>
+                      )
+                    }
+
+                    return usablePallets.map((p) => {
+                      const isCurrentGrade =
+                        (activeGradeTab === 'A' && gradeAPalletQr === p.code) ||
+                        (activeGradeTab === 'B' && gradeBPalletQr === p.code) ||
+                        (activeGradeTab === 'C' && gradeCPalletQr === p.code)
 
                       return (
                         <button
                           key={p.code}
                           type="button"
-                          disabled={isInUse}
-                          onClick={() => !isInUse && handleAssignScannedPallet(p.code, activeGradeTab)}
-                          title={isInUse ? `In use: Grade ${p.grade || 'A'} (${p.remainingKg} kg remaining)` : undefined}
-                          className={`px-2 py-1 text-xs font-mono border transition-all flex items-center gap-1.5 ${
+                          onClick={() => handleAssignScannedPallet(p.code, activeGradeTab)}
+                          className={`px-2 py-1 text-xs font-mono border transition-all flex items-center gap-1.5 cursor-pointer ${
                             isCurrentGrade
                               ? 'bg-primary text-primary-foreground border-primary font-bold shadow-xs'
-                              : isInUse
-                              ? 'bg-destructive/10 text-destructive/80 border-destructive/30 cursor-not-allowed opacity-60'
-                              : isAssignedOther
-                              ? 'bg-muted/40 text-muted-foreground border-border/50 line-through opacity-60 cursor-not-allowed'
-                              : 'bg-card text-foreground border-border hover:border-primary/60 hover:bg-primary/5 cursor-pointer'
+                              : 'bg-card text-foreground border-border hover:border-primary/60 hover:bg-primary/5'
                           }`}
                         >
                           <span>{p.code}</span>
-                          {isInUse ? (
-                            <span className="text-[10px] font-sans font-semibold text-destructive">
-                              (In Use · Grd {p.grade || 'A'})
-                            </span>
-                          ) : (
-                            <span className="text-[10px] opacity-75 font-sans">({p.tareKg}kg)</span>
-                          )}
+                          <span className="text-[10px] opacity-75 font-sans">({p.tareKg || 15}kg)</span>
                         </button>
                       )
                     })
-                  )}
+                  })()}
                 </div>
               </div>
             </div>
@@ -972,11 +982,11 @@ export default function SortingPage() {
         <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
-              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 4 of 4
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 4 of 4">
+                Langkah 4 dari 4
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Review & Save
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Review & Save">
+                Tinjau & Simpan
               </h2>
             </div>
             <div className="flex flex-wrap gap-1 items-center">

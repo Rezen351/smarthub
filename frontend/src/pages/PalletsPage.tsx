@@ -295,9 +295,9 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
             size="sm"
             icon="check"
             onClick={() => setReleaseTarget(row)}
-            title="Settle remaining stock and release pallet for Sorting reuse"
+            title="Lepas palet kembali ke status Tersedia"
           >
-            Release
+            Lepas Palet
           </Button>
         )}
         <Button
@@ -306,18 +306,18 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
           icon="print"
           disabled={isPrinting}
           onClick={() => handlePrint(row.code)}
-          title="Send ESC/POS QR label print job to Pallet Printer"
+          title="Kirim cetak label QR ke printer palet"
         >
-          {isPrinting ? 'Printing…' : 'Print QR'}
+          {isPrinting ? 'Mencetak…' : 'Cetak QR'}
         </Button>
         <Button
           variant="ghost"
           size="sm"
           icon="eye"
           onClick={() => setPreviewPallet(row)}
-          title="Preview QR Code & Label"
+          title="Pratinjau QR Code & Label"
         >
-          Preview
+          Pratinjau
         </Button>
         {canDelete && (
           <Button
@@ -326,7 +326,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
             icon="trash"
             className="text-destructive hover:bg-destructive/10"
             onClick={() => setConfirmDelete(row)}
-            title="Remove empty physical pallet"
+            title="Hapus palet fisik kosong"
           />
         )}
       </div>
@@ -336,7 +336,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
   const columns: Column<Pallet>[] = [
     {
       key: 'code',
-      label: 'Pallet Code',
+      label: 'Kode Palet',
       priority: true,
       render: (row) => (
         <div className="flex items-center gap-2">
@@ -357,14 +357,14 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
             tone={isAvail ? 'success' : isDepleted ? 'neutral' : 'accent'}
             dot={isAvail}
           >
-            {row.status.replace(/_/g, ' ')}
+            {row.status === 'AVAILABLE' ? 'TERSEDIA' : row.status === 'IN_USE' ? 'DIGUNAKAN' : 'HABIS'}
           </Badge>
         )
       },
     },
     {
       key: 'tareKg',
-      label: 'Tare Weight',
+      label: 'Bobot Tara',
       align: 'right',
       render: (row) => (
         <span className="font-mono text-xs font-semibold text-muted-foreground">
@@ -374,7 +374,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
     },
     {
       key: 'grade',
-      label: 'Stored Grade',
+      label: 'Grade Tersimpan',
       render: (row) => (
         <span className="font-mono text-xs">
           {row.grade ? (
@@ -387,7 +387,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
     },
     {
       key: 'weightKg',
-      label: 'Net Produce',
+      label: 'Bobot Bersih',
       align: 'right',
       render: (row) => {
         const net = row.remainingKg || row.weightKg || 0
@@ -400,7 +400,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
     },
     {
       key: 'notes',
-      label: 'Notes & Specification',
+      label: 'Catatan',
       render: (row) => (
         <span className="text-xs text-muted-foreground truncate max-w-xs block">
           {row.notes || '—'}
@@ -409,7 +409,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
     },
     {
       key: 'actions',
-      label: 'Actions',
+      label: 'Aksi',
       align: 'right',
       render: renderActions,
     },
@@ -421,12 +421,12 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
         <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold text-foreground">Pallet Registry</h2>
+              <h2 className="text-lg font-semibold text-foreground">Daftar Palet</h2>
               <Badge tone={palletPrinter.status === 'ONLINE' ? 'success' : 'warning'} dot>
                 {palletPrinter.status === 'ONLINE' ? `Printer Online (${palletPrinter.ip})` : 'Printer Offline'}
               </Badge>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Register pallets, set tare weights, and print QR labels.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Registrasi palet fisik, atur tara, dan cetak label QR.</p>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -434,19 +434,19 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
               icon="settings"
               touch
               onClick={() => setPrinterModalOpen(true)}
-              title="Configure dedicated Pallet thermal printer"
+              title="Konfigurasi printer termal palet"
             >
-              Printer Settings
+              Pengaturan Printer
             </Button>
             <Button variant="primary" icon="plus" touch onClick={handleOpenRegister}>
-              Register Pallet
+              Daftar Palet Baru
             </Button>
           </div>
         </div>
       ) : (
         <PageHeader
-          title="Pallet Registry"
-          subtitle="Register pallets, set tare weights, and print QR labels."
+          title="Daftar Palet"
+          subtitle="Registrasi palet fisik, atur tara, dan cetak label QR."
           actions={
             <div className="flex items-center gap-2">
               <Button
@@ -454,12 +454,12 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                 icon="settings"
                 touch
                 onClick={() => setPrinterModalOpen(true)}
-                title="Configure dedicated Pallet thermal printer"
+                title="Konfigurasi printer termal palet"
               >
-                Printer Settings
+                Pengaturan Printer
               </Button>
               <Button variant="primary" icon="plus" touch onClick={handleOpenRegister}>
-                Register Pallet
+                Daftar Palet Baru
               </Button>
             </div>
           }
@@ -469,27 +469,27 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
       {/* Aggregate KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
-          label="Total Pallets"
+          label="Total Palet"
           value={totalPallets}
-          sub="Registered physical units"
+          sub="Unit fisik terdaftar"
           icon={<Icon name="pallet" size={18} />}
         />
         <StatCard
-          label="Available"
+          label="Tersedia"
           value={availablePallets}
-          sub="Ready for sorting"
+          sub="Siap untuk sortasi"
           icon={<Icon name="check-circle" size={18} />}
         />
         <StatCard
-          label="In Use / Staged"
+          label="Digunakan"
           value={inUsePallets}
-          sub="Loaded with sorted grades"
+          sub="Memuat hasil sortasi"
           icon={<Icon name="box" size={18} />}
         />
         <StatCard
-          label="Total Produce on Pallets"
+          label="Total Bobot di Palet"
           value={`${formatWeight(totalStockKg)} kg`}
-          sub="Commercial potato yield"
+          sub="Hasil sortasi komersial"
           icon={<Icon name="scale" size={18} />}
         />
       </div>

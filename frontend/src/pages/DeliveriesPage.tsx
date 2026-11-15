@@ -90,36 +90,45 @@ export default function DeliveriesPage() {
 
   const selected = deliveries.find((delivery) => delivery.id === selectedId)
   const columns: Column<Delivery>[] = [
-    { key: 'code', label: 'Delivery', priority: true, render: (row) => <span className="font-mono">{row.code}</span> },
-    { key: 'truckPlate', label: 'Truck', priority: true },
-    { key: 'destination', label: 'Destination', priority: true },
-    { key: 'units', label: 'Packages', render: (row) => `${row.verifiedUnits}/${row.units} verified` },
-    { key: 'status', label: 'Status', render: (row) => <Badge tone={row.status === 'DEPARTED' ? 'success' : row.status === 'READY' ? 'accent' : 'warning'}>{row.status}</Badge> },
-    { key: 'actions', label: 'Action', render: (row) => row.status === 'DEPARTED' ? null : <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setSelectedId(row.id)}>Select</Button><Button size="sm" variant="primary" disabled={row.status !== 'READY' || busy} onClick={() => setConfirmDepart(row)}>Depart</Button></div> },
+    { key: 'code', label: 'Pengiriman', priority: true, render: (row) => <span className="font-mono">{row.code}</span> },
+    { key: 'truckPlate', label: 'Truk', priority: true },
+    { key: 'destination', label: 'Tujuan', priority: true },
+    { key: 'units', label: 'Kemasan', render: (row) => `${row.verifiedUnits}/${row.units} terverifikasi` },
+    { key: 'status', label: 'Status', render: (row) => <Badge tone={row.status === 'DEPARTED' ? 'success' : row.status === 'READY' ? 'accent' : 'warning'}>{row.status === 'DEPARTED' ? 'BERANGKAT' : row.status === 'READY' ? 'SIAP' : 'MEMUAT'}</Badge> },
+    { key: 'actions', label: 'Aksi', render: (row) => row.status === 'DEPARTED' ? null : <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setSelectedId(row.id)}>Pilih</Button><Button size="sm" variant="primary" disabled={row.status !== 'READY' || busy} onClick={() => setConfirmDepart(row)}>Berangkat</Button></div> },
   ]
 
   return <div className="stack stack-lg">
-    <PageHeader title="Deliveries" subtitle="Allocate packages, scan every label, then record departure." />
+    <PageHeader title="Pengiriman" subtitle="Alokasikan kemasan, pindai setiap label, dan catat keberangkatan truk." />
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-md">
-      <Card title="Create delivery" subtitle="Assign stored packages by grade.">
+      <Card title="Buat Pengiriman" subtitle="Alokasikan kemasan tersimpan berdasarkan grade.">
         <form className="stack-md" onSubmit={create}>
-          <Field label="Truck plate" htmlFor="delivery-plate" required><Input id="delivery-plate" value={form.truckPlate} onChange={(e) => setForm({ ...form, truckPlate: e.target.value })} required /></Field>
-          <Field label="Destination" htmlFor="delivery-destination" required><Input id="delivery-destination" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} required /></Field>
-          <Field label="Driver name" htmlFor="delivery-driver"><Input id="delivery-driver" value={form.driverName} onChange={(e) => setForm({ ...form, driverName: e.target.value })} /></Field>
+          <Field label="Plat nomor truk" htmlFor="delivery-plate" required><Input id="delivery-plate" value={form.truckPlate} onChange={(e) => setForm({ ...form, truckPlate: e.target.value })} required /></Field>
+          <Field label="Tujuan" htmlFor="delivery-destination" required><Input id="delivery-destination" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} required /></Field>
+          <Field label="Nama pengemudi" htmlFor="delivery-driver"><Input id="delivery-driver" value={form.driverName} onChange={(e) => setForm({ ...form, driverName: e.target.value })} /></Field>
           <Field label="Grade" htmlFor="delivery-grade" required><select id="delivery-grade" className="form-input" value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value as 'A' | 'B' | 'C' })}><option value="A">Grade A</option><option value="B">Grade B</option><option value="C">Grade C</option></select></Field>
-          <Field label="Packaging units" htmlFor="delivery-units" required><Input id="delivery-units" type="number" min="1" step="1" value={form.units} onChange={(e) => setForm({ ...form, units: e.target.value })} required /></Field>
-          <Button type="submit" variant="primary" disabled={busy}>Create Delivery</Button>
+          <Field label="Jumlah unit kemasan" htmlFor="delivery-units" required><Input id="delivery-units" type="number" min="1" step="1" value={form.units} onChange={(e) => setForm({ ...form, units: e.target.value })} required /></Field>
+          <Button type="submit" variant="primary" disabled={busy}>Buat Pengiriman</Button>
         </form>
       </Card>
-      <Card title="Verify load" subtitle={selected ? `${selected.code} · ${selected.verifiedUnits}/${selected.units} packages verified` : 'Select a delivery from the table.'}>
+      <Card title="Verifikasi Muatan" subtitle={selected ? `${selected.code} · ${selected.verifiedUnits}/${selected.units} kemasan terverifikasi` : 'Pilih pengiriman dari tabel di bawah.'}>
         <form className="stack-md" onSubmit={verify}>
-          {selected && <p className="text-xs text-muted-foreground">Assigned labels: {selected.packageCodes.join(', ')}</p>}
-          <Field label="Package code or barcode" htmlFor="delivery-scan" required><Input id="delivery-scan" mono value={scanCode} onChange={(e) => setScanCode(e.target.value)} placeholder="Scan package label" required /></Field>
-          <Button type="submit" variant="primary" disabled={busy || !selected || selected.status === 'DEPARTED'}>Scan & Verify</Button>
+          {selected && <p className="text-xs text-muted-foreground">Label teralokasi: {selected.packageCodes.join(', ')}</p>}
+          <Field label="Kode kemasan atau barcode" htmlFor="delivery-scan" required><Input id="delivery-scan" mono value={scanCode} onChange={(e) => setScanCode(e.target.value)} placeholder="Pindai label kemasan" required /></Field>
+          <Button type="submit" variant="primary" disabled={busy || !selected || selected.status === 'DEPARTED'}>Pindai & Verifikasi</Button>
         </form>
       </Card>
     </div>
-    <Card title="Loads"><DataTable columns={columns} data={deliveries} rowKey={(row) => row.id} emptyTitle="No deliveries recorded." /></Card>
-    <ConfirmDialog open={Boolean(confirmDepart)} title="Confirm departure?" description={confirmDepart ? `Depart ${confirmDepart.truckPlate} with ${confirmDepart.units} verified packages?` : null} confirmLabel="Depart" onConfirm={depart} onCancel={() => setConfirmDepart(null)} />
+    <Card title="Daftar Pengiriman" subtitle="Pantau kemasan yang dimuat dan konfirmasi keberangkatan.">
+      <DataTable rowKey={(row) => row.id} columns={columns} data={deliveries} />
+    </Card>
+    <ConfirmDialog
+      open={confirmDepart !== null}
+      title="Konfirmasi Keberangkatan Truk"
+      description={`Tandai pengiriman ${confirmDepart?.code ?? ''} (${confirmDepart?.truckPlate ?? ''}) sebagai telah berangkat?`}
+      confirmLabel="Konfirmasi Berangkat"
+      onConfirm={depart}
+      onCancel={() => setConfirmDepart(null)}
+    />
   </div>
 }

@@ -24,8 +24,10 @@ import { saveReceptionIntake } from '../lib/receptionIntake'
 import { useSessionContext } from '../hooks/useSessionContext'
 import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
+import { useAuth } from '../hooks/useAuth'
 import { api } from '../services/api'
 import CameraScannerModal from '../components/shared/CameraScannerModal'
+import CancelTransactionModal from '../components/admin/CancelTransactionModal'
 
 type WeighingStatus = 'PENDING' | 'BUFFER_WAITING'
 
@@ -96,9 +98,36 @@ export default function WeighingPage() {
   const [saveError, setSaveError] = useState('')
   const [printStatus, setPrintStatus] = useState('Not sent to printer')
 
+  /* ── User & Admin Cancellation ── */
+  const { user } = useAuth()
+  const [cancelModalRecord, setCancelModalRecord] = useState<WeighingRecord | null>(null)
+
   /* ── Records Ledger ── */
   const [records, setRecords] = useState<WeighingRecord[]>([])
   const [farmersList, setFarmersList] = useState(FARMERS)
+
+  const refreshRecords = useCallback(() => {
+    api.weighing
+      .list()
+      .then((list) => {
+        if (Array.isArray(list)) {
+          setRecords(
+            list.map((w: any) => ({
+              id: w.id,
+              farmerId: w.farmerCode || w.farmerId || 'FMR-001',
+              farmerName: w.farmerName || 'Ahmad Santoso',
+              farmerVillage: w.farmerVillage || 'Desa Sumber Brantas',
+              weightKg: Number(w.grossWeightKg),
+              depositDate: formatSafeDate(w.createdAt || w.approvedAt),
+              time: formatSafeTime(w.createdAt || w.approvedAt),
+              status: w.status === 'PENDING' ? 'PENDING' : 'BUFFER_WAITING',
+              waringCode: w.code,
+            }))
+          )
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     api.scales
@@ -176,27 +205,8 @@ export default function WeighingPage() {
       })
       .catch(() => {})
 
-    api.weighing
-      .list()
-      .then((list) => {
-        if (Array.isArray(list)) {
-          setRecords(
-            list.map((w: any) => ({
-              id: w.id,
-              farmerId: w.farmerCode || w.farmerId || 'FMR-001',
-              farmerName: w.farmerName || 'Ahmad Santoso',
-              farmerVillage: w.farmerVillage || 'Desa Sumber Brantas',
-              weightKg: Number(w.grossWeightKg),
-              depositDate: formatSafeDate(w.createdAt || w.approvedAt),
-              time: formatSafeTime(w.createdAt || w.approvedAt),
-              status: 'BUFFER_WAITING',
-              waringCode: w.code,
-            }))
-          )
-        }
-      })
-      .catch(() => {})
-  }, [])
+    refreshRecords()
+  }, [refreshRecords])
 
   /* Auto-focus scanner input in Step 1 */
   useEffect(() => {
@@ -521,7 +531,7 @@ export default function WeighingPage() {
   const columns: Column<WeighingRecord>[] = [
     {
       key: 'farmerName',
-      label: 'Farmer',
+      label: 'Petani',
       priority: true,
       render: (row) => (
         <div>
@@ -532,7 +542,7 @@ export default function WeighingPage() {
     },
     {
       key: 'weightKg',
-      label: 'Weight kg',
+      label: 'Bobot (kg)',
       priority: true,
       align: 'right',
       render: (row) => (
@@ -543,7 +553,7 @@ export default function WeighingPage() {
     },
     {
       key: 'depositDate',
-      label: 'Deposit Date',
+      label: 'Waktu Setor',
       priority: true,
       render: (row) => (
         <div>
@@ -558,61 +568,75 @@ export default function WeighingPage() {
       priority: true,
       render: (row) => (
         <Badge tone={statusTone[row.status]} dot>
-          {row.status}
+          {row.status === 'BUFFER_WAITING' ? 'GUDANG PENYANGGA' : row.status === 'PENDING' ? 'MENUNGGU' : row.status}
         </Badge>
       ),
     },
     {
       key: 'waringCode',
-      label: 'Waring Code',
+      label: 'Kode Waring',
       priority: true,
       render: (row) =>
         row.waringCode ? (
           <span className="font-mono font-medium tabular-nums text-foreground">{row.waringCode}</span>
         ) : (
-          <span className="text-xs text-muted-foreground italic">Assigned on approval</span>
+          <span className="text-xs text-muted-foreground italic">Diberikan saat disetujui</span>
         ),
     },
     {
       key: 'actions',
-      label: 'Actions',
+      label: 'Aksi',
       align: 'right',
-      render: (row) =>
-        row.status === 'PENDING' ? (
-          <div className="flex items-center gap-1.5 justify-end">
+      render: (row) => (
+        <div className="flex items-center gap-1.5 justify-end">
+          {row.status === 'PENDING' ? (
+            <>
+              <Button
+                size="sm"
+                variant="primary"
+                icon="check"
+                onClick={() => {
+                  setConfirmApprove(row)
+                  setApprovedSuccessRecord(null)
+                  setActiveStep(3)
+                  document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+              >
+                Setujui
+              </Button>
+              <Button size="sm" variant="outline" icon="refresh" onClick={() => handleKoreksi(row)}>
+                Koreksi
+              </Button>
+            </>
+          ) : (
             <Button
               size="sm"
-              variant="primary"
-              icon="check"
+              variant="outline"
+              icon="print"
               onClick={() => {
                 setConfirmApprove(row)
-                setApprovedSuccessRecord(null)
+                setPrintModalRecord(row)
+                setApprovedSuccessRecord(row)
                 setActiveStep(3)
                 document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
               }}
             >
-              Approve
+              Cetak Ulang
             </Button>
-            <Button size="sm" variant="outline" icon="refresh" onClick={() => handleKoreksi(row)}>
-              Correct
+          )}
+          {user?.role === 'ADMIN' && (
+            <Button
+              size="sm"
+              variant="outline"
+              icon="trash"
+              className="text-destructive hover:bg-destructive/10 border-destructive/30"
+              onClick={() => setCancelModalRecord(row)}
+            >
+              Batalkan
             </Button>
-          </div>
-        ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            icon="print"
-            onClick={() => {
-              setConfirmApprove(row)
-              setPrintModalRecord(row)
-              setApprovedSuccessRecord(row)
-              setActiveStep(3)
-              document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
-            }}
-          >
-            Reprint
-          </Button>
-        ),
+          )}
+        </div>
+      ),
     },
   ]
 
@@ -678,11 +702,11 @@ export default function WeighingPage() {
         <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
-              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 1 of 3
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 1 of 3">
+                Langkah 1 dari 3
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Scan Farmer Card
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Scan Farmer Card">
+                Pindai Kartu Petani
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
@@ -751,11 +775,11 @@ export default function WeighingPage() {
         <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
-              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 2 of 3
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 2 of 3">
+                Langkah 2 dari 3
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Weigh Harvest
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Weigh Harvest">
+                Timbang Panen
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -843,11 +867,11 @@ export default function WeighingPage() {
         <div className="station-step bg-card border border-border rounded-none p-4 shadow-sm space-y-3 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-2 flex-wrap gap-2 no-print">
             <div>
-              <span className="text-[10px] uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 3 of 3
+              <span className="text-[10px] uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 3 of 3">
+                Langkah 3 dari 3
               </span>
-              <h2 className="text-xl font-bold tracking-tight text-foreground">
-                Approve & Print
+              <h2 className="text-xl font-bold tracking-tight text-foreground" data-title="Approve & Print">
+                Setujui & Cetak
               </h2>
             </div>
             {approvedSuccessRecord ? (
@@ -1043,24 +1067,24 @@ export default function WeighingPage() {
         {/* Quick Stats Grid */}
         <div className="station-quick-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pending approval</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Menunggu persetujuan</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{pendingCount}</p>
-            <p className="text-xs text-muted-foreground">Awaiting verification</p>
+            <p className="text-xs text-muted-foreground">Perlu verifikasi</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Approved today</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Disetujui hari ini</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{approvedToday}</p>
             <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              Approved warings
+              Waring siap dipilah
             </p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Timbangan</p>
             <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
             <p className="text-xs text-muted-foreground font-mono">{scaleEndpoint}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Printer</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Printer Struk</p>
             <p className={`text-2xl font-bold tracking-tight ${printerOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{printerOnline ? 'Online' : 'Offline'}</p>
             <p className="text-xs text-muted-foreground font-mono">{printerEndpoint}</p>
           </div>
@@ -1069,9 +1093,9 @@ export default function WeighingPage() {
         {/* Sequential Stepper in Standard View */}
         <div id="weighing-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
-            <span className="font-semibold text-base text-foreground">Reception Stepper</span>
+            <span className="font-semibold text-base text-foreground">Alur Penerimaan</span>
             <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-              Focus Mode
+              Mode Fokus
             </Button>
           </div>
 
@@ -1087,17 +1111,17 @@ export default function WeighingPage() {
         {/* ── Today's Harvest Weighing Records Ledger ── */}
         <div id="weighing-records" className="space-y-3 no-print">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight text-foreground">Today's Reception Records</h2>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Buku Besar Penerimaan Hari Ini</h2>
             <span className="text-xs text-muted-foreground font-mono">
-              {pendingCount} pending · {approvedToday} approved
+              {pendingCount} menunggu · {approvedToday} disetujui
             </span>
           </div>
           <DataTable
             columns={columns}
             data={records}
             rowKey={(row) => row.id}
-            emptyTitle="No harvest records today."
-            emptyDescription="Select a farmer and record the first intake weighing."
+            emptyTitle="Belum ada rekaman panen hari ini."
+            emptyDescription="Pilih petani dan lakukan penimbangan panen pertama."
           />
         </div>
       </div>
@@ -1110,6 +1134,19 @@ export default function WeighingPage() {
         title="Scan Farmer ID Card · Station 01 Reception"
         subtitle="Align the QR code or 1D barcode on the farmer ID card within the camera viewport."
         manualPlaceholder="Scan barcode or enter farmer ID / name..."
+      />
+
+      {/* ── Admin Transaction Cancellation Modal ── */}
+      <CancelTransactionModal
+        open={!!cancelModalRecord}
+        waringCode={cancelModalRecord?.waringCode || cancelModalRecord?.id}
+        waringId={cancelModalRecord?.id}
+        farmerName={cancelModalRecord?.farmerName}
+        onClose={() => setCancelModalRecord(null)}
+        onSuccess={() => {
+          setCancelModalRecord(null)
+          refreshRecords()
+        }}
       />
     </>
   )

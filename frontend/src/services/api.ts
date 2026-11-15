@@ -218,6 +218,12 @@ export const api = {
       })
       return res.data
     },
+    delete: async (idOrCode: string) => {
+      const res = await request<ApiResponse<any>>(`/weighing/${encodeURIComponent(idOrCode)}`, {
+        method: 'DELETE',
+      })
+      return res.data
+    },
     correct: async (id: string, grossWeightKg: number, note?: string) => {
       const res = await request<ApiResponse<any>>(`/weighing/${id}/correct`, {
         method: 'PATCH',
@@ -481,6 +487,26 @@ export const api = {
     },
     downloadRankingsCsv: async (limit = 50, period = 'all') => {
       return downloadFile(`/api/v1/reports/rankings/farmers?limit=${limit}&period=${period}&format=csv`, `smartgeulis_farmer_rankings_${period}.csv`)
+    },
+  },
+
+  // Admin Operations & Transaction Management
+  admin: {
+    inspectTransaction: async (params: { waringCode?: string; waringId?: string; farmerId?: string; date?: string }) => {
+      const sp = new URLSearchParams()
+      if (params.waringCode) sp.set('waringCode', params.waringCode)
+      if (params.waringId) sp.set('waringId', params.waringId)
+      if (params.farmerId) sp.set('farmerId', params.farmerId)
+      if (params.date) sp.set('date', params.date)
+      const res = await request<ApiResponse<any[]>>(`/admin/transactions/inspect?${sp.toString()}`)
+      return res.data
+    },
+    cancelTransaction: async (params: { waringCode?: string; waringId?: string; farmerId?: string; date?: string; reason?: string }) => {
+      const res = await request<ApiResponse<any>>('/admin/transactions/cancel', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      })
+      return res.data
     },
   },
 }

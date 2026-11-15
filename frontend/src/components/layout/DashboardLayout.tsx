@@ -20,38 +20,38 @@ interface MenuItem {
 
 const roleMenu: Record<string, MenuItem[]> = {
   ADMIN: [
-    { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
-    { label: 'Station 1: Reception', path: '/dashboard/weighing', icon: 'scale' },
-    { label: 'Station 2: Sorting', path: '/dashboard/sorting', icon: 'sortir' },
-    { label: 'Station 3: Packaging', path: '/dashboard/packaging', icon: 'package' },
-    { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box' },
-    { label: 'Deliveries', path: '/dashboard/deliveries', icon: 'truck' },
-    { label: 'Users', path: '/dashboard/users', icon: 'users' },
-    { label: 'Reports', path: '/dashboard/reports', icon: 'reports' },
-    { label: 'Settings', path: '/dashboard/settings', icon: 'settings' },
-    { label: 'OpenAPI Docs', path: '/docs', icon: 'clipboard', external: true },
+    { label: 'Dasbor', path: '/dashboard', icon: 'dashboard', end: true },
+    { label: 'Stasiun 1: Penerimaan', path: '/dashboard/weighing', icon: 'scale' },
+    { label: 'Stasiun 2: Pemilahan', path: '/dashboard/sorting', icon: 'sortir' },
+    { label: 'Stasiun 3: Pengemasan', path: '/dashboard/packaging', icon: 'package' },
+    { label: 'Buku Besar Gudang', path: '/dashboard/warehouse', icon: 'box' },
+    { label: 'Pengiriman', path: '/dashboard/deliveries', icon: 'truck' },
+    { label: 'Pengguna', path: '/dashboard/users', icon: 'users' },
+    { label: 'Laporan', path: '/dashboard/reports', icon: 'reports' },
+    { label: 'Pengaturan', path: '/dashboard/settings', icon: 'settings' },
+    { label: 'Dokumentasi API', path: '/docs', icon: 'clipboard', external: true },
   ],
   OPERATOR: [
-    { label: 'Workstation Hub', path: '/dashboard', icon: 'dashboard', end: true },
-    { label: 'Station 1: Reception', path: '/dashboard/weighing', icon: 'scale' },
-    { label: 'Station 2: Sorting', path: '/dashboard/sorting', icon: 'sortir' },
-    { label: 'Station 3: Packaging', path: '/dashboard/packaging', icon: 'package' },
-    { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box' },
-    { label: 'Deliveries', path: '/dashboard/deliveries', icon: 'truck' },
-    { label: 'Settings', path: '/dashboard/settings', icon: 'settings' },
+    { label: 'Pusat Kerja', path: '/dashboard', icon: 'dashboard', end: true },
+    { label: 'Stasiun 1: Penerimaan', path: '/dashboard/weighing', icon: 'scale' },
+    { label: 'Stasiun 2: Pemilahan', path: '/dashboard/sorting', icon: 'sortir' },
+    { label: 'Stasiun 3: Pengemasan', path: '/dashboard/packaging', icon: 'package' },
+    { label: 'Buku Besar Gudang', path: '/dashboard/warehouse', icon: 'box' },
+    { label: 'Pengiriman', path: '/dashboard/deliveries', icon: 'truck' },
+    { label: 'Pengaturan', path: '/dashboard/settings', icon: 'settings' },
   ],
   FARMER: [
-    { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', end: true },
-    { label: 'My Deposits', path: '/dashboard/my-deliveries', icon: 'clipboard' },
-    { label: 'My Farmer QR', path: '/dashboard/farmer-qr', icon: 'qr' },
-    { label: 'Profile', path: '/dashboard/profile', icon: 'user' },
+    { label: 'Dasbor', path: '/dashboard', icon: 'dashboard', end: true },
+    { label: 'Setoran Saya', path: '/dashboard/my-deliveries', icon: 'clipboard' },
+    { label: 'QR Petani Saya', path: '/dashboard/farmer-qr', icon: 'qr' },
+    { label: 'Profil', path: '/dashboard/profile', icon: 'user' },
   ],
 }
 
 const roleLabel: Record<string, string> = {
-  ADMIN: 'System Admin',
-  OPERATOR: 'Plant Operator',
-  FARMER: 'Farmer',
+  ADMIN: 'Admin Sistem',
+  OPERATOR: 'Operator Pabrik',
+  FARMER: 'Petani',
 }
 
 export default function DashboardLayout() {
@@ -191,11 +191,11 @@ export default function DashboardLayout() {
         </div>
       </div>
       <Button variant="outline" size="sm" icon="logout" block onClick={requestLogout}>
-        Log Out
+        Keluar
       </Button>
       <Link to="/traceability" className="t-caption text-text-secondary hover:text-text flex items-center gap-1">
         <Icon name="search" size={12} />
-        Public traceability
+        Ketertelusuran Publik
       </Link>
       <div className="pt-2 border-t border-border flex flex-col gap-0.5 text-text-light font-mono text-[11px]">
         <div className="flex items-center justify-between">
@@ -312,19 +312,19 @@ export default function DashboardLayout() {
                     <span className="sidebar-link-icon">
                       <Icon name="user" size={16} />
                     </span>
-                    Profile & Security
+                    Profil & Keamanan
                   </Link>
                   <Link to="/traceability" className="sidebar-link" role="menuitem">
                     <span className="sidebar-link-icon">
                       <Icon name="search" size={16} />
                     </span>
-                    Public traceability
+                    Ketertelusuran Publik
                   </Link>
                   <a href="/docs" target="_blank" rel="noopener noreferrer" className="sidebar-link" role="menuitem">
                     <span className="sidebar-link-icon">
                       <Icon name="clipboard" size={16} />
                     </span>
-                    OpenAPI Documentation ↗
+                    Dokumentasi API ↗
                   </a>
                   <button
                     type="button"
@@ -336,7 +336,7 @@ export default function DashboardLayout() {
                     <span className="sidebar-link-icon">
                       <Icon name="logout" size={16} />
                     </span>
-                    Log Out
+                    Keluar Akun
                   </button>
                 </div>
               </div>
@@ -346,7 +346,7 @@ export default function DashboardLayout() {
 
         {serverState === 'disconnected' && (
           <div role="status" className="alert alert-warning rounded-none">
-            Server offline. Check your connection before saving.
+            Server terputus. Periksa koneksi sebelum menyimpan.
           </div>
         )}
         <ContextBar />
@@ -358,9 +358,10 @@ export default function DashboardLayout() {
       <ConfirmDialog
         open={logoutOpen}
         tone="danger"
-        title="Log out?"
-        description="You will need to sign in again to continue working."
-        confirmLabel="Yes, Log Out"
+        title="Keluar dari akun?"
+        description="Anda harus masuk kembali untuk melanjutkan pekerjaan di sistem."
+        confirmLabel="Ya, Keluar"
+        cancelLabel="Batal"
         onConfirm={confirmLogout}
         onCancel={() => setLogoutOpen(false)}
       />

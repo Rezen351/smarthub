@@ -39,9 +39,9 @@ interface PackageRecord {
 }
 
 const STEPS = [
-  { id: 1, label: 'Package Spec' },
-  { id: 2, label: 'Weigh & Check' },
-  { id: 3, label: 'Label & Store' },
+  { id: 1, label: 'Spesifikasi Kemasan' },
+  { id: 2, label: 'Timbang & Cek' },
+  { id: 3, label: 'Label & Simpan' },
 ] as const
 
 interface AvailablePallet {
@@ -597,23 +597,23 @@ export default function PackagingPage() {
   const columns: Column<PackageRecord>[] = [
     {
       key: 'code',
-      label: 'Unit Code',
+      label: 'Kode Unit',
       priority: true,
       render: (row) => (
         <div className="flex flex-col">
           <span className="font-mono font-bold text-foreground">{row.code}</span>
           {row.sourcePallet && (
-            <span className="text-[11px] font-mono text-muted-foreground">Pallet: {row.sourcePallet}</span>
+            <span className="text-[11px] font-mono text-muted-foreground">Palet: {row.sourcePallet}</span>
           )}
         </div>
       ),
     },
     {
       key: 'mode',
-      label: 'Type',
+      label: 'Jenis',
       render: (row) => (
         <Badge tone={row.mode === 'RETAIL_POUCH' ? 'success' : 'accent'}>
-          {row.mode === 'RETAIL_POUCH' ? '1 kg Pouch' : `${row.targetKg} kg Carton`}
+          {row.mode === 'RETAIL_POUCH' ? 'Pouch 1 kg' : `Karton ${row.targetKg} kg`}
         </Badge>
       ),
     },
@@ -624,7 +624,7 @@ export default function PackagingPage() {
     },
     {
       key: 'weightKg',
-      label: 'Weight',
+      label: 'Bobot (kg)',
       align: 'right',
       priority: true,
       render: (row) => (
@@ -635,7 +635,7 @@ export default function PackagingPage() {
     },
     {
       key: 'time',
-      label: 'Time',
+      label: 'Waktu',
       render: (row) => <span className="font-mono text-xs text-muted-foreground">{row.time}</span>,
     },
     {
@@ -643,13 +643,13 @@ export default function PackagingPage() {
       label: 'Status',
       render: () => (
         <Badge tone="success" dot>
-          Warehouse Ready
+          Siap Gudang
         </Badge>
       ),
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: 'Aksi',
       align: 'right',
       priority: true,
       render: (row) => (
@@ -660,18 +660,18 @@ export default function PackagingPage() {
             icon="print"
             disabled={reprintingId === row.id}
             onClick={() => handleReprintPackage(row)}
-            title={`Reprint label for ${row.code}`}
+            title={`Cetak ulang label ${row.code}`}
           >
-            {reprintingId === row.id ? 'Printing…' : 'Reprint'}
+            {reprintingId === row.id ? 'Mencetak…' : 'Cetak Ulang'}
           </Button>
           <Button
             variant="ghost"
             size="sm"
             icon="eye"
             onClick={() => setPreviewPackage(row)}
-            title="Preview label"
+            title="Pratinjau label"
           >
-            Preview
+            Pratinjau
           </Button>
         </div>
       ),
@@ -736,11 +736,11 @@ export default function PackagingPage() {
         <div className="station-step bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
-              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 1 of 3
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 1 of 3">
+                Langkah 1 dari 3
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Scan Pallet & Select Package
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Scan Pallet & Select Package">
+                Pindai Palet & Pilih Kemasan
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
@@ -973,11 +973,11 @@ export default function PackagingPage() {
         <div className="station-step bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
-              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 2 of 3
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 2 of 3">
+                Langkah 2 dari 3
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Weigh Package
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Weigh Package">
+                Timbang Kemasan
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -1119,11 +1119,11 @@ export default function PackagingPage() {
         <div className="station-step bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <div>
-              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 3 of 3
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 3 of 3">
+                Langkah 3 dari 3
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Print Label & Store
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Print Label & Store">
+                Cetak Label & Simpan
               </h2>
             </div>
             {savedSuccessRecord ? (
@@ -1376,8 +1376,8 @@ export default function PackagingPage() {
       <div className="station-page space-y-6">
         <div className="no-print">
           <PageHeader
-            title="Station 03: Packaging"
-            subtitle="Retail pouches, export cartons, and warehouse storage."
+            title="Stasiun 3: Pengemasan"
+            subtitle="Kemasan retail pouch, karton ekspor, dan penyimpanan gudang."
             actions={
               <Button
                 variant="outline"
@@ -1385,7 +1385,7 @@ export default function PackagingPage() {
                 icon="history"
                 onClick={() => document.getElementById('packaging-ledger')?.scrollIntoView({ behavior: 'smooth' })}
               >
-                Records ({packages.length})
+                Riwayat ({packages.length})
               </Button>
             }
           />
@@ -1394,19 +1394,19 @@ export default function PackagingPage() {
         {/* Quick Stats Grid (4 Cards) */}
         <div className="station-quick-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Retail Pouches</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pouch Retail</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{pouchCount}</p>
-            <p className="text-xs text-muted-foreground">1 kg units</p>
+            <p className="text-xs text-muted-foreground">Unit 1 kg</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Export Cartons</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Karton Ekspor</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{exportCount}</p>
             <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              Master crates
+              Peti Ekspor
             </p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Timbangan</p>
             <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
             <p className="text-xs text-muted-foreground font-mono">{scaleEndpoint}</p>
           </div>
@@ -1420,7 +1420,7 @@ export default function PackagingPage() {
         {/* Sequential Stepper in Standard View */}
         <div id="packaging-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
-            <span className="font-semibold text-base text-foreground">Packaging Stepper</span>
+            <span className="font-semibold text-base text-foreground">Alur Kerja Pengemasan</span>
             <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
               Focus Mode
             </Button>
@@ -1438,9 +1438,9 @@ export default function PackagingPage() {
         {/* Packaged Output Ledger Table */}
         <div id="packaging-ledger" className="space-y-3 no-print">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight text-foreground">Today's Packaging Records</h2>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Riwayat Pengemasan Hari Ini</h2>
             <span className="text-xs text-muted-foreground font-mono">
-              {packages.length} units recorded
+              {packages.length} unit tercatat
             </span>
           </div>
 
