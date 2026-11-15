@@ -1,10 +1,11 @@
+import { idText } from '@/lib/indonesian'
 /**
  * Station 03: Packaging & Dispatch Console
  *
  * Implements the unified station layout with sequential 3-step workflow:
- *   Step 1: Spec & Grade (Choose Retail Pouch 1 kg vs Bulk Export Carton 10/50 kg, and potato grade)
+ *   Step 1: Spec & Grade (Choose a 1, 5, or 10 kg box matched to source Sorting washing status)
  *   Step 2: Weigh & Check (Precision Scale 03 reading via Modbus TCP Port 502 with real-time tolerance check)
- *   Step 3: Label & Dispatch (GS1 Digital Link QR / ITF-14 barcode label printing & automated finished goods ledger update)
+ *   Step 3: Label & Dispatch (Operational Code128 and GS1 EAN-13 label printing & automated finished goods ledger update)
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Badge from '../components/shared/Badge'
@@ -21,11 +22,12 @@ import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
 import CameraScannerModal from '../components/shared/CameraScannerModal'
 import PalletCloseoutModal from '../components/shared/PalletCloseoutModal'
-import { api } from '../services/api'
+import { api, type PackagingProduct } from '../services/api'
 
 type PackagingMode = 'RETAIL_POUCH' | 'BULK_EXPORT'
 
 interface PackageRecord {
+  product?: PackagingProduct | null
   id: string
   code: string
   sourcePallet?: string
@@ -45,6 +47,7 @@ const STEPS = [
 ] as const
 
 interface AvailablePallet {
+  washDecision?: string | null
   code: string
   grade: 'A' | 'B' | 'C'
   weightKg: number
@@ -77,7 +80,16 @@ export default function PackagingPage() {
 
   const [packagingMode, setPackagingMode] = useState<PackagingMode>('RETAIL_POUCH')
   const [selectedGrade, setSelectedGrade] = useState<'A' | 'B' | 'C'>('A')
-  const [exportTargetKg, setExportTargetKg] = useState<10 | 50>(10)
+  const [exportTargetKg, setExportTargetKg] = useState<5 | 10>(10)
+  const [products, setProducts] = useState<PackagingProduct[]>([])
+  const [sourceWash, setSourceWash] = useState<string | null>(null)
+  useEffect(() => {
+    let active = true
+    api.packaging.products()
+      .then(data => { if (active) setProducts(data) })
+      .catch(() => { if (active) setProducts([]) })
+    return () => { active = false }
+  }, [])
   const [scaleCapacityKg, setScaleCapacityKg] = useState<number | null>(null)
   const [scaleOnline, setScaleOnline] = useState(false)
   const [scaleEndpoint, setScaleEndpoint] = useState('Not configured')
@@ -169,6 +181,7 @@ export default function PackagingPage() {
           farmerName: p.farmerName || 'Farmer',
           farmerVillage: p.farmerVillage,
           waringCode: p.waringCode || '',
+          washDecision: p.washDecision,
         }))
         .filter((p) => p.code && p.remainingKg > 0)
       setPalletsFromApi(mapped)
@@ -195,6 +208,7 @@ export default function PackagingPage() {
             farmerName: p.farmerName || 'Farmer',
             farmerVillage: p.farmerVillage,
             waringCode: p.waringCode || '',
+            washDecision: p.washDecision,
           }))
           .filter((p) => p.code && p.remainingKg > 0)
         setPalletsFromApi(mapped)
@@ -218,6 +232,7 @@ export default function PackagingPage() {
 
   const handleSelectPallet = (p: AvailablePallet) => {
     setSourcePalletCode(p.code)
+    setSourceWash(p.washDecision || null)
     setSelectedGrade(p.grade)
     setSourceFarmer(p.farmerName)
     setSourceWaring(p.waringCode)
@@ -256,6 +271,7 @@ export default function PackagingPage() {
           farmerName: pallet.farmerName || 'Farmer',
           farmerVillage: pallet.farmerVillage || undefined,
           waringCode: pallet.waringCode || '',
+          washDecision: pallet.washDecision,
         })
         setPalletSearch('')
         setPalletScanError(null)
@@ -289,6 +305,9 @@ export default function PackagingPage() {
 
 
   const targetKg = packagingMode === 'RETAIL_POUCH' ? 1.0 : exportTargetKg
+  const selectedProduct = products.find(p => p.nominalWeightKg === targetKg && p.washDecision === sourceWash)
+  const productReady = Boolean(selectedProduct?.gtinValid)
+  const productError = !sourceWash ? 'The source Sorting batch has no washing status.' : !selectedProduct ? 'Packaging product unavailable.' : !selectedProduct.gtinValid ? `Invalid GTIN: ${selectedProduct.gtin}. Confirm the official GTIN before printing.` : null
   const toleranceKg = packagingMode === 'RETAIL_POUCH' ? 0.005 : 0.05
   const weightValue = Number(currentWeight) || 0
   const isWithinTolerance = Math.abs(weightValue - targetKg) <= toleranceKg
@@ -299,6 +318,7 @@ export default function PackagingPage() {
   const [previewPackage, setPreviewPackage] = useState<PackageRecord | null>(null)
 
   const handleReprintPackage = (row: PackageRecord) => {
+    if (!row.product?.gtinValid) { toast.error('Product identity unavailable. GS1 label printing is blocked.'); return }
     setReprintingId(row.id)
     const now = new Date()
     const printDate = row.date || formatSafeDate(now)
@@ -349,9 +369,10 @@ export default function PackagingPage() {
               mode,
               grade: (p.grade === 'B' || p.grade === 'C' ? p.grade : 'A') as 'A' | 'B' | 'C',
               weightKg: w,
-              targetKg: mode === 'RETAIL_POUCH' ? 1.0 : (w >= 30 ? 50 : 10),
-              date: datePart,
-              time: timePart,
+              targetKg: p.product?.nominalWeightKg ?? (mode === 'RETAIL_POUCH' ? 1.0 : (w >= 30 ? 50 : 10)),
+              product: p.product,
+              date: p.labelDate || datePart,
+              time: p.labelTime || timePart,
               status: p.status === 'LABELLED' ? 'LABELLED' : 'WAREHOUSE_STORED',
             }
           })
@@ -371,7 +392,7 @@ export default function PackagingPage() {
   const minTargetKg = targetKg - toleranceKg
   const isBelowCurrentSpec = Boolean(sourcePalletCode && remainingPalletKg > 0.05 && remainingPalletKg < minTargetKg)
   const isBelowMinSku = Boolean(sourcePalletCode && remainingPalletKg > 0.05 && remainingPalletKg < 0.995)
-  const canSwitchTo10Kg = packagingMode === 'BULK_EXPORT' && exportTargetKg === 50 && remainingPalletKg >= 9.95
+  const canSwitchTo5Kg = packagingMode === 'BULK_EXPORT' && exportTargetKg === 10 && remainingPalletKg >= 4.95
   const canSwitchTo1Kg = (packagingMode === 'BULK_EXPORT' || targetKg > 1) && remainingPalletKg >= 0.995 && remainingPalletKg < minTargetKg
 
   const renderRemainderGuidance = () => {
@@ -382,31 +403,31 @@ export default function PackagingPage() {
           <Icon name="alert-triangle" size={16} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
           <div className="space-y-0.5">
             <div className="font-bold">
-              {isBelowMinSku
+              {idText(isBelowMinSku
                 ? `Sub-Minimum Remainder (${remainingPalletKg.toFixed(3)} kg < 1.000 kg)`
-                : `Remaining Stock (${remainingPalletKg.toFixed(3)} kg) Below ${targetKg} kg Spec`}
+                : `Remaining Stock (${remainingPalletKg.toFixed(3)} kg) Below ${targetKg} kg Spec`)}
             </div>
             <p className="text-amber-800/90 dark:text-amber-300/90">
-              {isBelowMinSku
-                ? `Cannot form a 1 kg pouch from ${sourcePalletCode}. Close and release the pallet to return it to Sorting.`
-                : `Switch to a smaller standard package or close and release ${sourcePalletCode} with an audited disposition.`}
+              {idText(isBelowMinSku
+                ? `Cannot form a 1 kg box from ${sourcePalletCode}. Close and release the pallet to return it to Sorting.`
+                : `Switch to a smaller standard package or close and release ${sourcePalletCode} with an audited disposition.`)}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {canSwitchTo10Kg && (
+          {canSwitchTo5Kg && (
             <Button
               size="sm"
               variant="outline"
               onClick={() => {
                 setPackagingMode('BULK_EXPORT')
-                setExportTargetKg(10)
+                setExportTargetKg(5)
                 setSavedSuccessRecord(null)
                 setCurrentWeight('')
                 setActiveStep(2)
               }}
             >
-              Use 10 kg Carton
+              {idText("Use 5 kg Box")}
             </Button>
           )}
           {canSwitchTo1Kg && (
@@ -420,7 +441,7 @@ export default function PackagingPage() {
                 setActiveStep(2)
               }}
             >
-              Use 1 kg Pouch
+              {idText("Use 1 kg Box")}
             </Button>
           )}
           <Button
@@ -429,7 +450,7 @@ export default function PackagingPage() {
             icon="check"
             onClick={() => setCloseoutOpen(true)}
           >
-            Close &amp; Release Pallet
+            {idText("Close & Release Pallet")}
           </Button>
         </div>
       </div>
@@ -470,6 +491,7 @@ export default function PackagingPage() {
     const prevPallet = sourcePalletCode
     setSavedSuccessRecord(null)
     setSourcePalletCode('')
+    setSourceWash(null)
     setSourceFarmer('')
     setSourceWaring('')
     setSourcePalletRemainingKg(null)
@@ -490,6 +512,7 @@ export default function PackagingPage() {
 
   /* Step 3: Print & Dispatch Commitment */
   const handlePrintAndLabel = async () => {
+    if (!productReady || !selectedProduct) { toast.error(productError || 'Select a valid product'); return }
     if (!sourcePalletCode || sourcePalletRemainingKg === null) {
       toast.error('Select and verify a source pallet before packaging')
       return
@@ -503,18 +526,20 @@ export default function PackagingPage() {
     }
 
     if (!isWithinTolerance) {
-      toast.warning(
+      toast.error(
         `Weight ${currentWeight} kg is outside tolerance for ${
-          packagingMode === 'RETAIL_POUCH' ? '1 kg pouch' : `${targetKg} kg export carton`
+          packagingMode === 'RETAIL_POUCH' ? '1 kg box' : `${targetKg} kg box`
         }.`,
       )
+      return
     }
 
     setIsPrinting(true)
     try {
       const saved = await api.packaging.pack({
         palletCode: sourcePalletCode,
-        packageTypeCode: packagingMode === 'RETAIL_POUCH' ? 'RETAIL_POUCH' : 'EXPORT_CARTON',
+        productNumber: selectedProduct.productNumber,
+        packageTypeCode: 'EXPORT_CARTON',
         quantity: 1,
         totalNetWeightKg: weightValue,
         storageLocation: packagingMode === 'RETAIL_POUCH' ? 'Rack A-01' : 'Pallet Bay 03',
@@ -522,15 +547,16 @@ export default function PackagingPage() {
       if (!saved?.packageCode) throw new Error('The server did not confirm the package code.')
       const newCode = saved.packageCode
       const now = new Date()
-      const printDate = formatSafeDate(now)
-      const printTime = formatSafeTime(now)
+      const printDate = saved.labelDate || formatSafeDate(now)
+      const printTime = saved.labelTime || formatSafeTime(now)
       const newRecord: PackageRecord = {
         id: String(Date.now()),
         code: newCode,
         sourcePallet: sourcePalletCode,
         mode: packagingMode,
-        grade: selectedGrade,
-        weightKg: weightValue,
+        product: saved.product,
+        grade: saved.grade,
+        weightKg: saved.weightKg,
         targetKg,
         date: printDate,
         time: printTime,
@@ -570,7 +596,7 @@ export default function PackagingPage() {
 
       toast.success(
         `Recorded ${newCode} (${
-          packagingMode === 'RETAIL_POUCH' ? '1 kg Pouch' : `${targetKg} kg Export Carton`
+          packagingMode === 'RETAIL_POUCH' ? '1 kg Box' : `${targetKg} kg Box`
         }). Stored in warehouse.`,
       )
     } catch (err) {
@@ -591,8 +617,8 @@ export default function PackagingPage() {
   }
 
   /* Metric counts */
-  const pouchCount = packages.filter((p) => p.mode === 'RETAIL_POUCH').length
-  const exportCount = packages.filter((p) => p.mode === 'BULK_EXPORT').length
+  const pouchCount = packages.filter((p) => p.product ? p.product.nominalWeightKg === 1 : p.mode === 'RETAIL_POUCH').length
+  const exportCount = packages.filter((p) => p.product ? p.product.nominalWeightKg !== 1 : p.mode === 'BULK_EXPORT').length
 
   const columns: Column<PackageRecord>[] = [
     {
@@ -601,9 +627,9 @@ export default function PackagingPage() {
       priority: true,
       render: (row) => (
         <div className="flex flex-col">
-          <span className="font-mono font-bold text-foreground">{row.code}</span>
+          <span className="font-mono font-bold text-foreground">{idText(row.code)}</span>
           {row.sourcePallet && (
-            <span className="text-[11px] font-mono text-muted-foreground">Palet: {row.sourcePallet}</span>
+            <span className="text-[11px] font-mono text-muted-foreground">{idText("Palet:")} {idText(row.sourcePallet)}</span>
           )}
         </div>
       ),
@@ -613,14 +639,14 @@ export default function PackagingPage() {
       label: 'Jenis',
       render: (row) => (
         <Badge tone={row.mode === 'RETAIL_POUCH' ? 'success' : 'accent'}>
-          {row.mode === 'RETAIL_POUCH' ? 'Pouch 1 kg' : `Karton ${row.targetKg} kg`}
+          {row.product ? `${row.product.nominalWeightKg} kg Box` : idText(row.mode === 'RETAIL_POUCH' ? 'Pouch 1 kg' : `Karton ${row.targetKg} kg`)}
         </Badge>
       ),
     },
     {
       key: 'grade',
       label: 'Grade',
-      render: (row) => <Badge tone="neutral">Grade {row.grade}</Badge>,
+      render: (row) => <Badge tone="neutral">{idText("Grade")} {idText(row.grade)}</Badge>,
     },
     {
       key: 'weightKg',
@@ -629,21 +655,21 @@ export default function PackagingPage() {
       priority: true,
       render: (row) => (
         <span className="font-mono font-bold text-emerald-800">
-          {formatWeight(row.weightKg)} kg
+          {idText(formatWeight(row.weightKg))} {idText("kg")}
         </span>
       ),
     },
     {
       key: 'time',
       label: 'Waktu',
-      render: (row) => <span className="font-mono text-xs text-muted-foreground">{row.time}</span>,
+      render: (row) => <span className="font-mono text-xs text-muted-foreground">{idText(row.time)}</span>,
     },
     {
       key: 'status',
       label: 'Status',
       render: () => (
         <Badge tone="success" dot>
-          Siap Gudang
+          {idText("Siap Gudang")}
         </Badge>
       ),
     },
@@ -658,20 +684,20 @@ export default function PackagingPage() {
             variant="outline"
             size="sm"
             icon="print"
-            disabled={reprintingId === row.id}
+            disabled={reprintingId === row.id || !row.product?.gtinValid}
             onClick={() => handleReprintPackage(row)}
-            title={`Cetak ulang label ${row.code}`}
+            title={row.product?.gtinValid ? `Reprint label ${row.code}` : "Product identity unavailable. GS1 label printing is blocked."}
           >
-            {reprintingId === row.id ? 'Mencetak…' : 'Cetak Ulang'}
+            {idText(reprintingId === row.id ? 'Mencetak…' : 'Cetak Ulang')}
           </Button>
           <Button
             variant="ghost"
             size="sm"
             icon="eye"
             onClick={() => setPreviewPackage(row)}
-            title="Pratinjau label"
+            title={idText("Pratinjau label")}
           >
-            Pratinjau
+            {idText("Pratinjau")}
           </Button>
         </div>
       ),
@@ -682,7 +708,7 @@ export default function PackagingPage() {
      STEPPER PROGRESS BAR COMPONENT
   ───────────────────────────────────────────────────────────── */
   const renderStepperBar = () => (
-    <nav className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto" aria-label="Packaging steps">
+    <nav className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto" aria-label={idText("Packaging steps")}>
       {STEPS.map((step, idx) => {
         const isCurrent = activeStep === step.id
         const isDone = activeStep > step.id || (step.id === 3 && savedSuccessRecord !== null)
@@ -714,10 +740,10 @@ export default function PackagingPage() {
                     : 'bg-muted border border-border text-muted-foreground'
                 }`}
               >
-                {isDone ? '✓' : step.id}
+                {idText(isDone ? '✓' : step.id)}
               </span>
-              <span className="sm:hidden">{compactLabel}</span>
-              <span className="hidden sm:inline">{step.label}</span>
+              <span className="sm:hidden">{idText(compactLabel)}</span>
+              <span className="hidden sm:inline">{idText(step.label)}</span>
             </button>
             {idx < STEPS.length - 1 && <span className="text-muted-foreground/40 text-xs mx-0.5 sm:mx-1">/</span>}
           </div>
@@ -737,14 +763,14 @@ export default function PackagingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 1 of 3">
-                Langkah 1 dari 3
+                {idText("Langkah 1 dari 3")}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Scan Pallet & Select Package">
-                Pindai Palet & Pilih Kemasan
+                {idText("Pindai Palet & Pilih Kemasan")}
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
-              Awaiting Scan
+              {idText("Awaiting Scan")}
             </Badge>
           </div>
 
@@ -754,9 +780,9 @@ export default function PackagingPage() {
               <div className="inline-flex p-3 bg-muted border border-border text-muted-foreground mb-1">
                 <Icon name="scan" size={28} />
               </div>
-              <h3 className="text-base font-bold text-foreground">QR Scanner and Camera</h3>
+              <h3 className="text-base font-bold text-foreground">{idText("QR Scanner and Camera")}</h3>
               <p className="text-xs text-muted-foreground max-w-md">
-                Scan the pallet QR from Station 02 Sorting to confirm the grade and source.
+                {idText("Scan the pallet QR from Station 02 Sorting to confirm the grade and source.")}
               </p>
             </div>
 
@@ -770,27 +796,27 @@ export default function PackagingPage() {
                   setPalletSearch(e.target.value)
                   setPalletScanError(null)
                 }}
-                placeholder="Scan or enter Pallet QR (e.g. PLT-GRD-A-01)..."
+                placeholder={idText("Scan or enter Pallet QR (e.g. PLT-GRD-A-01)...")}
                 className="font-mono text-xs uppercase flex-1 min-w-0"
               />
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <Button type="submit" variant="primary" icon="check" className="w-full sm:w-auto">
-                  Verify
+                  {idText("Verify")}
                 </Button>
                 <Button type="button" variant="outline" icon="scan" onClick={openCameraModal} className="w-full sm:w-auto">
-                  Camera
+                  {idText("Camera")}
                 </Button>
               </div>
             </form>
-            {palletScanError && <p className="text-xs text-destructive font-mono">{palletScanError}</p>}
+            {palletScanError && <p className="text-xs text-destructive font-mono">{idText(palletScanError)}</p>}
           </div>
 
           {/* Active Verified Pallet Confirmation Strip */}
           <div className="p-4 bg-card border border-border flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-0.5">
-              <span className="text-xs text-muted-foreground uppercase font-mono block">Source Pallet</span>
+              <span className="text-xs text-muted-foreground uppercase font-mono block">{idText("Source Pallet")}</span>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-lg font-bold font-mono text-primary">{sourcePalletCode || 'Not selected'}</span>
+                <span className="text-lg font-bold font-mono text-primary">{idText(sourcePalletCode || 'Not selected')}</span>
                 {sourcePalletCode && <span
                   className={`text-xs font-semibold px-2 py-0.5 border ${
                     selectedGrade === 'A'
@@ -800,13 +826,13 @@ export default function PackagingPage() {
                       : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300'
                   }`}
                 >
-                  Grade {selectedGrade}
+                  {idText("Grade")} {idText(selectedGrade)}
                 </span>}
-                {sourcePalletCode && <span className="text-xs text-muted-foreground">({sourceFarmer} · Origin: {sourceWaring})</span>}
+                {sourcePalletCode && <span className="text-xs text-muted-foreground">({idText(sourceFarmer)} {idText("· Origin:")} {idText(sourceWaring)})</span>}
               </div>
               {sourcePalletCode && sourcePalletRemainingKg !== null && (
                 <span className={`text-xs font-mono block ${remainingPalletKg <= 0 ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
-                  Remaining: {remainingPalletKg.toFixed(3)} kg {remainingPalletKg <= 0 && '(Depleted)'}
+                  {idText("Remaining:")} {idText(remainingPalletKg.toFixed(3))} {idText("kg")} {idText(remainingPalletKg <= 0 && '(Depleted)')}
                 </span>
               )}
             </div>
@@ -814,7 +840,7 @@ export default function PackagingPage() {
               {sourcePalletCode && remainingPalletKg <= 0 ? (
                 <>
                   <Badge tone="danger" dot>
-                    Pallet Depleted
+                    {idText("Pallet Depleted")}
                   </Badge>
                   <Button
                     variant="outline"
@@ -822,13 +848,13 @@ export default function PackagingPage() {
                     icon="scan"
                     onClick={() => handleScanNextPallet()}
                   >
-                    Scan Next Pallet
+                    {idText("Scan Next Pallet")}
                   </Button>
                 </>
               ) : (
                 <>
                   <Badge tone={sourcePalletCode ? 'success' : 'warning'} dot live={Boolean(sourcePalletCode)}>
-                    {sourcePalletCode ? 'Source Confirmed' : 'Source Required'}
+                    {idText(sourcePalletCode ? 'Source Confirmed' : 'Source Required')}
                   </Badge>
                   {sourcePalletCode && remainingPalletKg > 0 && (
                     <Button
@@ -836,7 +862,7 @@ export default function PackagingPage() {
                       size="sm"
                       onClick={() => setCloseoutOpen(true)}
                     >
-                      Close &amp; Release
+                      {idText("Close & Release")}
                     </Button>
                   )}
                 </>
@@ -844,102 +870,24 @@ export default function PackagingPage() {
             </div>
           </div>
 
-          {renderRemainderGuidance()}
+          {idText(renderRemainderGuidance())}
 
-          {/* Mode Selector Buttons */}
-          <div className="space-y-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
-              Choose Package Type:
-            </span>
-            <div className="station-mode-grid grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setPackagingMode('RETAIL_POUCH')
-                  setCurrentWeight('')
-                  setSavedSuccessRecord(null)
-                }}
-                className={`p-5 text-left border transition-all cursor-pointer bg-card ${
-                  packagingMode === 'RETAIL_POUCH'
-                    ? 'border-primary ring-1 ring-primary text-foreground font-bold shadow-xs'
-                    : 'border-border text-muted-foreground hover:bg-muted/20'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Icon name="package" size={18} className="text-primary" />
-                    <span className="font-bold text-sm text-foreground">Retail 1 kg Pouch</span>
-                  </div>
-                  <Badge tone={packagingMode === 'RETAIL_POUCH' ? 'success' : 'neutral'}>
-                    Product QR
-                  </Badge>
-                </div>
-                <p className="station-secondary-copy text-xs text-muted-foreground mt-2 leading-relaxed">
-                  1 kg consumer pouch with a product QR code. Target weight 1.000 kg (allowed range ±5 g).
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setPackagingMode('BULK_EXPORT')
-                  setCurrentWeight('')
-                  setSavedSuccessRecord(null)
-                }}
-                className={`p-5 text-left border transition-all cursor-pointer bg-card ${
-                  packagingMode === 'BULK_EXPORT'
-                    ? 'border-primary ring-1 ring-primary text-foreground font-bold shadow-xs'
-                    : 'border-border text-muted-foreground hover:bg-muted/20'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Icon name="truck" size={18} className="text-primary" />
-                    <span className="font-bold text-sm text-foreground">Export Carton</span>
-                  </div>
-                  <Badge tone={packagingMode === 'BULK_EXPORT' ? 'accent' : 'neutral'}>
-                    Barcode
-                  </Badge>
-                </div>
-                <p className="station-secondary-copy text-xs text-muted-foreground mt-2 leading-relaxed">
-                  Bulk master carton with a barcode. Target weight 10 kg or 50 kg (allowed range ±50 g).
-                </p>
-              </button>
+          <div className="space-y-3">
+            <span className="text-xs font-bold">Box Size</span>
+            <div className="flex flex-wrap gap-2">
+              {([1, 5, 10] as const).map(size => (
+                <Button key={size} variant={targetKg === size ? 'primary' : 'outline'}
+                  disabled={scaleCapacityKg === null || scaleCapacityKg < size}
+                  onClick={() => { setPackagingMode(size === 1 ? 'RETAIL_POUCH' : 'BULK_EXPORT'); if (size !== 1) setExportTargetKg(size); setCurrentWeight(''); setSavedSuccessRecord(null) }}>
+                  {size} kg Box
+                </Button>
+              ))}
             </div>
+            <p className="text-xs">Sorting: {sourceWash || 'Unavailable'}</p>
+            {selectedProduct && <p className="text-xs">{selectedProduct.productName} · GTIN {selectedProduct.gtin}</p>}
+            <div className="text-xs flex flex-wrap gap-2">{products.map(product => <span key={product.productNumber} className="border border-border p-2">{product.productName}: {product.gtinValid ? 'Valid GTIN' : 'Invalid GTIN'}</span>)}</div>
+            {productError && <p role="alert" className="text-xs text-destructive">{productError}</p>}
           </div>
-
-          {/* Export Carton Size */}
-          {packagingMode === 'BULK_EXPORT' && (
-            <div className="p-4 bg-card border border-border space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-foreground block">
-                Export Carton Size:
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant={exportTargetKg === 10 ? 'primary' : 'outline'}
-                  onClick={() => {
-                    setExportTargetKg(10)
-                    setCurrentWeight('')
-                  }}
-                >
-                  10 kg Carton
-                </Button>
-                <Button
-                  size="sm"
-                  variant={exportTargetKg === 50 ? 'primary' : 'outline'}
-                  disabled={scaleCapacityKg === null || scaleCapacityKg < 50}
-                  onClick={() => {
-                    setExportTargetKg(50)
-                    setCurrentWeight('')
-                  }}
-                >
-                  50 kg Carton
-                </Button>
-              </div>
-              {scaleCapacityKg !== null && scaleCapacityKg < 50 && <p className="text-xs text-muted-foreground">50 kg requires a scale with at least 50 kg capacity.</p>}
-            </div>
-          )}
 
           {/* Action Footer */}
           <div className="flex items-center justify-between pt-4 border-t border-border">
@@ -949,20 +897,20 @@ export default function PackagingPage() {
                 icon="scan"
                 onClick={() => handleScanNextPallet()}
               >
-                Scan Another Pallet
+                {idText("Scan Another Pallet")}
               </Button>
             ) : <div />}
             <Button
               variant="primary"
               icon="check"
               touch
-              disabled={!sourcePalletCode || sourcePalletRemainingKg === null || remainingPalletKg <= 0}
+              disabled={!productReady || !sourcePalletCode || sourcePalletRemainingKg === null || remainingPalletKg <= 0 || scaleCapacityKg === null || targetKg > scaleCapacityKg}
               onClick={() => {
                 setCurrentWeight('')
                 setActiveStep(2)
               }}
             >
-              Continue to Weighing
+              {idText("Continue to Weighing")}
             </Button>
           </div>
         </div>
@@ -974,15 +922,15 @@ export default function PackagingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 2 of 3">
-                Langkah 2 dari 3
+                {idText("Langkah 2 dari 3")}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Weigh Package">
-                Timbang Kemasan
+                {idText("Timbang Kemasan")}
               </h2>
             </div>
             <div className="flex items-center gap-2">
-              <Badge tone="accent">Pallet: {sourcePalletCode}</Badge>
-              <Badge tone="accent">Grade {selectedGrade}</Badge>
+              <Badge tone="accent">{idText("Pallet:")} {idText(sourcePalletCode)}</Badge>
+              <Badge tone="accent">{idText("Grade")} {idText(selectedGrade)}</Badge>
             </div>
           </div>
 
@@ -1001,24 +949,24 @@ export default function PackagingPage() {
               {/* Target & Tolerance Metric Card */}
               <div className="p-4 bg-muted/20 border border-border flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <span className="text-xs text-muted-foreground block">Target</span>
+                  <span className="text-xs text-muted-foreground block">{idText("Target")}</span>
                   <span className="text-base font-bold text-foreground">
-                    {targetKg.toFixed(3)} kg (±{toleranceKg} kg)
+                    {idText(targetKg.toFixed(3))} {idText("kg (±")}{idText(toleranceKg)} {idText("kg)")}
                   </span>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground block">Difference</span>
+                  <span className="text-xs text-muted-foreground block">{idText("Difference")}</span>
                   <span
                     className={`font-mono font-bold text-base ${
                       isWithinTolerance ? 'text-emerald-700' : 'text-red-700'
                     }`}
                   >
-                    {(weightValue - targetKg > 0 ? '+' : '') + (weightValue - targetKg).toFixed(3)} kg
+                    {idText((weightValue - targetKg > 0 ? '+' : '') + (weightValue - targetKg).toFixed(3))} {idText("kg")}
                   </span>
                 </div>
                 <div>
                   <Badge tone={isWithinTolerance ? 'success' : 'warning'} dot live={isWithinTolerance}>
-                    {isWithinTolerance ? 'Within Range' : 'Outside Range'}
+                    {idText(isWithinTolerance ? 'Within Range' : 'Outside Range')}
                   </Badge>
                 </div>
               </div>
@@ -1028,11 +976,12 @@ export default function PackagingPage() {
             <div className="station-step-preview lg:col-span-5 space-y-4">
               <div className="border border-border p-4 bg-card space-y-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-foreground block">
-                  {packagingMode === 'RETAIL_POUCH' ? 'Pouch Label Preview' : 'Carton Label Preview'}
+                  Box Label Preview
                 </span>
 
                 {packagingMode === 'RETAIL_POUCH' ? (
                   <LabelPreview
+                    product={savedSuccessRecord?.product ?? selectedProduct}
                     type="pouch"
                     code={nextCodePreview}
                     farmerName={sourceFarmer}
@@ -1047,6 +996,7 @@ export default function PackagingPage() {
                   />
                 ) : (
                   <LabelPreview
+                    product={savedSuccessRecord?.product ?? selectedProduct}
                     type="export"
                     code={nextCodePreview}
                     farmerName={sourceFarmer}
@@ -1065,13 +1015,13 @@ export default function PackagingPage() {
 
           {/* Action Footer */}
           <div className="space-y-3 pt-4 border-t border-border">
-            {renderRemainderGuidance()}
+            {idText(renderRemainderGuidance())}
             {remainingPalletKg <= 0.0005 && (
               <div className="p-4 bg-amber-500/15 border-2 border-amber-500/30 rounded flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-amber-800 dark:text-amber-400">
                   <Icon name="alert-triangle" size={16} />
                   <span>
-                    Pallet {sourcePalletCode} is fully depleted (0.000 kg). Cannot package further units.
+                    {idText("Pallet")} {idText(sourcePalletCode)} {idText("is fully depleted (0.000 kg). Cannot package further units.")}
                   </span>
                 </div>
                 <Button
@@ -1080,25 +1030,25 @@ export default function PackagingPage() {
                   icon="scan"
                   onClick={() => handleScanNextPallet()}
                 >
-                  Scan Next Pallet
+                  {idText("Scan Next Pallet")}
                 </Button>
               </div>
             )}
             {weightValue > remainingPalletKg + 0.0005 && remainingPalletKg > 0.0005 && (
               <div className="p-3 bg-destructive/10 border border-destructive/30 rounded flex items-center justify-between text-xs text-destructive flex-wrap gap-2">
                 <span>
-                  Package weight ({weightValue.toFixed(3)} kg) exceeds remaining pallet stock ({remainingPalletKg.toFixed(3)} kg).
+                  {idText("Package weight (")}{idText(weightValue.toFixed(3))} {idText("kg) exceeds remaining pallet stock (")}{idText(remainingPalletKg.toFixed(3))} {idText("kg).")}
                 </span>
               </div>
             )}
             {weightValue <= 0 && remainingPalletKg > 0.0005 && (
               <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-700 dark:text-amber-400">
-                Please lock the reading from Scale 03 or enter a valid package weight.
+                {idText("Please lock the reading from Scale 03 or enter a valid package weight.")}
               </div>
             )}
             <div className="flex items-center justify-between">
               <Button variant="outline" onClick={() => setActiveStep(1)}>
-                Back
+                {idText("Back")}
               </Button>
               <Button
                 variant="primary"
@@ -1107,7 +1057,7 @@ export default function PackagingPage() {
                 disabled={weightValue <= 0 || !sourcePalletCode || sourcePalletRemainingKg === null || weightValue > remainingPalletKg + 0.0005 || remainingPalletKg <= 0}
                 onClick={() => setActiveStep(3)}
               >
-                Continue to Label
+                {idText("Continue to Label")}
               </Button>
             </div>
           </div>
@@ -1120,19 +1070,19 @@ export default function PackagingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 3 of 3">
-                Langkah 3 dari 3
+                {idText("Langkah 3 dari 3")}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Print Label & Store">
-                Cetak Label & Simpan
+                {idText("Cetak Label & Simpan")}
               </h2>
             </div>
             {savedSuccessRecord ? (
               <Badge tone="success" dot>
-                Stored
+                {idText("Stored")}
               </Badge>
             ) : (
               <Badge tone="warning" dot>
-                Ready to Print
+                {idText("Ready to Print")}
               </Badge>
             )}
           </div>
@@ -1140,47 +1090,49 @@ export default function PackagingPage() {
           {/* Summary Details Grid */}
           <div className="p-4 bg-muted/30 border border-border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 no-print">
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Package Code</span>
+              <span className="text-xs text-muted-foreground block font-medium">{idText("Package Code")}</span>
               <span className="font-mono font-bold text-base text-foreground block">
-                {savedSuccessRecord?.code ?? nextCodePreview}
+                {idText(savedSuccessRecord?.code ?? nextCodePreview)}
               </span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Source Pallet</span>
+              <span className="text-xs text-muted-foreground block font-medium">{idText("Source Pallet")}</span>
               <span className="font-mono font-bold text-base text-primary block truncate">
-                {sourcePalletCode}
+                {idText(sourcePalletCode)}
               </span>
-              <span className="text-[11px] text-muted-foreground truncate block">{sourceFarmer}</span>
+              <span className="text-[11px] text-muted-foreground truncate block">{idText(sourceFarmer)}</span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Grade</span>
-              <span className="font-bold text-base text-foreground block">Grade {selectedGrade}</span>
+              <span className="text-xs text-muted-foreground block font-medium">{idText("Grade")}</span>
+              <span className="font-bold text-base text-foreground block">{idText("Grade")} {idText(selectedGrade)}</span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Net Weight</span>
+              <span className="text-xs text-muted-foreground block font-medium">{idText("Net Weight")}</span>
               <span className="text-2xl font-black text-emerald-700 dark:text-emerald-400 block font-mono">
-                {formatWeight(weightValue)} <span className="text-xs font-normal text-muted-foreground">kg</span>
+                {idText(formatWeight(weightValue))} <span className="text-xs font-normal text-muted-foreground">{idText("kg")}</span>
               </span>
-              <span className="text-xs text-muted-foreground">Target: {targetKg.toFixed(3)} kg</span>
+              <span className="text-xs text-muted-foreground">{idText("Target:")} {idText(targetKg.toFixed(3))} {idText("kg")}</span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Package Type</span>
+              <span className="text-xs text-muted-foreground block font-medium">{idText("Package Type")}</span>
               <span className="font-semibold text-base text-foreground block">
-                {packagingMode === 'RETAIL_POUCH' ? '1 kg Retail Pouch' : `${exportTargetKg} kg Export Carton`}
+                {idText(packagingMode === 'RETAIL_POUCH' ? '1 kg Box' : `${exportTargetKg} kg Box`)}
               </span>
             </div>
           </div>
 
+          {productError && !savedSuccessRecord && <p role="alert" className="text-xs text-destructive">{productError}</p>}
           {/* Print Preview */}
           <div className="station-final-preview max-w-md mx-auto">
             {packagingMode === 'RETAIL_POUCH' ? (
               <LabelPreview
+                product={savedSuccessRecord?.product ?? selectedProduct}
                 type="pouch"
                 code={savedSuccessRecord?.code ?? nextCodePreview}
                 farmerName={sourceFarmer}
                 farmerId={sourcePalletCode}
-                grade={selectedGrade}
-                weightKg={weightValue}
+                grade={savedSuccessRecord?.grade ?? selectedGrade}
+                weightKg={savedSuccessRecord?.weightKg ?? weightValue}
                 stationName="Station 03 · Packaging"
                 date={savedSuccessRecord?.date ?? formatSafeDate(new Date())}
                 time={savedSuccessRecord?.time ?? formatSafeTime(new Date())}
@@ -1188,12 +1140,13 @@ export default function PackagingPage() {
               />
             ) : (
               <LabelPreview
+                product={savedSuccessRecord?.product ?? selectedProduct}
                 type="export"
                 code={savedSuccessRecord?.code ?? nextCodePreview}
                 farmerName={sourceFarmer}
                 farmerId={sourcePalletCode}
-                grade={selectedGrade}
-                weightKg={weightValue}
+                grade={savedSuccessRecord?.grade ?? selectedGrade}
+                weightKg={savedSuccessRecord?.weightKg ?? weightValue}
                 date={savedSuccessRecord?.date ?? formatSafeDate(new Date())}
                 time={savedSuccessRecord?.time ?? formatSafeTime(new Date())}
                 screenFit
@@ -1210,9 +1163,9 @@ export default function PackagingPage() {
                     <Icon name="check-circle" size={20} />
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-foreground">Pallet Depleted</h4>
+                    <h4 className="font-bold text-sm text-foreground">{idText("Pallet Depleted")}</h4>
                     <p className="text-xs text-muted-foreground">
-                      Pallet <span className="font-mono font-bold text-foreground">{sourcePalletCode || savedSuccessRecord.sourcePallet}</span> is fully packaged (0.000 kg remaining). Continue by scanning the next pallet.
+                      {idText("Pallet")} <span className="font-mono font-bold text-foreground">{idText(sourcePalletCode || savedSuccessRecord.sourcePallet)}</span> {idText("is fully packaged (0.000 kg remaining). Continue by scanning the next pallet.")}
                     </p>
                   </div>
                 </div>
@@ -1223,16 +1176,16 @@ export default function PackagingPage() {
                   onClick={() => handleScanNextPallet()}
                   className="w-full sm:w-auto"
                 >
-                  Scan Next Pallet
+                  {idText("Scan Next Pallet")}
                 </Button>
               </div>
             )}
-            {savedSuccessRecord && renderRemainderGuidance()}
+            {idText(savedSuccessRecord && renderRemainderGuidance())}
             {weightValue > remainingPalletKg + 0.0005 && !savedSuccessRecord && (
               <div className="p-3 bg-destructive/15 border-2 border-destructive/40 rounded text-xs text-destructive font-semibold flex items-center gap-2">
                 <Icon name="alert-triangle" size={16} />
                 <span>
-                  Cannot print: package weight ({weightValue.toFixed(3)} kg) exceeds remaining pallet stock ({remainingPalletKg.toFixed(3)} kg). Please go back to Step 2 and adjust.
+                  {idText("Cannot print: package weight (")}{idText(weightValue.toFixed(3))} {idText("kg) exceeds remaining pallet stock (")}{idText(remainingPalletKg.toFixed(3))} {idText("kg). Please go back to Step 2 and adjust.")}
                 </span>
               </div>
             )}
@@ -1240,7 +1193,7 @@ export default function PackagingPage() {
               {!savedSuccessRecord ? (
                 <>
                   <Button variant="outline" onClick={() => setActiveStep(2)}>
-                    Back
+                    {idText("Back")}
                   </Button>
                   <Button
                     variant="primary"
@@ -1248,6 +1201,7 @@ export default function PackagingPage() {
                     touch
                     loading={isPrinting}
                     disabled={
+                      !productReady ||
                       !isWithinTolerance ||
                       isPrinting ||
                       weightValue <= 0 ||
@@ -1255,14 +1209,14 @@ export default function PackagingPage() {
                     }
                     onClick={handlePrintAndLabel}
                   >
-                    Print Label & Store
+                    {idText("Print Label & Store")}
                   </Button>
                 </>
               ) : (
                 <>
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-muted-foreground font-mono">
-                      Stored: {savedSuccessRecord.code} ({savedSuccessRecord.time})
+                      {idText("Stored:")} {idText(savedSuccessRecord.code)} ({idText(savedSuccessRecord.time)})
                     </span>
                     <Button
                       variant="outline"
@@ -1292,7 +1246,7 @@ export default function PackagingPage() {
                         )
                       }}
                     >
-                      Reprint Label
+                      {idText("Reprint Label")}
                     </Button>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -1303,7 +1257,7 @@ export default function PackagingPage() {
                         touch
                         onClick={() => handleScanNextPallet()}
                       >
-                        Pallet Depleted · Scan Next Pallet
+                        {idText("Pallet Depleted · Scan Next Pallet")}
                       </Button>
                     ) : isBelowMinSku ? (
                       <Button
@@ -1312,17 +1266,17 @@ export default function PackagingPage() {
                         touch
                         onClick={() => setCloseoutOpen(true)}
                       >
-                        Close &amp; Release Pallet ({remainingPalletKg.toFixed(3)} kg)
+                        {idText("Close & Release Pallet (")}{idText(remainingPalletKg.toFixed(3))} {idText("kg)")}
                       </Button>
                     ) : (
                       <>
                         {remainingPalletKg > 0.05 && (
                           <Button variant="outline" onClick={() => setCloseoutOpen(true)}>
-                            Close &amp; Release
+                            {idText("Close & Release")}
                           </Button>
                         )}
                         <Button variant="primary" icon="check" touch onClick={handleNextUnit}>
-                          Package Next Unit
+                          {idText("Package Next Unit")}
                         </Button>
                       </>
                     )}
@@ -1344,30 +1298,30 @@ export default function PackagingPage() {
           className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto"
           role="dialog"
           aria-modal="true"
-          aria-label="Packaging Focus Mode"
+          aria-label={idText("Packaging Focus Mode")}
         >
           <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
             <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
-              STATION 03 · PACKAGING
+              {idText("STATION 03 · PACKAGING")}
             </div>
 
             {/* Stepper Progress Bar in Focus Header */}
             <div className="hidden md:flex">
-              {renderStepperBar()}
+              {idText(renderStepperBar())}
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
               <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode} className="whitespace-nowrap">
-                Exit Focus Mode
+                {idText("Exit Focus Mode")}
               </Button>
             </div>
           </header>
 
           <main className="station-focus-main flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto space-y-6">
             <div className="md:hidden">
-              {renderStepperBar()}
+              {idText(renderStepperBar())}
             </div>
-            {renderSequentialContent()}
+            {idText(renderSequentialContent())}
           </main>
         </div>
       )}
@@ -1376,8 +1330,8 @@ export default function PackagingPage() {
       <div className="station-page space-y-6">
         <div className="no-print">
           <PageHeader
-            title="Stasiun 3: Pengemasan"
-            subtitle="Kemasan retail pouch, karton ekspor, dan penyimpanan gudang."
+            title={idText("Stasiun 3: Pengemasan")}
+            subtitle="Box packaging, label printing, and warehouse storage."
             actions={
               <Button
                 variant="outline"
@@ -1385,7 +1339,7 @@ export default function PackagingPage() {
                 icon="history"
                 onClick={() => document.getElementById('packaging-ledger')?.scrollIntoView({ behavior: 'smooth' })}
               >
-                Riwayat ({packages.length})
+                {idText("Riwayat (")}{idText(packages.length)})
               </Button>
             }
           />
@@ -1394,53 +1348,53 @@ export default function PackagingPage() {
         {/* Quick Stats Grid (4 Cards) */}
         <div className="station-quick-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pouch Retail</p>
-            <p className="text-2xl font-bold tracking-tight text-foreground">{pouchCount}</p>
-            <p className="text-xs text-muted-foreground">Unit 1 kg</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">1 kg Boxes</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">{idText(pouchCount)}</p>
+            <p className="text-xs text-muted-foreground">{idText("Unit 1 kg")}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Karton Ekspor</p>
-            <p className="text-2xl font-bold tracking-tight text-foreground">{exportCount}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">5 / 10 kg Boxes</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">{idText(exportCount)}</p>
             <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              Peti Ekspor
+              Box packaging
             </p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Timbangan</p>
-            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
-            <p className="text-xs text-muted-foreground font-mono">{scaleEndpoint}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{idText("Timbangan")}</p>
+            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{idText(scaleOnline ? 'Online' : 'Offline')}</p>
+            <p className="text-xs text-muted-foreground font-mono">{idText(scaleEndpoint)}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Printer</p>
-            <p className={`text-2xl font-bold tracking-tight ${printerOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{printerOnline ? 'Online' : 'Offline'}</p>
-            <p className="text-xs text-muted-foreground font-mono">{printerEndpoint}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{idText("Printer")}</p>
+            <p className={`text-2xl font-bold tracking-tight ${printerOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{idText(printerOnline ? 'Online' : 'Offline')}</p>
+            <p className="text-xs text-muted-foreground font-mono">{idText(printerEndpoint)}</p>
           </div>
         </div>
 
         {/* Sequential Stepper in Standard View */}
         <div id="packaging-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
-            <span className="font-semibold text-base text-foreground">Alur Kerja Pengemasan</span>
+            <span className="font-semibold text-base text-foreground">{idText("Alur Kerja Pengemasan")}</span>
             <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-              Focus Mode
+              {idText("Focus Mode")}
             </Button>
           </div>
 
           {/* Stepper Navigation Bar */}
           <div className="no-print">
-            {renderStepperBar()}
+            {idText(renderStepperBar())}
           </div>
 
           {/* Main Sequential Step Content */}
-          {renderSequentialContent()}
+          {idText(renderSequentialContent())}
         </div>
 
         {/* Packaged Output Ledger Table */}
         <div id="packaging-ledger" className="space-y-3 no-print">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight text-foreground">Riwayat Pengemasan Hari Ini</h2>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">{idText("Riwayat Pengemasan Hari Ini")}</h2>
             <span className="text-xs text-muted-foreground font-mono">
-              {packages.length} unit tercatat
+              {idText(packages.length)} {idText("unit tercatat")}
             </span>
           </div>
 
@@ -1454,7 +1408,7 @@ export default function PackagingPage() {
         isOpen={isCameraOpen}
         onClose={closeCameraModal}
         onScan={handleVerifyModalScan}
-        title="Scan Pallet QR Code · Station 03 Packaging"
+        title={idText("Scan Pallet QR Code · Station 03 Packaging")}
         subtitle="Align the QR code on the staged pallet within the camera view."
         manualPlaceholder="Scan or enter pallet code..."
       />
@@ -1479,8 +1433,8 @@ export default function PackagingPage() {
           <div className="bg-card border border-border p-6 shadow-xl max-w-sm w-full space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between border-b border-border pb-3">
               <div>
-                <h3 className="text-base font-bold text-foreground">Package Label Preview</h3>
-                <p className="text-xs text-muted-foreground mt-0.5 font-mono">{previewPackage.code}</p>
+                <h3 className="text-base font-bold text-foreground">{idText("Package Label Preview")}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5 font-mono">{idText(previewPackage.code)}</p>
               </div>
               <button
                 type="button"
@@ -1493,6 +1447,7 @@ export default function PackagingPage() {
 
             <div className="flex justify-center">
               <LabelPreview
+                product={previewPackage.product}
                 type={previewPackage.mode === 'RETAIL_POUCH' ? 'pouch' : 'export'}
                 code={previewPackage.code}
                 grade={previewPackage.grade}
@@ -1512,13 +1467,14 @@ export default function PackagingPage() {
                 variant="primary"
                 icon="print"
                 className="w-full"
-                disabled={reprintingId === previewPackage.id}
+                title={previewPackage.product?.gtinValid ? "Reprint Label" : "Product identity unavailable. GS1 label printing is blocked."}
+                disabled={reprintingId === previewPackage.id || !previewPackage.product?.gtinValid}
                 onClick={() => handleReprintPackage(previewPackage)}
               >
-                {reprintingId === previewPackage.id ? 'Printing Label…' : 'Reprint Label'}
+                {idText(reprintingId === previewPackage.id ? 'Printing Label…' : 'Reprint Label')}
               </Button>
               <Button variant="ghost" onClick={() => setPreviewPackage(null)} className="w-full">
-                Close Preview
+                {idText("Close Preview")}
               </Button>
             </div>
           </div>

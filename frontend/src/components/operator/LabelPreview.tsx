@@ -1,8 +1,12 @@
+import PackagingLabel from './PackagingLabel'
+import type { PackagingProduct } from '../../services/api'
+import { idText } from '@/lib/indonesian'
 import OfflineBarcode from '../shared/OfflineBarcode'
 import OfflineQrCode from '../shared/OfflineQrCode'
 
 export interface LabelPreviewProps {
   type: 'pallet' | 'grade' | 'pouch' | 'receipt' | 'waring' | 'export'
+  product?: PackagingProduct | null
   code: string
   farmerName?: string
   farmerId?: string
@@ -28,6 +32,7 @@ const TYPE_LABEL: Record<LabelPreviewProps['type'], string> = {
 
 export default function LabelPreview({
   type,
+  product,
   code,
   farmerName = '',
   farmerId = '',
@@ -41,6 +46,9 @@ export default function LabelPreview({
   screenFit = false,
   className = '',
 }: LabelPreviewProps) {
+  if (type === 'pouch' || type === 'export') {
+    return <PackagingLabel code={code} product={product} grade={grade} weightKg={weightKg} date={date} time={time} className={className} />
+  }
   // Barcode: shown for pallet, pouch, export, grade (omitted for receipt and waring)
   const showsBarcode = type !== 'receipt' && type !== 'waring'
   // QR Code: shown for waring, pallet, pouch, export, grade (omitted for receipt)
@@ -56,7 +64,7 @@ export default function LabelPreview({
   const showFarmerId = (type === 'receipt' || type === 'waring') && Boolean(farmerId)
   const showCommodity = type === 'receipt' && Boolean(commodity)
   const showStation = type === 'receipt' && Boolean(stationName)
-  const showGrade = (type === 'pouch' || type === 'export' || type === 'grade') && Boolean(grade)
+  const showGrade = type === 'grade' && Boolean(grade)
 
   const hasMetadata = showFarmer || showFarmerId || showCommodity || showStation || showGrade
 
@@ -68,8 +76,8 @@ export default function LabelPreview({
     >
       {/* 1. Header (Centered) */}
       <div className={`text-center border-b border-dashed border-gray-400 ${screenFit ? 'pb-1' : 'pb-2'}`}>
-        <strong className={`block tracking-wide ${screenFit ? 'text-xs' : 'text-sm'}`}>SMARTGEULIS</strong>
-        <span className="block text-xs font-semibold">{TYPE_LABEL[type]}</span>
+        <strong className={`block tracking-wide ${screenFit ? 'text-xs' : 'text-sm'}`}>{idText("SMARTGEULIS")}</strong>
+        <span className="block text-xs font-semibold">{idText(TYPE_LABEL[type])}</span>
       </div>
 
       {/* 2. Metadata (Left-aligned) */}
@@ -77,32 +85,32 @@ export default function LabelPreview({
         <div className={`text-left ${screenFit ? 'space-y-0.5' : 'space-y-1'} text-xs break-words`}>
           {showFarmer && (
             <div>
-              <span>Farmer: </span>
+              <span>{idText("Farmer:")} </span>
               <strong>{farmerName}</strong>
             </div>
           )}
           {showFarmerId && (
             <div>
-              <span>Farmer ID: </span>
-              <strong>{farmerId}</strong>
+              <span>{idText("Farmer ID:")} </span>
+              <strong>{idText(farmerId)}</strong>
             </div>
           )}
           {showGrade && (
             <div>
-              <span>Grade: </span>
-              <strong>{grade}</strong>
+              <span>{idText("Grade:")} </span>
+              <strong>{idText(grade)}</strong>
             </div>
           )}
           {showCommodity && (
             <div>
-              <span>Commodity: </span>
-              <strong>{commodity}</strong>
+              <span>{idText("Commodity:")} </span>
+              <strong>{idText(commodity)}</strong>
             </div>
           )}
           {showStation && (
             <div>
-              <span>Station: </span>
-              <strong>{stationName}</strong>
+              <span>{idText("Station:")} </span>
+              <strong>{idText(stationName)}</strong>
             </div>
           )}
         </div>
@@ -115,10 +123,10 @@ export default function LabelPreview({
         }`}
       >
         {displayWeight && (
-          <strong className={`block ${screenFit ? 'text-base' : 'text-lg'}`}>{displayWeight}</strong>
+          <strong className={`block ${screenFit ? 'text-base' : 'text-lg'}`}>{idText(displayWeight)}</strong>
         )}
         <strong className={`block tracking-wide break-all ${screenFit ? 'text-xs' : 'text-sm'}`}>
-          {code || 'PENDING'}
+          {idText(code || 'PENDING')}
         </strong>
 
         {/* 4. Barcode & QR Code (Centered) */}
@@ -146,8 +154,8 @@ export default function LabelPreview({
 
       {/* 5. Date/Time & Status Footer (Centered) */}
       <div className={`text-center space-y-0.5 text-xs border-t border-dashed border-gray-400 ${screenFit ? 'pt-1' : 'pt-2'}`}>
-        {displayTime && <div>{displayTime}</div>}
-        <div className="font-semibold tracking-wider">{statusText}</div>
+        {displayTime && <div>{idText(displayTime)}</div>}
+        <div className="font-semibold tracking-wider">{idText(statusText)}</div>
       </div>
     </div>
   )

@@ -218,7 +218,7 @@ const openapiJSON = `{
   "openapi": "3.0.3",
   "info": {
     "title": "SmartGeulis Traceability System API",
-    "description": "Production REST API for the SmartGeulis Potato Packhouse Traceability System. Covers Reception & Weighing (Station 01), Sorting & 3-Tier Grading (Station 02), 1 kg Pouch Retail Packaging (Station 03), Physical Pallets, Daily & Monthly Reporting with CSV downloads, and Hardware IoT Telemetry.",
+    "description": "Production REST API for the SmartGeulis Potato Packhouse Traceability System. Covers Reception & Weighing (Station 01), Sorting & 3-Tier Grading (Station 02), 1/5/10 kg Box Packaging (Station 03), Physical Pallets, Daily & Monthly Reporting with CSV downloads, and Hardware IoT Telemetry.",
     "version": "1.0.0",
     "contact": {
       "name": "SmartGeulis Engineering Team",
@@ -240,7 +240,7 @@ const openapiJSON = `{
     { "name": "Authentication", "description": "User login, profile management, and credential updates" },
     { "name": "Station 01: Weighing & Reception", "description": "Farmer harvest intake sacks, tare deduction, and waring logging" },
     { "name": "Station 02: Sorting & Grading", "description": "3-tier potato classification (Grade A, B, C) and pallet allocation" },
-    { "name": "Station 03: Retail Packaging", "description": "1 kg potato pouch packaging, GS1 barcode printing, and depletion" },
+    { "name": "Station 03: Retail Packaging", "description": "Box packaging with operational Code128 and GS1 EAN-13 labels, product snapshots, and stock depletion" },
     { "name": "Pallet Registry", "description": "Reusable physical warehouse pallets (PLT-001 through PLT-010)" },
     { "name": "Reports & Analytics", "description": "Daily recap, monthly recap, farmer rankings, and CSV downloads" },
     { "name": "Hardware & Scales", "description": "Modbus TCP digital scale configuration and live readings" },
@@ -496,29 +496,67 @@ const openapiJSON = `{
         }
       }
     },
+    "/packaging/products": {
+      "get": {
+        "tags": ["Station 03: Retail Packaging"],
+        "summary": "List Packaging products from ProductList.xlsx",
+        "description": "Six washed/unwashed box variants in 1, 5, and 10 kg sizes. gtinValid reports check-digit validity; invalid GTINs cannot be packaged.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Product catalog in the standard success/data wrapper" } }
+      }
+    },
+    "/packaging/records": {
+      "get": {
+        "tags": ["Station 03: Retail Packaging"],
+        "summary": "List stored packages with immutable product snapshots",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Package records with product snapshots; historical records may have product=null" } }
+      }
+    },
     "/packaging/pack": {
       "post": {
         "tags": ["Station 03: Retail Packaging"],
-        "summary": "Pack & Deplete 1 kg Retail Pouch",
+        "summary": "Pack one 1, 5, or 10 kg box",
+        "description": "Requires a valid catalog GTIN, matching source Sorting wash status, available pallet stock, configured scale capacity, and weight within tolerance. Invalid requests leave stock unchanged. Returns packageCode and a product snapshot. Grade comes from the source pallet.",
+        "security": [{ "BearerAuth": [] }],
         "requestBody": {
           "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["palletCode", "weightKg", "grade"],
-                "properties": {
-                  "palletCode": { "type": "string", "example": "PLT-001" },
-                  "weightKg": { "type": "number", "example": 1.0 },
-                  "grade": { "type": "string", "example": "A" }
-                }
-              }
+          "content": { "application/json": { "schema": {
+            "type": "object",
+            "required": ["palletCode", "productNumber", "quantity", "totalNetWeightKg"],
+            "properties": {
+              "palletCode": { "type": "string", "example": "PLT-001" },
+              "productNumber": { "type": "string", "example": "001" },
+              "quantity": { "type": "integer", "enum": [1] },
+              "totalNetWeightKg": { "type": "number", "example": 10.0 }
             }
-          }
+          } } }
         },
         "responses": {
-          "200": { "description": "Pouch packaged, label generated, and pallet inventory depleted" }
+          "201": { "description": "Box stored with product snapshot and pallet inventory depleted" },
+          "400": { "description": "Invalid product, GTIN, washing status, weight, or capacity; stock unchanged" },
+          "401": { "description": "Authentication required" },
+          "403": { "description": "Operator or administrator role required" }
         }
+      }
+    },
+    "/printers/packaging/print": {
+      "post": {
+        "tags": ["Station 03: Retail Packaging"],
+        "summary": "Print two barcodes from a persisted package snapshot",
+        "description": "Each job contains type=export (pouch is accepted for compatibility) and the saved package code. Client-supplied label metadata is ignored. Labels contain Code128 for the package code and EAN-13 for the product GTIN, without QR. Historical packages without a valid snapshot are rejected.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["jobs"], "properties": { "jobs": {
+            "type": "array", "minItems": 1, "maxItems": 4, "items": {
+              "type": "object", "required": ["type", "code"], "properties": {
+                "type": { "type": "string", "enum": ["export", "pouch"] },
+                "code": { "type": "string", "example": "EXP-20261115-0001" }
+              }
+            }
+          } }
+        } } } },
+        "responses": { "200": { "description": "Labels sent to the Packaging printer" }, "400": { "description": "Invalid or missing persisted product snapshot" } }
       }
     },
     "/pallets": {
@@ -596,7 +634,6 @@ const openapiJSON = `{
   }
 }
 `
-
 
 func (s *server) openapiSpec(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")

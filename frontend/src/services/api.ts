@@ -37,7 +37,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       localStorage.removeItem('user')
     }
     const errorMsg = payload?.error?.message || `Request failed with status ${response.status}`
-    throw new APIError(endpoint.startsWith('/weighing/batches') ? errorMsg : translateApiError(errorMsg, response.status), response.status, payload?.error?.code)
+    throw new APIError((endpoint.startsWith('/weighing/batches') || endpoint.startsWith('/packaging') || endpoint === '/printers/packaging/print') ? errorMsg : translateApiError(errorMsg, response.status), response.status, payload?.error?.code)
   }
 
   return payload
@@ -117,7 +117,19 @@ export interface PalletCloseout {
   createdAt: string
 }
 
+export interface PackagingProduct {
+  productNumber: string
+  gtin: string
+  brand: string
+  productName: string
+  package: 'box'
+  nominalWeightKg: 1 | 5 | 10
+  washDecision: 'WASHED' | 'UNWASHED'
+  gtinValid: boolean
+}
+
 export interface Pallet {
+  washDecision?: 'WASHED' | 'UNWASHED' | null
   id: string
   code: string
   tareKg: number
@@ -348,8 +360,13 @@ export const api = {
 
   // Station 03: Packaging
   packaging: {
+    products: async () => {
+      const res = await request<ApiResponse<PackagingProduct[]>>('/packaging/products')
+      return res.data
+    },
     pack: async (data: {
       palletCode: string
+      productNumber: string
       packageTypeCode: string
       quantity: number
       totalNetWeightKg: number
