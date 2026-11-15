@@ -8,10 +8,14 @@ import PageHeader from '../components/shared/PageHeader'
 import StatCard from '../components/shared/StatCard'
 import { formatWeight } from '../lib/utils'
 import { usePackhouseStore, type BufferWaringItem, type FinishedStockItem } from '../hooks/usePackhouseStore'
+import { useAuth } from '../hooks/useAuth'
+import CancelTransactionModal from '../components/admin/CancelTransactionModal'
 
 type WarehouseZone = 'buffer' | 'finished'
 
 export default function WarehousePage() {
+  const { user } = useAuth()
+  const [cancelModalRecord, setCancelModalRecord] = useState<{ code: string; farmerName?: string } | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const initialZone = (searchParams.get('zone') as WarehouseZone) || 'buffer'
   const [activeZone, setActiveZone] = useState<WarehouseZone>(initialZone)
@@ -87,9 +91,28 @@ export default function WarehousePage() {
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: 'Aksi',
       align: 'right',
-      render: () => <Link to="/dashboard/sorting"><Button size="sm" variant="outline">Open Sorting</Button></Link>,
+      render: (row) => (
+        <div className="flex items-center gap-1.5 justify-end">
+          <Link to="/dashboard/sorting">
+            <Button size="sm" variant="outline">
+              Buka Pemilahan
+            </Button>
+          </Link>
+          {user?.role === 'ADMIN' && (
+            <Button
+              size="sm"
+              variant="outline"
+              icon="trash"
+              className="text-destructive hover:bg-destructive/10 border-destructive/30"
+              onClick={() => setCancelModalRecord({ code: row.code, farmerName: row.farmerName })}
+            >
+              Batalkan
+            </Button>
+          )}
+        </div>
+      ),
     },
   ]
 
@@ -349,6 +372,18 @@ export default function WarehousePage() {
           </div>
         </div>
       )}
+
+      {/* Admin Transaction Cancellation Modal */}
+      <CancelTransactionModal
+        open={!!cancelModalRecord}
+        waringCode={cancelModalRecord?.code}
+        farmerName={cancelModalRecord?.farmerName}
+        onClose={() => setCancelModalRecord(null)}
+        onSuccess={() => {
+          setCancelModalRecord(null)
+          window.location.reload()
+        }}
+      />
     </div>
   )
 }

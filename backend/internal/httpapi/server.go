@@ -219,6 +219,8 @@ func (s *server) handle(w http.ResponseWriter, r *http.Request) {
 			s.empty(w, "traceability")
 		case "labels":
 			s.empty(w, "labels")
+		case "admin":
+			s.adminHandler(w, r, parts[1:])
 		default:
 			fail(w, 404, "NOT_FOUND", "Route not found")
 		}
@@ -975,6 +977,20 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 			}
 		}
 		write(w, map[string]any{"success": true, "data": out})
+		return
+	}
+	if r.Method == "DELETE" && len(p) == 1 {
+		_, role, err := s.authenticatedClaims(r)
+		if err != nil {
+			fail(w, 401, "UNAUTHORIZED", "Valid administrator authentication is required")
+			return
+		}
+		if role != "ADMIN" {
+			fail(w, 403, "FORBIDDEN", "Only administrators can cancel or delete intake transactions")
+			return
+		}
+		target := strings.TrimSpace(p[0])
+		s.executeCancelTransaction(w, r, cancelRequest{WaringID: target, WaringCode: target})
 		return
 	}
 	if r.Method == "POST" && len(p) == 0 {
@@ -2605,6 +2621,402 @@ func (s *server) warehouse(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, map[string]any{"success": true, "data": map[string]any{"bufferZone": map[string]any{"waringCount": bufferCount, "totalWeightKg": bufferKg}, "finishedGoodsZone": map[string]any{"totalUnits": finishedUnits, "totalWeightKg": finishedKg, "pouchCount": pouches, "cartonCount": cartons}}})
 }
+
+type cancelRequest struct {
+	WaringCode string `json:"waringCode"`
+	WaringID   string `json:"waringId"`
+	FarmerID   string `json:"farmerId"`
+	Date       string `json:"date"`
+	Reason     string `json:"reason"`
+}
+
+func (s *server) adminHandler(w http.ResponseWriter, r *http.Request, p []string) {
+	_, role, err := s.authenticatedClaims(r)
+	if err != nil {
+		fail(w, 401, "UNAUTHORIZED", "Valid administrator authentication is required")
+		return
+	}
+	if role != "ADMIN" {
+		fail(w, 403, "FORBIDDEN", "Only administrators can perform transaction cancellation")
+		return
+	}
+
+	if len(p) >= 2 && p[0] == "transactions" {
+		switch p[1] {
+		case "inspect":
+			if r.Method != "GET" {
+				fail(w, 405, "METHOD_NOT_ALLOWED", "Method not allowed")
+				return
+			}
+			s.adminInspectTransaction(w, r)
+			return
+		case "cancel":
+			if r.Method != "POST" && r.Method != "DELETE" {
+				fail(w, 405, "METHOD_NOT_ALLOWED", "Method not allowed")
+				return
+			}
+			var req cancelRequest
+			_ = decode(r, &req)
+			if req.WaringCode == "" {
+				req.WaringCode = strings.TrimSpace(r.URL.Query().Get("waringCode"))
+			}
+			if req.WaringID == "" {
+				req.WaringID = strings.TrimSpace(r.URL.Query().Get("waringId"))
+			}
+			if req.FarmerID == "" {
+				req.FarmerID = strings.TrimSpace(r.URL.Query().Get("farmerId"))
+			}
+			if req.Date == "" {
+				req.Date = strings.TrimSpace(r.URL.Query().Get("date"))
+			}
+			s.executeCancelTransaction(w, r, req)
+			return
+		}
+	}
+	fail(w, 404, "NOT_FOUND", "Admin route not found")
+}
+
+func (s *server) adminInspectTransaction(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("waringCode"))
+	if q == "" {
+		q = strings.TrimSpace(r.URL.Query().Get("code"))
+	}
+	waringID := strings.TrimSpace(r.URL.Query().Get("waringId"))
+	if waringID == "" {
+		waringID = strings.TrimSpace(r.URL.Query().Get("id"))
+	}
+	farmerID := strings.TrimSpace(r.URL.Query().Get("farmerId"))
+	dateStr := strings.TrimSpace(r.URL.Query().Get("date"))
+
+	if q == "" && waringID == "" && farmerID == "" {
+		fail(w, 400, "VALIDATION_ERROR", "waringCode, waringId, or farmerId parameter is required")
+		return
+	}
+
+	var query string
+	var args []any
+	if waringID != "" {
+		query = `
+			SELECT w.id, w.code, f.code, f.name, w."grossWeightKg", w."tareWeightKg", w."netWeightKg", w.status, w."createdAt"
+			FROM warings w
+			JOIN farmers f ON f.id = w."farmerId"
+			WHERE w.id = $1 OR UPPER(w.code) = UPPER($1)
+		`
+		args = append(args, waringID)
+	} else if q != "" {
+		query = `
+			SELECT w.id, w.code, f.code, f.name, w."grossWeightKg", w."tareWeightKg", w."netWeightKg", w.status, w."createdAt"
+			FROM warings w
+			JOIN farmers f ON f.id = w."farmerId"
+			WHERE UPPER(w.code) = UPPER($1) OR w.id = $1
+		`
+		args = append(args, q)
+	} else if farmerID != "" {
+		if dateStr != "" {
+			query = `
+				SELECT w.id, w.code, f.code, f.name, w."grossWeightKg", w."tareWeightKg", w."netWeightKg", w.status, w."createdAt"
+				FROM warings w
+				JOIN farmers f ON f.id = w."farmerId"
+				WHERE (w."farmerId" = $1 OR UPPER(f.code) = UPPER($1)) AND DATE(w."createdAt") = $2::date
+				ORDER BY w."createdAt" DESC
+			`
+			args = append(args, farmerID, dateStr)
+		} else {
+			query = `
+				SELECT w.id, w.code, f.code, f.name, w."grossWeightKg", w."tareWeightKg", w."netWeightKg", w.status, w."createdAt"
+				FROM warings w
+				JOIN farmers f ON f.id = w."farmerId"
+				WHERE w."farmerId" = $1 OR UPPER(f.code) = UPPER($1)
+				ORDER BY w."createdAt" DESC
+			`
+			args = append(args, farmerID)
+		}
+	}
+
+	rows, err := s.db.Query(r.Context(), query, args...)
+	if err != nil {
+		fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to query transactions: "+err.Error())
+		return
+	}
+	defer rows.Close()
+
+	type inspectionItem struct {
+		WaringID             string   `json:"waringId"`
+		WaringCode           string   `json:"waringCode"`
+		FarmerCode           string   `json:"farmerCode"`
+		FarmerName           string   `json:"farmerName"`
+		GrossWeightKg        float64  `json:"grossWeightKg"`
+		TareWeightKg         float64  `json:"tareWeightKg"`
+		NetWeightKg          float64  `json:"netWeightKg"`
+		Status               string   `json:"status"`
+		CreatedAt            string   `json:"createdAt"`
+		HasSortingBatch      bool     `json:"hasSortingBatch"`
+		SortingBatchID       *string  `json:"sortingBatchId,omitempty"`
+		GradeAKg             float64  `json:"gradeAKg"`
+		GradeBKg             float64  `json:"gradeBKg"`
+		GradeCKg             float64  `json:"gradeCKg"`
+		LinkedPalletCodes    []string `json:"linkedPalletCodes"`
+		PackageUnitsCount    int      `json:"packageUnitsCount"`
+		DispatchedUnitsCount int      `json:"dispatchedUnitsCount"`
+		CanCancel            bool     `json:"canCancel"`
+		BlockReason          string   `json:"blockReason,omitempty"`
+	}
+
+	items := []inspectionItem{}
+	for rows.Next() {
+		var item inspectionItem
+		var at time.Time
+		if err := rows.Scan(&item.WaringID, &item.WaringCode, &item.FarmerCode, &item.FarmerName, &item.GrossWeightKg, &item.TareWeightKg, &item.NetWeightKg, &item.Status, &at); err != nil {
+			continue
+		}
+		item.CreatedAt = at.Format(time.RFC3339)
+		item.CanCancel = true
+		item.LinkedPalletCodes = []string{}
+
+		var sbID string
+		var gA, gB, gC float64
+		var pA, pB, pC *string
+		sbErr := s.db.QueryRow(r.Context(), `
+			SELECT id, "gradeA_Kg", "gradeB_Kg", "gradeC_Kg", "gradeA_PalletCode", "gradeB_PalletCode", "gradeC_PalletCode"
+			FROM sorting_batches
+			WHERE "waringId" = $1
+		`, item.WaringID).Scan(&sbID, &gA, &gB, &gC, &pA, &pB, &pC)
+
+		if sbErr == nil {
+			item.HasSortingBatch = true
+			item.SortingBatchID = &sbID
+			item.GradeAKg = gA
+			item.GradeBKg = gB
+			item.GradeCKg = gC
+			if pA != nil && *pA != "" {
+				item.LinkedPalletCodes = append(item.LinkedPalletCodes, *pA)
+			}
+			if pB != nil && *pB != "" {
+				item.LinkedPalletCodes = append(item.LinkedPalletCodes, *pB)
+			}
+			if pC != nil && *pC != "" {
+				item.LinkedPalletCodes = append(item.LinkedPalletCodes, *pC)
+			}
+
+			var totalPkgs, dispatchedPkgs int
+			_ = s.db.QueryRow(r.Context(), `
+				SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'DISPATCHED' OR "deliveryId" IS NOT NULL)
+				FROM package_units
+				WHERE "sortingBatchId" = $1
+				   OR "sourcePalletId" IN (SELECT id FROM pallets WHERE "sortingBatchId" = $1)
+			`, sbID).Scan(&totalPkgs, &dispatchedPkgs)
+
+			item.PackageUnitsCount = totalPkgs
+			item.DispatchedUnitsCount = dispatchedPkgs
+			if dispatchedPkgs > 0 {
+				item.CanCancel = false
+				item.BlockReason = fmt.Sprintf("%d kemasan terkait telah dikirim (DISPATCHED)", dispatchedPkgs)
+			}
+		}
+
+		items = append(items, item)
+	}
+
+	if len(items) == 0 {
+		fail(w, 404, "TRANSACTION_NOT_FOUND", "No matching intake transactions found")
+		return
+	}
+
+	write(w, map[string]any{"success": true, "data": items})
+}
+
+func (s *server) executeCancelTransaction(w http.ResponseWriter, r *http.Request, req cancelRequest) {
+	if req.WaringCode == "" && req.WaringID == "" && req.FarmerID == "" {
+		fail(w, 400, "VALIDATION_ERROR", "waringCode, waringId, or farmerId is required to cancel a transaction")
+		return
+	}
+
+	tx, err := s.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to start database transaction: "+err.Error())
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var query string
+	var args []any
+	if req.WaringID != "" {
+		query = `SELECT id, code FROM warings WHERE id = $1 OR UPPER(code) = UPPER($1)`
+		args = append(args, req.WaringID)
+	} else if req.WaringCode != "" {
+		query = `SELECT id, code FROM warings WHERE UPPER(code) = UPPER($1) OR id = $1`
+		args = append(args, strings.TrimSpace(req.WaringCode))
+	} else if req.FarmerID != "" {
+		if req.Date != "" {
+			query = `SELECT id, code FROM warings WHERE ("farmerId" = $1 OR "farmerId" IN (SELECT id FROM farmers WHERE UPPER(code) = UPPER($1))) AND DATE("createdAt") = $2::date`
+			args = append(args, req.FarmerID, req.Date)
+		} else {
+			query = `SELECT id, code FROM warings WHERE "farmerId" = $1 OR "farmerId" IN (SELECT id FROM farmers WHERE UPPER(code) = UPPER($1))`
+			args = append(args, req.FarmerID)
+		}
+	}
+
+	rows, err := tx.Query(r.Context(), query, args...)
+	if err != nil {
+		fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to query target transactions: "+err.Error())
+		return
+	}
+	var waringIDs []string
+	var waringCodes []string
+	for rows.Next() {
+		var wid, wcode string
+		if err := rows.Scan(&wid, &wcode); err == nil {
+			waringIDs = append(waringIDs, wid)
+			waringCodes = append(waringCodes, wcode)
+		}
+	}
+	rows.Close()
+
+	if len(waringIDs) == 0 {
+		fail(w, 404, "TRANSACTION_NOT_FOUND", "No matching intake transactions found")
+		return
+	}
+
+	// 2. Find linked sorting batches
+	sbRows, err := tx.Query(r.Context(), `
+		SELECT id, "gradeA_PalletCode", "gradeB_PalletCode", "gradeC_PalletCode"
+		FROM sorting_batches
+		WHERE "waringId" = ANY($1)
+	`, waringIDs)
+	if err != nil {
+		fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to query linked sorting batches: "+err.Error())
+		return
+	}
+	var sortingBatchIDs []string
+	palletCodeSet := make(map[string]struct{})
+	for sbRows.Next() {
+		var sbid string
+		var pA, pB, pC *string
+		if err := sbRows.Scan(&sbid, &pA, &pB, &pC); err == nil {
+			sortingBatchIDs = append(sortingBatchIDs, sbid)
+			if pA != nil && *pA != "" {
+				palletCodeSet[strings.ToUpper(strings.TrimSpace(*pA))] = struct{}{}
+			}
+			if pB != nil && *pB != "" {
+				palletCodeSet[strings.ToUpper(strings.TrimSpace(*pB))] = struct{}{}
+			}
+			if pC != nil && *pC != "" {
+				palletCodeSet[strings.ToUpper(strings.TrimSpace(*pC))] = struct{}{}
+			}
+		}
+	}
+	sbRows.Close()
+
+	deletedPackagesCount := 0
+	if len(sortingBatchIDs) > 0 {
+		// Check if any package units are already dispatched
+		var dispatchedCount int
+		err = tx.QueryRow(r.Context(), `
+			SELECT COUNT(*) FROM package_units
+			WHERE ("sortingBatchId" = ANY($1) OR "sourcePalletId" IN (SELECT id FROM pallets WHERE "sortingBatchId" = ANY($1)))
+			  AND (status = 'DISPATCHED' OR "deliveryId" IS NOT NULL)
+		`, sortingBatchIDs).Scan(&dispatchedCount)
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to check package status: "+err.Error())
+			return
+		}
+		if dispatchedCount > 0 {
+			fail(w, 409, "CANNOT_CANCEL_DISPATCHED", fmt.Sprintf("Transaksi tidak dapat dibatalkan: terdapat %d kemasan yang sudah berstatus DISPATCHED atau masuk pengiriman aktif.", dispatchedCount))
+			return
+		}
+
+		// Delete connected package units
+		res, err := tx.Exec(r.Context(), `
+			DELETE FROM package_units
+			WHERE "sortingBatchId" = ANY($1)
+			   OR "sourcePalletId" IN (SELECT id FROM pallets WHERE "sortingBatchId" = ANY($1))
+		`, sortingBatchIDs)
+		if err == nil {
+			deletedPackagesCount = int(res.RowsAffected())
+		}
+
+		// Delete pallet closeouts
+		_, _ = tx.Exec(r.Context(), `DELETE FROM pallet_closeouts WHERE "sortingBatchId" = ANY($1)`, sortingBatchIDs)
+
+		// 3. Reset physical pallets back to AVAILABLE
+		palletCodes := make([]string, 0, len(palletCodeSet))
+		for code := range palletCodeSet {
+			palletCodes = append(palletCodes, code)
+		}
+
+		_, err = tx.Exec(r.Context(), `
+			UPDATE pallets
+			SET status = 'AVAILABLE',
+			    grade = NULL,
+			    "weightKg" = 0,
+			    "remainingKg" = 0,
+			    "farmerId" = NULL,
+			    "sortingBatchId" = NULL,
+			    notes = 'Tersedia (Reset setelah pembatalan transaksi)',
+			    "updatedAt" = NOW()
+			WHERE "sortingBatchId" = ANY($1)
+		`, sortingBatchIDs)
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to reset physical pallets: "+err.Error())
+			return
+		}
+
+		if len(palletCodes) > 0 {
+			_, err = tx.Exec(r.Context(), `
+				UPDATE pallets
+				SET status = 'AVAILABLE',
+				    grade = NULL,
+				    "weightKg" = 0,
+				    "remainingKg" = 0,
+				    "farmerId" = NULL,
+				    "sortingBatchId" = NULL,
+				    notes = 'Tersedia (Reset setelah pembatalan transaksi)',
+				    "updatedAt" = NOW()
+				WHERE code = ANY($1)
+			`, palletCodes)
+			if err != nil {
+				fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to reset physical pallets by code: "+err.Error())
+				return
+			}
+		}
+
+		// Delete sorting batches
+		_, err = tx.Exec(r.Context(), `DELETE FROM sorting_batches WHERE id = ANY($1)`, sortingBatchIDs)
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to delete sorting batches: "+err.Error())
+			return
+		}
+	}
+
+	// 4. Delete warings
+	_, err = tx.Exec(r.Context(), `DELETE FROM warings WHERE id = ANY($1)`, waringIDs)
+	if err != nil {
+		fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to delete intake warings: "+err.Error())
+		return
+	}
+
+	if err := tx.Commit(r.Context()); err != nil {
+		fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to commit cancellation transaction: "+err.Error())
+		return
+	}
+
+	palletCodes := make([]string, 0, len(palletCodeSet))
+	for code := range palletCodeSet {
+		palletCodes = append(palletCodes, code)
+	}
+
+	write(w, map[string]any{
+		"success": true,
+		"data": map[string]any{
+			"cancelledWarings":      waringCodes,
+			"deletedSortingBatches": len(sortingBatchIDs),
+			"deletedPackages":       deletedPackagesCount,
+			"palletsReset":          palletCodes,
+			"message":               "Transaksi berhasil dibatalkan. Palet fisik telah dikembalikan ke status tersedia.",
+		},
+	})
+}
+
 func (s *server) empty(w http.ResponseWriter, name string) {
 	write(w, map[string]any{"success": true, "data": []any{}})
 }
