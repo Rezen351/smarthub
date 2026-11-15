@@ -6,7 +6,7 @@ import Icon, { type IconName } from '../components/shared/Icon'
 import PageHeader from '../components/shared/PageHeader'
 import StatCard from '../components/shared/StatCard'
 import { api } from '../services/api'
-import { formatSafeDate } from '../lib/utils'
+import { formatSafeDate, formatWeight } from '../lib/utils'
 
 interface WorkstationCard {
   id: string
@@ -179,7 +179,7 @@ export default function OperatorDashboardHome() {
       tag: 'STATION 01',
       badgeTone: 'accent',
       scaleName: `Scale (${tcpNodes.find((node) => node.stationNum === '01')?.capacity || 'Not configured'})`,
-      metric: `${metrics.grossIntakeKg.toLocaleString()} kg · ${metrics.grossIntakeWarings} Warings`,
+      metric: `${formatWeight(metrics.grossIntakeKg)} kg · ${metrics.grossIntakeWarings} Warings`,
     },
     {
       id: 'ws-2',
@@ -228,7 +228,7 @@ export default function OperatorDashboardHome() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Today Gross Intake"
-          value={`${metrics.grossIntakeKg.toLocaleString()} kg`}
+          value={`${formatWeight(metrics.grossIntakeKg)} kg`}
           sub={`${metrics.grossIntakeWarings} Warings`}
           icon="scale"
           trend="neutral"
@@ -238,7 +238,7 @@ export default function OperatorDashboardHome() {
           value={`${metrics.bufferWarings} Warings`}
           sub={
             metrics.bufferWarings > 0
-              ? `${metrics.bufferKg.toLocaleString()} kg awaiting sort`
+              ? `${formatWeight(metrics.bufferKg)} kg awaiting sort`
               : 'Queue empty'
           }
           icon="box"

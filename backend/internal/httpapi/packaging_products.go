@@ -20,7 +20,7 @@ type packagingProduct struct {
 }
 
 func validGTIN13(value string) bool {
-	if len(value) != 13 {
+	if !hasGTIN13Digits(value) {
 		return false
 	}
 	sum := 0
@@ -37,12 +37,24 @@ func validGTIN13(value string) bool {
 	return sum%10 == 0
 }
 
+func hasGTIN13Digits(value string) bool {
+	if len(value) != 13 {
+		return false
+	}
+	for _, c := range value {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
 func validatePackagingProduct(product packagingProduct, wash string, weight float64, quantity int) error {
 	if quantity != 1 {
 		return fmt.Errorf("Package quantity must be one")
 	}
-	if !validGTIN13(product.GTIN) {
-		return fmt.Errorf("Product %s has an invalid GTIN. Confirm the official GTIN before packaging", product.ProductNumber)
+	if !hasGTIN13Digits(product.GTIN) {
+		return fmt.Errorf("Product %s must have a 13-digit GTIN before packaging", product.ProductNumber)
 	}
 	if wash != "WASHED" && wash != "UNWASHED" {
 		return fmt.Errorf("The source Sorting batch has no washing status")
@@ -96,8 +108,8 @@ func (s *server) packagePrintJob(ctx context.Context, code string) (printJob, er
 	if err != nil {
 		return job, fmt.Errorf("Load package label: %w", err)
 	}
-	if snapshot == nil || !validGTIN13(snapshot.GTIN) {
-		return job, fmt.Errorf("Package has no valid product snapshot and cannot print a GS1 label")
+	if snapshot == nil || !hasGTIN13Digits(snapshot.GTIN) {
+		return job, fmt.Errorf("Package has no usable 13-digit product snapshot and cannot print a GS1 label")
 	}
 	job.Type = "export"
 	job.Product = snapshot

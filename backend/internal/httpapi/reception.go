@@ -348,12 +348,12 @@ func formatReceptionReceipt(items []receptionWaring) string {
 	var gross, tare, netWeight float64
 	for i, item := range items {
 		fmt.Fprintf(&out, "%d. %s\n", i+1, item.Code)
-		fmt.Fprintf(&out, "Gross %.3f  Tare %.3f kg\nNet %.3f kg\n", item.GrossWeightKg, item.TareWeightKg, item.NetWeightKg)
+		fmt.Fprintf(&out, "Gross %s  Tare %s kg\nNet %s kg\n", formatWeightKg(item.GrossWeightKg), formatWeightKg(item.TareWeightKg), formatWeightKg(item.NetWeightKg))
 		gross += item.GrossWeightKg
 		tare += item.TareWeightKg
 		netWeight += item.NetWeightKg
 	}
-	fmt.Fprintf(&out, "--------------------------------\nTotal gross: %.3f kg\nTotal tare:  %.3f kg\nTotal net:   %.3f kg\n", roundReceptionKg(gross), roundReceptionKg(tare), roundReceptionKg(netWeight))
+	fmt.Fprintf(&out, "--------------------------------\nTotal gross: %s kg\nTotal tare:  %s kg\nTotal net:   %s kg\n", formatWeightKg(roundReceptionKg(gross)), formatWeightKg(roundReceptionKg(tare)), formatWeightKg(roundReceptionKg(netWeight)))
 	return out.String()
 }
 

@@ -306,8 +306,8 @@ export default function PackagingPage() {
 
   const targetKg = packagingMode === 'RETAIL_POUCH' ? 1.0 : exportTargetKg
   const selectedProduct = products.find(p => p.nominalWeightKg === targetKg && p.washDecision === sourceWash)
-  const productReady = Boolean(selectedProduct?.gtinValid)
-  const productError = !sourceWash ? 'The source Sorting batch has no washing status.' : !selectedProduct ? 'Packaging product unavailable.' : !selectedProduct.gtinValid ? `Invalid GTIN: ${selectedProduct.gtin}. Confirm the official GTIN before printing.` : null
+  const productReady = Boolean(selectedProduct && /^\d{13}$/.test(selectedProduct.gtin))
+  const productError = !sourceWash ? 'The source Sorting batch has no washing status.' : !selectedProduct ? 'Packaging product unavailable.' : !/^\d{13}$/.test(selectedProduct.gtin) ? `A 13-digit GTIN is required. Current value: ${selectedProduct.gtin}.` : null
   const toleranceKg = packagingMode === 'RETAIL_POUCH' ? 0.005 : 0.05
   const weightValue = Number(currentWeight) || 0
   const isWithinTolerance = Math.abs(weightValue - targetKg) <= toleranceKg
@@ -318,7 +318,7 @@ export default function PackagingPage() {
   const [previewPackage, setPreviewPackage] = useState<PackageRecord | null>(null)
 
   const handleReprintPackage = (row: PackageRecord) => {
-    if (!row.product?.gtinValid) { toast.error('Product identity unavailable. GS1 label printing is blocked.'); return }
+    if (!row.product || !/^\d{13}$/.test(row.product.gtin)) { toast.error('A 13-digit GTIN is required to print this label.'); return }
     setReprintingId(row.id)
     const now = new Date()
     const printDate = row.date || formatSafeDate(now)
@@ -404,8 +404,8 @@ export default function PackagingPage() {
           <div className="space-y-0.5">
             <div className="font-bold">
               {idText(isBelowMinSku
-                ? `Sub-Minimum Remainder (${remainingPalletKg.toFixed(3)} kg < 1.000 kg)`
-                : `Remaining Stock (${remainingPalletKg.toFixed(3)} kg) Below ${targetKg} kg Spec`)}
+                ? `Sub-Minimum Remainder (${formatWeight(remainingPalletKg, 3)} kg < 1,000 kg)`
+                : `Remaining Stock (${formatWeight(remainingPalletKg, 3)} kg) Below ${targetKg} kg Spec`)}
             </div>
             <p className="text-amber-800/90 dark:text-amber-300/90">
               {idText(isBelowMinSku
@@ -520,14 +520,14 @@ export default function PackagingPage() {
 
     if (weightValue > remainingPalletKg + 0.0005) {
       toast.error(
-        `Package weight ${weightValue.toFixed(3)} kg exceeds pallet ${sourcePalletCode} remaining weight of ${remainingPalletKg.toFixed(3)} kg`,
+        `Package weight ${formatWeight(weightValue, 3)} kg exceeds pallet ${sourcePalletCode} remaining weight of ${formatWeight(remainingPalletKg, 3)} kg`,
       )
       return
     }
 
     if (!isWithinTolerance) {
       toast.error(
-        `Weight ${currentWeight} kg is outside tolerance for ${
+        `Weight ${formatWeight(currentWeight, 3)} kg is outside tolerance for ${
           packagingMode === 'RETAIL_POUCH' ? '1 kg box' : `${targetKg} kg box`
         }.`,
       )
@@ -684,9 +684,9 @@ export default function PackagingPage() {
             variant="outline"
             size="sm"
             icon="print"
-            disabled={reprintingId === row.id || !row.product?.gtinValid}
+            disabled={reprintingId === row.id || !row.product || !/^\d{13}$/.test(row.product.gtin)}
             onClick={() => handleReprintPackage(row)}
-            title={row.product?.gtinValid ? `Reprint label ${row.code}` : "Product identity unavailable. GS1 label printing is blocked."}
+            title={row.product && /^\d{13}$/.test(row.product.gtin) ? `Reprint label ${row.code}` : "A 13-digit GTIN is required to print this label."}
           >
             {idText(reprintingId === row.id ? 'Mencetak…' : 'Cetak Ulang')}
           </Button>
@@ -832,7 +832,7 @@ export default function PackagingPage() {
               </div>
               {sourcePalletCode && sourcePalletRemainingKg !== null && (
                 <span className={`text-xs font-mono block ${remainingPalletKg <= 0 ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
-                  {idText("Remaining:")} {idText(remainingPalletKg.toFixed(3))} {idText("kg")} {idText(remainingPalletKg <= 0 && '(Depleted)')}
+                  {idText("Remaining:")} {idText(formatWeight(remainingPalletKg, 3))} {idText("kg")} {idText(remainingPalletKg <= 0 && '(Depleted)')}
                 </span>
               )}
             </div>
@@ -885,7 +885,6 @@ export default function PackagingPage() {
             </div>
             <p className="text-xs">Sorting: {sourceWash || 'Unavailable'}</p>
             {selectedProduct && <p className="text-xs">{selectedProduct.productName} · GTIN {selectedProduct.gtin}</p>}
-            <div className="text-xs flex flex-wrap gap-2">{products.map(product => <span key={product.productNumber} className="border border-border p-2">{product.productName}: {product.gtinValid ? 'Valid GTIN' : 'Invalid GTIN'}</span>)}</div>
             {productError && <p role="alert" className="text-xs text-destructive">{productError}</p>}
           </div>
 
@@ -951,7 +950,7 @@ export default function PackagingPage() {
                 <div>
                   <span className="text-xs text-muted-foreground block">{idText("Target")}</span>
                   <span className="text-base font-bold text-foreground">
-                    {idText(targetKg.toFixed(3))} {idText("kg (±")}{idText(toleranceKg)} {idText("kg)")}
+                    {idText(formatWeight(targetKg, 3))} {idText("kg (±")}{idText(formatWeight(toleranceKg))} {idText("kg)")}
                   </span>
                 </div>
                 <div>
@@ -961,7 +960,7 @@ export default function PackagingPage() {
                       isWithinTolerance ? 'text-emerald-700' : 'text-red-700'
                     }`}
                   >
-                    {idText((weightValue - targetKg > 0 ? '+' : '') + (weightValue - targetKg).toFixed(3))} {idText("kg")}
+                    {idText((weightValue - targetKg > 0 ? '+' : '') + formatWeight(weightValue - targetKg, 3))} {idText("kg")}
                   </span>
                 </div>
                 <div>
@@ -1021,7 +1020,7 @@ export default function PackagingPage() {
                 <div className="flex items-center gap-2 text-xs font-semibold text-amber-800 dark:text-amber-400">
                   <Icon name="alert-triangle" size={16} />
                   <span>
-                    {idText("Pallet")} {idText(sourcePalletCode)} {idText("is fully depleted (0.000 kg). Cannot package further units.")}
+                    {idText("Pallet")} {idText(sourcePalletCode)} {idText("is fully depleted (0,000 kg). Cannot package further units.")}
                   </span>
                 </div>
                 <Button
@@ -1037,7 +1036,7 @@ export default function PackagingPage() {
             {weightValue > remainingPalletKg + 0.0005 && remainingPalletKg > 0.0005 && (
               <div className="p-3 bg-destructive/10 border border-destructive/30 rounded flex items-center justify-between text-xs text-destructive flex-wrap gap-2">
                 <span>
-                  {idText("Package weight (")}{idText(weightValue.toFixed(3))} {idText("kg) exceeds remaining pallet stock (")}{idText(remainingPalletKg.toFixed(3))} {idText("kg).")}
+                  {idText("Package weight (")}{idText(formatWeight(weightValue, 3))} {idText("kg) exceeds remaining pallet stock (")}{idText(formatWeight(remainingPalletKg, 3))} {idText("kg).")}
                 </span>
               </div>
             )}
@@ -1111,7 +1110,7 @@ export default function PackagingPage() {
               <span className="text-2xl font-black text-emerald-700 dark:text-emerald-400 block font-mono">
                 {idText(formatWeight(weightValue))} <span className="text-xs font-normal text-muted-foreground">{idText("kg")}</span>
               </span>
-              <span className="text-xs text-muted-foreground">{idText("Target:")} {idText(targetKg.toFixed(3))} {idText("kg")}</span>
+              <span className="text-xs text-muted-foreground">{idText("Target:")} {idText(formatWeight(targetKg, 3))} {idText("kg")}</span>
             </div>
             <div>
               <span className="text-xs text-muted-foreground block font-medium">{idText("Package Type")}</span>
@@ -1165,7 +1164,7 @@ export default function PackagingPage() {
                   <div>
                     <h4 className="font-bold text-sm text-foreground">{idText("Pallet Depleted")}</h4>
                     <p className="text-xs text-muted-foreground">
-                      {idText("Pallet")} <span className="font-mono font-bold text-foreground">{idText(sourcePalletCode || savedSuccessRecord.sourcePallet)}</span> {idText("is fully packaged (0.000 kg remaining). Continue by scanning the next pallet.")}
+                      {idText("Pallet")} <span className="font-mono font-bold text-foreground">{idText(sourcePalletCode || savedSuccessRecord.sourcePallet)}</span> {idText("is fully packaged (0,000 kg remaining). Continue by scanning the next pallet.")}
                     </p>
                   </div>
                 </div>
@@ -1185,7 +1184,7 @@ export default function PackagingPage() {
               <div className="p-3 bg-destructive/15 border-2 border-destructive/40 rounded text-xs text-destructive font-semibold flex items-center gap-2">
                 <Icon name="alert-triangle" size={16} />
                 <span>
-                  {idText("Cannot print: package weight (")}{idText(weightValue.toFixed(3))} {idText("kg) exceeds remaining pallet stock (")}{idText(remainingPalletKg.toFixed(3))} {idText("kg). Please go back to Step 2 and adjust.")}
+                  {idText("Cannot print: package weight (")}{idText(formatWeight(weightValue, 3))} {idText("kg) exceeds remaining pallet stock (")}{idText(formatWeight(remainingPalletKg, 3))} {idText("kg). Please go back to Step 2 and adjust.")}
                 </span>
               </div>
             )}
@@ -1266,7 +1265,7 @@ export default function PackagingPage() {
                         touch
                         onClick={() => setCloseoutOpen(true)}
                       >
-                        {idText("Close & Release Pallet (")}{idText(remainingPalletKg.toFixed(3))} {idText("kg)")}
+                        {idText("Close & Release Pallet (")}{idText(formatWeight(remainingPalletKg, 3))} {idText("kg)")}
                       </Button>
                     ) : (
                       <>
@@ -1467,8 +1466,8 @@ export default function PackagingPage() {
                 variant="primary"
                 icon="print"
                 className="w-full"
-                title={previewPackage.product?.gtinValid ? "Reprint Label" : "Product identity unavailable. GS1 label printing is blocked."}
-                disabled={reprintingId === previewPackage.id || !previewPackage.product?.gtinValid}
+                title={previewPackage.product && /^\d{13}$/.test(previewPackage.product.gtin) ? "Reprint Label" : "A 13-digit GTIN is required to print this label."}
+                disabled={reprintingId === previewPackage.id || !previewPackage.product || !/^\d{13}$/.test(previewPackage.product.gtin)}
                 onClick={() => handleReprintPackage(previewPackage)}
               >
                 {idText(reprintingId === previewPackage.id ? 'Printing Label…' : 'Reprint Label')}

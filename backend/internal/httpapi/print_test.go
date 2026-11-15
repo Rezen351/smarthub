@@ -33,7 +33,7 @@ func TestEncodePrintJobsMatchesPreviewLayout(t *testing.T) {
 	if bytes.Contains(payload[receipt:waring], qrSize) || bytes.Contains(payload[receipt:waring], []byte{0x1d, 0x6b, 0x49}) {
 		t.Fatal("receipt should not contain a barcode or QR")
 	}
-	for _, field := range [][]byte{[]byte("Farmer: Ada"), []byte("Commodity: Potatoes"), []byte("12.500 kg\n"), []byte("WRG-001\n"), []byte("BUFFER_WAITING")} {
+	for _, field := range [][]byte{[]byte("Farmer: Ada"), []byte("Commodity: Potatoes"), []byte("12,500 kg\n"), []byte("WRG-001\n"), []byte("BUFFER_WAITING")} {
 		if !bytes.Contains(payload[receipt:waring], field) {
 			t.Fatalf("receipt missing %q", field)
 		}
@@ -44,7 +44,7 @@ func TestEncodePrintJobsMatchesPreviewLayout(t *testing.T) {
 		[]byte("WARING LABEL\n"), separator,
 		[]byte("Farmer: Ada\n"),
 		[]byte("Farmer ID: FMR-001\n"), separator,
-		[]byte("12.500 kg\n"), []byte("WRG-001\n"), separator,
+		[]byte("12,500 kg\n"), []byte("WRG-001\n"), separator,
 		qrSize,
 		[]byte{0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30},
 		[]byte("2026-11-02\n"), []byte("PRINTED\n"),

@@ -1,3 +1,4 @@
+import { formatWeight } from '../../lib/weightFormat'
 import { idText } from '@/lib/indonesian'
 import { useEffect, useState } from 'react'
 import {
@@ -121,7 +122,7 @@ export default function CancelTransactionModal({
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{idText("Bobot Bruto / Neto:")}</span>
                   <span className="font-semibold text-foreground">
-                    {idText(inspectionData?.grossWeightKg?.toFixed(2) ?? '-')} {idText("kg /")} {idText(inspectionData?.netWeightKg?.toFixed(2) ?? '-')} {idText("kg")}
+                    {idText(inspectionData?.grossWeightKg == null ? '-' : formatWeight(inspectionData.grossWeightKg, 2))} {idText("kg /")} {idText(inspectionData?.netWeightKg == null ? '-' : formatWeight(inspectionData.netWeightKg, 2))} {idText("kg")}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -144,7 +145,7 @@ export default function CancelTransactionModal({
                   {inspectionData?.hasSortingBatch && (
                     <>
                       <li>
-                        {idText("Data pemilahan terkait (")}{idText(((inspectionData.gradeAKg || 0) + (inspectionData.gradeBKg || 0) + (inspectionData.gradeCKg || 0)).toFixed(1))} {idText("kg) akan dihapus.")}
+                        {idText("Data pemilahan terkait (")}{idText(formatWeight((inspectionData.gradeAKg || 0) + (inspectionData.gradeBKg || 0) + (inspectionData.gradeCKg || 0), 1))} {idText("kg) akan dihapus.")}
                       </li>
                       {inspectionData?.linkedPalletCodes?.length > 0 && (
                         <li>

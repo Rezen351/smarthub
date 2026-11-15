@@ -16,6 +16,12 @@ func TestProductGTINs(t *testing.T) {
 		if validGTIN13(invalid) {
 			t.Fatalf("accepted %q", invalid)
 		}
+		if hasGTIN13Digits(invalid) {
+			t.Fatalf("accepted unusable GTIN format %q", invalid)
+		}
+	}
+	if !hasGTIN13Digits("8994477090011") {
+		t.Fatal("rejected 13-digit GTIN with a check-digit mismatch")
 	}
 }
 
@@ -40,8 +46,8 @@ func TestPackagingProductValidation(t *testing.T) {
 		t.Fatal("accepted multiple units")
 	}
 	product.GTIN = "8994477090011"
-	if validatePackagingProduct(product, "WASHED", 10, 1) == nil {
-		t.Fatal("accepted invalid GTIN")
+	if err := validatePackagingProduct(product, "WASHED", 10, 1); err != nil {
+		t.Fatalf("blocked 13-digit GTIN with a check-digit mismatch: %v", err)
 	}
 	product.GTIN = "8994477090010"
 	for _, size := range []int{1, 5} {
@@ -66,15 +72,20 @@ func TestPackagingLabelContainsTwoBarcodesWithoutQR(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if bytes.Count(payload, []byte{0x1d, 0x6b, 0x49}) != 1 || bytes.Count(payload, []byte{0x1d, 0x6b, 0x43}) != 1 {
-			t.Fatal("expected one Code128 and one EAN-13")
+		if bytes.Count(payload, []byte{0x1d, 0x6b, 0x49}) != 0 || bytes.Count(payload, []byte{0x1d, 0x6b, 0x43}) != 1 {
+			t.Fatal("expected only one EAN-13 barcode")
 		}
 		if bytes.Contains(payload, []byte{0x1d, 0x28, 0x6b}) {
 			t.Fatal("Packaging contains a QR command")
 		}
-		for _, value := range []string{product.GTIN, product.ProductName, product.Brand, "Operational Barcode", "GS1 Barcode", "EXP-20261115-0001"} {
+		for _, value := range []string{product.GTIN, "Weight: 10,000 kg", "Grade: A", "GS1 Barcode"} {
 			if !bytes.Contains(payload, []byte(value)) {
 				t.Fatalf("missing %s", value)
+			}
+		}
+		for _, omitted := range []string{"SMARTGEULIS", "PACKAGING LABEL", "Operational Barcode", "EXP-20261115-0001", product.ProductName, product.Brand, "PRINTED", "2026-11-15"} {
+			if bytes.Contains(payload, []byte(omitted)) {
+				t.Fatalf("Packaging label contains extra field %q", omitted)
 			}
 		}
 	}
@@ -82,7 +93,11 @@ func TestPackagingLabelContainsTwoBarcodesWithoutQR(t *testing.T) {
 		t.Fatal("accepted missing product")
 	}
 	product.GTIN = "8994477090011"
+	if _, err := encodePrintJobs([]printJob{{Type: "export", Code: "code", Product: product}}); err != nil {
+		t.Fatalf("blocked 13-digit GTIN barcode: %v", err)
+	}
+	product.GTIN = "899447709001x"
 	if _, err := encodePrintJobs([]printJob{{Type: "export", Code: "code", Product: product}}); err == nil {
-		t.Fatal("accepted invalid GTIN")
+		t.Fatal("accepted non-numeric GTIN")
 	}
 }

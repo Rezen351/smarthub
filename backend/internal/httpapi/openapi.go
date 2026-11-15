@@ -500,7 +500,7 @@ const openapiJSON = `{
       "get": {
         "tags": ["Station 03: Retail Packaging"],
         "summary": "List Packaging products from ProductList.xlsx",
-        "description": "Six washed/unwashed box variants in 1, 5, and 10 kg sizes. gtinValid reports check-digit validity; invalid GTINs cannot be packaged.",
+        "description": "Six washed/unwashed box variants in 1, 5, and 10 kg sizes. gtinValid reports check-digit validity. A 13-digit numeric value is printed as listed even when its check digit does not validate; verify such values with the official product catalog.",
         "security": [{ "BearerAuth": [] }],
         "responses": { "200": { "description": "Product catalog in the standard success/data wrapper" } }
       }

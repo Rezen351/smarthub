@@ -168,7 +168,7 @@ export default function ReceptionSession({ operatorId, farmer, capacityKg, initi
       <div className="overflow-x-auto"><table className="w-full text-sm"><caption className="sr-only">Waring weights</caption>
         <thead><tr className="border-b border-border text-left"><th className="p-2">Waring</th><th>Gross (kg)</th><th>Tare (kg)</th><th>Net (kg)</th><th><span className="sr-only">Actions</span></th></tr></thead>
         <tbody>{(saved?.items || draft.items).map((item, index) => <tr key={item.captureId} className="border-b border-border">
-          <td className="p-2 font-mono">{saved ? saved.items[index].code : index + 1}{saved?.items[index].cancelled && ' · Cancelled'}</td><td>{formatWeight(item.grossWeightKg)}</td><td>1.2</td><td>{formatWeight(receptionKg(item.grossWeightKg - 1.2))}</td>
+          <td className="p-2 font-mono">{saved ? saved.items[index].code : index + 1}{saved?.items[index].cancelled && ' · Cancelled'}</td><td>{formatWeight(item.grossWeightKg)}</td><td>{formatWeight(1.2)}</td><td>{formatWeight(receptionKg(item.grossWeightKg - 1.2))}</td>
           <td>{!frozen && <div className="flex gap-2 justify-end"><Button size="sm" disabled={Boolean(draft.weight)} onClick={() => { editRef.current = item.captureId; setEditingId(item.captureId); setPaused(true); persist({ ...draftRef.current, editingId: item.captureId, weight: String(item.grossWeightKg) }) }}><span>Edit</span></Button>
             <Button size="sm" disabled={Boolean(draft.weight)} onClick={() => persist({ ...draftRef.current, items: draftRef.current.items.filter((row) => row.captureId !== item.captureId) })}><span>Remove</span></Button></div>}</td>
         </tr>)}</tbody></table></div>
@@ -183,8 +183,8 @@ export default function ReceptionSession({ operatorId, farmer, capacityKg, initi
             <header className="text-center border-b border-dashed border-gray-400 pb-2"><strong>SMARTGEULIS</strong><div>RECEIVING RECEIPT</div></header>
             <p>Farmer: {saved.farmerName}<br />Farmer ID: {saved.farmerCode}<br />Commodity: Potatoes</p>
             <p>Warings: {saved.items.length}</p>
-            {saved.items.map((item, index) => <div key={item.id}>{index + 1}. {item.code}<br />Gross {item.grossWeightKg.toFixed(3)} · Tare {item.tareWeightKg.toFixed(3)} kg<br />Net {item.netWeightKg.toFixed(3)} kg</div>)}
-            <p className="border-t border-dashed border-gray-400 pt-2">Total gross: {saved.grossWeightKg.toFixed(3)} kg<br />Total tare: {saved.tareWeightKg.toFixed(3)} kg<br />Total net: {saved.netWeightKg.toFixed(3)} kg</p>
+            {saved.items.map((item, index) => <div key={item.id}>{index + 1}. {item.code}<br />Gross {formatWeight(item.grossWeightKg, 3)} · Tare {formatWeight(item.tareWeightKg, 3)} kg<br />Net {formatWeight(item.netWeightKg, 3)} kg</div>)}
+            <p className="border-t border-dashed border-gray-400 pt-2">Total gross: {formatWeight(saved.grossWeightKg, 3)} kg<br />Total tare: {formatWeight(saved.tareWeightKg, 3)} kg<br />Total net: {formatWeight(saved.netWeightKg, 3)} kg</p>
             <p className="text-center">{saved.code}<br />{saved.createdAt.slice(0, 10)} {saved.createdAt.slice(11, 19)}<br />BUFFER_WAITING</p>
           </div>
           {previewLabel && <div className="space-y-2"><label className="text-sm block" htmlFor="reception-label">Waring label</label>

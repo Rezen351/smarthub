@@ -18,7 +18,7 @@ const quickActions: { label: string; path: string; icon: IconName; desc: string 
   { label: 'Profile', path: '/dashboard/profile', icon: 'user', desc: 'Farm & contact data' },
 ]
 
-const formatKg = (value: number) => `${value.toLocaleString('id-ID')} kg`
+const formatKg = (value: number) => `${value.toLocaleString('id-ID', { useGrouping: false, maximumFractionDigits: 3 })} kg`
 
 export default function FarmerDashboardHome() {
   const { user } = useAuth()

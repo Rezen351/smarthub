@@ -603,20 +603,20 @@ export default function ReportsPage() {
             />
             <StatCard
               label="Gross Intake (kg)"
-              value={dailyData ? `${formatWeight(dailyData.grossIntakeKg)} kg` : '0.0 kg'}
-              sub={`Net: ${dailyData ? formatWeight(dailyData.netIntakeKg) : '0.0'} kg`}
+              value={dailyData ? `${formatWeight(dailyData.grossIntakeKg)} kg` : '0,0 kg'}
+              sub={`Net: ${dailyData ? formatWeight(dailyData.netIntakeKg) : '0,0'} kg`}
               icon={<Icon name="scale" size={16} />}
             />
             <StatCard
               label="Sorting Yield"
               value={dailyData ? `${dailyData.sortingBatches} Batches` : '0 Batches'}
-              sub={`A: ${dailyData?.gradeAKg?.toFixed(1) || 0}kg · B: ${dailyData?.gradeBKg?.toFixed(1) || 0}kg`}
+              sub={`A: ${formatWeight(dailyData?.gradeAKg, 1)}kg · B: ${formatWeight(dailyData?.gradeBKg, 1)}kg`}
               icon={<Icon name="sortir" size={16} />}
             />
             <StatCard
               label="Retail Pouches"
               value={dailyData ? `${dailyData.packagedUnits} Units` : '0 Units'}
-              sub={`Weight: ${dailyData?.packagedWeightKg?.toFixed(1) || 0} kg`}
+              sub={`Weight: ${formatWeight(dailyData?.packagedWeightKg, 1)} kg`}
               icon={<Icon name="package" size={16} />}
             />
           </div>
@@ -713,20 +713,20 @@ export default function ReportsPage() {
             />
             <StatCard
               label="Total Net Weighed"
-              value={monthlyData ? `${formatWeight(monthlyData.netIntakeKg)} kg` : '0.0 kg'}
-              sub={`Gross: ${monthlyData ? formatWeight(monthlyData.grossIntakeKg) : '0.0'} kg`}
+              value={monthlyData ? `${formatWeight(monthlyData.netIntakeKg)} kg` : '0,0 kg'}
+              sub={`Gross: ${monthlyData ? formatWeight(monthlyData.grossIntakeKg) : '0,0'} kg`}
               icon={<Icon name="scale" size={16} />}
             />
             <StatCard
               label="Sorting Yield"
               value={monthlyData ? `${monthlyData.sortingBatches} Batches` : '0 Batches'}
-              sub={`A: ${monthlyData?.gradeAKg?.toFixed(1) || 0}kg · B: ${monthlyData?.gradeBKg?.toFixed(1) || 0}kg`}
+              sub={`A: ${formatWeight(monthlyData?.gradeAKg, 1)}kg · B: ${formatWeight(monthlyData?.gradeBKg, 1)}kg`}
               icon={<Icon name="sortir" size={16} />}
             />
             <StatCard
               label="Packaged Pouches"
               value={monthlyData ? `${monthlyData.packagedUnits} Units` : '0 Units'}
-              sub={`${monthlyData?.packagedWeightKg?.toFixed(1) || 0} kg shipped/stored`}
+              sub={`${formatWeight(monthlyData?.packagedWeightKg, 1)} kg shipped/stored`}
               icon={<Icon name="package" size={16} />}
             />
           </div>

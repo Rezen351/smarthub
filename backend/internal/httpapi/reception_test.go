@@ -221,7 +221,7 @@ func TestReceptionBatchIntegration(t *testing.T) {
 	if len(jobs) != 4 || bytes.Count(payload, []byte("RECEIVING RECEIPT\n")) != 1 || bytes.Count(payload, []byte("WARING LABEL\n")) != 3 || bytes.Count(payload, []byte{0x1d, 0x56, 0x42, 0x03}) != 4 {
 		t.Fatal("expected one receipt, three labels, four cuts")
 	}
-	for _, value := range []string{"Total gross: 150.000 kg", "Total tare:  3.600 kg", "Total net:   146.400 kg"} {
+	for _, value := range []string{"Total gross: 150,000 kg", "Total tare:  3,600 kg", "Total net:   146,400 kg"} {
 		if !bytes.Contains(payload, []byte(value)) {
 			t.Fatalf("missing %s", value)
 		}

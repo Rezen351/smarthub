@@ -236,7 +236,7 @@ export default function SortingPage() {
 
     if (numVal > maxAllowedForActiveGrade + 0.005) {
       toast.error(
-        `Weight ${numVal.toFixed(3)} kg exceeds remaining intake capacity of ${maxAllowedForActiveGrade.toFixed(3)} kg for this waring.`,
+        `Weight ${formatWeight(numVal, 3)} kg exceeds remaining intake capacity of ${formatWeight(maxAllowedForActiveGrade, 3)} kg for this waring.`,
       )
       return
     }
@@ -266,7 +266,7 @@ export default function SortingPage() {
     const matched = registeredPallets.find((p) => p.code.toUpperCase() === code)
     if (matched && matched.status === 'IN_USE' && (matched.remainingKg ?? 0) > 0) {
       toast.error(
-        `Pallet "${code}" is currently IN USE with Grade ${matched.grade || 'unspecified'} (${matched.remainingKg} kg). Cannot reuse until Station 03 finishes packaging.`,
+        `Pallet "${code}" is currently IN USE with Grade ${matched.grade || 'unspecified'} (${formatWeight(matched.remainingKg)} kg). Cannot reuse until Station 03 finishes packaging.`,
       )
       return
     }
@@ -326,7 +326,7 @@ export default function SortingPage() {
 
     if (totalGraded > gGross + 0.005) {
       toast.error(
-        `Total graded weight (${totalGraded.toFixed(3)} kg) exceeds waring intake (${gGross.toFixed(3)} kg).`,
+        `Total graded weight (${formatWeight(totalGraded, 3)} kg) exceeds waring intake (${formatWeight(gGross, 3)} kg).`,
       )
       return
     }
@@ -1028,28 +1028,28 @@ export default function SortingPage() {
                   <div
                     style={{ width: `${(gA / gGross) * 100}%` }}
                     className="bg-emerald-600 flex items-center justify-center text-xs font-bold font-mono text-white"
-                    title={idText(`Grade A: ${gA} kg (${((gA / gGross) * 100).toFixed(1)}%)`)}
+                    title={idText(`Grade A: ${formatWeight(gA)} kg (${((gA / gGross) * 100).toFixed(1)}%)`)}
                   >
                     {idText(gA > 0 && `A: ${formatWeight(gA)} kg`)}
                   </div>
                   <div
                     style={{ width: `${(gB / gGross) * 100}%` }}
                     className="bg-blue-600 flex items-center justify-center text-xs font-bold font-mono text-white"
-                    title={idText(`Grade B: ${gB} kg (${((gB / gGross) * 100).toFixed(1)}%)`)}
+                    title={idText(`Grade B: ${formatWeight(gB)} kg (${((gB / gGross) * 100).toFixed(1)}%)`)}
                   >
                     {idText(gB > 0 && `B: ${formatWeight(gB)} kg`)}
                   </div>
                   <div
                     style={{ width: `${(gC / gGross) * 100}%` }}
                     className="bg-amber-500 flex items-center justify-center text-xs font-bold font-mono text-white"
-                    title={idText(`Grade C: ${gC} kg (${((gC / gGross) * 100).toFixed(1)}%)`)}
+                    title={idText(`Grade C: ${formatWeight(gC)} kg (${((gC / gGross) * 100).toFixed(1)}%)`)}
                   >
                     {idText(gC > 0 && `C: ${formatWeight(gC)} kg`)}
                   </div>
                   <div
                     style={{ width: `${(shrinkageKg / gGross) * 100}%` }}
                     className="bg-red-600 flex items-center justify-center text-xs font-bold font-mono text-white"
-                    title={idText(`Shrinkage: ${shrinkageKg.toFixed(1)} kg (${shrinkagePct.toFixed(1)}%)`)}
+                    title={idText(`Shrinkage: ${formatWeight(shrinkageKg, 1)} kg (${shrinkagePct.toFixed(1)}%)`)}
                   >
                     {idText(shrinkageKg > 0 && `Loss: ${formatWeight(shrinkageKg)} kg`)}
                   </div>

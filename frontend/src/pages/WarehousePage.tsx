@@ -283,7 +283,7 @@ export default function WarehousePage() {
             <StatCard
               label="Buffer Utilization"
               value={`${bufferPct}%`}
-              sub={`${bufferCapacityKg - bufferTotalKg} kg free space`}
+              sub={`${formatWeight(bufferCapacityKg - bufferTotalKg)} kg free space`}
               trend={bufferPct > 80 ? 'up' : 'neutral'}
               icon={<Icon name="stack" size={16} />}
             />

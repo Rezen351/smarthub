@@ -28,7 +28,7 @@ const left = ['0001101','0011001','0010011','0111101','0100011','0110001','01011
 const parity = ['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL']
 
 export function encodeEAN13(value: string): string {
-  if (!validGTIN13(value)) throw new Error('Invalid GTIN')
+	if (!/^\d{13}$/.test(value)) throw new Error('Invalid GTIN-13')
   const right = (digit: string) => Array.from(left[Number(digit)], bit => bit === '0' ? '1' : '0').join('')
   const first = Array.from(value.slice(1, 7), (digit, i) => parity[Number(value[0])][i] === 'L'
     ? left[Number(digit)] : Array.from(right(digit)).reverse().join('')).join('')

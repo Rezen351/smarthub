@@ -796,7 +796,7 @@
     "pattern": "^Sub\\-Minimum\\ Remainder\\ \\((.*?)\\ kg\\ <\\ 1\\.000\\ kg\\)$",
     "parts": [
       "Di bawah minimum Sisa (",
-      " kg < 1.000 kg)"
+      " kg < 1,000 kg)"
     ]
   },
   {

@@ -89,7 +89,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
           timestamp: formatSafeDateTime(w.receivedAt),
           operator: 'Operator',
           completed: true,
-          details: `Gross weight verified at ${w.grossWeightKg} kg, net ${w.netWeightKg} kg. Status: ${w.status}.`,
+          details: `Gross weight verified at ${formatWeight(w.grossWeightKg)} kg, net ${formatWeight(w.netWeightKg)} kg. Status: ${w.status}.`,
         },
         {
           stage: 'Station 02: Sorting & Grading',
@@ -153,7 +153,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
           timestamp: formatSafeDateTime(intake.receivedAt),
           operator: 'Receiving Operator',
           completed: true,
-          details: `Intake sack ${intake.waringCode || 'Waring'}, gross ${intake.grossWeightKg} kg, net ${intake.netWeightKg} kg.`,
+          details: `Intake sack ${intake.waringCode || 'Waring'}, gross ${formatWeight(intake.grossWeightKg)} kg, net ${formatWeight(intake.netWeightKg)} kg.`,
         },
         {
           stage: 'Station 02: Sorting & Grading',
@@ -222,7 +222,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
         timestamp: formatSafeDateTime(intake.receivedAt),
         operator: 'Receiving Operator',
         completed: true,
-        details: `Intake sack ${intake.waringCode || 'Waring'}, gross ${intake.grossWeightKg} kg, net ${intake.netWeightKg} kg.`,
+        details: `Intake sack ${intake.waringCode || 'Waring'}, gross ${formatWeight(intake.grossWeightKg)} kg, net ${formatWeight(intake.netWeightKg)} kg.`,
       },
       {
         stage: 'Station 02: Sorting & Pallet Staging',
@@ -230,7 +230,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
         timestamp: formatSafeDateTime(pallet.createdAt),
         operator: 'Automated 3-Tier Sizer',
         completed: true,
-        details: `Assembled onto Grade ${pallet.grade} Pallet. Remaining weight: ${pallet.remainingKg || pallet.weightKg} kg.`,
+        details: `Assembled onto Grade ${pallet.grade} Pallet. Remaining weight: ${formatWeight(pallet.remainingKg || pallet.weightKg)} kg.`,
       },
       {
         stage: 'Station 03: Packaging & Pouching',

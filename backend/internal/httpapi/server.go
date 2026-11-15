@@ -1596,24 +1596,27 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 		"waring":  "WARING LABEL",
 		"pallet":  "SORTING PALLET",
 		"grade":   "SORTED PALLET",
-		"pouch":   "BOX LABEL",
-		"export":  "BOX LABEL",
+		"pouch":   "PACKAGING LABEL",
+		"export":  "PACKAGING LABEL",
 	}
 	for _, job := range jobs {
 		if job.Type == "pouch" || job.Type == "export" {
-			if job.Product == nil || !validGTIN13(job.Product.GTIN) {
-				return nil, fmt.Errorf("A valid product snapshot is required for Packaging labels")
+			if job.Product == nil || !hasGTIN13Digits(job.Product.GTIN) {
+				return nil, fmt.Errorf("A 13-digit product snapshot is required for Packaging labels")
 			}
 		}
 		label, ok := labels[job.Type]
 		if !ok || job.Code == "" {
 			return nil, fmt.Errorf("print job type and code are required")
 		}
-		out = append(out, 0x1b, 0x61, 0x01)
-		out = appendText(out, "SMARTGEULIS\n")
-		out = appendText(out, label+"\n")
-		out = appendText(out, "--------------------------------\n")
-		out = append(out, 0x1b, 0x61, 0x00)
+		packaging := job.Type == "pouch" || job.Type == "export"
+		if !packaging {
+			out = append(out, 0x1b, 0x61, 0x01)
+			out = appendText(out, "SMARTGEULIS\n")
+			out = appendText(out, label+"\n")
+			out = appendText(out, "--------------------------------\n")
+			out = append(out, 0x1b, 0x61, 0x00)
+		}
 
 		hasMeta := false
 		if job.Type == "receipt" {
@@ -1646,37 +1649,36 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 				hasMeta = true
 			}
 		} else if job.Type == "pouch" || job.Type == "export" {
-			// Packaging metadata comes from the saved product snapshot.
-			out = appendText(out, job.Product.Brand+"\n"+job.Product.ProductName+"\n")
-			out = appendText(out, fmt.Sprintf("Box: %d kg\n", job.Product.NominalWeightKg))
-			hasMeta = true
-			if job.Grade != "" {
-				out = appendText(out, "Grade: "+job.Grade+"\n")
-				hasMeta = true
-			}
+			// Packaging labels show only measured weight, grade, and barcodes.
 		}
 
-		out = append(out, 0x1b, 0x61, 0x01)
-		if hasMeta {
-			out = appendText(out, "--------------------------------\n")
+		if !packaging {
+			out = append(out, 0x1b, 0x61, 0x01)
+			if hasMeta {
+				out = appendText(out, "--------------------------------\n")
+			}
 		}
 
 		if job.Type == "receipt" && len(job.ReceiptItems) > 0 {
 			out = appendText(out, formatReceptionReceipt(job.ReceiptItems))
 		}
 		if job.WeightKg > 0 && job.Type != "pallet" && len(job.ReceiptItems) == 0 {
-			out = appendText(out, fmt.Sprintf("%.3f kg\n", job.WeightKg))
+			if packaging {
+				out = appendText(out, "Weight: "+formatWeightKg(job.WeightKg)+" kg\n")
+			} else {
+				out = appendText(out, formatWeightKg(job.WeightKg)+" kg\n")
+			}
 		}
-		out = appendText(out, job.Code+"\n")
-		out = appendText(out, "--------------------------------\n")
+		if !packaging {
+			out = appendText(out, job.Code+"\n")
+			out = appendText(out, "--------------------------------\n")
+		}
 
 		if job.Type == "waring" {
 			// Waring label uses 2D QR Code only
 			out = appendQR(out, job.Code)
 		} else if job.Type == "pouch" || job.Type == "export" {
-			out = appendText(out, "Operational Barcode\n")
-			out = appendPackagingCode128(out, job.Code)
-			out = appendText(out, "\nGS1 Barcode\n")
+			out = appendText(out, "Grade: "+job.Grade+"\nGS1 Barcode\n")
 			out = appendEAN13(out, job.Product.GTIN)
 			out = appendText(out, "\n"+job.Product.GTIN+"\n")
 		} else if job.Type != "receipt" {
@@ -1686,20 +1688,22 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 			out = appendQR(out, job.Code)
 		}
 
-		dateStr := job.Date
-		timeStr := job.Time
-		if dateStr == "" && timeStr == "" {
-			now := time.Now()
-			dateStr = now.Format("2006-01-02")
-			timeStr = now.Format("15:04:05")
-		}
-		if dateStr != "" || timeStr != "" {
-			out = appendText(out, strings.TrimSpace(dateStr+" "+timeStr)+"\n")
-		}
-		if job.Type == "receipt" {
-			out = appendText(out, "BUFFER_WAITING\n")
-		} else {
-			out = appendText(out, "PRINTED\n")
+		if !packaging {
+			dateStr := job.Date
+			timeStr := job.Time
+			if dateStr == "" && timeStr == "" {
+				now := time.Now()
+				dateStr = now.Format("2006-01-02")
+				timeStr = now.Format("15:04:05")
+			}
+			if dateStr != "" || timeStr != "" {
+				out = appendText(out, strings.TrimSpace(dateStr+" "+timeStr)+"\n")
+			}
+			if job.Type == "receipt" {
+				out = appendText(out, "BUFFER_WAITING\n")
+			} else {
+				out = appendText(out, "PRINTED\n")
+			}
 		}
 		out = appendText(out, "\n")
 		// Cut paper after each job so multi-ticket print jobs (e.g. receipt + waring) are cut separately
@@ -1722,13 +1726,6 @@ func appendCode128(dst []byte, value string) []byte {
 	dst = append(dst, 0x1d, 0x77, 0x02, 0x1d, 0x68, 0x20, 0x1d, 0x48, 0x00)
 	dst = append(dst, 0x1d, 0x6b, 0x49, byte(len(data)))
 	return appendText(dst, data)
-}
-
-func appendPackagingCode128(dst []byte, value string) []byte {
-	data := "{B" + value
-	dst = append(dst, 0x1d, 0x77, 0x02, 0x1d, 0x68, 0x60, 0x1d, 0x48, 0x00)
-	dst = append(dst, 0x1d, 0x6b, 0x49, byte(len(data)))
-	return append(dst, []byte(data)...)
 }
 
 func appendEAN13(dst []byte, value string) []byte {
@@ -2138,7 +2135,7 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 				"disposition": disposition,
 				"status":      "AVAILABLE",
 				"released":    true,
-				"message":     fmt.Sprintf("Pallet %s settled (%.3f kg) and released for reuse", palletCode, remainingKg),
+				"message":     fmt.Sprintf("Pallet %s settled (%s kg) and released for reuse", palletCode, formatWeightKg(remainingKg)),
 			},
 		})
 		return
@@ -2382,7 +2379,7 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 				if existingGrade != nil && *existingGrade != "" {
 					grd = *existingGrade
 				}
-				fail(w, 400, "PALLET_IN_USE", fmt.Sprintf("Pallet '%s' is currently IN_USE with Grade %s (%0.1f kg remaining). Cannot reuse until Station 03 Packaging finishes packaging.", pCode, grd, existingRemaining))
+				fail(w, 400, "PALLET_IN_USE", fmt.Sprintf("Pallet '%s' is currently IN_USE with Grade %s (%s kg remaining). Cannot reuse until Station 03 Packaging finishes packaging.", pCode, grd, formatWeightKg(existingRemaining)))
 				return
 			}
 		}
@@ -2395,7 +2392,7 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 
 		maxIntake := math.Max(grossWeight, netWeight)
 		if totalGraded > maxIntake+0.005 {
-			fail(w, 400, "EXCEEDS_INTAKE_WEIGHT", fmt.Sprintf("Total graded weight (%0.3f kg) exceeds intake waring weight (%0.3f kg)", totalGraded, maxIntake))
+			fail(w, 400, "EXCEEDS_INTAKE_WEIGHT", fmt.Sprintf("Total graded weight (%s kg) exceeds intake waring weight (%s kg)", formatWeightKg(totalGraded), formatWeightKg(maxIntake)))
 			return
 		}
 
@@ -2597,7 +2594,7 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 		}
 
 		if input.TotalNetWeightKg > remainingKg+0.0005 {
-			fail(w, 400, "WEIGHT_EXCEEDS_PALLET", fmt.Sprintf("Package weight (%0.3f kg) exceeds pallet '%s' remaining stock (%0.3f kg). Cannot package more than remaining inventory.", input.TotalNetWeightKg, pCode, remainingKg))
+			fail(w, 400, "WEIGHT_EXCEEDS_PALLET", fmt.Sprintf("Package weight (%s kg) exceeds pallet '%s' remaining stock (%s kg). Cannot package more than remaining inventory.", formatWeightKg(input.TotalNetWeightKg), pCode, formatWeightKg(remainingKg)))
 			return
 		}
 
@@ -2629,7 +2626,7 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 			fail(w, 400, "SCALE_CAPACITY_EXCEEDED", "Package exceeds the configured Packaging scale capacity")
 			return
 		}
-		product.GTINValid = true
+		product.GTINValid = validGTIN13(product.GTIN)
 		format := "EXPORT_CARTON"
 
 		dateStr := time.Now().Format("20060102")

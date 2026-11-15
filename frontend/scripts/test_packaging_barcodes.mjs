@@ -10,7 +10,8 @@ test('EAN-13 encodes known symbol, guards, parity and quiet zones', () => {
   const bits = encodeEAN13('4006381333931')
   assert.equal(bits, '00000000000' + '101' + '0001101' + '0100111' + '0101111' + '0111101' + '0001001' + '0110011' + '01010' + '1000010' + '1000010' + '1000010' + '1110100' + '1000010' + '1100110' + '101' + '0000000')
   assert.equal(bits.length, 113)
-  assert.throws(() => encodeEAN13('8994477090011'), /Invalid GTIN/)
+  assert.equal(encodeEAN13('8994477090011').length, 113)
+  assert.throws(() => encodeEAN13('899447709001x'), /Invalid GTIN-13/)
 })
 test('Code128 B encodes an independent known checksum vector', () => {
   // Start B=104, A=33, B=34, checksum=(104+33+2*34)%103=102, stop=106.

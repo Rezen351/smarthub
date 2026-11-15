@@ -1,3 +1,4 @@
+import { weightInputValue } from '../../lib/weightFormat'
 import { idText } from '@/lib/indonesian'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Badge from '../shared/Badge'
@@ -224,7 +225,7 @@ export default function ScaleWeightInput({
       )
       return
     }
-    onChange(formatKg(reading))
+    onChange(weightInputValue(reading))
     setCaptured(true)
     toast.success(`Weight captured: ${formatKg(reading)} kg`)
   }, [allowZero, capacityKg, maxAllowedWeightKg, onChange, reading, toast])

@@ -130,18 +130,18 @@ func (s *server) dailyRecap(w http.ResponseWriter, r *http.Request) {
 		_ = writer.Write([]string{"Date", targetDate})
 		_ = writer.Write([]string{"Total Warings Received", strconv.Itoa(totalWarings)})
 		_ = writer.Write([]string{"Unique Delivering Farmers", strconv.Itoa(uniqueFarmers)})
-		_ = writer.Write([]string{"Gross Intake (kg)", fmt.Sprintf("%.2f", grossKg)})
-		_ = writer.Write([]string{"Tare Weight (kg)", fmt.Sprintf("%.2f", tareKg)})
-		_ = writer.Write([]string{"Net Intake (kg)", fmt.Sprintf("%.2f", netKg)})
+		_ = writer.Write([]string{"Gross Intake (kg)", formatWeightDisplay(grossKg, 2)})
+		_ = writer.Write([]string{"Tare Weight (kg)", formatWeightDisplay(tareKg, 2)})
+		_ = writer.Write([]string{"Net Intake (kg)", formatWeightDisplay(netKg, 2)})
 		_ = writer.Write([]string{"Sorting Batches", strconv.Itoa(sortingBatches)})
-		_ = writer.Write([]string{"Grade A Yield (kg)", fmt.Sprintf("%.2f", gradeAKg)})
-		_ = writer.Write([]string{"Grade B Yield (kg)", fmt.Sprintf("%.2f", gradeBKg)})
-		_ = writer.Write([]string{"Grade C Yield (kg)", fmt.Sprintf("%.2f", gradeCKg)})
-		_ = writer.Write([]string{"Sorting Shrinkage (kg)", fmt.Sprintf("%.2f", shrinkageKg)})
+		_ = writer.Write([]string{"Grade A Yield (kg)", formatWeightDisplay(gradeAKg, 2)})
+		_ = writer.Write([]string{"Grade B Yield (kg)", formatWeightDisplay(gradeBKg, 2)})
+		_ = writer.Write([]string{"Grade C Yield (kg)", formatWeightDisplay(gradeCKg, 2)})
+		_ = writer.Write([]string{"Sorting Shrinkage (kg)", formatWeightDisplay(shrinkageKg, 2)})
 		_ = writer.Write([]string{"Retail Pouches Packaged", strconv.Itoa(packagedUnits)})
-		_ = writer.Write([]string{"Packaged Weight (kg)", fmt.Sprintf("%.2f", packagedWeightKg)})
+		_ = writer.Write([]string{"Packaged Weight (kg)", formatWeightDisplay(packagedWeightKg, 2)})
 		_ = writer.Write([]string{"Pallet Remainder Closeouts", strconv.Itoa(palletCloseouts)})
-		_ = writer.Write([]string{"Pallet Closeout Weight (kg)", fmt.Sprintf("%.2f", palletCloseoutKg)})
+		_ = writer.Write([]string{"Pallet Closeout Weight (kg)", formatWeightDisplay(palletCloseoutKg, 2)})
 		_ = writer.Write([]string{""})
 
 		_ = writer.Write([]string{"Farmer Code", "Farmer Name", "Village", "Warings", "Gross (kg)", "Tare (kg)", "Net (kg)"})
@@ -151,9 +151,9 @@ func (s *server) dailyRecap(w http.ResponseWriter, r *http.Request) {
 				f.FarmerName,
 				f.Village,
 				strconv.Itoa(f.Warings),
-				fmt.Sprintf("%.2f", f.GrossWeight),
-				fmt.Sprintf("%.2f", f.TareWeight),
-				fmt.Sprintf("%.2f", f.NetWeight),
+				formatWeightDisplay(f.GrossWeight, 2),
+				formatWeightDisplay(f.TareWeight, 2),
+				formatWeightDisplay(f.NetWeight, 2),
 			})
 		}
 		return
@@ -301,18 +301,18 @@ func (s *server) monthlyRecap(w http.ResponseWriter, r *http.Request) {
 		_ = writer.Write([]string{"Month", targetMonth})
 		_ = writer.Write([]string{"Total Warings Received", strconv.Itoa(totalWarings)})
 		_ = writer.Write([]string{"Active Delivering Farmers", strconv.Itoa(activeFarmers)})
-		_ = writer.Write([]string{"Gross Intake (kg)", fmt.Sprintf("%.2f", grossKg)})
-		_ = writer.Write([]string{"Tare Weight (kg)", fmt.Sprintf("%.2f", tareKg)})
-		_ = writer.Write([]string{"Net Intake (kg)", fmt.Sprintf("%.2f", netKg)})
+		_ = writer.Write([]string{"Gross Intake (kg)", formatWeightDisplay(grossKg, 2)})
+		_ = writer.Write([]string{"Tare Weight (kg)", formatWeightDisplay(tareKg, 2)})
+		_ = writer.Write([]string{"Net Intake (kg)", formatWeightDisplay(netKg, 2)})
 		_ = writer.Write([]string{"Sorting Batches", strconv.Itoa(sortingBatches)})
-		_ = writer.Write([]string{"Grade A Yield (kg)", fmt.Sprintf("%.2f", gradeAKg)})
-		_ = writer.Write([]string{"Grade B Yield (kg)", fmt.Sprintf("%.2f", gradeBKg)})
-		_ = writer.Write([]string{"Grade C Yield (kg)", fmt.Sprintf("%.2f", gradeCKg)})
-		_ = writer.Write([]string{"Sorting Shrinkage (kg)", fmt.Sprintf("%.2f", shrinkageKg)})
+		_ = writer.Write([]string{"Grade A Yield (kg)", formatWeightDisplay(gradeAKg, 2)})
+		_ = writer.Write([]string{"Grade B Yield (kg)", formatWeightDisplay(gradeBKg, 2)})
+		_ = writer.Write([]string{"Grade C Yield (kg)", formatWeightDisplay(gradeCKg, 2)})
+		_ = writer.Write([]string{"Sorting Shrinkage (kg)", formatWeightDisplay(shrinkageKg, 2)})
 		_ = writer.Write([]string{"Retail Pouches Packaged", strconv.Itoa(packagedUnits)})
-		_ = writer.Write([]string{"Packaged Weight (kg)", fmt.Sprintf("%.2f", packagedWeightKg)})
+		_ = writer.Write([]string{"Packaged Weight (kg)", formatWeightDisplay(packagedWeightKg, 2)})
 		_ = writer.Write([]string{"Pallet Remainder Closeouts", strconv.Itoa(palletCloseouts)})
-		_ = writer.Write([]string{"Pallet Closeout Weight (kg)", fmt.Sprintf("%.2f", palletCloseoutKg)})
+		_ = writer.Write([]string{"Pallet Closeout Weight (kg)", formatWeightDisplay(palletCloseoutKg, 2)})
 		_ = writer.Write([]string{""})
 
 		_ = writer.Write([]string{"Date", "Warings", "Gross Intake (kg)", "Net Intake (kg)", "Delivering Farmers"})
@@ -320,8 +320,8 @@ func (s *server) monthlyRecap(w http.ResponseWriter, r *http.Request) {
 			_ = writer.Write([]string{
 				d.Date,
 				strconv.Itoa(d.Warings),
-				fmt.Sprintf("%.2f", d.GrossWeight),
-				fmt.Sprintf("%.2f", d.NetWeight),
+				formatWeightDisplay(d.GrossWeight, 2),
+				formatWeightDisplay(d.NetWeight, 2),
 				strconv.Itoa(d.Farmers),
 			})
 		}
@@ -334,8 +334,8 @@ func (s *server) monthlyRecap(w http.ResponseWriter, r *http.Request) {
 				tf.FarmerCode,
 				tf.Village,
 				strconv.Itoa(tf.Warings),
-				fmt.Sprintf("%.2f", tf.GrossWeight),
-				fmt.Sprintf("%.2f", tf.NetWeight),
+				formatWeightDisplay(tf.GrossWeight, 2),
+				formatWeightDisplay(tf.NetWeight, 2),
 			})
 		}
 		return
@@ -476,8 +476,8 @@ func (s *server) farmerRankings(w http.ResponseWriter, r *http.Request) {
 				r.Village,
 				r.District,
 				strconv.Itoa(r.TotalWarings),
-				fmt.Sprintf("%.2f", r.TotalGrossKg),
-				fmt.Sprintf("%.2f", r.TotalNetKg),
+				formatWeightDisplay(r.TotalGrossKg, 2),
+				formatWeightDisplay(r.TotalNetKg, 2),
 				fmt.Sprintf("%.1f%%", r.SharePct),
 				r.LastIntakeAt.Format(time.RFC3339),
 			})
@@ -494,4 +494,3 @@ func (s *server) farmerRankings(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 }
-

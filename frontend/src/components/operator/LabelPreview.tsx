@@ -1,3 +1,4 @@
+import { formatWeight } from '../../lib/weightFormat'
 import PackagingLabel from './PackagingLabel'
 import type { PackagingProduct } from '../../services/api'
 import { idText } from '@/lib/indonesian'
@@ -47,15 +48,15 @@ export default function LabelPreview({
   className = '',
 }: LabelPreviewProps) {
   if (type === 'pouch' || type === 'export') {
-    return <PackagingLabel code={code} product={product} grade={grade} weightKg={weightKg} date={date} time={time} className={className} />
+    return <PackagingLabel product={product} grade={grade} weightKg={weightKg} className={className} />
   }
-  // Barcode: shown for pallet, pouch, export, grade (omitted for receipt and waring)
+  // Barcode: shown for pallet and grade (omitted for receipt and waring)
   const showsBarcode = type !== 'receipt' && type !== 'waring'
-  // QR Code: shown for waring, pallet, pouch, export, grade (omitted for receipt)
+  // QR Code: shown for waring, pallet, and grade (omitted for receipt)
   const showsQr = type !== 'receipt'
 
   // Weight: only shown if positive and not pallet
-  const displayWeight = weightKg !== undefined && weightKg > 0 && type !== 'pallet' ? `${weightKg.toFixed(3)} kg` : null
+  const displayWeight = weightKg !== undefined && weightKg > 0 && type !== 'pallet' ? `${formatWeight(weightKg, 3)} kg` : null
   const statusText = type === 'receipt' ? 'BUFFER_WAITING' : 'PRINTED'
   const displayTime = [date, time].filter(Boolean).join(' ')
 

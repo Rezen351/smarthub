@@ -23,12 +23,12 @@ const stats: Stat[] = [
   { label: 'Active Pallets', value: '24', sub: '+3 today', trend: 'up', icon: 'arrow-up' },
   { label: "Today's Weighing", value: '156', sub: 'kg processed', trend: 'up', icon: 'arrow-up' },
   { label: 'Pending Deliveries', value: '5', sub: '2 urgent', trend: 'down', icon: 'arrow-down' },
-  { label: 'Warehouse Capacity', value: '78%', sub: '2,340 kg used', trend: 'up', icon: 'arrow-up' },
+  { label: 'Warehouse Capacity', value: '78%', sub: '2340 kg used', trend: 'up', icon: 'arrow-up' },
 ]
 
 const activities: Activity[] = [
   { time: '10:30', action: 'Pallet PLT-20260914-0001 created by Ahmad', icon: 'pallet', tone: 'neutral' },
-  { time: '10:15', action: 'Weighing recorded: 45.5 kg - Grade A', icon: 'scale', tone: 'accent' },
+  { time: '10:15', action: 'Weighing recorded: 45,5 kg - Grade A', icon: 'scale', tone: 'accent' },
   { time: '09:45', action: 'Pouch PCH-PLT-20260914-0001-001 created', icon: 'package', tone: 'neutral' },
   { time: '09:30', action: 'Warehouse stock updated: +10 pouch Grade A', icon: 'box', tone: 'neutral' },
 ]
