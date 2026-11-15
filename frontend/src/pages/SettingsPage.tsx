@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Badge from '../components/shared/Badge'
@@ -115,14 +116,14 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Settings"
+        title={idText("Settings")}
         subtitle="Manage connected devices and reusable pallets."
       />
 
       <div
         className="inline-flex w-full border border-border bg-muted/40 p-1 sm:w-auto"
         role="tablist"
-        aria-label="Settings sections"
+        aria-label={idText("Settings sections")}
       >
         {sections.map((section) => {
           const isActive = activeSection === section.id
@@ -142,7 +143,7 @@ export default function SettingsPage() {
               }`}
             >
               <Icon name={section.icon} size={16} />
-              {section.label}
+              {idText(section.label)}
             </button>
           )
         })}
@@ -170,8 +171,8 @@ function DeviceSettings() {
           ...INITIAL_SETTINGS,
           ...parsed,
           printers: {
-            reception: { ...INITIAL_SETTINGS.printers.reception, ...(parsed.printers?.reception || {}) },
-            packaging: { ...INITIAL_SETTINGS.printers.packaging, ...(parsed.printers?.packaging || {}) },
+            reception: { ...INITIAL_SETTINGS.printers.reception, ...(parsed.printers?.reception || {})},
+            packaging: { ...INITIAL_SETTINGS.printers.packaging, ...(parsed.printers?.packaging || {})},
           },
         }
       }
@@ -438,11 +439,11 @@ function DeviceSettings() {
       <div className="border-t border-border pt-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <span className="font-semibold text-base text-foreground">Printer Settings</span>
-            <p className="text-xs text-muted-foreground mt-1">{label} · IW-J300H · 80 mm · Ethernet only</p>
+            <span className="font-semibold text-base text-foreground">{idText("Printer Settings")}</span>
+            <p className="text-xs text-muted-foreground mt-1">{idText(label)} {idText("· IW-J300H · 80 mm · Ethernet only")}</p>
           </div>
           <Badge tone={printer.status === 'ONLINE' ? 'success' : 'warning'} dot>
-            {printer.status === 'ONLINE' ? 'Online' : 'Offline'}
+            {idText(printer.status === 'ONLINE' ? 'Online' : 'Offline')}
           </Badge>
         </div>
 
@@ -463,13 +464,13 @@ function DeviceSettings() {
             <Input
               id={`${station}-printer-ip`}
               mono
-              placeholder="192.168.1.120"
+              placeholder={idText("192.168.1.120")}
               value={printer.ip}
               onChange={(e) => setForm({ ...form, printers: { ...form.printers, [station]: { ...printer, ip: e.target.value } } })}
             />
           </Field>
 
-          <Field label="TCP Port" htmlFor={`${station}-printer-port`} required hint="Default printer port: 9100">
+          <Field label="TCP Port" htmlFor={`${station}-printer-port`} required hint={idText("Default printer port: 9100")}>
             <Input
               id={`${station}-printer-port`}
               type="number"
@@ -490,7 +491,7 @@ function DeviceSettings() {
             loading={testingTarget === `printer-${station}`}
             onClick={() => handleTestPrinter(station)}
           >
-            Test Printer
+            {idText("Test Printer")}
           </Button>
         </div>
       </div>
@@ -501,12 +502,12 @@ function DeviceSettings() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Device Settings</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Scale and thermal printer connections.</p>
+          <h2 className="text-lg font-semibold text-foreground">{idText("Device Settings")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{idText("Scale and thermal printer connections.")}</p>
         </div>
         <div>
           <Badge tone="success" dot live>
-            3 Stations · 2 Printers
+            {idText("3 Stations · 2 Printers")}
           </Badge>
         </div>
       </div>
@@ -515,14 +516,14 @@ function DeviceSettings() {
         {/* Station 01: Reception */}
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4">
-            <span className="font-semibold text-base text-foreground">Station 01: Reception</span>
+            <span className="font-semibold text-base text-foreground">{idText("Station 01: Reception")}</span>
             <Badge tone={scaleOnline['01'] ? 'success' : 'warning'} dot>
-              {scaleOnline['01'] ? 'Online' : 'Offline'}
+              {idText(scaleOnline['01'] ? 'Online' : 'Offline')}
             </Badge>
           </div>
 
           <div className="border-t border-border pt-5">
-            <span className="font-semibold text-sm uppercase tracking-wider text-foreground">Scale Settings</span>
+            <span className="font-semibold text-sm uppercase tracking-wider text-foreground">{idText("Scale Settings")}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -555,7 +556,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Modbus Unit ID" htmlFor="intake-slave" hint="Valid range: 1–247">
+            <Field label="Modbus Unit ID" htmlFor="intake-slave" hint={idText("Valid range: 1–247")}>
               <Input
                 id="intake-slave"
                 type="number"
@@ -572,7 +573,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Weight Start Register" htmlFor="intake-reg-weight" required hint="FLOAT32 uses this register and the next word">
+            <Field label="Weight Start Register" htmlFor="intake-reg-weight" required hint={idText("FLOAT32 uses this register and the next word")}>
               <Input
                 id="intake-reg-weight"
                 type="number"
@@ -589,7 +590,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Status Register" htmlFor="intake-reg-status" hint="Firmware default: 40011">
+            <Field label="Status Register" htmlFor="intake-reg-status" hint={idText("Firmware default: 40011")}>
               <Input
                 id="intake-reg-status"
                 type="number"
@@ -645,24 +646,24 @@ function DeviceSettings() {
               loading={testingTarget === '01'}
               onClick={() => handleTestConnection('01', 'Station 01', form.intake.ip, form.intake.port)}
             >
-                Check Scale
+                {idText("Check Scale")}
             </Button>
           </div>
 
-          {renderPrinterSettings('reception')}
+          {idText(renderPrinterSettings('reception'))}
         </div>
 
         {/* Station 02: Sorting */}
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4">
-            <span className="font-semibold text-base text-foreground">Station 02: Sorting</span>
+            <span className="font-semibold text-base text-foreground">{idText("Station 02: Sorting")}</span>
             <Badge tone={scaleOnline['02'] ? 'success' : 'warning'} dot>
-              {scaleOnline['02'] ? 'Online' : 'Offline'}
+              {idText(scaleOnline['02'] ? 'Online' : 'Offline')}
             </Badge>
           </div>
 
           <div className="border-t border-border pt-5">
-            <span className="font-semibold text-sm uppercase tracking-wider text-foreground">Scale Settings</span>
+            <span className="font-semibold text-sm uppercase tracking-wider text-foreground">{idText("Scale Settings")}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -695,7 +696,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Modbus Unit ID" htmlFor="grading-slave" hint="Valid range: 1–247">
+            <Field label="Modbus Unit ID" htmlFor="grading-slave" hint={idText("Valid range: 1–247")}>
               <Input
                 id="grading-slave"
                 type="number"
@@ -712,7 +713,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Weight Start Register" htmlFor="grading-reg-weight" required hint="FLOAT32 uses this register and the next word">
+            <Field label="Weight Start Register" htmlFor="grading-reg-weight" required hint={idText("FLOAT32 uses this register and the next word")}>
               <Input
                 id="grading-reg-weight"
                 type="number"
@@ -729,7 +730,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Status Register" htmlFor="grading-reg-status" hint="Firmware default: 40011">
+            <Field label="Status Register" htmlFor="grading-reg-status" hint={idText("Firmware default: 40011")}>
               <Input
                 id="grading-reg-status"
                 type="number"
@@ -785,7 +786,7 @@ function DeviceSettings() {
               loading={testingTarget === '02'}
               onClick={() => handleTestConnection('02', 'Station 02', form.grading.ip, form.grading.port)}
             >
-                Check Scale
+                {idText("Check Scale")}
             </Button>
           </div>
 
@@ -794,14 +795,14 @@ function DeviceSettings() {
         {/* Station 03: Packaging */}
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4">
-            <span className="font-semibold text-base text-foreground">Station 03: Packaging</span>
+            <span className="font-semibold text-base text-foreground">{idText("Station 03: Packaging")}</span>
             <Badge tone={scaleOnline['03'] ? 'success' : 'warning'} dot>
-              {scaleOnline['03'] ? 'Online' : 'Offline'}
+              {idText(scaleOnline['03'] ? 'Online' : 'Offline')}
             </Badge>
           </div>
 
           <div className="border-t border-border pt-5">
-            <span className="font-semibold text-sm uppercase tracking-wider text-foreground">Scale Settings</span>
+            <span className="font-semibold text-sm uppercase tracking-wider text-foreground">{idText("Scale Settings")}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -834,7 +835,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Modbus Unit ID" htmlFor="pkg-slave" hint="Valid range: 1–247">
+            <Field label="Modbus Unit ID" htmlFor="pkg-slave" hint={idText("Valid range: 1–247")}>
               <Input
                 id="pkg-slave"
                 type="number"
@@ -851,7 +852,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Weight Start Register" htmlFor="pkg-reg-weight" required hint="FLOAT32 uses this register and the next word">
+            <Field label="Weight Start Register" htmlFor="pkg-reg-weight" required hint={idText("FLOAT32 uses this register and the next word")}>
               <Input
                 id="pkg-reg-weight"
                 type="number"
@@ -868,7 +869,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Status Register" htmlFor="pkg-reg-status" hint="Firmware default: 40011">
+            <Field label="Status Register" htmlFor="pkg-reg-status" hint={idText("Firmware default: 40011")}>
               <Input
                 id="pkg-reg-status"
                 type="number"
@@ -939,17 +940,17 @@ function DeviceSettings() {
               loading={testingTarget === '03'}
               onClick={() => handleTestConnection('03', 'Station 03', form.packaging.ip, form.packaging.port)}
             >
-                Check Scale
+                {idText("Check Scale")}
             </Button>
           </div>
 
-          {renderPrinterSettings('packaging')}
+          {idText(renderPrinterSettings('packaging'))}
         </div>
 
         {/* Global Settings */}
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="border-b border-border pb-4">
-            <span className="font-semibold text-base text-foreground">General Settings</span>
+            <span className="font-semibold text-base text-foreground">{idText("General Settings")}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -982,10 +983,10 @@ function DeviceSettings() {
         {/* Form Actions */}
         <div className="flex items-center gap-3 pt-2">
           <Button type="submit" variant="primary" icon="check" loading={saving} touch>
-            Save Settings
+            {idText("Save Settings")}
           </Button>
           <Button type="button" variant="ghost" icon="refresh" onClick={handleResetDefaults}>
-            Reset Defaults
+            {idText("Reset Defaults")}
           </Button>
         </div>
       </form>

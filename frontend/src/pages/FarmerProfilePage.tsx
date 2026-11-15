@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { api } from '../services/api'
@@ -122,24 +123,24 @@ export default function FarmerProfilePage() {
   return (
     <div className="stack stack-lg" style={{ maxWidth: 760 }}>
       <PageHeader
-        title="Profile & Security"
+        title={idText("Profile & Security")}
         subtitle="Manage your personal details, farm records, and account credentials."
       />
 
       {/* Account Overview Header Card */}
       <Card>
         <div className="row gap-md flex-wrap items-center">
-          <span className="avatar avatar-lg">{name.charAt(0)?.toUpperCase() || 'U'}</span>
+          <span className="avatar avatar-lg">{idText(name.charAt(0)?.toUpperCase() || 'U')}</span>
           <div className="stack-xs min-w-0 flex-1">
-            <p className="t-h3">{name || 'User Profile'}</p>
+            <p className="t-h3">{idText(name || 'User Profile')}</p>
             <p className="t-small text-text-secondary">{user?.email}</p>
             <div className="row gap-xs items-center flex-wrap pt-1">
               <Badge tone="accent" icon="leaf">
-                {user ? ROLE_LABEL[user.role] ?? user.role : 'User'}
+                {idText(user ? ROLE_LABEL[user.role] ?? user.role : 'User')}
               </Badge>
               {user?.farmerId && (
                 <Badge tone="neutral">
-                  ID: {user.farmerId}
+                  {idText("ID:")} {idText(user.farmerId)}
                 </Badge>
               )}
             </div>
@@ -149,7 +150,7 @@ export default function FarmerProfilePage() {
 
       {/* Official ID Card Card */}
       <Card
-        title="ID Card"
+        title={idText("ID Card")}
         subtitle="Digital ID card for station check-in and transaction verification."
         action={
           <div className="row gap-xs">
@@ -159,7 +160,7 @@ export default function FarmerProfilePage() {
               icon="print"
               onClick={() => printIdCard(userCardData)}
             >
-              Print Card
+              {idText("Print Card")}
             </Button>
             <Button
               size="sm"
@@ -175,7 +176,7 @@ export default function FarmerProfilePage() {
                 }
               }}
             >
-              {exportingCard ? 'Exporting...' : 'Export PNG'}
+              {idText(exportingCard ? 'Exporting...' : 'Export PNG')}
             </Button>
           </div>
         }
@@ -187,25 +188,25 @@ export default function FarmerProfilePage() {
           <div className="stack-sm text-xs text-text-secondary flex-1">
             <div className="bg-bg-alt p-3 rounded border border-border space-y-1">
               <div className="flex justify-between">
-                <span className="font-medium text-text">Name:</span>
-                <span className="font-semibold text-text">{userCardData.name}</span>
+                <span className="font-medium text-text">{idText("Name:")}</span>
+                <span className="font-semibold text-text">{idText(userCardData.name)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium text-text">ID Code:</span>
-                <span className="font-mono font-bold text-accent">{userCardData.code}</span>
+                <span className="font-medium text-text">{idText("ID Code:")}</span>
+                <span className="font-mono font-bold text-accent">{idText(userCardData.code)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium text-text">Role:</span>
-                <span className="font-semibold text-text capitalize">{userCardData.role?.toLowerCase()}</span>
+                <span className="font-medium text-text">{idText("Role:")}</span>
+                <span className="font-semibold text-text capitalize">{idText(userCardData.role?.toLowerCase())}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium text-text">Domicile:</span>
-                <span>{userCardData.domicile}</span>
+                <span className="font-medium text-text">{idText("Domicile:")}</span>
+                <span>{idText(userCardData.domicile)}</span>
               </div>
             </div>
             <div className="pt-1 flex flex-wrap gap-2">
               <Button size="sm" variant="primary" icon="print" onClick={() => printIdCard(userCardData)}>
-                Print Card
+                {idText("Print Card")}
               </Button>
               <Button
                 size="sm"
@@ -221,7 +222,7 @@ export default function FarmerProfilePage() {
                   }
                 }}
               >
-                {exportingCard ? 'Exporting...' : 'Export PNG'}
+                {idText(exportingCard ? 'Exporting...' : 'Export PNG')}
               </Button>
             </div>
           </div>
@@ -229,7 +230,7 @@ export default function FarmerProfilePage() {
       </Card>
 
       {/* Account Information Form */}
-      <Card title="Account Information" subtitle="Used across system records, labels, and receipts.">
+      <Card title={idText("Account Information")} subtitle="Used across system records, labels, and receipts.">
         <form className="stack-md" onSubmit={handleUpdateProfile}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
             <Field label="Full name" htmlFor="profile-name" required>
@@ -237,11 +238,11 @@ export default function FarmerProfilePage() {
                 id="profile-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your full name"
+                placeholder={idText("Enter your full name")}
                 required
               />
             </Field>
-            <Field label="Email Address" htmlFor="profile-email" hint="Contact system administrator to change email.">
+            <Field label="Email Address" htmlFor="profile-email" hint={idText("Contact system administrator to change email.")}>
               <Input
                 id="profile-email"
                 type="email"
@@ -250,23 +251,23 @@ export default function FarmerProfilePage() {
                 className="bg-muted cursor-not-allowed opacity-80"
               />
             </Field>
-            <Field label="Phone Number" htmlFor="profile-phone" hint="e.g. 08123456789">
+            <Field label="Phone Number" htmlFor="profile-phone" hint={idText("e.g. 08123456789")}>
               <Input
                 id="profile-phone"
                 type="tel"
                 inputMode="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="08xxxxxxxxxx"
+                placeholder={idText("08xxxxxxxxxx")}
               />
             </Field>
             {isFarmer ? (
-              <Field label="Farm Location / Village" htmlFor="profile-location" hint="Dieng, Kejajar, etc.">
+              <Field label="Farm Location / Village" htmlFor="profile-location" hint={idText("Dieng, Kejajar, etc.")}>
                 <Input
                   id="profile-location"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Village or farm area"
+                  placeholder={idText("Village or farm area")}
                 />
               </Field>
             ) : (
@@ -284,14 +285,14 @@ export default function FarmerProfilePage() {
                 id="profile-address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="Full address"
+                placeholder={idText("Full address")}
               />
             </Field>
           </div>
 
           <div className="row gap-sm pt-2">
             <Button type="submit" variant="primary" icon="check" disabled={savingProfile}>
-              {savingProfile ? 'Saving...' : 'Save Profile Details'}
+              {idText(savingProfile ? 'Saving...' : 'Save Profile Details')}
             </Button>
           </div>
         </form>
@@ -299,7 +300,7 @@ export default function FarmerProfilePage() {
 
       {/* Security & Password Change Card */}
       <Card
-        title="Security & Password"
+        title={idText("Security & Password")}
         subtitle="Change your login credentials to protect your account."
       >
         <form className="stack-md" onSubmit={handleChangePassword}>
@@ -316,14 +317,14 @@ export default function FarmerProfilePage() {
                 autoComplete="current-password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
+                placeholder={idText("Enter current password")}
                 required
               />
             </Field>
             <Field
               label="New Password"
               htmlFor="profile-new-password"
-              hint="Minimum 6 characters"
+              hint={idText("Minimum 6 characters")}
               required
             >
               <Input
@@ -332,7 +333,7 @@ export default function FarmerProfilePage() {
                 autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
+                placeholder={idText("Enter new password")}
                 required
               />
             </Field>
@@ -347,7 +348,7 @@ export default function FarmerProfilePage() {
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter new password"
+                placeholder={idText("Re-enter new password")}
                 required
               />
             </Field>
@@ -360,7 +361,7 @@ export default function FarmerProfilePage() {
               icon="lock"
               disabled={savingPassword}
             >
-              {savingPassword ? 'Updating...' : 'Update Password'}
+              {idText(savingPassword ? 'Updating...' : 'Update Password')}
             </Button>
           </div>
         </form>
@@ -370,7 +371,7 @@ export default function FarmerProfilePage() {
       {isFarmer && (
         <div className="alert alert-info">
           <Icon name="qr" size={16} />
-          <span>Present your &quot;My QR&quot; page at the weighing station so potato batches are registered directly under your identity.</span>
+          <span>{idText("Present your \"My QR\" page at the weighing station so potato batches are registered directly under your identity.")}</span>
         </div>
       )}
     </div>

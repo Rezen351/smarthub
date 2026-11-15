@@ -29,12 +29,12 @@ export function formatSafeDate(val: any, fallback?: string): string {
 export function formatSafeTime(val: any, fallback = '—'): string {
   if (!val) return fallback
   const d = new Date(val)
-  return isNaN(d.getTime()) ? fallback : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return isNaN(d.getTime()) ? fallback : d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
 }
 
 export function formatSafeDateTime(val: any, fallback = '—'): string {
   if (!val) return fallback
   const d = new Date(val)
-  return isNaN(d.getTime()) ? fallback : d.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+  return isNaN(d.getTime()) ? fallback : d.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })
 }
 

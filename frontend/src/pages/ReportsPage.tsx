@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Card from '../components/shared/Card'
 import Badge from '../components/shared/Badge'
@@ -220,10 +221,10 @@ export default function ReportsPage() {
   const totalDeliveriesCount = deliveries.length
 
   const stats: Stat[] = useMemo(() => [
-    { label: 'Total Farmers', value: farmerCount.toLocaleString('en-US'), sub: 'Registered farmers', trend: 'up', icon: 'users' },
-    { label: 'Total Warings', value: totalWaringsCount.toLocaleString('en-US'), sub: 'Intake sacks recorded', trend: 'up', icon: 'box' },
-    { label: 'Total Weighing (kg)', value: totalWeighedKg.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), sub: 'Live platform scales', trend: 'up', icon: 'scale' },
-    { label: 'Total Deliveries', value: totalDeliveriesCount.toLocaleString('en-US'), sub: 'Outbound dispatches', trend: 'neutral', icon: 'truck' },
+    { label: 'Total Farmers', value: farmerCount.toLocaleString('id-ID'), sub: 'Registered farmers', trend: 'up', icon: 'users' },
+    { label: 'Total Warings', value: totalWaringsCount.toLocaleString('id-ID'), sub: 'Intake sacks recorded', trend: 'up', icon: 'box' },
+    { label: 'Total Weighing (kg)', value: totalWeighedKg.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), sub: 'Live platform scales', trend: 'up', icon: 'scale' },
+    { label: 'Total Deliveries', value: totalDeliveriesCount.toLocaleString('id-ID'), sub: 'Outbound dispatches', trend: 'neutral', icon: 'truck' },
   ], [farmerCount, totalWaringsCount, totalWeighedKg, totalDeliveriesCount])
 
   /* Dynamic Weekly Intake by Day */
@@ -329,8 +330,8 @@ export default function ReportsPage() {
       priority: true,
       render: (row) => (
         <div className="stack-none">
-          <span className="mono t-small font-medium">{row.date}</span>
-          <span className="t-caption text-text-secondary">{row.time}</span>
+          <span className="mono t-small font-medium">{idText(row.date)}</span>
+          <span className="t-caption text-text-secondary">{idText(row.time)}</span>
         </div>
       ),
     },
@@ -345,31 +346,31 @@ export default function ReportsPage() {
           Packaging: 'success',
           Dispatch: 'neutral',
         }
-        return <Badge tone={toneMap[row.station]}>{row.station}</Badge>
+        return <Badge tone={toneMap[row.station]}>{idText(row.station)}</Badge>
       },
     },
     {
       key: 'reference',
       label: 'Identifier',
-      render: (row) => <span className="mono t-small font-semibold">{row.reference}</span>,
+      render: (row) => <span className="mono t-small font-semibold">{idText(row.reference)}</span>,
     },
     {
       key: 'description',
       label: 'Description',
-      render: (row) => <span className="t-small text-text-secondary">{row.description}</span>,
+      render: (row) => <span className="t-small text-text-secondary">{idText(row.description)}</span>,
     },
     {
       key: 'quantity',
       label: 'Quantity',
       priority: true,
       align: 'right',
-      render: (row) => <span className="mono t-small font-semibold text-text">{row.quantity}</span>,
+      render: (row) => <span className="mono t-small font-semibold text-text">{idText(row.quantity)}</span>,
     },
     {
       key: 'status',
       label: 'Status',
       align: 'right',
-      render: (row) => <Badge tone={row.status === 'APPROVED' || row.status === 'STORED' || row.status === 'SORTED' || row.status === 'DELIVERED' ? 'success' : 'neutral'}>{row.status}</Badge>,
+      render: (row) => <Badge tone={row.status === 'APPROVED' || row.status === 'STORED' || row.status === 'SORTED' || row.status === 'DELIVERED' ? 'success' : 'neutral'}>{idText(row.status)}</Badge>,
     },
   ]
 
@@ -402,7 +403,7 @@ export default function ReportsPage() {
   return (
     <div className="stack stack-lg">
       <PageHeader
-        title="Reports & Analytics"
+        title={idText("Reports & Analytics")}
         subtitle="Operational recaps per day, per month, farmer rankings, and OpenAPI Documentation."
         actions={
           <div className="flex items-center gap-2">
@@ -412,7 +413,7 @@ export default function ReportsPage() {
               icon="reports"
               onClick={() => window.open('/docs', '_blank')}
             >
-              OpenAPI Docs
+              {idText("OpenAPI Docs")}
             </Button>
             <Button
               variant="primary"
@@ -420,14 +421,14 @@ export default function ReportsPage() {
               icon="download"
               onClick={handleExportCsv}
             >
-              Export CSV
+              {idText("Export CSV")}
             </Button>
           </div>
         }
       />
 
       {/* ── Main Navigation Tabs ── */}
-      <div className="tabs border-b border-border" role="tablist" aria-label="Report Views">
+      <div className="tabs border-b border-border" role="tablist" aria-label={idText("Report Views")}>
         {[
           { id: 'overview', label: 'Overview & Ledger', icon: 'clipboard' as IconName },
           { id: 'daily', label: 'Daily Recap', icon: 'calendar' as IconName },
@@ -443,7 +444,7 @@ export default function ReportsPage() {
             onClick={() => setActiveTab(tab.id as any)}
           >
             <Icon name={tab.icon} size={15} />
-            <span>{tab.label}</span>
+            <span>{idText(tab.label)}</span>
           </button>
         ))}
       </div>
@@ -455,7 +456,7 @@ export default function ReportsPage() {
             {stats.map((stat) => (
               <StatCard
                 key={stat.label}
-                label={stat.label}
+                label={idText(stat.label)}
                 value={stat.value}
                 sub={stat.sub}
                 trend={stat.trend}
@@ -465,12 +466,12 @@ export default function ReportsPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-md">
-            <Card title="Weekly weighing" subtitle="Approved kilograms per day">
+            <Card title={idText("Weekly weighing")} subtitle="Approved kilograms per day">
               <div className="stack-md">
                 <div className="row gap-sm" style={{ alignItems: 'flex-end', height: 180 }}>
                   {weekly.map((item) => (
                     <div key={item.day} className="stack-xs" style={{ flex: 1, alignItems: 'center' }}>
-                      <span className="t-caption text-text-secondary num">{item.kg}</span>
+                      <span className="t-caption text-text-secondary num">{idText(item.kg)}</span>
                       <div
                         className="progress-fill"
                         style={{
@@ -481,45 +482,45 @@ export default function ReportsPage() {
                           borderRadius: '4px 4px 0 0',
                         }}
                       />
-                      <span className="t-caption text-text-light">{item.day}</span>
+                      <span className="t-caption text-text-light">{idText(item.day)}</span>
                     </div>
                   ))}
                 </div>
                 <p className="t-caption text-text-secondary">
-                  Total {weekly.reduce((sum, item) => sum + item.kg, 0).toLocaleString('en-US')} kg in the last 7 days.
+                  {idText("Total")} {idText(weekly.reduce((sum, item) => sum + item.kg, 0).toLocaleString('id-ID'))} {idText("kg in the last 7 days.")}
                 </p>
               </div>
             </Card>
 
-            <Card title="Grade distribution" subtitle="Share of approved weight per grade">
+            <Card title={idText("Grade distribution")} subtitle="Share of approved weight per grade">
               <div className="stack-md">
                 {grades.map((item) => (
                   <div key={item.grade} className="stack-xs">
                     <div className="row between gap-sm">
-                      <span className="t-small font-semibold">Grade {item.grade}</span>
-                      <span className="mono t-small text-text-secondary">{item.kg.toLocaleString('en-US')} kg</span>
+                      <span className="t-small font-semibold">{idText("Grade")} {idText(item.grade)}</span>
+                      <span className="mono t-small text-text-secondary">{idText(item.kg.toLocaleString('id-ID'))} {idText("kg")}</span>
                     </div>
                     <div className="progress-track">
                       <div className="progress-fill" style={{ width: `${item.share}%` }} />
                     </div>
-                    <span className="t-caption text-text-secondary">{item.share}% of total</span>
+                    <span className="t-caption text-text-secondary">{idText(item.share)}{idText("% of total")}</span>
                   </div>
                 ))}
                 <div className="divider" />
                 <div className="row gap-sm flex-wrap">
-                  <Badge tone="accent" icon="leaf">Potatoes only</Badge>
-                  <Badge tone="neutral">{range === 'all' ? 'All time' : `Last ${range}`}</Badge>
+                  <Badge tone="accent" icon="leaf">{idText("Potatoes only")}</Badge>
+                  <Badge tone="neutral">{idText(range === 'all' ? 'All time' : `Last ${range}`)}</Badge>
                 </div>
               </div>
             </Card>
           </div>
 
           <Card
-            title="Transaction Ledger"
+            title={idText("Transaction Ledger")}
             subtitle="Recorded activity from Reception through Dispatch."
             action={
               <div className="flex items-center gap-3">
-                <div className="tabs" role="tablist" aria-label="Reporting range">
+                <div className="tabs" role="tablist" aria-label={idText("Reporting range")}>
                   {[
                     { id: '7d', label: '7 days' },
                     { id: '30d', label: '30 days' },
@@ -533,11 +534,11 @@ export default function ReportsPage() {
                       className={`tab ${range === option.id ? 'is-active' : ''}`}
                       onClick={() => setRange(option.id)}
                     >
-                      {option.label}
+                      {idText(option.label)}
                     </button>
                   ))}
                 </div>
-                <Badge tone="neutral">{transactions.length} records</Badge>
+                <Badge tone="neutral">{idText(transactions.length)} {idText("records")}</Badge>
               </div>
             }
             padding="none"
@@ -547,8 +548,8 @@ export default function ReportsPage() {
               data={transactions}
               rowKey={(row) => row.id}
               pageSize={10}
-              emptyTitle="No transactions recorded."
-              emptyDescription="Transactions appear after Station 01 records the first intake."
+              emptyTitle={idText("No transactions recorded.")}
+              emptyDescription={idText("Transactions appear after Station 01 records the first intake.")}
               caption="Transaction data is sourced from operational records; no sample rows are shown."
             />
           </Card>
@@ -561,7 +562,7 @@ export default function ReportsPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border bg-card">
             <div className="flex items-center gap-3">
               <label htmlFor="daily-date-input" className="text-sm font-semibold text-text">
-                Select Date:
+                {idText("Select Date:")}
               </label>
               <input
                 id="daily-date-input"
@@ -577,7 +578,7 @@ export default function ReportsPage() {
                 onClick={() => loadDailyRecap(selectedDate)}
                 loading={dailyLoading}
               >
-                Refresh
+                {idText("Refresh")}
               </Button>
             </div>
             <div className="flex items-center gap-2">
@@ -588,7 +589,7 @@ export default function ReportsPage() {
                 loading={dailyDownloading}
                 onClick={handleDownloadDailyCsv}
               >
-                Download Daily CSV
+                {idText("Download Daily CSV")}
               </Button>
             </div>
           </div>
@@ -621,7 +622,7 @@ export default function ReportsPage() {
           </div>
 
           <Card
-            title={`Delivering Farmers on ${selectedDate}`}
+            title={idText(`Delivering Farmers on ${selectedDate}`)}
             subtitle="Individual grower intake records and tare deductions"
             padding="none"
           >
@@ -630,25 +631,25 @@ export default function ReportsPage() {
                 <table className="table w-full">
                   <thead>
                     <tr>
-                      <th className="text-left">Farmer Code</th>
-                      <th className="text-left">Farmer Name</th>
-                      <th className="text-left">Village</th>
-                      <th className="text-right">Warings</th>
-                      <th className="text-right">Gross (kg)</th>
-                      <th className="text-right">Tare (kg)</th>
-                      <th className="text-right">Net Weight (kg)</th>
+                      <th className="text-left">{idText("Farmer Code")}</th>
+                      <th className="text-left">{idText("Farmer Name")}</th>
+                      <th className="text-left">{idText("Village")}</th>
+                      <th className="text-right">{idText("Warings")}</th>
+                      <th className="text-right">{idText("Gross (kg)")}</th>
+                      <th className="text-right">{idText("Tare (kg)")}</th>
+                      <th className="text-right">{idText("Net Weight (kg)")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {dailyData.farmerBreakdown.map((f: any) => (
                       <tr key={f.farmerCode}>
-                        <td className="font-mono font-bold text-accent">{f.farmerCode}</td>
-                        <td className="font-semibold">{f.farmerName}</td>
-                        <td className="text-muted-foreground">{f.village || 'Garut'}</td>
-                        <td className="text-right font-mono">{f.warings}</td>
-                        <td className="text-right font-mono font-medium">{formatWeight(f.grossWeightKg)} kg</td>
-                        <td className="text-right font-mono text-muted-foreground">{formatWeight(f.tareWeightKg)} kg</td>
-                        <td className="text-right font-mono font-bold text-success">{formatWeight(f.netWeightKg)} kg</td>
+                        <td className="font-mono font-bold text-accent">{idText(f.farmerCode)}</td>
+                        <td className="font-semibold">{idText(f.farmerName)}</td>
+                        <td className="text-muted-foreground">{idText(f.village || 'Garut')}</td>
+                        <td className="text-right font-mono">{idText(f.warings)}</td>
+                        <td className="text-right font-mono font-medium">{idText(formatWeight(f.grossWeightKg))} {idText("kg")}</td>
+                        <td className="text-right font-mono text-muted-foreground">{idText(formatWeight(f.tareWeightKg))} {idText("kg")}</td>
+                        <td className="text-right font-mono font-bold text-success">{idText(formatWeight(f.netWeightKg))} {idText("kg")}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -657,8 +658,8 @@ export default function ReportsPage() {
             ) : (
               <div className="py-12 text-center text-muted-foreground">
                 <Icon name="calendar" size={28} className="mx-auto mb-2 text-muted-foreground" />
-                <p className="font-medium text-sm">No intake transactions recorded on {selectedDate}.</p>
-                <p className="text-xs text-muted-foreground mt-1">Select another date or perform reception weighing.</p>
+                <p className="font-medium text-sm">{idText("No intake transactions recorded on")} {idText(selectedDate)}.</p>
+                <p className="text-xs text-muted-foreground mt-1">{idText("Select another date or perform reception weighing.")}</p>
               </div>
             )}
           </Card>
@@ -671,7 +672,7 @@ export default function ReportsPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border bg-card">
             <div className="flex items-center gap-3">
               <label htmlFor="monthly-month-input" className="text-sm font-semibold text-text">
-                Select Month:
+                {idText("Select Month:")}
               </label>
               <input
                 id="monthly-month-input"
@@ -687,7 +688,7 @@ export default function ReportsPage() {
                 onClick={() => loadMonthlyRecap(selectedMonth)}
                 loading={monthlyLoading}
               >
-                Refresh
+                {idText("Refresh")}
               </Button>
             </div>
             <div className="flex items-center gap-2">
@@ -698,7 +699,7 @@ export default function ReportsPage() {
                 loading={monthlyDownloading}
                 onClick={handleDownloadMonthlyCsv}
               >
-                Download Monthly CSV
+                {idText("Download Monthly CSV")}
               </Button>
             </div>
           </div>
@@ -733,7 +734,7 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <Card
-                title={`Daily Breakdown in ${selectedMonth}`}
+                title={idText(`Daily Breakdown in ${selectedMonth}`)}
                 subtitle="Day-by-day aggregate intake and delivery volumes"
                 padding="none"
               >
@@ -742,21 +743,21 @@ export default function ReportsPage() {
                     <table className="table w-full">
                       <thead>
                         <tr>
-                          <th className="text-left">Date</th>
-                          <th className="text-right">Warings</th>
-                          <th className="text-right">Gross (kg)</th>
-                          <th className="text-right">Net (kg)</th>
-                          <th className="text-right">Farmers</th>
+                          <th className="text-left">{idText("Date")}</th>
+                          <th className="text-right">{idText("Warings")}</th>
+                          <th className="text-right">{idText("Gross (kg)")}</th>
+                          <th className="text-right">{idText("Net (kg)")}</th>
+                          <th className="text-right">{idText("Farmers")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {monthlyData.dailyBreakdown.map((d: any) => (
                           <tr key={d.date}>
-                            <td className="font-mono font-semibold">{d.date}</td>
-                            <td className="text-right font-mono">{d.warings}</td>
-                            <td className="text-right font-mono font-medium">{formatWeight(d.grossWeightKg)} kg</td>
-                            <td className="text-right font-mono font-bold text-success">{formatWeight(d.netWeightKg)} kg</td>
-                            <td className="text-right font-mono">{d.farmers}</td>
+                            <td className="font-mono font-semibold">{idText(d.date)}</td>
+                            <td className="text-right font-mono">{idText(d.warings)}</td>
+                            <td className="text-right font-mono font-medium">{idText(formatWeight(d.grossWeightKg))} {idText("kg")}</td>
+                            <td className="text-right font-mono font-bold text-success">{idText(formatWeight(d.netWeightKg))} {idText("kg")}</td>
+                            <td className="text-right font-mono">{idText(d.farmers)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -765,7 +766,7 @@ export default function ReportsPage() {
                 ) : (
                   <div className="py-12 text-center text-muted-foreground">
                     <Icon name="bar-chart" size={28} className="mx-auto mb-2 text-muted-foreground" />
-                    <p className="font-medium text-sm">No activity recorded for {selectedMonth}.</p>
+                    <p className="font-medium text-sm">{idText("No activity recorded for")} {idText(selectedMonth)}.</p>
                   </div>
                 )}
               </Card>
@@ -773,7 +774,7 @@ export default function ReportsPage() {
 
             <div>
               <Card
-                title="Top 5 Farmers This Month"
+                title={idText("Top 5 Farmers This Month")}
                 subtitle="Leading contributors by intake weight"
               >
                 {monthlyData?.topFarmers && monthlyData.topFarmers.length > 0 ? (
@@ -782,22 +783,22 @@ export default function ReportsPage() {
                       <div key={f.farmerCode} className="py-3 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <span className="flex size-6 shrink-0 items-center justify-center font-bold text-xs bg-muted text-muted-foreground">
-                            #{idx + 1}
+                            #{idText(idx + 1)}
                           </span>
                           <div>
-                            <p className="text-xs font-bold text-foreground">{f.farmerName}</p>
-                            <p className="text-[10px] text-muted-foreground font-mono">{f.farmerCode} · {f.village || 'Garut'}</p>
+                            <p className="text-xs font-bold text-foreground">{idText(f.farmerName)}</p>
+                            <p className="text-[10px] text-muted-foreground font-mono">{idText(f.farmerCode)} · {idText(f.village || 'Garut')}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-mono text-xs font-bold text-success">{formatWeight(f.grossWeightKg)} kg</p>
-                          <p className="text-[10px] text-muted-foreground">{f.warings} Warings</p>
+                          <p className="font-mono text-xs font-bold text-success">{idText(formatWeight(f.grossWeightKg))} {idText("kg")}</p>
+                          <p className="text-[10px] text-muted-foreground">{idText(f.warings)} {idText("Warings")}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="py-6 text-center text-xs text-muted-foreground">No monthly farmer rankings.</p>
+                  <p className="py-6 text-center text-xs text-muted-foreground">{idText("No monthly farmer rankings.")}</p>
                 )}
               </Card>
             </div>
@@ -810,7 +811,7 @@ export default function ReportsPage() {
         <div className="stack stack-lg">
           <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border bg-card">
             <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-text">Leaderboard Period:</span>
+              <span className="text-sm font-semibold text-text">{idText("Leaderboard Period:")}</span>
               <div className="tabs" role="tablist">
                 {[
                   { id: 'all', label: 'All Time' },
@@ -823,7 +824,7 @@ export default function ReportsPage() {
                     className={`tab ${rankingPeriod === p.id ? 'is-active' : ''}`}
                     onClick={() => setRankingPeriod(p.id as any)}
                   >
-                    {p.label}
+                    {idText(p.label)}
                   </button>
                 ))}
               </div>
@@ -836,32 +837,32 @@ export default function ReportsPage() {
                 loading={rankingsDownloading}
                 onClick={handleDownloadRankingsCsv}
               >
-                Download Leaderboard CSV
+                {idText("Download Leaderboard CSV")}
               </Button>
             </div>
           </div>
 
           <Card
-            title="Farmer Leaderboard"
+            title={idText("Farmer Leaderboard")}
             subtitle="Ranked by total gross kilograms delivered with contribution share"
             padding="none"
           >
             {rankingsLoading ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">Loading farmer rankings…</div>
+              <div className="py-12 text-center text-sm text-muted-foreground">{idText("Loading farmer rankings…")}</div>
             ) : rankings.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="table w-full">
                   <thead>
                     <tr>
-                      <th className="text-center w-14">Rank</th>
-                      <th className="text-left">Farmer Code</th>
-                      <th className="text-left">Farmer Name</th>
-                      <th className="text-left">Village</th>
-                      <th className="text-left">District</th>
-                      <th className="text-right">Total Warings</th>
-                      <th className="text-right">Gross Intake (kg)</th>
-                      <th className="text-right">Net Intake (kg)</th>
-                      <th className="text-right">Share (%)</th>
+                      <th className="text-center w-14">{idText("Rank")}</th>
+                      <th className="text-left">{idText("Farmer Code")}</th>
+                      <th className="text-left">{idText("Farmer Name")}</th>
+                      <th className="text-left">{idText("Village")}</th>
+                      <th className="text-left">{idText("District")}</th>
+                      <th className="text-right">{idText("Total Warings")}</th>
+                      <th className="text-right">{idText("Gross Intake (kg)")}</th>
+                      <th className="text-right">{idText("Net Intake (kg)")}</th>
+                      <th className="text-right">{idText("Share (%)")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -879,17 +880,17 @@ export default function ReportsPage() {
                                 : 'border border-border text-muted-foreground'
                             }`}
                           >
-                            {r.rank === 1 ? '1 🥇' : r.rank === 2 ? '2 🥈' : r.rank === 3 ? '3 🥉' : r.rank}
+                            {idText(r.rank === 1 ? '1 🥇' : r.rank === 2 ? '2 🥈' : r.rank === 3 ? '3 🥉' : r.rank)}
                           </span>
                         </td>
-                        <td className="font-mono font-bold text-accent">{r.farmerCode}</td>
-                        <td className="font-semibold text-foreground">{r.farmerName}</td>
-                        <td className="text-muted-foreground">{r.village || '—'}</td>
-                        <td className="text-muted-foreground">{r.district || '—'}</td>
-                        <td className="text-right font-mono">{r.totalWarings}</td>
-                        <td className="text-right font-mono font-bold text-foreground">{formatWeight(r.totalGrossKg)} kg</td>
-                        <td className="text-right font-mono font-medium text-success">{formatWeight(r.totalNetKg)} kg</td>
-                        <td className="text-right font-mono font-bold text-accent">{r.sharePct?.toFixed(1) || 0}%</td>
+                        <td className="font-mono font-bold text-accent">{idText(r.farmerCode)}</td>
+                        <td className="font-semibold text-foreground">{idText(r.farmerName)}</td>
+                        <td className="text-muted-foreground">{idText(r.village || '—')}</td>
+                        <td className="text-muted-foreground">{idText(r.district || '—')}</td>
+                        <td className="text-right font-mono">{idText(r.totalWarings)}</td>
+                        <td className="text-right font-mono font-bold text-foreground">{idText(formatWeight(r.totalGrossKg))} {idText("kg")}</td>
+                        <td className="text-right font-mono font-medium text-success">{idText(formatWeight(r.totalNetKg))} {idText("kg")}</td>
+                        <td className="text-right font-mono font-bold text-accent">{idText(r.sharePct?.toFixed(1) || 0)}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -898,7 +899,7 @@ export default function ReportsPage() {
             ) : (
               <div className="py-12 text-center text-muted-foreground">
                 <Icon name="users" size={28} className="mx-auto mb-2 text-muted-foreground" />
-                <p className="font-medium text-sm">No farmer intake data found for this period.</p>
+                <p className="font-medium text-sm">{idText("No farmer intake data found for this period.")}</p>
               </div>
             )}
           </Card>

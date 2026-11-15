@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import React from 'react'
 import { cn } from '@/lib/utils'
 import Icon, { type IconName } from './Icon'
@@ -19,7 +20,7 @@ export default function StatCard({ label, value, sub, trend = 'neutral', icon, l
   const content = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{idText(label)}</p>
         {icon && (
           <span className="text-muted-foreground/80 shrink-0">
             {typeof icon === 'string' ? <Icon name={icon} size={18} /> : icon}
@@ -32,9 +33,9 @@ export default function StatCard({ label, value, sub, trend = 'neutral', icon, l
           large ? 'text-3xl md:text-4xl' : 'text-2xl md:text-3xl',
         )}
       >
-        {value}
+        {idText(value)}
       </div>
-      {sub && <div className={cn('text-xs font-medium', trendColor)}>{sub}</div>}
+      {sub && <div className={cn('text-xs font-medium', trendColor)}>{idText(sub)}</div>}
     </>
   )
 
@@ -48,9 +49,9 @@ export default function StatCard({ label, value, sub, trend = 'neutral', icon, l
         className={cn(cardClasses, 'text-left w-full hover:bg-muted/40 cursor-pointer')}
         onClick={onClick}
       >
-        {content}
+        {idText(content)}
       </button>
     )
   }
-  return <div className={cardClasses}>{content}</div>
+  return <div className={cardClasses}>{idText(content)}</div>
 }

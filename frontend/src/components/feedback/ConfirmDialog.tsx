@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import {
@@ -62,22 +63,22 @@ export default function ConfirmDialog({
           </div>
 
           <DialogHeader className="text-left space-y-2">
-            <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">{idText(title)}</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
-              {description}
+              {idText(description)}
             </DialogDescription>
           </DialogHeader>
 
           <DialogFooter className="flex flex-row justify-end gap-2 pt-2">
             <Button variant="outline" onClick={onCancel}>
-              {cancelLabel}
+              {idText(cancelLabel)}
             </Button>
             <Button
               ref={confirmRef}
               variant={tone === 'danger' ? 'danger' : 'primary'}
               onClick={onConfirm}
             >
-              {confirmLabel}
+              {idText(confirmLabel)}
             </Button>
           </DialogFooter>
         </div>

@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import Card from '../components/shared/Card'
 import Icon, { type IconName } from '../components/shared/Icon'
 import PageHeader from '../components/shared/PageHeader'
@@ -35,13 +36,13 @@ const activities: Activity[] = [
 export default function DashboardHome() {
   return (
     <div className="stack stack-lg">
-      <PageHeader title="Dashboard" subtitle="Overview of your operations" />
+      <PageHeader title={idText("Dashboard")} subtitle="Overview of your operations" />
 
       <div className="grid-stats">
         {stats.map((stat) => (
           <StatCard
             key={stat.label}
-            label={stat.label}
+            label={idText(stat.label)}
             value={stat.value}
             sub={stat.sub}
             trend={stat.trend}
@@ -50,17 +51,17 @@ export default function DashboardHome() {
         ))}
       </div>
 
-      <Card title="Recent Activity" subtitle="Latest events across your workflow">
+      <Card title={idText("Recent Activity")} subtitle="Latest events across your workflow">
         <div className="stack">
           {activities.map((activity, index) => (
             <div key={index} className="row gap-md py-3 border-b border-border last:border-0">
-              <span className="mono t-caption text-text-light w-12 flex-shrink-0">{activity.time}</span>
+              <span className="mono t-caption text-text-light w-12 flex-shrink-0">{idText(activity.time)}</span>
               <span
                 className={`icon-tile flex-shrink-0 ${activity.tone === 'accent' ? 'icon-tile-accent' : ''}`}
               >
                 <Icon name={activity.icon} size={18} />
               </span>
-              <span className="t-small text-text min-w-0">{activity.action}</span>
+              <span className="t-small text-text min-w-0">{idText(activity.action)}</span>
             </div>
           ))}
         </div>

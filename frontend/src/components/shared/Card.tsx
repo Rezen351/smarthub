@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import type { HTMLAttributes, ReactNode } from 'react'
 import {
   Card as UICard,
@@ -42,18 +43,18 @@ export default function Card({
       {hasHeader && (
         <CardHeader className="flex flex-col items-stretch justify-between gap-3 p-5 pb-3 space-y-0 sm:flex-row sm:items-start">
           <div className="min-w-0">
-            {title && <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>}
-            {subtitle && <CardDescription className="text-sm mt-1">{subtitle}</CardDescription>}
+            {title && <CardTitle className="text-base font-semibold tracking-tight">{idText(title)}</CardTitle>}
+            {subtitle && <CardDescription className="text-sm mt-1">{idText(subtitle)}</CardDescription>}
           </div>
-          {action && <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:shrink-0">{action}</div>}
+          {action && <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:shrink-0">{idText(action)}</div>}
         </CardHeader>
       )}
       <CardContent className={cn(padClasses[padding], hasHeader && 'pt-0')}>
-        {children}
+        {idText(children)}
       </CardContent>
       {footer && (
         <CardFooter className="border-t border-border bg-muted/40 px-5 py-3 text-xs text-muted-foreground">
-          {footer}
+          {idText(footer)}
         </CardFooter>
       )}
     </UICard>

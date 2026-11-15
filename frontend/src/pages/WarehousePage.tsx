@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useState, useEffect } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import Badge from '../components/shared/Badge'
@@ -52,7 +53,7 @@ export default function WarehousePage() {
       key: 'code',
       label: 'Waring Code',
       priority: true,
-      render: (row) => <span className="font-mono font-bold text-foreground">{row.code}</span>,
+      render: (row) => <span className="font-mono font-bold text-foreground">{idText(row.code)}</span>,
     },
     {
       key: 'farmerName',
@@ -66,7 +67,7 @@ export default function WarehousePage() {
       priority: true,
       render: (row) => (
         <span className="font-mono font-bold text-emerald-800">
-          {formatWeight(row.grossWeightKg)} kg
+          {idText(formatWeight(row.grossWeightKg))} {idText("kg")}
         </span>
       ),
     },
@@ -75,8 +76,8 @@ export default function WarehousePage() {
       label: 'Intake Time',
       render: (row) => (
         <div>
-          <span className="font-mono text-xs text-foreground block">{row.intakeTime}</span>
-          <span className="text-[10px] text-muted-foreground">{row.date || 'Today'}</span>
+          <span className="font-mono text-xs text-foreground block">{idText(row.intakeTime)}</span>
+          <span className="text-[10px] text-muted-foreground">{idText(row.date || 'Today')}</span>
         </div>
       ),
     },
@@ -85,7 +86,7 @@ export default function WarehousePage() {
       label: 'Queue Status',
       render: () => (
         <Badge tone="warning" dot>
-          Waiting for Sorting
+          {idText("Waiting for Sorting")}
         </Badge>
       ),
     },
@@ -97,7 +98,7 @@ export default function WarehousePage() {
         <div className="flex items-center gap-1.5 justify-end">
           <Link to="/dashboard/sorting">
             <Button size="sm" variant="outline">
-              Buka Pemilahan
+              {idText("Buka Pemilahan")}
             </Button>
           </Link>
           {user?.role === 'ADMIN' && (
@@ -108,7 +109,7 @@ export default function WarehousePage() {
               className="text-destructive hover:bg-destructive/10 border-destructive/30"
               onClick={() => setCancelModalRecord({ code: row.code, farmerName: row.farmerName })}
             >
-              Batalkan
+              {idText("Batalkan")}
             </Button>
           )}
         </div>
@@ -121,24 +122,24 @@ export default function WarehousePage() {
       key: 'code',
       label: 'Batch Code',
       priority: true,
-      render: (row) => <span className="font-mono font-bold text-foreground">{row.code}</span>,
+      render: (row) => <span className="font-mono font-bold text-foreground">{idText(row.code)}</span>,
     },
     {
       key: 'packageType',
       label: 'Package Standard',
-      render: (row) => <span className="text-sm font-semibold text-foreground">{row.packageType}</span>,
+      render: (row) => <span className="text-sm font-semibold text-foreground">{idText(row.packageType)}</span>,
     },
     {
       key: 'grade',
       label: 'Grade',
-      render: (row) => <Badge tone="accent">Grade {row.grade}</Badge>,
+      render: (row) => <Badge tone="accent">{idText("Grade")} {idText(row.grade)}</Badge>,
     },
     {
       key: 'units',
       label: 'Quantity Units',
       align: 'right',
       priority: true,
-      render: (row) => <span className="font-mono font-bold text-foreground">{row.units}</span>,
+      render: (row) => <span className="font-mono font-bold text-foreground">{idText(row.units)}</span>,
     },
     {
       key: 'totalWeightKg',
@@ -146,7 +147,7 @@ export default function WarehousePage() {
       align: 'right',
       render: (row) => (
         <span className="font-mono font-bold text-emerald-800">
-          {formatWeight(row.totalWeightKg)} kg
+          {idText(formatWeight(row.totalWeightKg))} {idText("kg")}
         </span>
       ),
     },
@@ -155,25 +156,25 @@ export default function WarehousePage() {
       label: 'Rack / Bay',
       render: (row) => (
         <span className="font-mono text-xs bg-muted px-2 py-0.5 border border-border">
-          {row.storageLocation}
+          {idText(row.storageLocation)}
         </span>
       ),
     },
     {
       key: 'packedTime',
       label: 'Time',
-      render: (row) => <span className="font-mono text-xs text-muted-foreground">{row.packedTime}</span>,
+      render: (row) => <span className="font-mono text-xs text-muted-foreground">{idText(row.packedTime)}</span>,
     },
   ]
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Warehouse Inventory"
+        title={idText("Warehouse Inventory")}
         subtitle="Harvest buffer and finished goods storage."
         actions={
           <div className="flex items-center gap-2">
-            <Badge tone="accent">2 Zones Active</Badge>
+            <Badge tone="accent">{idText("2 Zones Active")}</Badge>
           </div>
         }
       />
@@ -192,21 +193,21 @@ export default function WarehousePage() {
         >
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-bold text-muted-foreground">ZONE 01</span>
+              <span className="font-mono text-xs font-bold text-muted-foreground">{idText("ZONE 01")}</span>
               <Badge tone={activeZone === 'buffer' ? 'success' : 'neutral'}>
-                {bufferItems.length} Warings Queued
+                {idText(bufferItems.length)} {idText("Warings Queued")}
               </Badge>
             </div>
             <h3 className="font-bold text-lg text-foreground mt-1">
-              Raw Harvest Buffer
+              {idText("Raw Harvest Buffer")}
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
-              Queue for waring sacks awaiting sorting.
+              {idText("Queue for waring sacks awaiting sorting.")}
             </p>
             <div className="mt-3 flex items-center gap-3 text-xs font-mono">
-              <span className="font-bold text-emerald-800">{formatWeight(bufferTotalKg)} kg queued</span>
+              <span className="font-bold text-emerald-800">{idText(formatWeight(bufferTotalKg))} {idText("kg queued")}</span>
               <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground">Capacity: {bufferPct}%</span>
+              <span className="text-muted-foreground">{idText("Capacity:")} {idText(bufferPct)}%</span>
             </div>
           </div>
           <div
@@ -232,21 +233,21 @@ export default function WarehousePage() {
         >
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-bold text-muted-foreground">ZONE 02</span>
+              <span className="font-mono text-xs font-bold text-muted-foreground">{idText("ZONE 02")}</span>
               <Badge tone={activeZone === 'finished' ? 'accent' : 'neutral'}>
-                {finishedTotalUnits} Units in Stock
+                {idText(finishedTotalUnits)} {idText("Units in Stock")}
               </Badge>
             </div>
             <h3 className="font-bold text-lg text-foreground mt-1">
-              Finished Goods Storage
+              {idText("Finished Goods Storage")}
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
-              Retail pouches and export cartons ready for dispatch.
+              {idText("Retail pouches and export cartons ready for dispatch.")}
             </p>
             <div className="mt-3 flex items-center gap-3 text-xs font-mono">
-              <span className="font-bold text-blue-800">{formatWeight(finishedTotalKg)} kg total</span>
+              <span className="font-bold text-blue-800">{idText(formatWeight(finishedTotalKg))} {idText("kg total")}</span>
               <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground">Usage: {finishedPct}%</span>
+              <span className="text-muted-foreground">{idText("Usage:")} {idText(finishedPct)}%</span>
             </div>
           </div>
           <div
@@ -299,15 +300,15 @@ export default function WarehousePage() {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <h3 className="font-bold text-base text-foreground">
-                  Harvest Buffer Queue
+                  {idText("Harvest Buffer Queue")}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Warings from intake weighing waiting for manual sorting and pallet association.
+                  {idText("Warings from intake weighing waiting for manual sorting and pallet association.")}
                 </p>
               </div>
               <Link to="/dashboard/sorting">
                 <Button variant="primary" icon="check">
-                  Open Sorting Station
+                  {idText("Open Sorting Station")}
                 </Button>
               </Link>
             </div>
@@ -355,15 +356,15 @@ export default function WarehousePage() {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <h3 className="font-bold text-base text-foreground">
-                  Finished Goods Inventory Ledger
+                  {idText("Finished Goods Inventory Ledger")}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Packaged items ready for scan verification and dispatch loading.
+                  {idText("Packaged items ready for scan verification and dispatch loading.")}
                 </p>
               </div>
               <Link to="/dashboard/deliveries">
                 <Button variant="primary" icon="truck">
-                  Open Dispatch & Deliveries
+                  {idText("Open Dispatch & Deliveries")}
                 </Button>
               </Link>
             </div>

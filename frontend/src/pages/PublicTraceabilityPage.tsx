@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useEffect, useState, useCallback } from 'react'
 import { Link, useSearchParams, useParams } from 'react-router-dom'
 import Logo from '../components/shared/Logo'
@@ -168,7 +169,7 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
           timestamp: formatSafeDateTime(pkg.packedAt),
           operator: 'Packaging Operator',
           completed: true,
-          details: `Packed into ${pkg.format === 'RETAIL_POUCH' ? '1 kg Retail Pouch' : 'Export Carton'}. Barcode: ${pkg.barcode || pkg.code}.`,
+          details: `Packed into ${pkg.format === 'RETAIL_POUCH' ? 'Pouch 1 kg' : 'Carton'}. Barcode: ${pkg.barcode || pkg.code}.`,
         },
         {
           stage: 'Outbound Dispatch & Transport',
@@ -310,14 +311,14 @@ export default function PublicTraceabilityPage() {
       {/* ── Top Header Bar ── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#eaeaea]">
         <div className="public-trace-header max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="public-trace-brand flex items-center gap-3 group min-w-0" aria-label="SmartGeulis home">
+          <Link to="/" className="public-trace-brand flex items-center gap-3 group min-w-0" aria-label={idText("SmartGeulis home")}>
             <Logo className="h-8 w-auto" markOnly />
             <div className="public-trace-brand-copy min-w-0">
               <div className="public-trace-brand-title font-display text-2xl leading-none tracking-wider text-[#171717] flex items-center gap-2">
-                SmartGeulis
+                {idText("SmartGeulis")}
               </div>
               <div className="public-trace-brand-subtitle font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
-                TRACEABILITY SYSTEM
+                {idText("TRACEABILITY SYSTEM")}
               </div>
             </div>
           </Link>
@@ -328,13 +329,13 @@ export default function PublicTraceabilityPage() {
               className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-[#666666] hover:text-[#171717] px-3 py-2 rounded-sm transition-colors"
             >
               <Icon name="arrow-left" size={14} />
-              <span>Back to Home</span>
+              <span>{idText("Back to Home")}</span>
             </Link>
             <Link
               to="/login"
               className="public-trace-login inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider bg-[#000000] text-white hover:bg-[#333333] px-4 py-2 rounded-sm transition-colors shrink-0"
             >
-              <span>Operator Login</span>
+              <span>{idText("Operator Login")}</span>
             </Link>
           </div>
         </div>
@@ -345,13 +346,13 @@ export default function PublicTraceabilityPage() {
         {/* Page Title & Mission Banner */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
           <Badge tone="accent" icon="qr" className="px-3 py-1 text-xs">
-            Product Verification
+            {idText("Product Verification")}
           </Badge>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#171717]">
-            Product Traceability
+            {idText("Product Traceability")}
           </h1>
           <p className="text-sm sm:text-base text-[#666666] leading-relaxed">
-            Scan the QR code on your potato pouch or pallet, or enter the code manually to confirm product origin and quality.
+            {idText("Scan the QR code on your potato pouch or pallet, or enter the code manually to confirm product origin and quality.")}
           </p>
         </div>
 
@@ -359,7 +360,7 @@ export default function PublicTraceabilityPage() {
         <div className="bg-white border border-[#eaeaea] rounded-none p-5 sm:p-7 shadow-xs space-y-5">
           <form onSubmit={handleFormSubmit} className="space-y-4">
             <label className="block text-xs font-mono font-semibold uppercase tracking-wider text-[#666666]">
-              Enter Pouch or Pallet Code
+              {idText("Enter Pouch or Pallet Code")}
             </label>
 
             <div className="flex flex-col sm:flex-row gap-3">
@@ -368,7 +369,7 @@ export default function PublicTraceabilityPage() {
                   type="text"
                   value={queryCode}
                   onChange={(e) => setQueryCode(e.target.value)}
-                  placeholder="e.g. PCH-PLT-20260914-0001-001 or PLT-20261011-0042"
+                  placeholder={idText("e.g. PCH-PLT-20260914-0001-001 or PLT-20261011-0042")}
                   className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#ea580c] focus:ring-2 focus:ring-[#ea580c]/20 transition-all"
                 />
                 {queryCode && (
@@ -376,7 +377,7 @@ export default function PublicTraceabilityPage() {
                     type="button"
                     onClick={() => setQueryCode('')}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#171717] p-1"
-                    aria-label="Clear code"
+                    aria-label={idText("Clear code")}
                   >
                     <Icon name="close" size={14} />
                   </button>
@@ -390,7 +391,7 @@ export default function PublicTraceabilityPage() {
                   icon="search"
                   className="min-w-0 px-6 py-3 text-sm font-semibold justify-center flex-1 sm:flex-none"
                 >
-                  Trace Product
+                  {idText("Trace Product")}
                 </Button>
                 <Button
                   type="button"
@@ -399,7 +400,7 @@ export default function PublicTraceabilityPage() {
                   onClick={() => startCamera()}
                   className="min-w-0 px-4 py-3 text-sm font-semibold justify-center flex-1 sm:flex-none"
                 >
-                  Scan QR
+                  {idText("Scan QR")}
                 </Button>
               </div>
             </div>
@@ -408,14 +409,14 @@ export default function PublicTraceabilityPage() {
           {/* Quick Sample Chips for Instant Verification */}
           <div className="pt-4 border-t border-[#f0f0f0] flex flex-wrap items-center gap-2">
             <span className="text-xs font-mono text-[#666666] tracking-wider uppercase mr-1">
-              Sample Records:
+              {idText("Sample Records:")}
             </span>
             <button
               type="button"
               onClick={() => handleSelectSampleCode('WRG-20261026-0001')}
               className="text-xs font-mono bg-[#fff7ed] text-[#ea580c] hover:bg-[#ffedd5] border border-[#fed7aa] px-2.5 py-1 rounded-none transition-colors"
             >
-              Intake Waring (WRG-20261026-0001)
+              {idText("Intake Waring (WRG-20261026-0001)")}
             </button>
           </div>
         </div>
@@ -429,7 +430,7 @@ export default function PublicTraceabilityPage() {
             setSearchParams({ code })
             executeSearch(code)
           }}
-          title="Live QR Code & Barcode Scanner"
+          title={idText("Live QR Code & Barcode Scanner")}
           subtitle="Align the QR code on the physical packaging sticker or waring sack within the viewfinder."
           manualPlaceholder="Enter trace code (WRG-..., PCH-..., PLT-...)..."
           quickOptions={[
@@ -445,10 +446,9 @@ export default function PublicTraceabilityPage() {
               <Icon name="alert" size={24} />
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-[#171717]">Record Not Found</h3>
+              <h3 className="text-lg font-bold text-[#171717]">{idText("Record Not Found")}</h3>
               <p className="text-sm text-[#666666] max-w-md mx-auto">
-                No verified batch matching code <span className="font-mono font-bold text-[#171717]">{queryCode}</span> was
-                found. Check the code format or try one of the test sample buttons above.
+                {idText("No verified batch matching code")} <span className="font-mono font-bold text-[#171717]">{idText(queryCode)}</span> {idText("was found. Check the code format or try one of the test sample buttons above.")}
               </p>
             </div>
             <Button
@@ -457,7 +457,7 @@ export default function PublicTraceabilityPage() {
               icon="refresh"
               onClick={() => handleSelectSampleCode('WRG-20261026-0001')}
             >
-              Load Verified Waring
+              {idText("Load Verified Waring")}
             </Button>
           </div>
         )}
@@ -471,17 +471,17 @@ export default function PublicTraceabilityPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <Badge tone="success" icon="check-circle" live>
-                      Verified Authentic
+                      {idText("Verified Authentic")}
                     </Badge>
                     <Badge tone="neutral" className="font-mono uppercase text-xs">
-                      {result.type.replace('_', ' ')}
+                      {idText(result.type.replace('_', ' '))}
                     </Badge>
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-[#171717]">
-                    {result.code}
+                    {idText(result.code)}
                   </h2>
                   <p className="text-xs text-[#666666] font-mono mt-1">
-                    Product Link: <a href={result.gs1Uri} target="_blank" rel="noreferrer" className="text-[#ea580c] hover:underline">Open link</a>
+                    {idText("Product Link:")} <a href={result.gs1Uri} target="_blank" rel="noreferrer" className="text-[#ea580c] hover:underline">{idText("Open link")}</a>
                   </p>
                 </div>
 
@@ -492,7 +492,7 @@ export default function PublicTraceabilityPage() {
                     icon="print"
                     onClick={handlePrintCertificate}
                   >
-                    Print Certificate
+                    {idText("Print Certificate")}
                   </Button>
                 </div>
               </div>
@@ -500,32 +500,32 @@ export default function PublicTraceabilityPage() {
               {/* Product Details Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
-                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Product & Variety</span>
-                  <span className="text-base font-bold text-[#171717] mt-1 block">{result.variety}</span>
+                  <span className="text-[11px] font-mono uppercase text-[#666666] block">{idText("Product & Variety")}</span>
+                  <span className="text-base font-bold text-[#171717] mt-1 block">{idText(result.variety)}</span>
                 </div>
 
                 <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
-                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Grade</span>
+                  <span className="text-[11px] font-mono uppercase text-[#666666] block">{idText("Grade")}</span>
                   <div className="mt-1 flex items-center gap-1.5">
                     <Badge
                       tone={result.grade === 'A' ? 'success' : result.grade === 'B' ? 'accent' : 'warning'}
                       className="font-bold text-xs"
                     >
-                      Grade {result.grade}
+                      {idText("Grade")} {idText(result.grade)}
                     </Badge>
                   </div>
                 </div>
 
                 <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
-                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Verified Net Weight</span>
+                  <span className="text-[11px] font-mono uppercase text-[#666666] block">{idText("Verified Net Weight")}</span>
                   <span className="text-base font-bold font-mono text-emerald-600 mt-1 block">
-                    {formatWeight(result.weightKg)} kg
+                    {idText(formatWeight(result.weightKg))} {idText("kg")}
                   </span>
                 </div>
 
                 <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
-                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Quality</span>
-                  <span className="text-base font-bold text-[#171717] mt-1 block">{result.qualityScore}</span>
+                  <span className="text-[11px] font-mono uppercase text-[#666666] block">{idText("Quality")}</span>
+                  <span className="text-base font-bold text-[#171717] mt-1 block">{idText(result.qualityScore)}</span>
                 </div>
               </div>
 
@@ -533,40 +533,40 @@ export default function PublicTraceabilityPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                 <div className="space-y-3">
                   <h3 className="text-xs font-mono uppercase tracking-wider text-[#666666] font-semibold">
-                    Farm Origin
+                    {idText("Farm Origin")}
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
-                      <span className="text-[#666666]">Farmer / Producer</span>
-                      <span className="font-semibold text-[#171717]">{result.farmerName} ({result.farmerId})</span>
+                      <span className="text-[#666666]">{idText("Farmer / Producer")}</span>
+                      <span className="font-semibold text-[#171717]">{idText(result.farmerName)} ({idText(result.farmerId)})</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
-                      <span className="text-[#666666]">Location</span>
-                      <span className="font-semibold text-[#171717]">{result.farmLocation}</span>
+                      <span className="text-[#666666]">{idText("Location")}</span>
+                      <span className="font-semibold text-[#171717]">{idText(result.farmLocation)}</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
-                      <span className="text-[#666666]">Elevation</span>
-                      <span className="font-semibold text-[#171717]">{result.elevation}</span>
+                      <span className="text-[#666666]">{idText("Elevation")}</span>
+                      <span className="font-semibold text-[#171717]">{idText(result.elevation)}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <h3 className="text-xs font-mono uppercase tracking-wider text-[#666666] font-semibold">
-                    Batch Details
+                    {idText("Batch Details")}
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
-                      <span className="text-[#666666]">Product Number</span>
-                      <span className="font-mono font-semibold text-[#171717]">{result.gtin}</span>
+                      <span className="text-[#666666]">{idText("Product Number")}</span>
+                      <span className="font-mono font-semibold text-[#171717]">{idText(result.gtin)}</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
-                      <span className="text-[#666666]">Batch / Lot Number</span>
-                      <span className="font-mono font-semibold text-[#171717]">{result.batchLot}</span>
+                      <span className="text-[#666666]">{idText("Batch / Lot Number")}</span>
+                      <span className="font-mono font-semibold text-[#171717]">{idText(result.batchLot)}</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
-                      <span className="text-[#666666]">Harvest Date</span>
-                      <span className="font-mono font-semibold text-[#171717]">{result.harvestDate}</span>
+                      <span className="text-[#666666]">{idText("Harvest Date")}</span>
+                      <span className="font-mono font-semibold text-[#171717]">{idText(result.harvestDate)}</span>
                     </div>
                   </div>
                 </div>
@@ -577,10 +577,10 @@ export default function PublicTraceabilityPage() {
             <div className="bg-white border border-[#eaeaea] rounded-none p-6 sm:p-8 shadow-xs space-y-6">
               <div className="space-y-1">
                 <h3 className="text-xl font-bold tracking-tight text-[#171717]">
-                  Verified Harvest & Processing Journey
+                  {idText("Verified Harvest & Processing Journey")}
                 </h3>
                 <p className="text-xs text-[#666666]">
-                  Each stage is time-stamped and confirmed by the packhouse team.
+                  {idText("Each stage is time-stamped and confirmed by the packhouse team.")}
                 </p>
               </div>
 
@@ -600,18 +600,18 @@ export default function PublicTraceabilityPage() {
 
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-bold text-base text-[#171717]">{step.stage}</span>
+                        <span className="font-bold text-base text-[#171717]">{idText(step.stage)}</span>
                         <span className="font-mono text-xs text-[#666666] bg-[#fafafa] border border-[#f0f0f0] px-2 py-0.5 rounded-none">
-                          {step.timestamp}
+                          {idText(step.timestamp)}
                         </span>
                       </div>
 
                       <p className="text-xs font-medium text-[#ea580c]">
-                        {step.location} · <span className="text-[#666666]">{step.operator}</span>
+                        {idText(step.location)} · <span className="text-[#666666]">{idText(step.operator)}</span>
                       </p>
                       {step.details && (
                         <p className="text-xs text-[#525252] bg-[#f9fafb] p-2.5 rounded-none border border-[#f3f4f6] mt-1.5">
-                          {step.details}
+                          {idText(step.details)}
                         </p>
                       )}
                     </div>
@@ -624,20 +624,20 @@ export default function PublicTraceabilityPage() {
             <div className="bg-white border border-[#eaeaea] rounded-none p-6 sm:p-8 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="space-y-2 max-w-lg">
                 <Badge tone="accent" className="font-mono text-[10px]">
-                  PRODUCT QR
+                  {idText("PRODUCT QR")}
                 </Badge>
                 <h4 className="text-lg font-bold text-[#171717]">
-                  Scannable Product Verification QR
+                  {idText("Scannable Product Verification QR")}
                 </h4>
                 <p className="text-xs text-[#666666] leading-relaxed">
-                  Consumers and retailers can scan the QR code printed on the physical packaging sticker using any standard smartphone camera to view this live verification page.
+                  {idText("Consumers and retailers can scan the QR code printed on the physical packaging sticker using any standard smartphone camera to view this live verification page.")}
                 </p>
               </div>
 
               <div className="p-4 bg-white border-2 border-[#171717] rounded-none shadow-xs text-center flex flex-col items-center shrink-0">
                 <OfflineQrCode value={result.gs1Uri} size={128} />
                 <span className="font-mono text-[10px] text-[#666666] mt-2 block">
-                  {result.code}
+                  {idText(result.code)}
                 </span>
               </div>
             </div>
@@ -648,15 +648,15 @@ export default function PublicTraceabilityPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-[#eaeaea] bg-white py-6 text-xs text-[#666666] mt-auto">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} SmartGeulis. All rights reserved.</p>
+          <p>© {idText(new Date().getFullYear())} {idText("SmartGeulis. All rights reserved.")}</p>
           <div className="flex items-center gap-3">
             <span className="bg-[#f5f5f5] px-2 py-0.5 rounded-none font-mono border border-[#eaeaea]">
-              Type: smartgeulis
+              {idText("Type: smartgeulis")}
             </span>
-            <span>Traceability System v1.0.0</span>
+            <span>{idText("Traceability System v1.0.0")}</span>
           </div>
           <Link to="/" className="text-[#ea580c] hover:underline font-medium">
-            SmartGeulis Overview
+            {idText("SmartGeulis Overview")}
           </Link>
         </div>
       </footer>

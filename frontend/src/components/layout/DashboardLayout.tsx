@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
@@ -145,8 +146,8 @@ export default function DashboardLayout() {
   }
 
   const navLinks = (
-        <nav className="sidebar-nav" aria-label="Main navigation">
-          <p className="sidebar-section">{user ? roleLabel[user.role] ?? 'Menu' : 'Menu'}</p>
+        <nav className="sidebar-nav" aria-label={idText("Main navigation")}>
+          <p className="sidebar-section">{idText(user ? roleLabel[user.role] ?? 'Menu' : 'Menu')}</p>
           {menu.map((item) =>
             item.external ? (
               <a
@@ -159,7 +160,7 @@ export default function DashboardLayout() {
                 <span className="sidebar-link-icon">
                   <Icon name={item.icon} size={17} />
                 </span>
-                <span className="flex-1">{item.label}</span>
+                <span className="flex-1">{idText(item.label)}</span>
                 <span className="text-[10px] text-text-light font-mono">↗</span>
               </a>
             ) : (
@@ -172,7 +173,7 @@ export default function DashboardLayout() {
                 <span className="sidebar-link-icon">
                   <Icon name={item.icon} size={17} />
                 </span>
-                {item.label}
+                {idText(item.label)}
               </NavLink>
             )
           )}
@@ -186,23 +187,23 @@ export default function DashboardLayout() {
         <div className="min-w-0 flex-1">
           <p className="t-small font-semibold text-truncate">{user?.name}</p>
           <p className="t-caption text-text-secondary text-truncate">
-            {user ? roleLabel[user.role] ?? user.role : ''}
+            {idText(user ? roleLabel[user.role] ?? user.role : '')}
           </p>
         </div>
       </div>
       <Button variant="outline" size="sm" icon="logout" block onClick={requestLogout}>
-        Keluar
+        {idText("Keluar")}
       </Button>
       <Link to="/traceability" className="t-caption text-text-secondary hover:text-text flex items-center gap-1">
         <Icon name="search" size={12} />
-        Ketertelusuran Publik
+        {idText("Ketertelusuran Publik")}
       </Link>
       <div className="pt-2 border-t border-border flex flex-col gap-0.5 text-text-light font-mono text-[11px]">
         <div className="flex items-center justify-between">
-          <span className="font-semibold text-text">SmartGeulis</span>
-          <span className="bg-bg-alt px-1.5 py-0.5 rounded-none text-[9px] font-mono tracking-wider">TRACEABILITY</span>
+          <span className="font-semibold text-text">{idText("SmartGeulis")}</span>
+          <span className="bg-bg-alt px-1.5 py-0.5 rounded-none text-[9px] font-mono tracking-wider">{idText("TRACEABILITY")}</span>
         </div>
-        <span className="text-[10px]">Traceability System v1.0.0</span>
+        <span className="text-[10px]">{idText("Traceability System v1.0.0")}</span>
       </div>
     </div>
   )
@@ -210,28 +211,28 @@ export default function DashboardLayout() {
   return (
     <div className="app-shell">
       {/* ── Sidebar (Persistent on desktop, drawer on mobile) ── */}
-      <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`} aria-label="Sidebar">
+      <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`} aria-label={idText("Sidebar")}>
         <div className="sidebar-brand">
           <Link
             to="/dashboard"
             className="flex items-center gap-3 text-inherit group"
             style={{ textDecoration: 'none' }}
-            aria-label="SmartGeulis home"
+            aria-label={idText("SmartGeulis home")}
           >
             <Logo className="h-8 w-auto" markOnly />
             <div className="min-w-0">
               <div className="font-display text-xl leading-none tracking-wider text-text flex items-center gap-1.5">
-                SmartGeulis
+                {idText("SmartGeulis")}
               </div>
               <div className="font-mono-custom text-[9px] text-text-light tracking-[0.22em] uppercase mt-0.5 hidden xs:block sm:block">
-                <span className="hidden sm:inline">TRACEABILITY SYSTEM</span>
-                <span className="sm:hidden">TRACE</span>
+                <span className="hidden sm:inline">{idText("TRACEABILITY SYSTEM")}</span>
+                <span className="sm:hidden">{idText("TRACE")}</span>
               </div>
             </div>
           </Link>
         </div>
-        {navLinks}
-        {userCard}
+        {idText(navLinks)}
+        {idText(userCard)}
       </aside>
       {menuOpen && <div className="sidebar-overlay hide-desktop" onClick={() => setMenuOpen(false)} />}
 
@@ -244,7 +245,7 @@ export default function DashboardLayout() {
             size="sm"
             className="hide-desktop p-2 min-h-[40px] text-foreground"
             onClick={() => setMenuOpen((open) => !open)}
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-label={idText(menuOpen ? 'Close menu' : 'Open menu')}
             aria-expanded={menuOpen}
           >
             <Icon name={menuOpen ? 'close' : 'menu'} size={20} />
@@ -255,22 +256,22 @@ export default function DashboardLayout() {
             to="/dashboard"
             className="hide-desktop flex items-center gap-2 text-inherit group min-w-0"
             style={{ textDecoration: 'none' }}
-            aria-label="SmartGeulis home"
+            aria-label={idText("SmartGeulis home")}
           >
             <Logo className="h-6 w-auto shrink-0" markOnly />
             <div className="min-w-0">
               <div className="font-display text-sm leading-none tracking-wider text-text truncate">
-                SmartGeulis
+                {idText("SmartGeulis")}
               </div>
               <div className="font-mono-custom text-[7.5px] text-text-light tracking-[0.16em] uppercase truncate">
-                TRACEABILITY
+                {idText("TRACEABILITY")}
               </div>
             </div>
           </Link>
 
           {/* On desktop: show only current page title (brand is in sidebar) */}
           <span className="navbar-title hide-mobile font-semibold text-base text-text">
-            {currentPage?.label ?? 'Dashboard'}
+            {idText(currentPage?.label ?? 'Dashboard')}
           </span>
 
           <div className="navbar-spacer" />
@@ -285,7 +286,7 @@ export default function DashboardLayout() {
               onClick={() => setUserMenuOpen((open) => !open)}
               aria-haspopup="menu"
               aria-expanded={userMenuOpen}
-              aria-label="Account menu"
+              aria-label={idText("Account menu")}
             >
               <span className="avatar avatar-sm">{user?.name?.charAt(0)?.toUpperCase() ?? 'U'}</span>
               <Icon name="chevron-down" size={14} />
@@ -312,19 +313,19 @@ export default function DashboardLayout() {
                     <span className="sidebar-link-icon">
                       <Icon name="user" size={16} />
                     </span>
-                    Profil & Keamanan
+                    {idText("Profil & Keamanan")}
                   </Link>
                   <Link to="/traceability" className="sidebar-link" role="menuitem">
                     <span className="sidebar-link-icon">
                       <Icon name="search" size={16} />
                     </span>
-                    Ketertelusuran Publik
+                    {idText("Ketertelusuran Publik")}
                   </Link>
                   <a href="/docs" target="_blank" rel="noopener noreferrer" className="sidebar-link" role="menuitem">
                     <span className="sidebar-link-icon">
                       <Icon name="clipboard" size={16} />
                     </span>
-                    Dokumentasi API ↗
+                    {idText("Dokumentasi API ↗")}
                   </a>
                   <button
                     type="button"
@@ -336,7 +337,7 @@ export default function DashboardLayout() {
                     <span className="sidebar-link-icon">
                       <Icon name="logout" size={16} />
                     </span>
-                    Keluar Akun
+                    {idText("Keluar Akun")}
                   </button>
                 </div>
               </div>
@@ -346,7 +347,7 @@ export default function DashboardLayout() {
 
         {serverState === 'disconnected' && (
           <div role="status" className="alert alert-warning rounded-none">
-            Server terputus. Periksa koneksi sebelum menyimpan.
+            {idText("Server terputus. Periksa koneksi sebelum menyimpan.")}
           </div>
         )}
         <ContextBar />
@@ -358,7 +359,7 @@ export default function DashboardLayout() {
       <ConfirmDialog
         open={logoutOpen}
         tone="danger"
-        title="Keluar dari akun?"
+        title={idText("Keluar dari akun?")}
         description="Anda harus masuk kembali untuk melanjutkan pekerjaan di sistem."
         confirmLabel="Ya, Keluar"
         cancelLabel="Batal"

@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import React, { useState, useId } from 'react'
 import { formatWeight } from '../../lib/utils'
 
@@ -75,7 +76,7 @@ const SingleChartPanel: React.FC<SingleChartPanelProps> = ({
         <div>
           <div className="flex items-center gap-1.5">
             <h3 className={`text-sm xl:text-base font-bold tracking-tight uppercase ${isDark ? 'text-white' : 'text-foreground'}`}>
-              {title}
+              {idText(title)}
             </h3>
             <span
               className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 border ${
@@ -84,21 +85,21 @@ const SingleChartPanel: React.FC<SingleChartPanelProps> = ({
                   : 'border-orange-500/30 bg-orange-50 text-orange-700'
               }`}
             >
-              Live
+              {idText("Live")}
             </span>
           </div>
           <p className={`text-xs ${isDark ? 'text-white/60' : 'text-muted-foreground'}`}>
-            {subtitle}
+            {idText(subtitle)}
           </p>
         </div>
 
         {/* Quick KPI stats */}
         <div className="text-right shrink-0">
           <p className="font-mono text-base xl:text-lg font-black tabular-nums text-[#f97316] leading-tight">
-            {formatWeight(totalKg)} kg
+            {idText(formatWeight(totalKg))} {idText("kg")}
           </p>
           <p className={`text-xs font-mono ${isDark ? 'text-white/65' : 'text-muted-foreground'}`}>
-            {totalWarings}w · {statRightLabel}: <span className={`${isDark ? 'text-amber-400' : 'text-amber-600'} font-bold`}>{statRightValue}</span>
+            {idText(totalWarings)}{idText("w ·")} {idText(statRightLabel)}: <span className={`${isDark ? 'text-amber-400' : 'text-amber-600'} font-bold`}>{idText(statRightValue)}</span>
           </p>
         </div>
       </div>
@@ -112,9 +113,9 @@ const SingleChartPanel: React.FC<SingleChartPanelProps> = ({
               isDark ? 'bg-black/90 border-[#ea580c]/50 text-white' : 'bg-popover border-border text-foreground'
             }`}
           >
-            <span className="font-bold">{active.tooltipTitle}: </span>
-            <span className="text-[#f97316] font-bold font-mono">{formatWeight(active.value)} kg </span>
-            <span className={isDark ? 'text-white/60' : 'text-muted-foreground'}>({active.count}w)</span>
+            <span className="font-bold">{idText(active.tooltipTitle)}: </span>
+            <span className="text-[#f97316] font-bold font-mono">{idText(formatWeight(active.value))} {idText("kg")} </span>
+            <span className={isDark ? 'text-white/60' : 'text-muted-foreground'}>({idText(active.count)}{idText("w)")}</span>
           </div>
         )}
 
@@ -151,7 +152,7 @@ const SingleChartPanel: React.FC<SingleChartPanelProps> = ({
                   fontFamily="monospace"
                   fill={isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.4)'}
                 >
-                  {(pct * maxVal).toFixed(0)}
+                  {idText((pct * maxVal).toFixed(0))}
                 </text>
               </g>
             )
@@ -215,7 +216,7 @@ const SingleChartPanel: React.FC<SingleChartPanelProps> = ({
                     fontFamily="monospace"
                     fill={isDark ? '#fb923c' : '#ea580c'}
                   >
-                    {formatWeight(item.value)}
+                    {idText(formatWeight(item.value))}
                   </text>
                 )}
 
@@ -234,7 +235,7 @@ const SingleChartPanel: React.FC<SingleChartPanelProps> = ({
                       : 'rgba(0,0,0,0.75)'
                   }
                 >
-                  {item.label}
+                  {idText(item.label)}
                 </text>
 
                 <text
@@ -253,7 +254,7 @@ const SingleChartPanel: React.FC<SingleChartPanelProps> = ({
                       : 'rgba(0,0,0,0.3)'
                   }
                 >
-                  {item.count > 0 ? `${item.count}w` : '—'}
+                  {idText(item.count > 0 ? `${item.count}w` : '—')}
                 </text>
               </g>
             )
@@ -296,7 +297,7 @@ export const DailyDepositChart: React.FC<DailyDepositChartProps> = ({
 
   return (
     <SingleChartPanel
-      title="Daily Intake · Today"
+      title={idText("Daily Intake · Today")}
       subtitle="Hourly gross intake weight (kg) distribution"
       items={items}
       totalKg={totalKg}
@@ -339,7 +340,7 @@ export const WeeklyDepositChart: React.FC<WeeklyDepositChartProps> = ({
 
   return (
     <SingleChartPanel
-      title="Weekly Intake · Past 7 Days"
+      title={idText("Weekly Intake · Past 7 Days")}
       subtitle="Daily deposit volume trend over the past 7 days"
       items={items}
       totalKg={totalKg}

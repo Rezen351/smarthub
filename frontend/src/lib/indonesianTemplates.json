@@ -1,0 +1,1860 @@
+[
+  {
+    "pattern": "^relative\\ flex\\ flex\\-col\\ justify\\-between\\ (.*?)\\ p\\-3\\ xl:p\\-3\\.5\\ overflow\\-hidden\\ (.*?)$",
+    "parts": [
+      "relative flex flex-col justify-between ",
+      " p-3 xl:p-3.5 overflow-hidden ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-sm\\ xl:text\\-base\\ font\\-bold\\ tracking\\-tight\\ uppercase\\ (.*?)$",
+    "parts": [
+      "text-sm xl:text-base font-bold tracking-tight uppercase ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-xs\\ (.*?)$",
+    "parts": [
+      "text-xs ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-xs\\ font\\-mono\\ (.*?)$",
+    "parts": [
+      "text-xs font-mono ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ font\\-bold$",
+    "parts": [
+      "",
+      " font-bold"
+    ]
+  },
+  {
+    "pattern": "^Hour\\ (.*?)$",
+    "parts": [
+      "Jam ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^grid\\ grid\\-cols\\-1\\ md:grid\\-cols\\-2\\ gap\\-3\\ (.*?)$",
+    "parts": [
+      "grid grid-cols-1 md:grid-cols-2 gap-3 ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^relative\\ flex\\ flex\\-col\\ justify\\-between\\ (.*?)\\ p\\-3\\ xl:p\\-3\\.5\\ overflow\\-hidden\\ (.*?)$",
+    "parts": [
+      "relative flex flex-col justify-between ",
+      " p-3 xl:p-3.5 overflow-hidden ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-sm\\ xl:text\\-base\\ font\\-bold\\ tracking\\-tight\\ uppercase\\ (.*?)$",
+    "parts": [
+      "text-sm xl:text-base font-bold tracking-tight uppercase ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-xs\\ (.*?)$",
+    "parts": [
+      "text-xs ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^font\\-mono\\ text\\-base\\ xl:text\\-lg\\ font\\-black\\ tabular\\-nums\\ leading\\-tight\\ (.*?)$",
+    "parts": [
+      "font-mono text-base xl:text-lg font-black tabular-nums leading-tight ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-xs\\ font\\-mono\\ (.*?)$",
+    "parts": [
+      "text-xs font-mono ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^h\\-2\\.5\\ w\\-full\\ rounded\\-full\\ flex\\ overflow\\-hidden\\ (.*?)$",
+    "parts": [
+      "h-2.5 w-full rounded-full flex overflow-hidden ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Grade\\ A:\\ (.*?)%$",
+    "parts": [
+      "Mutu A: ",
+      "%"
+    ]
+  },
+  {
+    "pattern": "^Grade\\ B:\\ (.*?)%$",
+    "parts": [
+      "Mutu B: ",
+      "%"
+    ]
+  },
+  {
+    "pattern": "^Grade\\ C:\\ (.*?)%$",
+    "parts": [
+      "Mutu C: ",
+      "%"
+    ]
+  },
+  {
+    "pattern": "^h\\-full\\ w\\-full\\ (.*?)$",
+    "parts": [
+      "h-full w-full ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^flex\\-1\\ min\\-h\\-0\\ flex\\ flex\\-col\\ justify\\-around\\ divide\\-y\\ (.*?)$",
+    "parts": [
+      "flex-1 min-h-0 flex flex-col justify-around divide-y ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-xs\\ truncate\\ hidden\\ xl:inline\\ (.*?)$",
+    "parts": [
+      "text-xs truncate hidden xl:inline ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^font\\-mono\\ text\\-sm\\ font\\-bold\\ tabular\\-nums\\ mr\\-1\\.5\\ (.*?)$",
+    "parts": [
+      "font-mono text-sm font-bold tabular-nums mr-1.5 ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^font\\-mono\\ text\\-xs\\ font\\-bold\\ (.*?)$",
+    "parts": [
+      "font-mono text-xs font-bold ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-xs\\ truncate\\ hidden\\ xl:inline\\ (.*?)$",
+    "parts": [
+      "text-xs truncate hidden xl:inline ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^font\\-mono\\ text\\-sm\\ font\\-bold\\ tabular\\-nums\\ mr\\-1\\.5\\ (.*?)$",
+    "parts": [
+      "font-mono text-sm font-bold tabular-nums mr-1.5 ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^font\\-mono\\ text\\-xs\\ font\\-bold\\ (.*?)$",
+    "parts": [
+      "font-mono text-xs font-bold ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^flex\\ flex\\-col\\ (.*?)$",
+    "parts": [
+      "flex flex-col ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Server\\ status:\\ (.*?)$",
+    "parts": [
+      "Server status: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^context\\-bar\\ (.*?)$",
+    "parts": [
+      "context-bar ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^sidebar\\-link\\ (.*?)$",
+    "parts": [
+      "sidebar-link ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^sidebar\\ (.*?)$",
+    "parts": [
+      "bilah samping ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^printable\\-label\\ bg\\-white\\ text\\-black\\ border\\ border\\-gray\\-400\\ font\\-mono\\ rounded\\-none\\ (.*?)\\ (.*?)\\ (.*?)$",
+    "parts": [
+      "printable-label bg-white text-black border border-gray-400 font-mono rounded-none ",
+      "   ",
+      "   ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-center\\ border\\-b\\ border\\-dashed\\ border\\-gray\\-400\\ (.*?)$",
+    "parts": [
+      "text-center border-b border-dashed border-gray-400 ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^block\\ tracking\\-wide\\ (.*?)$",
+    "parts": [
+      "block tracking-wide ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-left\\ (.*?)\\ text\\-xs\\ break\\-words$",
+    "parts": [
+      "text-left ",
+      " text-xs break-words"
+    ]
+  },
+  {
+    "pattern": "^text\\-center\\ (.*?)\\ (.*?)$",
+    "parts": [
+      "text-center ",
+      "   ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^block\\ (.*?)$",
+    "parts": [
+      "block ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^block\\ tracking\\-wide\\ break\\-all\\ (.*?)$",
+    "parts": [
+      "block tracking-wide break-all ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^border\\-t\\ border\\-dashed\\ border\\-gray\\-400\\ (.*?)$",
+    "parts": [
+      "border-t border-dashed border-gray-400 ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-center\\ space\\-y\\-0\\.5\\ text\\-xs\\ border\\-t\\ border\\-dashed\\ border\\-gray\\-400\\ (.*?)$",
+    "parts": [
+      "text-center space-y-0.5 text-xs border-t border-dashed border-gray-400 ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Weight\\ exceeds\\ scale\\ capacity\\ of\\ (.*?)\\ kg\\.$",
+    "parts": [
+      "Bobot melebihi timbangan kapasitas dari ",
+      " kg."
+    ]
+  },
+  {
+    "pattern": "^Weight\\ \\((.*?)\\ kg\\)\\ exceeds\\ pallet\\ remaining\\ stock\\ \\((.*?)\\ kg\\)\\.$",
+    "parts": [
+      "Bobot (",
+      " kg) melebihi palet Sisa Stok (",
+      " kg)."
+    ]
+  },
+  {
+    "pattern": "^Scale\\ reading\\ \\((.*?)\\ kg\\)\\ exceeds\\ remaining\\ capacity\\ \\((.*?)\\ kg\\)\\.$",
+    "parts": [
+      "Timbangan pembacaan (",
+      " kg) melebihi sisa kapasitas (",
+      " kg)."
+    ]
+  },
+  {
+    "pattern": "^Weight\\ captured:\\ (.*?)\\ kg$",
+    "parts": [
+      "Bobot diambil: ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^radio\\-card\\ (.*?)$",
+    "parts": [
+      "radio-card ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^radio\\-card\\ (.*?)$",
+    "parts": [
+      "radio-card ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^scale\\-readout\\ (.*?)$",
+    "parts": [
+      "scale-readout ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^progress\\-fill\\ (.*?)$",
+    "parts": [
+      "progress-fill ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Cannot\\ capture:\\ Scale\\ reading\\ exceeds\\ pallet\\ stock\\ \\((.*?)\\ kg\\)$",
+    "parts": [
+      "Tidak dapat ambil: Timbangan pembacaan melebihi palet stok (",
+      " kg)"
+    ]
+  },
+  {
+    "pattern": "^Captured\\ (.*?)$",
+    "parts": [
+      "Diambil ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Scanned:\\ (.*?)$",
+    "parts": [
+      "Dipindai: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ object\\-contain\\ shrink\\-0$",
+    "parts": [
+      "",
+      " object-contain shrink-0"
+    ]
+  },
+  {
+    "pattern": "^flex\\ flex\\-col\\ items\\-center\\ gap\\-1\\ select\\-none\\ (.*?)$",
+    "parts": [
+      "flex flex-col items-center gap-1 select-none ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Barcode\\ (.*?)$",
+    "parts": [
+      "Kode batang ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^bg\\-white\\ text\\-xs\\ text\\-center\\ (.*?)$",
+    "parts": [
+      "bg-white text-xs text-center ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^bg\\-white\\ select\\-none\\ shrink\\-0\\ (.*?)$",
+    "parts": [
+      "bg-white select-none shrink-0 ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^QR\\ Code\\ for\\ (.*?)$",
+    "parts": [
+      "QR Kode untuk ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Pallet\\ (.*?)\\ released\\ for\\ reuse\\.$",
+    "parts": [
+      "Palet ",
+      " dilepas untuk gunakan kembali."
+    ]
+  },
+  {
+    "pattern": "^Close\\ and\\ release\\ pallet\\ (.*?)$",
+    "parts": [
+      "Tutup dan lepas palet ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^p\\-3\\ text\\-left\\ border\\ transition\\-colors\\ cursor\\-pointer\\ (.*?)$",
+    "parts": [
+      "p-3 text-left border transition-colors cursor-pointer ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ ·\\ (.*?)\\ kg\\ ·\\ (.*?)$",
+    "parts": [
+      "",
+      " · ",
+      " kg · ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ ·\\ (.*?)\\ kg\\ graded\\ ·\\ (.*?)$",
+    "parts": [
+      "",
+      " · ",
+      " kg dipilah · ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ ·\\ (.*?)\\ units\\ ·\\ (.*?)\\ kg$",
+    "parts": [
+      "",
+      " · ",
+      " unit · ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ ·\\ (.*?)\\ ·\\ (.*?)\\ units$",
+    "parts": [
+      "",
+      " · ",
+      " · ",
+      " unit"
+    ]
+  },
+  {
+    "pattern": "^flex\\ size\\-6\\ shrink\\-0\\ items\\-center\\ justify\\-center\\ text\\-xs\\ font\\-black\\ (.*?)$",
+    "parts": [
+      "flex size-6 shrink-0 items-center justify-center text-xs font-black ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Operations\\ Dashboard(.*?)$",
+    "parts": [
+      "Dasbor Operasional",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ Warings\\ recorded$",
+    "parts": [
+      "",
+      " Waring tercatat"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)%\\ of\\ 10\\ Ton\\ storage$",
+    "parts": [
+      "",
+      "% dari 10 Ton penyimpanan"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ completed\\ batches$",
+    "parts": [
+      "",
+      " Selesai kelompok"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ farmer\\ profiles$",
+    "parts": [
+      "",
+      " Petani profil"
+    ]
+  },
+  {
+    "pattern": "^flex\\ size\\-6\\ shrink\\-0\\ items\\-center\\ justify\\-center\\ text\\-xs\\ font\\-bold\\ (.*?)$",
+    "parts": [
+      "flex size-6 shrink-0 items-center justify-center text-xs font-bold ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^icon\\-tile\\ flex\\-shrink\\-0\\ (.*?)$",
+    "parts": [
+      "icon-tile flex-shrink-0 ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Delivery\\ (.*?)\\ created\\.\\ Scan\\ each\\ assigned\\ package\\.$",
+    "parts": [
+      "Pengiriman ",
+      " dibuat. Pindai setiap ditetapkan kemasan."
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ verified\\.\\ (.*?)\\ package\\(s\\)\\ remaining\\.$",
+    "parts": [
+      "",
+      " terverifikasi. ",
+      " kemasan(s) sisa."
+    ]
+  },
+  {
+    "pattern": "^Truck\\ (.*?)\\ departed\\.$",
+    "parts": [
+      "Truk ",
+      " Berangkat."
+    ]
+  },
+  {
+    "pattern": "^Tandai\\ pengiriman\\ (.*?)\\ \\((.*?)\\)\\ sebagai\\ telah\\ berangkat\\?$",
+    "parts": [
+      "Tandai pengiriman ",
+      " (",
+      ") sebagai telah berangkat?"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Across\\ (.*?)\\ (.*?)$",
+    "parts": [
+      "Di ",
+      "   ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^size\\-2\\.5\\ rounded\\-none\\ shrink\\-0\\ (.*?)$",
+    "parts": [
+      "size-2.5 rounded-none shrink-0 ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^w\\-2\\ h\\-2\\ rounded\\-full\\ (.*?)$",
+    "parts": [
+      "w-2 h-2 rounded-full ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^absolute\\ inset\\-0\\ transition\\-opacity\\ duration\\-1000\\ (.*?)$",
+    "parts": [
+      "absolute inset-0 transition-opacity duration-1000 ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^w\\-full\\ h\\-full\\ object\\-cover\\ filter\\ brightness\\-\\[0\\.38\\]\\ contrast\\-\\[1\\.3\\]\\ (.*?)$",
+    "parts": [
+      "w-full h-full object-cover saring brightness-[0.38] contrast-[1.3] ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^w\\-2\\ h\\-2\\ rounded\\-full\\ (.*?)$",
+    "parts": [
+      "w-2 h-2 rounded-full ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^flip\\-card\\ cursor\\-pointer\\ (.*?)$",
+    "parts": [
+      "flip-card cursor-pointer ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^flip\\-card\\ cursor\\-pointer\\ (.*?)$",
+    "parts": [
+      "flip-card cursor-pointer ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^flip\\-card\\ cursor\\-pointer\\ (.*?)$",
+    "parts": [
+      "flip-card cursor-pointer ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^flip\\-card\\ cursor\\-pointer\\ (.*?)$",
+    "parts": [
+      "flip-card cursor-pointer ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^transition\\-all\\ duration\\-300\\ rounded\\-full\\ h\\-1\\ (.*?)$",
+    "parts": [
+      "transition-all duration-300 rounded-full h-1 ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Go\\ to\\ case\\ (.*?)$",
+    "parts": [
+      "Buka contoh ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^cursor\\-pointer\\ p\\-3\\ border\\ text\\-center\\ transition\\-all\\ (.*?)$",
+    "parts": [
+      "cursor-pointer p-3 border text-center transition-all ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^w\\-2\\ h\\-2\\ rounded\\-full\\ (.*?)$",
+    "parts": [
+      "w-2 h-2 rounded-full ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Scale\\ \\((.*?)\\)$",
+    "parts": [
+      "Timbangan (",
+      ")"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg\\ ·\\ (.*?)\\ Warings$",
+    "parts": [
+      "",
+      " kg · ",
+      " Waring"
+    ]
+  },
+  {
+    "pattern": "^Scale\\ \\((.*?)\\)$",
+    "parts": [
+      "Timbangan (",
+      ")"
+    ]
+  },
+  {
+    "pattern": "^(.*?)%\\ Yield\\ ·\\ (.*?)%\\ Loss$",
+    "parts": [
+      "",
+      "% Rendemen · ",
+      "% Kehilangan"
+    ]
+  },
+  {
+    "pattern": "^Scale\\ \\((.*?)\\)$",
+    "parts": [
+      "Timbangan (",
+      ")"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ pouches\\ ·\\ (.*?)\\ crates$",
+    "parts": [
+      "",
+      " kantong · ",
+      " peti"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ Warings$",
+    "parts": [
+      "",
+      " Waring"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ Warings$",
+    "parts": [
+      "",
+      " Waring"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg\\ awaiting\\ sort$",
+    "parts": [
+      "",
+      " kg menunggu pilah"
+    ]
+  },
+  {
+    "pattern": "^(.*?)%\\ Shrinkage$",
+    "parts": [
+      "",
+      "% Susut"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ units$",
+    "parts": [
+      "",
+      " unit"
+    ]
+  },
+  {
+    "pattern": "^Pallet\\ (.*?)\\ selected\\ \\(Grade\\ (.*?)\\)$",
+    "parts": [
+      "Palet ",
+      " dipilih (Mutu ",
+      ")"
+    ]
+  },
+  {
+    "pattern": "^Pallet\\ (.*?)\\ has\\ no\\ remaining\\ weight$",
+    "parts": [
+      "Palet ",
+      " telah belum ada sisa bobot"
+    ]
+  },
+  {
+    "pattern": "^Failed\\ to\\ reprint\\ label\\ for\\ (.*?):\\ (.*?)$",
+    "parts": [
+      "Gagal ke cetak ulang label untuk ",
+      ": ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Reprinted\\ label\\ for\\ (.*?)\\.$",
+    "parts": [
+      "Dicetak ulang label untuk ",
+      "."
+    ]
+  },
+  {
+    "pattern": "^Sub\\-Minimum\\ Remainder\\ \\((.*?)\\ kg\\ <\\ 1\\.000\\ kg\\)$",
+    "parts": [
+      "Di bawah minimum Sisa (",
+      " kg < 1.000 kg)"
+    ]
+  },
+  {
+    "pattern": "^Remaining\\ Stock\\ \\((.*?)\\ kg\\)\\ Below\\ (.*?)\\ kg\\ Spec$",
+    "parts": [
+      "Sisa Stok (",
+      " kg) Di bawah ",
+      " kg Spesifikasi"
+    ]
+  },
+  {
+    "pattern": "^Cannot\\ form\\ a\\ 1\\ kg\\ pouch\\ from\\ (.*?)\\.\\ Close\\ and\\ release\\ the\\ pallet\\ to\\ return\\ it\\ to\\ Sorting\\.$",
+    "parts": [
+      "Tidak dapat bentuk 1 kg kantong dari ",
+      ". Tutup dan lepas palet ke kembali it ke Pemilahan."
+    ]
+  },
+  {
+    "pattern": "^Switch\\ to\\ a\\ smaller\\ standard\\ package\\ or\\ close\\ and\\ release\\ (.*?)\\ with\\ an\\ audited\\ disposition\\.$",
+    "parts": [
+      "Pilih kemasan lebih kecil atau tutup dan lepas ",
+      " dengan tercatat penanganan."
+    ]
+  },
+  {
+    "pattern": "^Pallet\\ (.*?)\\ completed\\.\\ Ready\\ to\\ scan\\ next\\ pallet\\.$",
+    "parts": [
+      "Palet ",
+      " Selesai. Siap ke pindai berikutnya palet."
+    ]
+  },
+  {
+    "pattern": "^Package\\ weight\\ (.*?)\\ kg\\ exceeds\\ pallet\\ (.*?)\\ remaining\\ weight\\ of\\ (.*?)\\ kg$",
+    "parts": [
+      "Bobot Kemasan ",
+      " kg melebihi palet ",
+      " sisa bobot dari ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Weight\\ (.*?)\\ kg\\ is\\ outside\\ tolerance\\ for\\ (.*?)\\.$",
+    "parts": [
+      "Bobot ",
+      " kg di luar toleransi untuk ",
+      "."
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg\\ export\\ carton$",
+    "parts": [
+      "",
+      " kg ekspor karton"
+    ]
+  },
+  {
+    "pattern": "^Pallet\\ (.*?)\\ is\\ available\\ again\\.$",
+    "parts": [
+      "Palet ",
+      " Tersedia ulang."
+    ]
+  },
+  {
+    "pattern": "^Packaging\\ label\\ print\\ failed:\\ (.*?)$",
+    "parts": [
+      "Pengemasan label cetak gagal: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Recorded\\ (.*?)\\ \\((.*?)\\)\\.\\ Stored\\ in\\ warehouse\\.$",
+    "parts": [
+      "Tercatat ",
+      " (",
+      "). Tersimpan Di Gudang."
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg\\ Export\\ Carton$",
+    "parts": [
+      "",
+      " kg Ekspor Karton"
+    ]
+  },
+  {
+    "pattern": "^Karton\\ (.*?)\\ kg$",
+    "parts": [
+      "Karton ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Cetak\\ ulang\\ label\\ (.*?)$",
+    "parts": [
+      "Cetak ulang label ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^flex\\ items\\-center\\ gap\\-1\\.5\\ text\\-xs\\ font\\-semibold\\ transition\\-colors\\ cursor\\-pointer\\ (.*?)$",
+    "parts": [
+      "flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-xs\\ font\\-mono\\ block\\ (.*?)$",
+    "parts": [
+      "text-xs font-mono block ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^p\\-5\\ text\\-left\\ border\\ transition\\-all\\ cursor\\-pointer\\ bg\\-card\\ (.*?)$",
+    "parts": [
+      "p-5 text-left border transition-all cursor-pointer bg-card ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^p\\-5\\ text\\-left\\ border\\ transition\\-all\\ cursor\\-pointer\\ bg\\-card\\ (.*?)$",
+    "parts": [
+      "p-5 text-left border transition-all cursor-pointer bg-card ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^font\\-mono\\ font\\-bold\\ text\\-base\\ (.*?)$",
+    "parts": [
+      "font-mono font-bold text-base ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg\\ Export\\ Carton$",
+    "parts": [
+      "",
+      " kg Ekspor Karton"
+    ]
+  },
+  {
+    "pattern": "^Packaging\\ label\\ print\\ failed:\\ (.*?)$",
+    "parts": [
+      "Pengemasan label cetak gagal: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-2xl\\ font\\-bold\\ tracking\\-tight\\ (.*?)$",
+    "parts": [
+      "text-2xl font-bold tracking-tight ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-2xl\\ font\\-bold\\ tracking\\-tight\\ (.*?)$",
+    "parts": [
+      "text-2xl font-bold tracking-tight ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Pallet\\ (.*?)\\ registered\\ successfully\\.$",
+    "parts": [
+      "Palet ",
+      " terdaftar berhasil."
+    ]
+  },
+  {
+    "pattern": "^Pallet\\ printer\\ is\\ online\\ at\\ (.*?):(.*?)\\.$",
+    "parts": [
+      "Palet pencetak terhubung di ",
+      ":",
+      "."
+    ]
+  },
+  {
+    "pattern": "^Pallet\\ printer\\ is\\ offline\\ at\\ (.*?):(.*?)\\.$",
+    "parts": [
+      "Palet pencetak terputus di ",
+      ":",
+      "."
+    ]
+  },
+  {
+    "pattern": "^Printer\\ test\\ failed:\\ (.*?)$",
+    "parts": [
+      "Pencetak uji gagal: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Failed\\ to\\ save\\ printer\\ settings:\\ (.*?)$",
+    "parts": [
+      "Gagal ke simpan Pengaturan Pencetak: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Print\\ job\\ for\\ pallet\\ (.*?)\\ dispatched\\ to\\ Pallet\\ Printer\\.$",
+    "parts": [
+      "Cetak pekerjaan untuk palet ",
+      " Dikirim ke Palet Pencetak."
+    ]
+  },
+  {
+    "pattern": "^Failed\\ to\\ print\\ label\\ for\\ (.*?)$",
+    "parts": [
+      "Gagal ke cetak label untuk ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Pallet\\ (.*?)\\ removed\\.$",
+    "parts": [
+      "Palet ",
+      " dihapus."
+    ]
+  },
+  {
+    "pattern": "^font\\-mono\\ text\\-xs\\ font\\-bold\\ (.*?)$",
+    "parts": [
+      "font-mono text-xs font-bold ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Printer\\ Online\\ \\((.*?)\\)$",
+    "parts": [
+      "Pencetak Terhubung (",
+      ")"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ mm$",
+    "parts": [
+      "",
+      " mm"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ \\(RAW\\ TCP\\)$",
+    "parts": [
+      "",
+      " (MENTAH TCP)"
+    ]
+  },
+  {
+    "pattern": "^Are\\ you\\ sure\\ you\\ want\\ to\\ remove\\ pallet\\ \"(.*?)\"\\ from\\ the\\ registry\\?$",
+    "parts": [
+      "Anda yakin Anda ingin ke hapus palet \"",
+      "\" dari daftar?"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ Farm\\ \\((.*?)\\)$",
+    "parts": [
+      "",
+      " Kebun (",
+      ")"
+    ]
+  },
+  {
+    "pattern": "^Gross\\ weight\\ verified\\ at\\ (.*?)\\ kg,\\ net\\ (.*?)\\ kg\\.\\ Status:\\ (.*?)\\.$",
+    "parts": [
+      "Bobot Bruto terverifikasi di ",
+      " kg, neto ",
+      " kg. Status: ",
+      "."
+    ]
+  },
+  {
+    "pattern": "^Intake\\ sack\\ (.*?),\\ gross\\ (.*?)\\ kg,\\ net\\ (.*?)\\ kg\\.$",
+    "parts": [
+      "Penerimaan karung ",
+      ", bruto ",
+      " kg, neto ",
+      " kg."
+    ]
+  },
+  {
+    "pattern": "^Graded\\ to\\ Grade\\ (.*?)\\.\\ Washing\\ decision:\\ (.*?)\\.\\ Shrinkage:\\ (.*?)%\\.$",
+    "parts": [
+      "Dipilah ke Mutu ",
+      ". Pencucian keputusan: ",
+      ". Susut: ",
+      "%."
+    ]
+  },
+  {
+    "pattern": "^Packed\\ into\\ (.*?)\\.\\ Barcode:\\ (.*?)\\.$",
+    "parts": [
+      "Dikemas ke ",
+      ". Kode batang: ",
+      "."
+    ]
+  },
+  {
+    "pattern": "^Driver:\\ (.*?)\\ \\((.*?)\\)$",
+    "parts": [
+      "Pengemudi: ",
+      " (",
+      ")"
+    ]
+  },
+  {
+    "pattern": "^Dispatched\\ under\\ manifest\\ (.*?)\\ to\\ (.*?)$",
+    "parts": [
+      "Dikirim di bawah daftar muatan ",
+      " ke ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Intake\\ sack\\ (.*?),\\ gross\\ (.*?)\\ kg,\\ net\\ (.*?)\\ kg\\.$",
+    "parts": [
+      "Penerimaan karung ",
+      ", bruto ",
+      " kg, neto ",
+      " kg."
+    ]
+  },
+  {
+    "pattern": "^Assembled\\ onto\\ Grade\\ (.*?)\\ Pallet\\.\\ Remaining\\ weight:\\ (.*?)\\ kg\\.$",
+    "parts": [
+      "Dikumpulkan ke Mutu ",
+      " Palet. Sisa bobot: ",
+      " kg."
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ ·\\ Grade\\ (.*?)$",
+    "parts": [
+      "",
+      " · Mutu ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ units\\ ·\\ (.*?)\\ kg$",
+    "parts": [
+      "",
+      " unit · ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ units$",
+    "parts": [
+      "",
+      " unit"
+    ]
+  },
+  {
+    "pattern": "^tab\\ (.*?)\\ flex\\ items\\-center\\ gap\\-2$",
+    "parts": [
+      "tab ",
+      " flex items-center gap-2"
+    ]
+  },
+  {
+    "pattern": "^Last\\ (.*?)$",
+    "parts": [
+      "Terakhir ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^tab\\ (.*?)$",
+    "parts": [
+      "tab ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ Delivering\\ Farmers$",
+    "parts": [
+      "",
+      " Menyetor Petani"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Net:\\ (.*?)\\ kg$",
+    "parts": [
+      "Neto: ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ Batches$",
+    "parts": [
+      "",
+      " Kelompok"
+    ]
+  },
+  {
+    "pattern": "^A:\\ (.*?)kg\\ ·\\ B:\\ (.*?)kg$",
+    "parts": [
+      "A: ",
+      "kg · B: ",
+      "kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ Units$",
+    "parts": [
+      "",
+      " Unit"
+    ]
+  },
+  {
+    "pattern": "^Weight:\\ (.*?)\\ kg$",
+    "parts": [
+      "Bobot: ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Delivering\\ Farmers\\ on\\ (.*?)$",
+    "parts": [
+      "Petani penyetor pada ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ Active\\ Growers$",
+    "parts": [
+      "",
+      " Aktif Petani"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Gross:\\ (.*?)\\ kg$",
+    "parts": [
+      "Bruto: ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ Batches$",
+    "parts": [
+      "",
+      " Kelompok"
+    ]
+  },
+  {
+    "pattern": "^A:\\ (.*?)kg\\ ·\\ B:\\ (.*?)kg$",
+    "parts": [
+      "A: ",
+      "kg · B: ",
+      "kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ Units$",
+    "parts": [
+      "",
+      " Unit"
+    ]
+  },
+  {
+    "pattern": "^Daily\\ Breakdown\\ in\\ (.*?)$",
+    "parts": [
+      "Rincian harian pada ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^tab\\ (.*?)$",
+    "parts": [
+      "tab ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^inline\\-flex\\ size\\-7\\ items\\-center\\ justify\\-center\\ text\\-xs\\ font\\-black\\ (.*?)$",
+    "parts": [
+      "inline-flex size-7 items-center justify-center text-xs font-black ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Please\\ enter\\ an\\ IP\\ address\\ for\\ (.*?)\\ before\\ testing\\.$",
+    "parts": [
+      "Silakan masukkan IP alamat untuk ",
+      " sebelum pengujian."
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ is\\ ready\\ at\\ (.*?):(.*?)$",
+    "parts": [
+      "",
+      " Siap di ",
+      ":",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Could\\ not\\ reach\\ (.*?)\\ at\\ (.*?):(.*?)$",
+    "parts": [
+      "Dapat tidak terhubung ke ",
+      " di ",
+      ":",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Scale\\ check\\ failed:\\ (.*?)$",
+    "parts": [
+      "Timbangan periksa gagal: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ printer\\ is\\ online\\ at\\ (.*?):(.*?)\\.$",
+    "parts": [
+      "",
+      " pencetak terhubung di ",
+      ":",
+      "."
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ printer\\ is\\ offline\\ at\\ (.*?):(.*?)\\.$",
+    "parts": [
+      "",
+      " pencetak terputus di ",
+      ":",
+      "."
+    ]
+  },
+  {
+    "pattern": "^Printer\\ check\\ failed:\\ (.*?)$",
+    "parts": [
+      "Pencetak periksa gagal: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Waring\\ (.*?)\\ loaded\\ from\\ buffer$",
+    "parts": [
+      "Waring ",
+      " dimuat dari penyangga"
+    ]
+  },
+  {
+    "pattern": "^Waring\\ \"(.*?)\"\\ not\\ found\\ in\\ buffer\\ queue\\.$",
+    "parts": [
+      "Waring \"",
+      "\" Data tidak ditemukan di Antrean Penyangga."
+    ]
+  },
+  {
+    "pattern": "^Weight\\ (.*?)\\ kg\\ exceeds\\ remaining\\ intake\\ capacity\\ of\\ (.*?)\\ kg\\ for\\ this\\ waring\\.$",
+    "parts": [
+      "Bobot ",
+      " kg melebihi sisa penerimaan kapasitas dari ",
+      " kg untuk ini waring."
+    ]
+  },
+  {
+    "pattern": "^Grade\\ A\\ weight\\ set\\ to\\ (.*?)\\ kg$",
+    "parts": [
+      "Bobot Mutu A ditetapkan ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Grade\\ B\\ weight\\ set\\ to\\ (.*?)\\ kg$",
+    "parts": [
+      "Bobot Mutu B ditetapkan ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Grade\\ C\\ weight\\ set\\ to\\ (.*?)\\ kg$",
+    "parts": [
+      "Bobot Mutu C ditetapkan ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Pallet\\ \"(.*?)\"\\ is\\ currently\\ IN\\ USE\\ with\\ Grade\\ (.*?)\\ \\((.*?)\\ kg\\)\\.\\ Cannot\\ reuse\\ until\\ Station\\ 03\\ finishes\\ packaging\\.$",
+    "parts": [
+      "Palet \"",
+      "\" saat ini DIGUNAKAN dengan Mutu ",
+      " (",
+      " kg). Tidak dapat gunakan kembali hingga Stasiun 03 selesai Pengemasan."
+    ]
+  },
+  {
+    "pattern": "^Pallet\\ \"(.*?)\"\\ is\\ already\\ assigned\\ to\\ another\\ grade\\ in\\ this\\ run\\.$",
+    "parts": [
+      "Palet \"",
+      "\" sudah ditetapkan ke lain mutu di ini proses."
+    ]
+  },
+  {
+    "pattern": "^Pallet\\ (.*?)\\ linked\\ to\\ Grade\\ (.*?)$",
+    "parts": [
+      "Palet ",
+      " terhubung ke Mutu ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Waring\\ \"(.*?)\"\\ not\\ in\\ queue\\.$",
+    "parts": [
+      "Waring \"",
+      "\" tidak di antrean."
+    ]
+  },
+  {
+    "pattern": "^Total\\ graded\\ weight\\ \\((.*?)\\ kg\\)\\ exceeds\\ waring\\ intake\\ \\((.*?)\\ kg\\)\\.$",
+    "parts": [
+      "Total dipilah bobot (",
+      " kg) melebihi waring penerimaan (",
+      " kg)."
+    ]
+  },
+  {
+    "pattern": "^Batch\\ saved\\.\\ Yield:\\ (.*?)%\\.\\ Pallets\\ ready\\ for\\ packaging\\.$",
+    "parts": [
+      "Kelompok tersimpan. Rendemen: ",
+      "%. Palet Siap untuk Pengemasan."
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^flex\\ items\\-center\\ gap\\-1\\.5\\ text\\-xs\\ font\\-semibold\\ transition\\-colors\\ cursor\\-pointer\\ (.*?)$",
+    "parts": [
+      "flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^p\\-3\\ text\\-center\\ border\\ text\\-xs\\ font\\-semibold\\ transition\\-all\\ cursor\\-pointer\\ (.*?)$",
+    "parts": [
+      "p-3 text-center border text-xs font-semibold transition-all cursor-pointer ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^p\\-3\\ text\\-center\\ border\\ text\\-xs\\ font\\-semibold\\ transition\\-all\\ cursor\\-pointer\\ (.*?)$",
+    "parts": [
+      "p-3 text-center border text-xs font-semibold transition-all cursor-pointer ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^p\\-3\\ text\\-left\\ border\\ rounded\\-none\\ transition\\-all\\ cursor\\-pointer\\ (.*?)$",
+    "parts": [
+      "p-3 text-left border rounded-none transition-all cursor-pointer ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Grade\\ (.*?)\\ Weight$",
+    "parts": [
+      "Mutu ",
+      " Bobot"
+    ]
+  },
+  {
+    "pattern": "^text\\-xs\\ font\\-mono\\ font\\-semibold\\ (.*?)$",
+    "parts": [
+      "text-xs font-mono font-semibold ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^\\ \\(Exceeds\\ by\\ \\+(.*?)\\ kg\\)$",
+    "parts": [
+      " (Melebihi oleh +",
+      " kg)"
+    ]
+  },
+  {
+    "pattern": "^Grade\\ A:\\ (.*?)\\ kg\\ \\((.*?)%\\)$",
+    "parts": [
+      "Mutu A: ",
+      " kg (",
+      "%)"
+    ]
+  },
+  {
+    "pattern": "^A:\\ (.*?)\\ kg$",
+    "parts": [
+      "A: ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Grade\\ B:\\ (.*?)\\ kg\\ \\((.*?)%\\)$",
+    "parts": [
+      "Mutu B: ",
+      " kg (",
+      "%)"
+    ]
+  },
+  {
+    "pattern": "^B:\\ (.*?)\\ kg$",
+    "parts": [
+      "B: ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Grade\\ C:\\ (.*?)\\ kg\\ \\((.*?)%\\)$",
+    "parts": [
+      "Mutu C: ",
+      " kg (",
+      "%)"
+    ]
+  },
+  {
+    "pattern": "^C:\\ (.*?)\\ kg$",
+    "parts": [
+      "C: ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Shrinkage:\\ (.*?)\\ kg\\ \\((.*?)%\\)$",
+    "parts": [
+      "Susut: ",
+      " kg (",
+      "%)"
+    ]
+  },
+  {
+    "pattern": "^Loss:\\ (.*?)\\ kg$",
+    "parts": [
+      "Kehilangan: ",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^text\\-2xl\\ font\\-bold\\ tracking\\-tight\\ (.*?)$",
+    "parts": [
+      "text-2xl font-bold tracking-tight ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg\\ Scale$",
+    "parts": [
+      "",
+      " kg Timbangan"
+    ]
+  },
+  {
+    "pattern": "^Scan\\ Pallet\\ QR\\ for\\ Grade\\ (.*?)$",
+    "parts": [
+      "Pindai Palet QR untuk Mutu ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Align\\ the\\ pre\\-attached\\ PLT\\ QR\\ code\\ for\\ Grade\\ (.*?)\\.$",
+    "parts": [
+      "Arahkan terpasang PLT QR kode untuk Mutu ",
+      "."
+    ]
+  },
+  {
+    "pattern": "^Enter\\ Pallet\\ Tag\\ \\(PLT\\-GRD\\-(.*?)\\-01\\)$",
+    "parts": [
+      "Masukkan Palet Label (PLT-GRD-",
+      "-01)"
+    ]
+  },
+  {
+    "pattern": "^journey\\-step\\ (.*?)$",
+    "parts": [
+      "journey-step ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^User\\ (.*?)\\ updated\\ successfully\\.$",
+    "parts": [
+      "Pengguna ",
+      " diperbarui berhasil."
+    ]
+  },
+  {
+    "pattern": "^User\\ (.*?)\\ deleted\\ —\\ sessions\\ invalidated\\.$",
+    "parts": [
+      "Pengguna ",
+      " dihapus — sesi dibatalkan."
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ of\\ (.*?)\\ shown$",
+    "parts": [
+      "",
+      " dari ",
+      " shown"
+    ]
+  },
+  {
+    "pattern": "^p\\-5\\ border\\ text\\-left\\ rounded\\-none\\ transition\\-all\\ cursor\\-pointer\\ flex\\ items\\-start\\ justify\\-between\\ (.*?)$",
+    "parts": [
+      "p-5 border text-left rounded-none transition-all cursor-pointer flex items-start justify-between ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^w\\-9\\ h\\-9\\ border\\ flex\\ items\\-center\\ justify\\-center\\ shrink\\-0\\ (.*?)$",
+    "parts": [
+      "w-9 h-9 border flex items-center justify-center shrink-0 ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^p\\-5\\ border\\ text\\-left\\ rounded\\-none\\ transition\\-all\\ cursor\\-pointer\\ flex\\ items\\-start\\ justify\\-between\\ (.*?)$",
+    "parts": [
+      "p-5 border text-left rounded-none transition-all cursor-pointer flex items-start justify-between ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^w\\-9\\ h\\-9\\ border\\ flex\\ items\\-center\\ justify\\-center\\ shrink\\-0\\ (.*?)$",
+    "parts": [
+      "w-9 h-9 border flex items-center justify-center shrink-0 ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg\\ free\\ space$",
+    "parts": [
+      "",
+      " kg free space"
+    ]
+  },
+  {
+    "pattern": "^Oldest:\\ (.*?)$",
+    "parts": [
+      "Oldest: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^(.*?)\\ kg$",
+    "parts": [
+      "",
+      " kg"
+    ]
+  },
+  {
+    "pattern": "^Farmer\\ verified:\\ (.*?)\\ \\((.*?)\\)$",
+    "parts": [
+      "Petani terverifikasi: ",
+      " (",
+      ")"
+    ]
+  },
+  {
+    "pattern": "^Unregistered\\ Farmer:\\ \"(.*?)\"\\.\\ Please\\ select\\ an\\ authorized\\ farmer\\ or\\ register\\ them\\ first\\.$",
+    "parts": [
+      "Belum terdaftar Petani: \"",
+      "\". Silakan pilih berwenang Petani atau daftar mereka pertama."
+    ]
+  },
+  {
+    "pattern": "^Unregistered\\ Farmer:\\ \"(.*?)\"\\.\\ Please\\ select\\ an\\ authorized\\ farmer\\ or\\ register\\ them\\ first\\.$",
+    "parts": [
+      "Belum terdaftar Petani: \"",
+      "\". Silakan pilih berwenang Petani atau daftar mereka pertama."
+    ]
+  },
+  {
+    "pattern": "^Weight\\ exceeds\\ scale\\ capacity\\ of\\ (.*?)\\ kg\\.$",
+    "parts": [
+      "Bobot melebihi timbangan kapasitas dari ",
+      " kg."
+    ]
+  },
+  {
+    "pattern": "^Intake\\ saved:\\ (.*?)$",
+    "parts": [
+      "Penerimaan Tersimpan: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Receipt\\ print\\ failed:\\ (.*?)$",
+    "parts": [
+      "Struk cetak gagal: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Receipt\\ printed\\ for\\ (.*?)$",
+    "parts": [
+      "Struk dicetak untuk ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Waring\\ label\\ print\\ failed:\\ (.*?)$",
+    "parts": [
+      "LABEL WARING cetak gagal: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Waring\\ QR\\ label\\ printed:\\ (.*?)$",
+    "parts": [
+      "Label QR Waring dicetak: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Receipt\\ \\&\\ Waring\\ label\\ (.*?)\\ printed$",
+    "parts": [
+      "Struk & LABEL WARING ",
+      " dicetak"
+    ]
+  },
+  {
+    "pattern": "^Receipt\\ and\\ Waring\\ label\\ print\\ failed:\\ (.*?)$",
+    "parts": [
+      "Struk dan LABEL WARING cetak gagal: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^flex\\ items\\-center\\ gap\\-1\\.5\\ text\\-xs\\ font\\-semibold\\ transition\\-colors\\ cursor\\-pointer\\ (.*?)$",
+    "parts": [
+      "flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Saved\\ ·\\ (.*?)$",
+    "parts": [
+      "Tersimpan · ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-2xl\\ font\\-bold\\ tracking\\-tight\\ (.*?)$",
+    "parts": [
+      "text-2xl font-bold tracking-tight ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^text\\-2xl\\ font\\-bold\\ tracking\\-tight\\ (.*?)$",
+    "parts": [
+      "text-2xl font-bold tracking-tight ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Could\\ not\\ clear\\ the\\ scale:\\ (.*?)$",
+    "parts": [
+      "Dapat tidak hapus timbangan: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Could\\ not\\ set\\ the\\ scale\\ to\\ zero:\\ (.*?)$",
+    "parts": [
+      "Dapat tidak tetapkan timbangan ke nol: ",
+      ""
+    ]
+  },
+  {
+    "pattern": "^Failed\\ to\\ update\\ settings:\\ (.*?)$",
+    "parts": [
+      "Gagal ke perbarui pengaturan: ",
+      ""
+    ]
+  }
+]

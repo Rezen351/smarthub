@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import {
   Table,
@@ -74,7 +75,7 @@ export default function DataTable<T>({
   if (data.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
+        <EmptyState title={idText(emptyTitle)} description={idText(emptyDescription)} action={emptyAction} />
       </div>
     )
   }
@@ -101,7 +102,7 @@ export default function DataTable<T>({
                   style={{ width: col.width }}
                   className={cn(col.align === 'right' && 'text-right')}
                 >
-                  {col.label}
+                  {idText(col.label)}
                 </TableHead>
               ))}
             </TableRow>
@@ -114,7 +115,7 @@ export default function DataTable<T>({
                     key={col.key}
                     className={cn(col.align === 'right' && 'tabular-nums text-right')}
                   >
-                    {col.render ? col.render(row, index) : String((row as Record<string, unknown>)[col.key] ?? '')}
+                    {idText(col.render ? col.render(row, index) : String((row as Record<string, unknown>)[col.key] ?? ''))}
                   </TableCell>
                 ))}
               </TableRow>
@@ -140,14 +141,14 @@ export default function DataTable<T>({
             <div className="p-3.5 flex flex-col gap-2 min-w-0" key={rowKey(row, index)}>
               <div className="mobile-table-heading flex items-center justify-between gap-2">
                 <span className="min-w-0 break-words text-sm font-semibold">
-                  {mobileTitle
+                  {idText(mobileTitle
                     ? mobileTitle(row, index)
                     : mobileColumns.length > 0 && mobileColumns[0].render
                       ? mobileColumns[0].render(row, index)
-                      : ''}
+                      : '')}
                 </span>
                 {headingRight && (
-                  <span className="min-w-0 flex items-center gap-2 break-words">{headingRight}</span>
+                  <span className="min-w-0 flex items-center gap-2 break-words">{idText(headingRight)}</span>
                 )}
               </div>
               {gridColumns.length > 0 && (
@@ -155,16 +156,16 @@ export default function DataTable<T>({
                   {gridColumns.map((col) => (
                     <div className="min-w-0 flex flex-col" key={col.key}>
                       <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                        {col.label}
+                        {idText(col.label)}
                       </span>
                       <span className="text-sm font-medium tabular-nums text-foreground mt-0.5 break-words">
-                        {col.render ? col.render(row, index) : String((row as Record<string, unknown>)[col.key] ?? '')}
+                        {idText(col.render ? col.render(row, index) : String((row as Record<string, unknown>)[col.key] ?? ''))}
                       </span>
                     </div>
                   ))}
                 </div>
               )}
-              {mobileActions && <div className="mobile-table-actions flex items-center gap-2 flex-wrap mt-1">{mobileActions(row, index)}</div>}
+              {mobileActions && <div className="mobile-table-actions flex items-center gap-2 flex-wrap mt-1">{idText(mobileActions(row, index))}</div>}
             </div>
           )
         })}
@@ -172,12 +173,12 @@ export default function DataTable<T>({
 
       <div className="mobile-table-pagination flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-xs text-muted-foreground">
         <span>
-          Showing {firstRow}-{lastRow} of {data.length}
+          {idText("Showing")} {idText(firstRow)}-{idText(lastRow)} {idText("of")} {idText(data.length)}
         </span>
 
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-1.5" htmlFor="data-table-page-size">
-            Rows per page
+            {idText("Rows per page")}
             <select
               id={`data-table-page-size-${pageSizeId}`}
               value={rowsPerPage}
@@ -186,14 +187,14 @@ export default function DataTable<T>({
             >
               {availablePageSizes.map((size) => (
                 <option key={size} value={size}>
-                  {size}
+                  {idText(size)}
                 </option>
               ))}
             </select>
           </label>
 
           <span className="px-1 text-foreground">
-            Page {currentPage} of {totalPages}
+            {idText("Page")} {idText(currentPage)} {idText("of")} {idText(totalPages)}
           </span>
 
           <button
@@ -202,7 +203,7 @@ export default function DataTable<T>({
             disabled={currentPage === 1}
             className="min-h-8 border border-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Previous
+            {idText("Previous")}
           </button>
           <button
             type="button"
@@ -210,12 +211,12 @@ export default function DataTable<T>({
             disabled={currentPage === totalPages}
             className="min-h-8 border border-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Next
+            {idText("Next")}
           </button>
         </div>
       </div>
 
-      {caption && <p className="text-xs text-muted-foreground px-4 py-3 border-t border-border">{caption}</p>}
+      {caption && <p className="text-xs text-muted-foreground px-4 py-3 border-t border-border">{idText(caption)}</p>}
     </div>
   )
 }

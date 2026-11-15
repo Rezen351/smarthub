@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { api } from '../services/api'
@@ -73,9 +74,9 @@ export default function FarmerQRPage() {
         <Card>
           <div className="text-center py-8 stack-sm">
             <Icon name="user" size={36} className="text-text-secondary mx-auto" />
-            <h1 className="t-h2">My Farmer ID Card</h1>
+            <h1 className="t-h2">{idText("My Farmer ID Card")}</h1>
             <p className="t-small text-text-secondary">
-              No registered farmer profile is linked to your account. Please contact the administrator.
+              {idText("No registered farmer profile is linked to your account. Please contact the administrator.")}
             </p>
           </div>
         </Card>
@@ -86,12 +87,12 @@ export default function FarmerQRPage() {
   return (
     <div className="stack stack-lg" style={{ maxWidth: 760 }}>
       <PageHeader
-        title="My Farmer ID Card"
+        title={idText("My Farmer ID Card")}
         subtitle="Official identity pass for Station 01 Reception weighing check-in."
         actions={
           <div className="row gap-xs">
             <Button variant="outline" size="sm" icon="print" onClick={handlePrint}>
-              Print ID Card
+              {idText("Print ID Card")}
             </Button>
             <Button
               variant="primary"
@@ -100,7 +101,7 @@ export default function FarmerQRPage() {
               disabled={exporting}
               onClick={handleExportPng}
             >
-              {exporting ? 'Exporting...' : 'Export to PNG'}
+              {idText(exporting ? 'Exporting...' : 'Export to PNG')}
             </Button>
           </div>
         }
@@ -108,7 +109,7 @@ export default function FarmerQRPage() {
 
       {/* Main Official ID Card Display */}
       <Card
-        title="Official Laminated Badge"
+        title={idText("Official Laminated Badge")}
         subtitle="Registered identity badge for packhouse intake check-in"
       >
         <div className="flex flex-col sm:flex-row items-center gap-6 justify-between p-2">
@@ -127,30 +128,30 @@ export default function FarmerQRPage() {
 
           <div className="stack-sm text-xs text-text-secondary flex-1">
             <div>
-              <p className="font-semibold text-text text-sm">Station 01 Weighing Check-In</p>
+              <p className="font-semibold text-text text-sm">{idText("Station 01 Weighing Check-In")}</p>
               <p className="mt-1">
-                Show this official card to the operator at Station 01 Reception or scan the QR code directly at the intake station.
+                {idText("Show this official card to the operator at Station 01 Reception or scan the QR code directly at the intake station.")}
               </p>
             </div>
 
             <div className="bg-bg-alt p-3 rounded border border-border space-y-1">
               <div className="flex justify-between">
-                <span className="font-medium text-text">Farmer Name:</span>
+                <span className="font-medium text-text">{idText("Farmer Name:")}</span>
                 <span className="font-semibold text-text">{cardData.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium text-text">Farmer ID:</span>
-                <span className="font-mono font-bold text-accent">{cardData.code}</span>
+                <span className="font-medium text-text">{idText("Farmer ID:")}</span>
+                <span className="font-mono font-bold text-accent">{idText(cardData.code)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium text-text">Domicile:</span>
+                <span className="font-medium text-text">{idText("Domicile:")}</span>
                 <span>{cardData.domicile}</span>
               </div>
             </div>
 
             <div className="pt-2 flex flex-wrap gap-2">
               <Button size="sm" variant="primary" icon="print" onClick={handlePrint}>
-                Print ID Card
+                {idText("Print ID Card")}
               </Button>
               <Button
                 size="sm"
@@ -159,7 +160,7 @@ export default function FarmerQRPage() {
                 disabled={exporting}
                 onClick={handleExportPng}
               >
-                {exporting ? 'Exporting...' : 'Export PNG'}
+                {idText(exporting ? 'Exporting...' : 'Export PNG')}
               </Button>
             </div>
           </div>

@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import Icon, { type IconName } from './Icon'
@@ -22,9 +23,9 @@ export default function EmptyState({
       <div className="size-11 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground mb-1.5">
         <Icon name={icon} size={20} />
       </div>
-      <p className="text-sm font-semibold text-foreground">{title}</p>
-      {description && <p className="text-sm text-muted-foreground max-w-sm">{description}</p>}
-      {action && <div className="mt-3">{action}</div>}
+      <p className="text-sm font-semibold text-foreground">{idText(title)}</p>
+      {description && <p className="text-sm text-muted-foreground max-w-sm">{idText(description)}</p>}
+      {action && <div className="mt-3">{idText(action)}</div>}
     </div>
   )
 }

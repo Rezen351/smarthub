@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import React from 'react'
 
 interface LiveWeightSparklineProps {
@@ -108,9 +109,9 @@ export const LiveWeightSparkline: React.FC<LiveWeightSparklineProps> = ({
 
       {showLabels && (
         <div className="flex items-center justify-between mt-1 text-xs font-mono text-white/50">
-          <span>Min {minVal.toFixed(2)} kg</span>
-          {capacityKg && <span>Cap {capacityKg} kg</span>}
-          <span className="text-[#fb923c] font-bold">Max {maxVal.toFixed(2)} kg</span>
+          <span>{idText("Min")} {idText(minVal.toFixed(2))} {idText("kg")}</span>
+          {capacityKg && <span>{idText("Cap")} {idText(capacityKg)} {idText("kg")}</span>}
+          <span className="text-[#fb923c] font-bold">{idText("Max")} {idText(maxVal.toFixed(2))} {idText("kg")}</span>
         </div>
       )}
     </div>

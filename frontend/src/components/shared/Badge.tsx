@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import type { HTMLAttributes, ReactNode } from 'react'
 import { Badge as UIBadge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -47,7 +48,7 @@ export default function Badge({
         />
       )}
       {icon && <Icon name={icon} size={12} />}
-      {children}
+      {idText(children)}
     </UIBadge>
   )
 }

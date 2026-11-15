@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import Badge from '../shared/Badge'
 
 export type ConnectionState = 'connected' | 'reconnecting' | 'disconnected'
@@ -22,9 +23,9 @@ export default function ConnectionBadge({ state, label }: ConnectionBadgeProps) 
       tone={state === 'connected' ? 'success' : state === 'reconnecting' ? 'warning' : 'neutral'}
       dot
       live={state !== 'disconnected'}
-      title={`Server status: ${labels[state]}`}
+      title={idText(`Server status: ${labels[state]}`)}
     >
-      {label ?? 'Server'} · {labels[state]}
+      {idText(label ?? 'Server')} · {idText(labels[state])}
     </Badge>
   )
 }

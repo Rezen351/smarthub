@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 /**
  * Station 02: Sorting Console
  *
@@ -424,7 +425,7 @@ export default function SortingPage() {
             <div className="flex flex-wrap items-center gap-1">
               {codes.map((c, i) => (
                 <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded border text-[11px] font-mono font-bold text-white bg-zinc-700 border-zinc-600">
-                  {c}
+                  {idText(c)}
                 </span>
               ))}
             </div>
@@ -435,8 +436,8 @@ export default function SortingPage() {
           <div className="flex flex-wrap items-center gap-1">
             {badges.map((p) => (
               <span key={p.grade} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-mono font-bold text-white ${p.tone}`}>
-                <span className="text-white font-extrabold">{p.grade}:</span>
-                <span className="text-white font-bold">{p.code}</span>
+                <span className="text-white font-extrabold">{idText(p.grade)}:</span>
+                <span className="text-white font-bold">{idText(p.code)}</span>
               </span>
             ))}
           </div>
@@ -449,15 +450,15 @@ export default function SortingPage() {
       priority: true,
       render: (r) => (
         <div className="flex flex-col">
-          <span className="font-mono text-xs">{r.waringCode}</span>
-          <span className="text-[11px] text-muted-foreground">{r.farmerName}</span>
+          <span className="font-mono text-xs">{idText(r.waringCode)}</span>
+          <span className="text-[11px] text-muted-foreground">{idText(r.farmerName)}</span>
         </div>
       ),
     },
     {
       key: 'grossIntakeKg',
       label: 'Gross (kg)',
-      render: (r) => <span className="font-mono text-xs">{formatWeight(r.grossIntakeKg)}</span>,
+      render: (r) => <span className="font-mono text-xs">{idText(formatWeight(r.grossIntakeKg))}</span>,
     },
     {
       key: 'gradeAKg',
@@ -465,10 +466,10 @@ export default function SortingPage() {
       render: (r) => (
         <div className="flex flex-col">
           <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-            {r.gradeAKg > 0 ? `${formatWeight(r.gradeAKg)} kg` : '—'}
+            {idText(r.gradeAKg > 0 ? `${formatWeight(r.gradeAKg)} kg` : '—')}
           </span>
           {r.gradeAKg > 0 && r.gradeAPalletQr && (
-            <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{r.gradeAPalletQr}</span>
+            <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{idText(r.gradeAPalletQr)}</span>
           )}
         </div>
       ),
@@ -479,10 +480,10 @@ export default function SortingPage() {
       render: (r) => (
         <div className="flex flex-col">
           <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">
-            {r.gradeBKg > 0 ? `${formatWeight(r.gradeBKg)} kg` : '—'}
+            {idText(r.gradeBKg > 0 ? `${formatWeight(r.gradeBKg)} kg` : '—')}
           </span>
           {r.gradeBKg > 0 && r.gradeBPalletQr && (
-            <span className="font-mono text-[10px] font-bold text-blue-600 dark:text-blue-400">{r.gradeBPalletQr}</span>
+            <span className="font-mono text-[10px] font-bold text-blue-600 dark:text-blue-400">{idText(r.gradeBPalletQr)}</span>
           )}
         </div>
       ),
@@ -493,10 +494,10 @@ export default function SortingPage() {
       render: (r) => (
         <div className="flex flex-col">
           <span className="font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">
-            {r.gradeCKg > 0 ? `${formatWeight(r.gradeCKg)} kg` : '—'}
+            {idText(r.gradeCKg > 0 ? `${formatWeight(r.gradeCKg)} kg` : '—')}
           </span>
           {r.gradeCKg > 0 && r.gradeCPalletQr && (
-            <span className="font-mono text-[10px] font-bold text-amber-600 dark:text-amber-400">{r.gradeCPalletQr}</span>
+            <span className="font-mono text-[10px] font-bold text-amber-600 dark:text-amber-400">{idText(r.gradeCPalletQr)}</span>
           )}
         </div>
       ),
@@ -506,7 +507,7 @@ export default function SortingPage() {
       label: 'Shrinkage / Loss',
       render: (r) => (
         <span className="font-mono text-xs text-red-600">
-          {formatWeight(r.shrinkageKg)} kg ({r.shrinkagePct}%)
+          {idText(formatWeight(r.shrinkageKg))} {idText("kg (")}{idText(r.shrinkagePct)}%)
         </span>
       ),
     },
@@ -515,7 +516,7 @@ export default function SortingPage() {
       label: 'Wash',
       render: (r) => (
         <Badge tone={r.washingRecord === 'WASHED' ? 'accent' : 'neutral'}>
-          {r.washingRecord}
+          {idText(r.washingRecord)}
         </Badge>
       ),
     },
@@ -523,7 +524,7 @@ export default function SortingPage() {
       key: 'timestamp',
       label: 'Time',
       align: 'right',
-      render: (r) => <span className="font-mono text-xs text-muted-foreground">{r.timestamp}</span>,
+      render: (r) => <span className="font-mono text-xs text-muted-foreground">{idText(r.timestamp)}</span>,
     },
   ]
 
@@ -533,7 +534,7 @@ export default function SortingPage() {
   const renderStepperBar = () => (
     <nav
       className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto"
-      aria-label="Sorting steps"
+      aria-label={idText("Sorting steps")}
     >
       {STEPS.map((step, idx) => {
         const isCurrent = activeStep === step.id
@@ -566,10 +567,10 @@ export default function SortingPage() {
                     : 'bg-muted border border-border text-muted-foreground'
                 }`}
               >
-                {isDone ? '✓' : step.id}
+                {idText(isDone ? '✓' : step.id)}
               </span>
-              <span className="sm:hidden">{compactLabel}</span>
-              <span className="hidden sm:inline">{step.label}</span>
+              <span className="sm:hidden">{idText(compactLabel)}</span>
+              <span className="hidden sm:inline">{idText(step.label)}</span>
             </button>
             {idx < STEPS.length - 1 && <span className="text-muted-foreground/40 text-xs mx-0.5 sm:mx-1">/</span>}
           </div>
@@ -589,14 +590,14 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 1 of 4">
-                Langkah 1 dari 4
+                {idText("Langkah 1 dari 4")}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Scan Waring">
-                Pindai Waring
+                {idText("Pindai Waring")}
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
-              Awaiting Scan
+              {idText("Awaiting Scan")}
             </Badge>
           </div>
 
@@ -607,10 +608,10 @@ export default function SortingPage() {
             </div>
             <div className="space-y-1">
               <h3 className="text-base font-bold text-foreground">
-                2D Scanner and Camera
+                {idText("2D Scanner and Camera")}
               </h3>
               <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                Scan the QR code on the intake waring sack with a USB 2D hardware scanner or device camera.
+                {idText("Scan the QR code on the intake waring sack with a USB 2D hardware scanner or device camera.")}
               </p>
             </div>
 
@@ -623,37 +624,37 @@ export default function SortingPage() {
                   setManualWaringSearch(e.target.value)
                   setWaringScanError(null)
                 }}
-                placeholder="Scan 2D barcode or enter waring code..."
+                placeholder={idText("Scan 2D barcode or enter waring code...")}
                 className="font-mono text-sm flex-1 min-w-0"
               />
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <Button type="submit" variant="primary" icon="check" className="w-full sm:w-auto">
-                  Verify
+                  {idText("Verify")}
                 </Button>
                 <Button type="button" variant="outline" icon="scan" onClick={openWaringCameraModal} className="w-full sm:w-auto">
-                  Camera
+                  {idText("Camera")}
                 </Button>
               </div>
             </form>
-            {waringScanError && <p className="text-xs text-destructive font-mono">{waringScanError}</p>}
+            {waringScanError && <p className="text-xs text-destructive font-mono">{idText(waringScanError)}</p>}
 
           </div>
 
           {/* Active Selected Waring Confirmation Strip */}
           <div className="p-3 sm:p-4 bg-card border border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="space-y-0.5">
-              <span className="text-xs text-muted-foreground uppercase font-mono block">Selected Intake Waring</span>
+              <span className="text-xs text-muted-foreground uppercase font-mono block">{idText("Selected Intake Waring")}</span>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-base sm:text-lg font-bold font-mono">{waringCode}</span>
-                <span className="text-xs text-muted-foreground">({farmerName} · {farmerVillage})</span>
+                <span className="text-base sm:text-lg font-bold font-mono">{idText(waringCode)}</span>
+                <span className="text-xs text-muted-foreground">({farmerName} · {idText(farmerVillage)})</span>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs sm:text-sm font-mono font-bold text-emerald-700 bg-card px-2 py-1 border border-emerald-300 dark:border-emerald-800">
-                {formatWeight(Number(grossIntakeKg))} kg Gross
+                {idText(formatWeight(Number(grossIntakeKg)))} {idText("kg Gross")}
               </span>
               <Button variant="primary" icon="check" touch onClick={() => setActiveStep(2)} className="flex-1 sm:flex-initial">
-                Proceed to Sizing
+                {idText("Proceed to Sizing")}
               </Button>
             </div>
           </div>
@@ -666,14 +667,14 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 2 of 4">
-                Langkah 2 dari 4
+                {idText("Langkah 2 dari 4")}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Size & Wash">
-                Sortir Ukuran & Cuci
+                {idText("Sortir Ukuran & Cuci")}
               </h2>
             </div>
             <Badge tone="accent">
-              Waring: {waringCode}
+              {idText("Waring:")} {idText(waringCode)}
             </Badge>
           </div>
 
@@ -681,35 +682,33 @@ export default function SortingPage() {
             {/* Sizing Machine Confirmation */}
             <div className="border border-border p-5 bg-card space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold">1. Feeding into Roller Sizer</h4>
+                <h4 className="text-sm font-bold">{idText("1. Feeding into Roller Sizer")}</h4>
                 <Badge tone={sizerFedConfirmed ? 'success' : 'neutral'}>
-                  {sizerFedConfirmed ? 'Feeding Confirmed' : 'Pending'}
+                  {idText(sizerFedConfirmed ? 'Feeding Confirmed' : 'Pending')}
                 </Badge>
               </div>
               <p className="station-secondary-copy text-xs text-muted-foreground leading-relaxed">
-                Pour waring <strong className="font-mono text-foreground">{waringCode}</strong> ({grossIntakeKg} kg)
-                into the sizer hopper. Tubers separate mechanically into Grade A (&gt;55mm), Grade B (40–55mm), and
-                Grade C (&lt;40mm).
+                {idText("Pour waring")} <strong className="font-mono text-foreground">{idText(waringCode)}</strong> ({idText(grossIntakeKg)} {idText("kg) into the sizer hopper. Tubers separate mechanically into Grade A (>55mm), Grade B (40–55mm), and Grade C (<40mm).")}
               </p>
               <Button
                 variant={sizerFedConfirmed ? 'outline' : 'primary'}
                 icon="check"
                 onClick={() => setSizerFedConfirmed(!sizerFedConfirmed)}
               >
-                {sizerFedConfirmed ? 'Feeding Completed' : 'Confirm Feeding'}
+                {idText(sizerFedConfirmed ? 'Feeding Completed' : 'Confirm Feeding')}
               </Button>
             </div>
 
             {/* Washing Decision */}
             <div className="border border-border p-5 bg-card space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold">2. Washing Decision</h4>
+                <h4 className="text-sm font-bold">{idText("2. Washing Decision")}</h4>
                 <Badge tone={washingRecord === 'WASHED' ? 'accent' : 'neutral'}>
-                  {washingRecord}
+                  {idText(washingRecord)}
                 </Badge>
               </div>
               <p className="station-secondary-copy text-xs text-muted-foreground leading-relaxed">
-                Choose whether this sorted batch passes through the water washing line or bypasses dry directly to weighing.
+                {idText("Choose whether this sorted batch passes through the water washing line or bypasses dry directly to weighing.")}
               </p>
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
@@ -721,7 +720,7 @@ export default function SortingPage() {
                       : 'border-border text-muted-foreground hover:bg-muted/20'
                   }`}
                 >
-                  Washed (Wet Line)
+                  {idText("Washed (Wet Line)")}
                 </button>
                 <button
                   type="button"
@@ -732,7 +731,7 @@ export default function SortingPage() {
                       : 'border-border text-muted-foreground hover:bg-muted/20'
                   }`}
                 >
-                  Unwashed (Direct)
+                  {idText("Unwashed (Direct)")}
                 </button>
               </div>
             </div>
@@ -740,10 +739,10 @@ export default function SortingPage() {
 
           <div className="flex justify-between items-center pt-4 border-t border-border">
             <Button variant="ghost" onClick={() => setActiveStep(1)}>
-              Back to Waring
+              {idText("Back to Waring")}
             </Button>
             <Button variant="primary" icon="check" touch onClick={() => setActiveStep(3)}>
-              Proceed to Weigh Grades
+              {idText("Proceed to Weigh Grades")}
             </Button>
           </div>
         </div>
@@ -755,10 +754,10 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 3 of 4">
-                Langkah 3 dari 4
+                {idText("Langkah 3 dari 4")}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Weigh Grades">
-                Timbang Grade
+                {idText("Timbang Grade")}
               </h2>
             </div>
           </div>
@@ -785,13 +784,13 @@ export default function SortingPage() {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm">Grade {grade}</span>
+                    <span className="font-bold text-sm">{idText("Grade")} {idText(grade)}</span>
                     <span className="font-mono text-xs font-semibold">
-                      {weight ? `${formatWeight(Number(weight))} kg` : '0 kg'}
+                      {idText(weight ? `${formatWeight(Number(weight))} kg` : '0 kg')}
                     </span>
                   </div>
                   <div className="text-[11px] font-mono text-muted-foreground mt-1 truncate">
-                    Pallet: {qr || 'Not linked'}
+                    {idText("Pallet:")} {idText(qr || 'Not linked')}
                   </div>
                 </button>
               )
@@ -803,9 +802,9 @@ export default function SortingPage() {
             {/* Left Column: Scale 02 Input */}
             <div className="border border-border p-4 bg-card space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">Weight Reading (Grade {activeGradeTab})</h4>
+                <h4 className="text-sm font-semibold">{idText("Weight Reading (Grade")} {idText(activeGradeTab)})</h4>
                 <span className="text-xs font-mono text-muted-foreground">
-                  Max: {formatWeight(maxAllowedForActiveGrade)} kg
+                  {idText("Max:")} {idText(formatWeight(maxAllowedForActiveGrade))} {idText("kg")}
                 </span>
               </div>
               <ScaleWeightInput
@@ -815,7 +814,7 @@ export default function SortingPage() {
                 capacityKg={scaleCapacityKg ?? 0}
                 maxAllowedWeightKg={maxAllowedForActiveGrade}
                 allowZero
-                label={`Grade ${activeGradeTab} Weight`}
+                label={idText(`Grade ${activeGradeTab} Weight`)}
               />
               <div className="flex gap-2">
                 <Button
@@ -829,18 +828,18 @@ export default function SortingPage() {
                   }
                   onClick={() => handleAssignLiveWeight()}
                 >
-                  Assign {liveScaleWeight || '0'} kg to Grade {activeGradeTab}
+                  {idText("Assign")} {idText(liveScaleWeight || '0')} {idText("kg to Grade")} {idText(activeGradeTab)}
                 </Button>
                 <Button
                   variant="outline"
                   type="button"
-                  title="Mark this grade as 0 kg (no harvest for this grade)"
+                  title={idText("Mark this grade as 0 kg (no harvest for this grade)")}
                   onClick={() => {
                     setLiveScaleWeight('0')
                     handleAssignLiveWeight('0')
                   }}
                 >
-                  Set 0 kg
+                  {idText("Set 0 kg")}
                 </Button>
               </div>
             </div>
@@ -848,24 +847,24 @@ export default function SortingPage() {
             {/* Right Column: Pre-attached Pallet QR Linkage */}
             <div className="border border-border p-4 bg-card space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">Pallet Link (Grade {activeGradeTab})</h4>
+                <h4 className="text-sm font-semibold">{idText("Pallet Link (Grade")} {idText(activeGradeTab)})</h4>
                 <Badge tone="neutral">
-                  Pre-attached QR
+                  {idText("Pre-attached QR")}
                 </Badge>
               </div>
               <p className="station-secondary-copy text-xs text-muted-foreground">
-                Scan the permanent QR code sticker attached to the Grade {activeGradeTab} physical pallet.
+                {idText("Scan the permanent QR code sticker attached to the Grade")} {idText(activeGradeTab)} {idText("physical pallet.")}
               </p>
 
               <div className="p-3 bg-muted/20 border border-border flex items-center justify-between">
                 <div>
-                  <span className="text-[11px] text-muted-foreground uppercase font-mono block">Linked Pallet</span>
+                  <span className="text-[11px] text-muted-foreground uppercase font-mono block">{idText("Linked Pallet")}</span>
                   <span className="font-mono font-bold text-sm">
-                    {activeGradeTab === 'A'
+                    {idText(activeGradeTab === 'A'
                       ? gradeAPalletQr
                       : activeGradeTab === 'B'
                       ? gradeBPalletQr
-                      : gradeCPalletQr}
+                      : gradeCPalletQr)}
                   </span>
                 </div>
                 <Button
@@ -873,15 +872,15 @@ export default function SortingPage() {
                   icon="scan"
                   onClick={() => openPalletCameraModal(activeGradeTab)}
                 >
-                  Scan Pallet QR
+                  {idText("Scan Pallet QR")}
                 </Button>
               </div>
 
               {/* Active Pallet Shortcuts */}
               <div className="station-secondary-panel space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-mono text-muted-foreground" aria-label="Select Physical Pallet">
-                    Pilih Palet Fisik
+                  <span className="text-[10px] uppercase font-mono text-muted-foreground" aria-label={idText("Select Physical Pallet")}>
+                    {idText("Pilih Palet Fisik")}
                   </span>
                   <Link
                     to="/dashboard/settings?section=pallets"
@@ -889,7 +888,7 @@ export default function SortingPage() {
                     className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
                   >
                     <Icon name="pallet" size={13} />
-                    Daftar Palet
+                    {idText("Daftar Palet")}
                   </Link>
                 </div>
                 <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1.5 bg-muted/20 border border-border">
@@ -916,7 +915,7 @@ export default function SortingPage() {
                     if (usablePallets.length === 0) {
                       return (
                         <span className="text-xs text-muted-foreground p-1">
-                          Tidak ada palet kosong tersedia. Selesaikan pengemasan atau daftarkan palet baru.
+                          {idText("Tidak ada palet kosong tersedia. Selesaikan pengemasan atau daftarkan palet baru.")}
                         </span>
                       )
                     }
@@ -938,8 +937,8 @@ export default function SortingPage() {
                               : 'bg-card text-foreground border-border hover:border-primary/60 hover:bg-primary/5'
                           }`}
                         >
-                          <span>{p.code}</span>
-                          <span className="text-[10px] opacity-75 font-sans">({p.tareKg || 15}kg)</span>
+                          <span>{idText(p.code)}</span>
+                          <span className="text-[10px] opacity-75 font-sans">({idText(p.tareKg || 15)}{idText("kg)")}</span>
                         </button>
                       )
                     })
@@ -955,13 +954,13 @@ export default function SortingPage() {
               <div className="p-3 bg-destructive/15 border-2 border-destructive/40 rounded text-xs text-destructive font-semibold flex items-center gap-2">
                 <Icon name="alert-triangle" size={16} />
                 <span>
-                  Total graded weight ({formatWeight(totalGraded)} kg) exceeds waring intake weight ({formatWeight(gGross)} kg). Please adjust grade weights before proceeding.
+                  {idText("Total graded weight (")}{idText(formatWeight(totalGraded))} {idText("kg) exceeds waring intake weight (")}{idText(formatWeight(gGross))} {idText("kg). Please adjust grade weights before proceeding.")}
                 </span>
               </div>
             )}
             <div className="flex justify-between items-center">
               <Button variant="ghost" onClick={() => setActiveStep(2)}>
-                Back to Sizing
+                {idText("Back to Sizing")}
               </Button>
               <Button
                 variant="primary"
@@ -970,7 +969,7 @@ export default function SortingPage() {
                 disabled={!allGradesRecorded || totalGraded <= 0 || totalGraded > gGross + 0.005}
                 onClick={() => setActiveStep(4)}
               >
-                Proceed to Review & Save
+                {idText("Proceed to Review & Save")}
               </Button>
             </div>
           </div>
@@ -983,26 +982,26 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 4 of 4">
-                Langkah 4 dari 4
+                {idText("Langkah 4 dari 4")}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Review & Save">
-                Tinjau & Simpan
+                {idText("Tinjau & Simpan")}
               </h2>
             </div>
             <div className="flex flex-wrap gap-1 items-center">
               {gA > 0 && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800">
-                  A: {gradeAPalletQr || 'PLT-001'}
+                  {idText("A:")} {idText(gradeAPalletQr || 'PLT-001')}
                 </span>
               )}
               {gB > 0 && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800">
-                  B: {gradeBPalletQr || 'PLT-002'}
+                  {idText("B:")} {idText(gradeBPalletQr || 'PLT-002')}
                 </span>
               )}
               {gC > 0 && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800">
-                  C: {gradeCPalletQr || 'PLT-003'}
+                  {idText("C:")} {idText(gradeCPalletQr || 'PLT-003')}
                 </span>
               )}
             </div>
@@ -1011,14 +1010,14 @@ export default function SortingPage() {
           {/* Yield Distribution Bar */}
           <div className="border border-border p-4 bg-card space-y-3">
             <div className="flex justify-between items-center flex-wrap gap-2">
-              <span className="text-xs font-bold uppercase font-mono">Yield Distribution</span>
+              <span className="text-xs font-bold uppercase font-mono">{idText("Yield Distribution")}</span>
               <span
                 className={`text-xs font-mono font-semibold ${
                   totalGraded > gGross + 0.005 ? 'text-destructive font-bold' : ''
                 }`}
               >
-                Total Graded: {formatWeight(totalGraded)} kg / {formatWeight(gGross)} kg Gross
-                {totalGraded > gGross + 0.005 && ` (Exceeds by +${formatWeight(totalGraded - gGross)} kg)`}
+                {idText("Total Graded:")} {idText(formatWeight(totalGraded))} {idText("kg /")} {idText(formatWeight(gGross))} {idText("kg Gross")}
+                {idText(totalGraded > gGross + 0.005 && ` (Exceeds by +${formatWeight(totalGraded - gGross)} kg)`)}
               </span>
             </div>
 
@@ -1029,35 +1028,35 @@ export default function SortingPage() {
                   <div
                     style={{ width: `${(gA / gGross) * 100}%` }}
                     className="bg-emerald-600 flex items-center justify-center text-xs font-bold font-mono text-white"
-                    title={`Grade A: ${gA} kg (${((gA / gGross) * 100).toFixed(1)}%)`}
+                    title={idText(`Grade A: ${gA} kg (${((gA / gGross) * 100).toFixed(1)}%)`)}
                   >
-                    {gA > 0 && `A: ${formatWeight(gA)} kg`}
+                    {idText(gA > 0 && `A: ${formatWeight(gA)} kg`)}
                   </div>
                   <div
                     style={{ width: `${(gB / gGross) * 100}%` }}
                     className="bg-blue-600 flex items-center justify-center text-xs font-bold font-mono text-white"
-                    title={`Grade B: ${gB} kg (${((gB / gGross) * 100).toFixed(1)}%)`}
+                    title={idText(`Grade B: ${gB} kg (${((gB / gGross) * 100).toFixed(1)}%)`)}
                   >
-                    {gB > 0 && `B: ${formatWeight(gB)} kg`}
+                    {idText(gB > 0 && `B: ${formatWeight(gB)} kg`)}
                   </div>
                   <div
                     style={{ width: `${(gC / gGross) * 100}%` }}
                     className="bg-amber-500 flex items-center justify-center text-xs font-bold font-mono text-white"
-                    title={`Grade C: ${gC} kg (${((gC / gGross) * 100).toFixed(1)}%)`}
+                    title={idText(`Grade C: ${gC} kg (${((gC / gGross) * 100).toFixed(1)}%)`)}
                   >
-                    {gC > 0 && `C: ${formatWeight(gC)} kg`}
+                    {idText(gC > 0 && `C: ${formatWeight(gC)} kg`)}
                   </div>
                   <div
                     style={{ width: `${(shrinkageKg / gGross) * 100}%` }}
                     className="bg-red-600 flex items-center justify-center text-xs font-bold font-mono text-white"
-                    title={`Shrinkage: ${shrinkageKg.toFixed(1)} kg (${shrinkagePct.toFixed(1)}%)`}
+                    title={idText(`Shrinkage: ${shrinkageKg.toFixed(1)} kg (${shrinkagePct.toFixed(1)}%)`)}
                   >
-                    {shrinkageKg > 0 && `Loss: ${formatWeight(shrinkageKg)} kg`}
+                    {idText(shrinkageKg > 0 && `Loss: ${formatWeight(shrinkageKg)} kg`)}
                   </div>
                 </>
               ) : (
                 <div className="w-full bg-muted flex items-center justify-center text-xs text-muted-foreground font-mono">
-                  No weight entered
+                  {idText("No weight entered")}
                 </div>
               )}
             </div>
@@ -1066,19 +1065,19 @@ export default function SortingPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-xs font-mono">
               <div className="flex items-center gap-2">
                 <span className="w-3.5 h-3.5 bg-emerald-600 shrink-0" />
-                <span>Grade A: {gGross > 0 ? ((gA / gGross) * 100).toFixed(1) : 0}%</span>
+                <span>{idText("Grade A:")} {idText(gGross > 0 ? ((gA / gGross) * 100).toFixed(1) : 0)}%</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3.5 h-3.5 bg-blue-600 shrink-0" />
-                <span>Grade B: {gGross > 0 ? ((gB / gGross) * 100).toFixed(1) : 0}%</span>
+                <span>{idText("Grade B:")} {idText(gGross > 0 ? ((gB / gGross) * 100).toFixed(1) : 0)}%</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3.5 h-3.5 bg-amber-500 shrink-0" />
-                <span>Grade C: {gGross > 0 ? ((gC / gGross) * 100).toFixed(1) : 0}%</span>
+                <span>{idText("Grade C:")} {idText(gGross > 0 ? ((gC / gGross) * 100).toFixed(1) : 0)}%</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3.5 h-3.5 bg-red-600 shrink-0" />
-                <span>Loss: {shrinkagePct.toFixed(1)}%</span>
+                <span>{idText("Loss:")} {idText(shrinkagePct.toFixed(1))}%</span>
               </div>
             </div>
           </div>
@@ -1086,28 +1085,28 @@ export default function SortingPage() {
           {/* Detailed Batch Matrix Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="border border-border p-3.5 bg-card">
-              <span className="text-[10px] uppercase font-mono text-muted-foreground block">Gross Waring</span>
-              <span className="text-xl font-black font-mono mt-0.5 block">{formatWeight(gGross)} kg</span>
-              <span className="text-xs text-muted-foreground">{waringCode}</span>
+              <span className="text-[10px] uppercase font-mono text-muted-foreground block">{idText("Gross Waring")}</span>
+              <span className="text-xl font-black font-mono mt-0.5 block">{idText(formatWeight(gGross))} {idText("kg")}</span>
+              <span className="text-xs text-muted-foreground">{idText(waringCode)}</span>
             </div>
             <div className="border border-border p-3.5 bg-card">
-              <span className="text-[10px] uppercase font-mono text-muted-foreground block">Commercial Yield</span>
+              <span className="text-[10px] uppercase font-mono text-muted-foreground block">{idText("Commercial Yield")}</span>
               <span className="text-xl font-black font-mono text-emerald-700 mt-0.5 block">
-                {yieldPct.toFixed(1)}%
+                {idText(yieldPct.toFixed(1))}%
               </span>
-              <span className="text-xs text-muted-foreground">{formatWeight(totalGraded)} kg net</span>
+              <span className="text-xs text-muted-foreground">{idText(formatWeight(totalGraded))} {idText("kg net")}</span>
             </div>
             <div className="border border-border p-3.5 bg-card">
-              <span className="text-[10px] uppercase font-mono text-muted-foreground block">Shrinkage Deficit</span>
+              <span className="text-[10px] uppercase font-mono text-muted-foreground block">{idText("Shrinkage Deficit")}</span>
               <span className="text-xl font-black font-mono text-red-600 mt-0.5 block">
-                {formatWeight(shrinkageKg)} kg
+                {idText(formatWeight(shrinkageKg))} {idText("kg")}
               </span>
-              <span className="text-xs text-muted-foreground">{shrinkagePct.toFixed(1)}% loss</span>
+              <span className="text-xs text-muted-foreground">{idText(shrinkagePct.toFixed(1))}{idText("% loss")}</span>
             </div>
             <div className="border border-border p-3.5 bg-card">
-              <span className="text-[10px] uppercase font-mono text-muted-foreground block">Wash Decision</span>
-              <span className="text-xl font-bold font-mono mt-0.5 block">{washingRecord}</span>
-              <span className="text-xs text-muted-foreground">Sizer Separated</span>
+              <span className="text-[10px] uppercase font-mono text-muted-foreground block">{idText("Wash Decision")}</span>
+              <span className="text-xl font-bold font-mono mt-0.5 block">{idText(washingRecord)}</span>
+              <span className="text-xs text-muted-foreground">{idText("Sizer Separated")}</span>
             </div>
           </div>
 
@@ -1117,13 +1116,13 @@ export default function SortingPage() {
               <div className="p-4 bg-destructive/15 border-2 border-destructive/40 rounded text-xs text-destructive font-semibold flex items-center gap-2">
                 <Icon name="alert-triangle" size={16} />
                 <span>
-                  Cannot commit batch: Total graded weight ({formatWeight(totalGraded)} kg) exceeds waring intake weight ({formatWeight(gGross)} kg).
+                  {idText("Cannot commit batch: Total graded weight (")}{idText(formatWeight(totalGraded))} {idText("kg) exceeds waring intake weight (")}{idText(formatWeight(gGross))} {idText("kg).")}
                 </span>
               </div>
             )}
             <div className="flex items-center justify-between pt-1 flex-wrap gap-3">
               <Button variant="ghost" onClick={() => setActiveStep(3)}>
-                Back to Weigh Grades
+                {idText("Back to Weigh Grades")}
               </Button>
 
               {!savedSuccessBatch ? (
@@ -1134,11 +1133,11 @@ export default function SortingPage() {
                   disabled={!allGradesRecorded || totalGraded <= 0 || totalGraded > gGross + 0.005}
                   onClick={handleSaveSortingRun}
                 >
-                  Commit Batch & Update Inventory
+                  {idText("Commit Batch & Update Inventory")}
                 </Button>
               ) : (
                 <Button variant="primary" icon="check" touch onClick={handleStartNextWaring}>
-                  Sort Next Waring
+                  {idText("Sort Next Waring")}
                 </Button>
               )}
             </div>
@@ -1158,31 +1157,31 @@ export default function SortingPage() {
           className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto"
           role="dialog"
           aria-modal="true"
-          aria-label="Sorting Focus Mode"
+          aria-label={idText("Sorting Focus Mode")}
         >
           <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
             <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
-              STATION 02 · SORTING
+              {idText("STATION 02 · SORTING")}
             </div>
 
             {/* Stepper Progress inside Focus Mode! */}
             <div className="hidden md:flex">
-              {renderStepperBar()}
+              {idText(renderStepperBar())}
             </div>
 
             {/* Controls */}
             <div className="flex shrink-0 items-center gap-2">
               <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode} className="whitespace-nowrap">
-                Exit Focus Mode
+                {idText("Exit Focus Mode")}
               </Button>
             </div>
           </header>
 
           <main className="station-focus-main flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto space-y-6">
             <div className="md:hidden">
-              {renderStepperBar()}
+              {idText(renderStepperBar())}
             </div>
-            {renderFocusContent()}
+            {idText(renderFocusContent())}
           </main>
         </div>
       )}
@@ -1193,7 +1192,7 @@ export default function SortingPage() {
       <div className="station-page space-y-6">
         {/* Page Header */}
         <PageHeader
-          title="Station 02: Sorting Console"
+          title={idText("Station 02: Sorting Console")}
           subtitle="Sort potato fractions, check yield, and link grade pallets."
           actions={
             <Button
@@ -1202,7 +1201,7 @@ export default function SortingPage() {
               icon="history"
               onClick={() => document.getElementById('sorting-records')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              Records ({sortedBatches.length})
+              {idText("Records (")}{idText(sortedBatches.length)})
             </Button>
           }
         />
@@ -1210,66 +1209,66 @@ export default function SortingPage() {
         {/* Quick Stats Grid */}
         <div className="station-quick-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Buffer Queue</p>
-            <p className="text-2xl font-bold tracking-tight text-foreground">{waitingWarings.length}</p>
-            <p className="text-xs text-muted-foreground">Ready for sorting</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{idText("Buffer Queue")}</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">{idText(waitingWarings.length)}</p>
+            <p className="text-xs text-muted-foreground">{idText("Ready for sorting")}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale 02 Status</p>
-            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
-            <p className="text-xs text-muted-foreground">{scaleCapacityKg ? `${scaleCapacityKg} kg Scale` : 'Scale capacity unavailable'}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{idText("Scale 02 Status")}</p>
+            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{idText(scaleOnline ? 'Online' : 'Offline')}</p>
+            <p className="text-xs text-muted-foreground">{idText(scaleCapacityKg ? `${scaleCapacityKg} kg Scale` : 'Scale capacity unavailable')}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Commercial Yield</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{idText("Commercial Yield")}</p>
             <p className="text-2xl font-bold tracking-tight text-emerald-600">
-              {gGross > 0 ? `${yieldPct.toFixed(1)}%` : '0.0%'}
+              {idText(gGross > 0 ? `${yieldPct.toFixed(1)}%` : '0.0%')}
             </p>
-            <p className="text-xs text-muted-foreground">Grade A+B+C ratio</p>
+            <p className="text-xs text-muted-foreground">{idText("Grade A+B+C ratio")}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Shrinkage Loss</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{idText("Shrinkage Loss")}</p>
             <p className="text-2xl font-bold tracking-tight text-red-600">
-              {gGross > 0 ? `${shrinkagePct.toFixed(1)}%` : '8.6%'}
+              {idText(gGross > 0 ? `${shrinkagePct.toFixed(1)}%` : '8.6%')}
             </p>
-            <p className="text-xs text-muted-foreground">Rejects & soil tare</p>
+            <p className="text-xs text-muted-foreground">{idText("Rejects & soil tare")}</p>
           </div>
         </div>
 
         {/* ── Main Sequential Stepper Card (Consistent with Screenshot) ── */}
         <div id="sorting-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
-            <span className="font-semibold text-base text-foreground">Sorting Stepper</span>
+            <span className="font-semibold text-base text-foreground">{idText("Sorting Stepper")}</span>
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-                Focus Mode
+                {idText("Focus Mode")}
               </Button>
             </div>
           </div>
 
           {/* Stepper Navigation Bar */}
-          {renderStepperBar()}
+          {idText(renderStepperBar())}
 
           {/* Embed the sequential step logic */}
-          {renderFocusContent()}
+          {idText(renderFocusContent())}
         </div>
 
         {/* ── Sorting Batch Records Ledger ── */}
         <div id="sorting-records" className="space-y-3 pt-6 border-t border-border">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold">Sorting History Ledger</h3>
-              <p className="text-xs text-muted-foreground">Completed sorting batches and yield results</p>
+              <h3 className="text-base font-semibold">{idText("Sorting History Ledger")}</h3>
+              <p className="text-xs text-muted-foreground">{idText("Completed sorting batches and yield results")}</p>
             </div>
             <Badge tone="neutral">
-              {sortedBatches.length} Batches
+              {idText(sortedBatches.length)} {idText("Batches")}
             </Badge>
           </div>
           <DataTable
             columns={columns}
             data={sortedBatches}
             rowKey={(r) => r.id}
-            emptyTitle="No sorting runs recorded yet."
-            emptyDescription="Select a waring from buffer queue to begin sorting."
+            emptyTitle={idText("No sorting runs recorded yet.")}
+            emptyDescription={idText("Select a waring from buffer queue to begin sorting.")}
           />
         </div>
       </div>
@@ -1281,14 +1280,14 @@ export default function SortingPage() {
         onClose={closeCameraModal}
         onScan={handleVerifyModalScan}
         title={
-          cameraModalMode === 'WARING'
+          idText(cameraModalMode === 'WARING'
             ? 'Scan Waring Sack QR Code · Station 02'
-            : `Scan Pallet QR for Grade ${activeGradeTab}`
+            : `Scan Pallet QR for Grade ${activeGradeTab}`)
         }
         subtitle={
-          cameraModalMode === 'WARING'
+          idText(cameraModalMode === 'WARING'
             ? 'Align the WRG QR code within the camera frame.'
-            : `Align the pre-attached PLT QR code for Grade ${activeGradeTab}.`
+            : `Align the pre-attached PLT QR code for Grade ${activeGradeTab}.`)
         }
         manualPlaceholder={
           cameraModalMode === 'WARING' ? 'Enter Waring Code (WRG-...)' : `Enter Pallet Tag (PLT-GRD-${activeGradeTab}-01)`

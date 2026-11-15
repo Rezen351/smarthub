@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useEffect, useState } from 'react'
 import Card from '../components/shared/Card'
 import Badge from '../components/shared/Badge'
@@ -47,15 +48,15 @@ export default function MyDeliveriesPage() {
   }, [])
 
   const columns: Column<Delivery>[] = [
-    { key: 'date', label: 'Date', priority: true, render: (row) => <span className="mono t-small">{row.date}</span> },
-    { key: 'truckPlate', label: 'Truck plate', priority: true, render: (row) => <span className="mono cell-strong">{row.truckPlate}</span> },
-    { key: 'destination', label: 'Destination', priority: true, render: (row) => <span className="t-small">{row.destination}</span> },
+    { key: 'date', label: 'Date', priority: true, render: (row) => <span className="mono t-small">{idText(row.date)}</span> },
+    { key: 'truckPlate', label: 'Truck plate', priority: true, render: (row) => <span className="mono cell-strong">{idText(row.truckPlate)}</span> },
+    { key: 'destination', label: 'Destination', priority: true, render: (row) => <span className="t-small">{idText(row.destination)}</span> },
     {
       key: 'status',
       label: 'Status',
       render: (row) => (
         <Badge tone={row.status === 'Delivered' ? 'success' : 'accent'} dot>
-          {row.status}
+          {idText(row.status)}
         </Badge>
       ),
     },
@@ -64,37 +65,37 @@ export default function MyDeliveriesPage() {
   return (
     <div className="stack stack-lg">
       <PageHeader
-        title="My Deposits"
+        title={idText("My Deposits")}
         subtitle="Trace every delivery made from your harvest deposits."
-        actions={<Badge tone="neutral">{deliveries.length} deliveries</Badge>}
+        actions={<Badge tone="neutral">{idText(deliveries.length)} {idText("deliveries")}</Badge>}
       />
 
       <div className="grid-stats">
         <div className="stat-card">
-          <p className="stat-label">Total deliveries</p>
-          <p className="stat-value">{loading ? '—' : deliveries.length}</p>
-          <p className="stat-sub">From your deposits</p>
+          <p className="stat-label">{idText("Total deliveries")}</p>
+          <p className="stat-value">{idText(loading ? '—' : deliveries.length)}</p>
+          <p className="stat-sub">{idText("From your deposits")}</p>
         </div>
         <div className="stat-card">
-          <p className="stat-label">In transit</p>
-          <p className="stat-value">{loading ? '—' : deliveries.filter((item) => item.status === 'In Transit').length}</p>
-          <p className="stat-sub">On the road</p>
+          <p className="stat-label">{idText("In transit")}</p>
+          <p className="stat-value">{idText(loading ? '—' : deliveries.filter((item) => item.status === 'In Transit').length)}</p>
+          <p className="stat-sub">{idText("On the road")}</p>
         </div>
         <div className="stat-card">
-          <p className="stat-label">Delivered</p>
-          <p className="stat-value">{loading ? '—' : deliveries.filter((item) => item.status === 'Delivered').length}</p>
-          <p className="stat-sub">Completed</p>
+          <p className="stat-label">{idText("Delivered")}</p>
+          <p className="stat-value">{idText(loading ? '—' : deliveries.filter((item) => item.status === 'Delivered').length)}</p>
+          <p className="stat-sub">{idText("Completed")}</p>
         </div>
         <div className="stat-card">
-          <p className="stat-label">Latest destination</p>
+          <p className="stat-label">{idText("Latest destination")}</p>
           <p className="stat-value" style={{ fontSize: 20 }}>
-            {loading ? '—' : deliveries[0]?.destination ?? '—'}
+            {idText(loading ? '—' : deliveries[0]?.destination ?? '—')}
           </p>
-          <p className="stat-sub">{loading ? 'Loading' : deliveries[0]?.date ?? 'No records'}</p>
+          <p className="stat-sub">{idText(loading ? 'Loading' : deliveries[0]?.date ?? 'No records')}</p>
         </div>
       </div>
 
-      <Card title="Delivery history" subtitle="Each record links back to the weighing at the receiving area.">
+      <Card title={idText("Delivery history")} subtitle="Each record links back to the weighing at the receiving area.">
         {loading ? (
           <div className="stack-sm">
             <div className="skeleton skeleton-block" />
@@ -105,8 +106,8 @@ export default function MyDeliveriesPage() {
             columns={columns}
             data={deliveries}
             rowKey={(row) => row.id}
-            emptyTitle="No deliveries recorded."
-            emptyDescription="Your deliveries appear here once your deposit leaves the warehouse."
+            emptyTitle={idText("No deliveries recorded.")}
+            emptyDescription={idText("Your deliveries appear here once your deposit leaves the warehouse.")}
           />
         )}
       </Card>
@@ -114,7 +115,7 @@ export default function MyDeliveriesPage() {
       <div className="alert alert-info">
         <Icon name="info" size={16} />
         <span>
-          Consumers can trace the same journey publicly from the pouch QR — no account needed.
+          {idText("Consumers can trace the same journey publicly from the pouch QR — no account needed.")}
         </span>
       </div>
     </div>

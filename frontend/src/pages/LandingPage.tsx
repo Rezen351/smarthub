@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import Logo from '../components/shared/Logo'
@@ -275,7 +276,7 @@ export default function LandingPage() {
       />
 
       {/* ── Scoped CSS Styles ── */}
-      <style>{`
+      <style>{idText(`
         .font-display { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.02em; }
         .font-heading { font-family: 'Oswald', sans-serif; }
         .font-mono-custom { font-family: 'JetBrains Mono', monospace; }
@@ -416,7 +417,7 @@ export default function LandingPage() {
         .pulse-btn {
           animation: pulse-btn-glow 2.4s ease-out infinite;
         }
-      `}</style>
+      `)}</style>
 
       {/* ── Top Header Navbar ── */}
       <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-white/90 border-b border-[#eaeaea]">
@@ -425,32 +426,32 @@ export default function LandingPage() {
             <Logo className="h-8 w-auto" markOnly />
             <div>
               <div className="font-display text-2xl leading-none tracking-wider text-[#171717] flex items-center gap-2">
-                SmartGeulis
+                {idText("SmartGeulis")}
               </div>
               <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
-                TRACEABILITY SYSTEM
+                {idText("TRACEABILITY SYSTEM")}
               </div>
             </div>
           </Link>
 
           <nav className="hidden lg:flex items-center gap-8 font-heading text-xs uppercase tracking-[0.18em] text-[#666666]">
             <a href="#facility" className="hover:text-[#171717] transition-colors">
-              Facility
+              {idText("Facility")}
             </a>
             <a href="#pipeline" className="hover:text-[#171717] transition-colors">
-              Journey
+              {idText("Journey")}
             </a>
             <a href="#hardware" className="hover:text-[#171717] transition-colors">
-              Stations
+              {idText("Stations")}
             </a>
             <a href="#stories" className="hover:text-[#171717] transition-colors">
-              Farmers
+              {idText("Farmers")}
             </a>
             <a href="#booking" className="hover:text-[#171717] transition-colors">
-              Connect
+              {idText("Connect")}
             </a>
             <Link to="/traceability" className="hover:text-[#ea580c] text-[#ea580c] font-semibold transition-colors">
-              Public Trace
+              {idText("Public Trace")}
             </Link>
           </nav>
 
@@ -465,13 +466,13 @@ export default function LandingPage() {
                     : 'bg-red-500'
                 }`}
               ></span>
-              <span className="tracking-wider">SYSTEM STATUS · {backendStatus}</span>
+              <span className="tracking-wider">{idText("SYSTEM STATUS ·")} {idText(backendStatus)}</span>
             </div>
             <Link
               to="/login"
               className="font-heading text-xs tracking-[0.18em] uppercase text-white bg-[#000000] px-5 py-2.5 hover:bg-[#333333] transition-colors rounded-none"
             >
-              Sign In
+              {idText("Sign In")}
             </Link>
           </div>
         </div>
@@ -490,7 +491,7 @@ export default function LandingPage() {
             >
               <img
                 src={frame.url}
-                alt={frame.title}
+                alt={idText(frame.title)}
                 className={`w-full h-full object-cover filter brightness-[0.38] contrast-[1.3] ${
                   index === currentFrame ? 'reel-active-img' : ''
                 }`}
@@ -523,7 +524,7 @@ export default function LandingPage() {
                 }`}
               ></span>
               <span className="tracking-[0.2em] uppercase font-semibold">
-                SYSTEM STATUS · {backendStatus}
+                {idText("SYSTEM STATUS ·")} {idText(backendStatus)}
               </span>
             </div>
           </div>
@@ -532,19 +533,19 @@ export default function LandingPage() {
           <div className="max-w-5xl">
             <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
               <span className="w-8 h-[2px] bg-[#ea580c]"></span>
-              <span>EST. 2026 · GARUT HIGHLAND PACKHOUSE</span>
+              <span>{idText("EST. 2026 · GARUT HIGHLAND PACKHOUSE")}</span>
             </div>
 
             <h1 className="font-display text-[13vw] md:text-[9.5vw] lg:text-[7.5vw] leading-[0.85] mb-6 tracking-tight">
-              <span className="block">GROWN WITH CARE.</span>
-              <span className="block text-stroke-white">WEIGHED WITH HONESTY.</span>
+              <span className="block">{idText("GROWN WITH CARE.")}</span>
+              <span className="block text-stroke-white">{idText("WEIGHED WITH HONESTY.")}</span>
               <span className="block">
-                TRACEABLE IN <span className="text-[#ea580c]">FULL.</span>
+                {idText("TRACEABLE IN")} <span className="text-[#ea580c]">{idText("FULL.")}</span>
               </span>
             </h1>
 
             <p className="max-w-2xl text-white/80 text-base md:text-lg leading-relaxed font-body">
-              From the volcanic soils of Garut into caring family kitchens. SmartGeulis connects local highland farmers directly with consumers through open scales, gentle handling, and honest traceability in every bag.
+              {idText("From the volcanic soils of Garut into caring family kitchens. SmartGeulis connects local highland farmers directly with consumers through open scales, gentle handling, and honest traceability in every bag.")}
             </p>
           </div>
 
@@ -568,10 +569,10 @@ export default function LandingPage() {
               </div>
               <div>
                 <div className="font-mono-custom text-[10px] tracking-[0.2em] text-white/60 uppercase">
-                  ACTIVE PACKHOUSE STATIONS
+                  {idText("ACTIVE PACKHOUSE STATIONS")}
                 </div>
                 <div className="font-heading text-sm text-white tracking-wider">
-                  3 Connected Stations · Ready for Daily Work
+                  {idText("3 Connected Stations · Ready for Daily Work")}
                 </div>
               </div>
             </div>
@@ -579,7 +580,7 @@ export default function LandingPage() {
             {/* Reel Progress & Chapter */}
             <div className="flex items-center gap-5 max-w-md w-full lg:w-auto">
               <div className="font-mono-custom text-[11px] text-white/60 tracking-[0.2em]">
-                {String(currentFrame + 1).padStart(2, '0')} / {String(reelFrames.length).padStart(2, '0')}
+                {idText(String(currentFrame + 1).padStart(2, '0'))} / {idText(String(reelFrames.length).padStart(2, '0'))}
               </div>
               <div className="flex-1 h-[2px] bg-white/20 overflow-hidden rounded-full">
                 <div
@@ -588,7 +589,7 @@ export default function LandingPage() {
                 />
               </div>
               <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase">
-                {reelFrames[currentFrame].subtitle}
+                {idText(reelFrames[currentFrame].subtitle)}
               </div>
             </div>
           </div>
@@ -597,29 +598,29 @@ export default function LandingPage() {
         {/* Scrolling Ticker Marquee */}
         <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-black/80 backdrop-blur-md py-3 overflow-hidden z-20">
           <div className="marquee-track font-heading text-xs tracking-[0.25em] uppercase text-white/70">
-            <span className="px-8">WEIGHED & APPROVED</span>
+            <span className="px-8">{idText("WEIGHED & APPROVED")}</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">PRODUCT QR LABELS</span>
+            <span className="px-8">{idText("PRODUCT QR LABELS")}</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">CONNECTED SCALES</span>
+            <span className="px-8">{idText("CONNECTED SCALES")}</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">CLEAR SORTING</span>
+            <span className="px-8">{idText("CLEAR SORTING")}</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">VERIFIED WEIGHT</span>
+            <span className="px-8">{idText("VERIFIED WEIGHT")}</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">PUBLIC QR TRACEABILITY</span>
+            <span className="px-8">{idText("PUBLIC QR TRACEABILITY")}</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">FIELD TO EXPORT CONTAINER</span>
+            <span className="px-8">{idText("FIELD TO EXPORT CONTAINER")}</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">WEIGHED & APPROVED</span>
+            <span className="px-8">{idText("WEIGHED & APPROVED")}</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">PRODUCT QR LABELS</span>
+            <span className="px-8">{idText("PRODUCT QR LABELS")}</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">CONNECTED SCALES</span>
+            <span className="px-8">{idText("CONNECTED SCALES")}</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">CLEAR SORTING</span>
+            <span className="px-8">{idText("CLEAR SORTING")}</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">VERIFIED WEIGHT</span>
+            <span className="px-8">{idText("VERIFIED WEIGHT")}</span>
             <span className="text-[#ea580c]">/</span>
           </div>
         </div>
@@ -631,37 +632,37 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-10 gap-x-6">
             <div className="border-l-2 border-[#eaeaea] pl-6">
               <div className="font-display text-6xl md:text-7xl text-[#171717] tabular-nums">
-                {counters.years}+
+                {idText(counters.years)}+
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
-                Highland Facility
+                {idText("Highland Facility")}
               </div>
             </div>
 
             <div className="border-l-2 border-[#f97316] pl-6">
               <div className="font-display text-6xl md:text-7xl text-[#ea580c] tabular-nums">
-                {counters.farmers}+
+                {idText(counters.farmers)}+
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
-                Farming Families
+                {idText("Farming Families")}
               </div>
             </div>
 
             <div className="border-l-2 border-[#eaeaea] pl-6">
               <div className="font-display text-6xl md:text-7xl text-[#171717] tabular-nums">
-                {counters.tons.toLocaleString()}+
+                {idText(counters.tons.toLocaleString())}+
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
-                Kilograms Weighed with Pride
+                {idText("Kilograms Weighed with Pride")}
               </div>
             </div>
 
             <div className="border-l-2 border-[#eaeaea] pl-6">
               <div className="font-display text-6xl md:text-7xl text-[#171717] tabular-nums">
-                {counters.stations}
+                {idText(counters.stations)}
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
-                Care & Quality Stations
+                {idText("Care & Quality Stations")}
               </div>
             </div>
           </div>
@@ -675,16 +676,16 @@ export default function LandingPage() {
             <div className="lg:col-span-7">
               <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4 font-semibold">
                 <span className="w-8 h-[2px] bg-[#ea580c]"></span>
-                <span>01 — Physical Facility & Headquarters</span>
+                <span>{idText("01 — Physical Facility & Headquarters")}</span>
               </div>
               <h2 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[0.9] text-[#171717]">
-                THE HEART OF OUR <br />
-                <span className="text-[#ea580c]">HIGHLAND PACKHOUSE.</span>
+                {idText("THE HEART OF OUR")} <br />
+                <span className="text-[#ea580c]">{idText("HIGHLAND PACKHOUSE.")}</span>
               </h2>
             </div>
             <div className="lg:col-span-5 flex flex-col justify-end">
               <p className="text-[#666666] text-base leading-relaxed font-body">
-                Located in the fertile volcanic highlands of Garut, West Java, the SmartGeulis packhouse serves as the physical home where fresh harvests are received directly from local farming families, sorted with care, and prepared for dining tables across the nation.
+                {idText("Located in the fertile volcanic highlands of Garut, West Java, the SmartGeulis packhouse serves as the physical home where fresh harvests are received directly from local farming families, sorted with care, and prepared for dining tables across the nation.")}
               </p>
             </div>
           </div>
@@ -694,17 +695,17 @@ export default function LandingPage() {
             <div className="relative overflow-hidden bg-black/5 border border-[#eaeaea] group">
               <img
                 src="/Papan Nama Warehouse.png"
-                alt="SmartGeulis Packhouse & Warehouse Signboard"
+                alt={idText("SmartGeulis Packhouse & Warehouse Signboard")}
                 className="w-full h-auto max-h-[580px] object-contain mx-auto transition-transform duration-700 group-hover:scale-[1.01]"
               />
               {/* Badge Overlays */}
               <div className="absolute top-4 left-4 bg-black/85 backdrop-blur-md border border-white/20 text-white px-3.5 py-1.5 text-xs font-mono-custom uppercase tracking-wider flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#ea580c] animate-pulse"></span>
-                <span>Official Facility Signboard</span>
+                <span>{idText("Official Facility Signboard")}</span>
               </div>
               <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-md border border-[#eaeaea] text-[#171717] px-4 py-2 text-xs font-mono-custom tracking-wider hidden sm:flex items-center gap-2 shadow-sm font-semibold">
                 <span className="w-2 h-2 bg-[#ea580c]"></span>
-                <span>Garut Highlands · West Java, Indonesia</span>
+                <span>{idText("Garut Highlands · West Java, Indonesia")}</span>
               </div>
             </div>
           </div>
@@ -715,9 +716,9 @@ export default function LandingPage() {
               <div className="w-10 h-10 bg-[#fff7ed] border border-[#ffedd5] text-[#ea580c] flex items-center justify-center mb-4">
                 <Icon name="scale" size={20} />
               </div>
-              <h3 className="font-display text-2xl text-[#171717] mb-2">OPEN & HONEST INTAKE</h3>
+              <h3 className="font-display text-2xl text-[#171717] mb-2">{idText("OPEN & HONEST INTAKE")}</h3>
               <p className="text-xs text-[#666666] leading-relaxed font-body">
-                Local growers arrive every morning with fresh harvest sacks. Digital scales with large bright screens let farmers verify their weight directly with total peace of mind.
+                {idText("Local growers arrive every morning with fresh harvest sacks. Digital scales with large bright screens let farmers verify their weight directly with total peace of mind.")}
               </p>
             </div>
 
@@ -725,9 +726,9 @@ export default function LandingPage() {
               <div className="w-10 h-10 bg-[#fff7ed] border border-[#ffedd5] text-[#ea580c] flex items-center justify-center mb-4">
                 <Icon name="package" size={20} />
               </div>
-              <h3 className="font-display text-2xl text-[#171717] mb-2">COOL HIGHLAND STORAGE</h3>
+              <h3 className="font-display text-2xl text-[#171717] mb-2">{idText("COOL HIGHLAND STORAGE")}</h3>
               <p className="text-xs text-[#666666] leading-relaxed font-body">
-                Naturally cooled highland air and clean, ventilated storage bays preserve crispness, moisture, and natural flavor without artificial chemicals or synthetic treatments.
+                {idText("Naturally cooled highland air and clean, ventilated storage bays preserve crispness, moisture, and natural flavor without artificial chemicals or synthetic treatments.")}
               </p>
             </div>
 
@@ -735,9 +736,9 @@ export default function LandingPage() {
               <div className="w-10 h-10 bg-[#fff7ed] border border-[#ffedd5] text-[#ea580c] flex items-center justify-center mb-4">
                 <Icon name="users" size={20} />
               </div>
-              <h3 className="font-display text-2xl text-[#171717] mb-2">COMMUNITY & EMPOWERMENT</h3>
+              <h3 className="font-display text-2xl text-[#171717] mb-2">{idText("COMMUNITY & EMPOWERMENT")}</h3>
               <p className="text-xs text-[#666666] leading-relaxed font-body">
-                Co-developed with Universitas Padjadjaran and Eptilu, our packhouse serves as an open learning hub for sustainable farming, transparent economics, and fair trade.
+                {idText("Co-developed with Universitas Padjadjaran and Eptilu, our packhouse serves as an open learning hub for sustainable farming, transparent economics, and fair trade.")}
               </p>
             </div>
           </div>
@@ -751,18 +752,18 @@ export default function LandingPage() {
             <div className="lg:col-span-6">
               <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
                 <span className="w-8 h-[2px] bg-[#ea580c]"></span>
-                <span>02 — Operational Pipeline</span>
+                <span>{idText("02 — Operational Pipeline")}</span>
               </div>
               <h2 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9]">
-                Three stations.<br />
-                <span className="text-stroke">One commitment:</span><br />
-                <span className="text-[#ea580c]">100% honest quality.</span>
+                {idText("Three stations.")}<br />
+                <span className="text-stroke">{idText("One commitment:")}</span><br />
+                <span className="text-[#ea580c]">{idText("100% honest quality.")}</span>
               </h2>
             </div>
 
             <div className="lg:col-span-6 flex flex-col justify-end">
               <p className="text-[#666666] text-lg leading-relaxed mb-6 font-body">
-                From the moment morning harvests arrive to the sealed retail pouch on your dining table. Explore how our three dedicated care stations ensure every potato is weighed honestly, sorted by quality, and packed with pride.
+                {idText("From the moment morning harvests arrive to the sealed retail pouch on your dining table. Explore how our three dedicated care stations ensure every potato is weighed honestly, sorted by quality, and packed with pride.")}
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -773,7 +774,7 @@ export default function LandingPage() {
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
-                  All Stations
+                  {idText("All Stations")}
                 </button>
                 <button
                   onClick={() => setActiveCategory('weighing')}
@@ -783,7 +784,7 @@ export default function LandingPage() {
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
-                  Weighing
+                  {idText("Weighing")}
                 </button>
                 <button
                   onClick={() => setActiveCategory('sorting')}
@@ -793,7 +794,7 @@ export default function LandingPage() {
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
-                  Sorting
+                  {idText("Sorting")}
                 </button>
                 <button
                   onClick={() => setActiveCategory('packaging')}
@@ -803,7 +804,7 @@ export default function LandingPage() {
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
-                  Packaging
+                  {idText("Packaging")}
                 </button>
               </div>
             </div>
@@ -817,48 +818,48 @@ export default function LandingPage() {
                 <div className="relative h-64 overflow-hidden bg-black">
                   <img
                     src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80"
-                    alt="Intake Weighing Station"
+                    alt={idText("Intake Weighing Station")}
                     className="w-full h-full object-cover filter contrast-[1.2] opacity-80 group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#f59e0b] tracking-[0.2em]">
-                    01 / INTAKE WEIGHING
+                    {idText("01 / INTAKE WEIGHING")}
                   </div>
                   <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#ea580c] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
-                    RECEIPT + LABEL
+                    {idText("RECEIPT + LABEL")}
                   </div>
                 </div>
 
                 <div className="p-7">
-                  <h3 className="font-display text-4xl mb-3 text-[#171717]">HARVEST INTAKE</h3>
+                  <h3 className="font-display text-4xl mb-3 text-[#171717]">{idText("HARVEST INTAKE")}</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Greeting local farmers at dawn, recording fresh harvest sacks on clear digital scales, and printing an immediate receipt for the grower with zero guesswork.
+                    {idText("Greeting local farmers at dawn, recording fresh harvest sacks on clear digital scales, and printing an immediate receipt for the grower with zero guesswork.")}
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Welcome
+                        {idText("Welcome")}
                       </div>
-                      <div className="font-heading text-base text-[#171717]">DIRECT GROWER INTAKE</div>
+                      <div className="font-heading text-base text-[#171717]">{idText("DIRECT GROWER INTAKE")}</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Weighing
+                        {idText("Weighing")}
                       </div>
-                      <div className="font-heading text-base text-[#171717]">CERTIFIED DIGITAL SCALE</div>
+                      <div className="font-heading text-base text-[#171717]">{idText("CERTIFIED DIGITAL SCALE")}</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Trust
+                        {idText("Trust")}
                       </div>
-                      <div className="font-heading text-base text-[#171717]">HONEST TARE SUBTRACTION</div>
+                      <div className="font-heading text-base text-[#171717]">{idText("HONEST TARE SUBTRACTION")}</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Confirmation
+                        {idText("Confirmation")}
                       </div>
-                      <div className="font-heading text-base text-[#171717]">PRINTED SLIP + SACK TAG</div>
+                      <div className="font-heading text-base text-[#171717]">{idText("PRINTED SLIP + SACK TAG")}</div>
                     </div>
                   </div>
 
@@ -866,7 +867,7 @@ export default function LandingPage() {
                     to="/dashboard/weighing"
                     className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#ea580c] transition-colors"
                   >
-                    <span>Launch Station</span>
+                    <span>{idText("Launch Station")}</span>
                     <Icon name="arrow-right" size={16} />
                   </Link>
                 </div>
@@ -879,48 +880,48 @@ export default function LandingPage() {
                 <div className="relative h-64 overflow-hidden bg-black">
                   <img
                     src="https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80"
-                    alt="Sorting Station"
+                    alt={idText("Sorting Station")}
                     className="w-full h-full object-cover filter contrast-[1.2] opacity-80 group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#f59e0b] tracking-[0.2em]">
-                    02 / CLASSIFICATION
+                    {idText("02 / CLASSIFICATION")}
                   </div>
                   <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#ea580c] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
-                    SORTING FLOW
+                    {idText("SORTING FLOW")}
                   </div>
                 </div>
 
                 <div className="p-7">
-                  <h3 className="font-display text-4xl mb-3 text-[#171717]">SORTING & GRADING</h3>
+                  <h3 className="font-display text-4xl mb-3 text-[#171717]">{idText("SORTING & GRADING")}</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Carefully selecting potatoes by hand and eye into Grade A, B, and C so premium tubers reach supermarkets and every harvest finds its best home without unnecessary waste.
+                    {idText("Carefully selecting potatoes by hand and eye into Grade A, B, and C so premium tubers reach supermarkets and every harvest finds its best home without unnecessary waste.")}
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Selection
+                        {idText("Selection")}
                       </div>
-                      <div className="font-heading text-base text-[#171717]">HAND & EYE QUALITY SORT</div>
+                      <div className="font-heading text-base text-[#171717]">{idText("HAND & EYE QUALITY SORT")}</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Categories
+                        {idText("Categories")}
                       </div>
-                      <div className="font-heading text-base text-[#171717]">GRADE A / B / C</div>
+                      <div className="font-heading text-base text-[#171717]">{idText("GRADE A / B / C")}</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Identification
+                        {idText("Identification")}
                       </div>
-                      <div className="font-heading text-base text-[#171717]">PALLET TRACKING TAG</div>
+                      <div className="font-heading text-base text-[#171717]">{idText("PALLET TRACKING TAG")}</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Destination
+                        {idText("Destination")}
                       </div>
-                      <div className="font-heading text-base text-[#171717]">READY FOR PACKAGING</div>
+                      <div className="font-heading text-base text-[#171717]">{idText("READY FOR PACKAGING")}</div>
                     </div>
                   </div>
 
@@ -928,7 +929,7 @@ export default function LandingPage() {
                     to="/dashboard/sorting"
                     className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#ea580c] transition-colors"
                   >
-                    <span>Launch Station</span>
+                    <span>{idText("Launch Station")}</span>
                     <Icon name="arrow-right" size={16} />
                   </Link>
                 </div>
@@ -941,48 +942,48 @@ export default function LandingPage() {
                 <div className="relative h-64 overflow-hidden bg-black">
                   <img
                     src="https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80"
-                    alt="Packaging Station"
+                    alt={idText("Packaging Station")}
                     className="w-full h-full object-cover filter contrast-[1.2] opacity-80 group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#f59e0b] tracking-[0.2em]">
-                    03 / RETAIL POUCH
+                    {idText("03 / RETAIL POUCH")}
                   </div>
                   <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#171717] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
-                    3-CHANNEL CLUSTER
+                    {idText("3-CHANNEL CLUSTER")}
                   </div>
                 </div>
 
                 <div className="p-7">
-                  <h3 className="font-display text-4xl mb-3 text-[#171717]">RETAIL PACKAGING</h3>
+                  <h3 className="font-display text-4xl mb-3 text-[#171717]">{idText("RETAIL PACKAGING")}</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Weighing fresh potatoes into clean 1 kg stand-up pouches, sealed with a unique QR code that connects home cooks directly to the grower who nurtured the crop.
+                    {idText("Weighing fresh potatoes into clean 1 kg stand-up pouches, sealed with a unique QR code that connects home cooks directly to the grower who nurtured the crop.")}
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Family Unit
+                        {idText("Family Unit")}
                       </div>
-                      <div className="font-heading text-base text-[#171717]">1 KG RETAIL POUCH</div>
+                      <div className="font-heading text-base text-[#171717]">{idText("1 KG RETAIL POUCH")}</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Freshness
+                        {idText("Freshness")}
                       </div>
-                      <div className="font-heading text-base text-[#171717]">BREATHE-EASY PACK</div>
+                      <div className="font-heading text-base text-[#171717]">{idText("BREATHE-EASY PACK")}</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Transparency
+                        {idText("Transparency")}
                       </div>
-                      <div className="font-heading text-base text-[#171717]">SCANNABLE FARMER QR</div>
+                      <div className="font-heading text-base text-[#171717]">{idText("SCANNABLE FARMER QR")}</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Packhouse Line
+                        {idText("Packhouse Line")}
                       </div>
-                      <div className="font-heading text-base text-[#171717]">DEDICATED GRADE LINES</div>
+                      <div className="font-heading text-base text-[#171717]">{idText("DEDICATED GRADE LINES")}</div>
                     </div>
                   </div>
 
@@ -990,7 +991,7 @@ export default function LandingPage() {
                     to="/dashboard/packaging"
                     className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#ea580c] transition-colors"
                   >
-                    <span>Launch Station</span>
+                    <span>{idText("Launch Station")}</span>
                     <Icon name="arrow-right" size={16} />
                   </Link>
                 </div>
@@ -1007,17 +1008,17 @@ export default function LandingPage() {
             <div className="lg:col-span-7">
               <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
                 <span className="w-8 h-[2px] bg-[#ea580c]"></span>
-                <span>03 — Stations</span>
+                <span>{idText("03 — Stations")}</span>
               </div>
               <h2 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9]">
-                Simple, caring tools.<br />
-                Built for <span className="text-[#ea580c]">people</span>,<br />
-                designed for <span className="text-stroke">trust.</span>
+                {idText("Simple, caring tools.")}<br />
+                {idText("Built for")} <span className="text-[#ea580c]">{idText("people")}</span>,<br />
+                {idText("designed for")} <span className="text-stroke">{idText("trust.")}</span>
               </h2>
             </div>
             <div className="lg:col-span-5 flex flex-col justify-end">
               <p className="text-[#666666] text-base leading-relaxed font-body">
-                No complex manuals or confusing jargon. Each packhouse tool is designed for everyday ease, instant clarity, and fair trade for farmers and families. Hover or tap any card below to explore.
+                {idText("No complex manuals or confusing jargon. Each packhouse tool is designed for everyday ease, instant clarity, and fair trade for farmers and families. Hover or tap any card below to explore.")}
               </p>
             </div>
           </div>
@@ -1035,29 +1036,29 @@ export default function LandingPage() {
                   <div className="relative h-64 overflow-hidden bg-black">
                     <img
                       src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80"
-                      alt="Digital Scales"
+                      alt={idText("Digital Scales")}
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
                     <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
                       / 01
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
-                      RAPID CAPTURE
+                      {idText("RAPID CAPTURE")}
                     </div>
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">FAIR DIGITAL SCALES</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">{idText("FAIR DIGITAL SCALES")}</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        Honest Weight for Every Farmer
+                        {idText("Honest Weight for Every Farmer")}
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        FAIR WEIGHING
+                        {idText("FAIR WEIGHING")}
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#ea580c] tracking-wider font-semibold">
-                        EXPLORE →
+                        {idText("EXPLORE →")}
                       </span>
                     </div>
                   </div>
@@ -1067,32 +1068,32 @@ export default function LandingPage() {
                 <div className="flip-face flip-back border border-[#f97316] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
                     <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-3">
-                      / Everyday Trust
+                      {idText("/ Everyday Trust")}
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">FAIR NUMBERS YOU TRUST</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">{idText("FAIR NUMBERS YOU TRUST")}</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Large bright display seen by farmer & operator</span>
+                        <span>{idText("Large bright display seen by farmer & operator")}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>One-touch tare deduction for sack weight only</span>
+                        <span>{idText("One-touch tare deduction for sack weight only")}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Gentle, non-slip platform for fresh potatoes</span>
+                        <span>{idText("Gentle, non-slip platform for fresh potatoes")}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Instant confirmation so growers leave confident</span>
+                        <span>{idText("Instant confirmation so growers leave confident")}</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Complete Honesty</div>
-                    <div className="font-display text-xl text-[#ea580c]">ZERO GUESSWORK</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Clear numbers you can see before any deal is settled.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">{idText("Complete Honesty")}</div>
+                    <div className="font-display text-xl text-[#ea580c]">{idText("ZERO GUESSWORK")}</div>
+                    <p className="text-[11px] text-[#666666] mt-1">{idText("Clear numbers you can see before any deal is settled.")}</p>
                   </div>
                 </div>
               </div>
@@ -1109,29 +1110,29 @@ export default function LandingPage() {
                   <div className="relative h-64 overflow-hidden bg-black">
                     <img
                       src="https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=600&q=80"
-                      alt="Pallet QR Label Engine"
+                      alt={idText("Pallet QR Label Engine")}
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
                     <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
                       / 02
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
-                      QR + RECEIPT
+                      {idText("QR + RECEIPT")}
                     </div>
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">PRINTED PROOF</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">{idText("PRINTED PROOF")}</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        Immediate Receipts in Hand
+                        {idText("Immediate Receipts in Hand")}
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        OFFICIAL SLIPS
+                        {idText("OFFICIAL SLIPS")}
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#ea580c] tracking-wider font-semibold">
-                        EXPLORE →
+                        {idText("EXPLORE →")}
                       </span>
                     </div>
                   </div>
@@ -1141,32 +1142,32 @@ export default function LandingPage() {
                 <div className="flip-face flip-back border border-[#f97316] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
                     <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-3">
-                      / Everyday Confidence
+                      {idText("/ Everyday Confidence")}
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">A RECEIPT TO TAKE HOME</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">{idText("A RECEIPT TO TAKE HOME")}</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Instant printed receipt handed to farmer before leaving</span>
+                        <span>{idText("Instant printed receipt handed to farmer before leaving")}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Weather-resistant tag attached to each mesh waring sack</span>
+                        <span>{idText("Weather-resistant tag attached to each mesh waring sack")}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Clear numbering for simple cooperative accounting</span>
+                        <span>{idText("Clear numbering for simple cooperative accounting")}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Operates reliably without depending on internet speed</span>
+                        <span>{idText("Operates reliably without depending on internet speed")}</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Permanent Record</div>
-                    <div className="font-display text-xl text-[#ea580c]">PEACE OF MIND</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Tangible printed proof for every single kilogram delivered.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">{idText("Permanent Record")}</div>
+                    <div className="font-display text-xl text-[#ea580c]">{idText("PEACE OF MIND")}</div>
+                    <p className="text-[11px] text-[#666666] mt-1">{idText("Tangible printed proof for every single kilogram delivered.")}</p>
                   </div>
                 </div>
               </div>
@@ -1183,29 +1184,29 @@ export default function LandingPage() {
                   <div className="relative h-64 overflow-hidden bg-black">
                     <img
                       src="https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=600&q=80"
-                      alt="Packaging Lines"
+                      alt={idText("Packaging Lines")}
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
                     <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
                       / 03
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
-                      PARALLEL LINES
+                      {idText("PARALLEL LINES")}
                     </div>
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">KITCHEN POUCHES</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">{idText("KITCHEN POUCHES")}</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        Convenient 1 kg Family Sizing
+                        {idText("Convenient 1 kg Family Sizing")}
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        GRADE-SPECIFIC
+                        {idText("GRADE-SPECIFIC")}
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#ea580c] tracking-wider font-semibold">
-                        EXPLORE →
+                        {idText("EXPLORE →")}
                       </span>
                     </div>
                   </div>
@@ -1215,32 +1216,32 @@ export default function LandingPage() {
                 <div className="flip-face flip-back border border-[#f97316] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
                     <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-3">
-                      / Table-Ready Quality
+                      {idText("/ Table-Ready Quality")}
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">SEALED FOR FRESHNESS</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">{idText("SEALED FOR FRESHNESS")}</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Grade A Line: Hand-selected premium potatoes for fresh markets</span>
+                        <span>{idText("Grade A Line: Hand-selected premium potatoes for fresh markets")}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Grade B Line: Wholesome, affordable table potatoes for daily cooking</span>
+                        <span>{idText("Grade B Line: Wholesome, affordable table potatoes for daily cooking")}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Grade C Line: Consistent quality for food makers and local chefs</span>
+                        <span>{idText("Grade C Line: Consistent quality for food makers and local chefs")}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Breathe-easy pouches that preserve farm-fresh firmness</span>
+                        <span>{idText("Breathe-easy pouches that preserve farm-fresh firmness")}</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Family Sizing</div>
-                    <div className="font-display text-xl text-[#ea580c]">1 KG POUCH</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Perfect portion for family cooking and easy storage.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">{idText("Family Sizing")}</div>
+                    <div className="font-display text-xl text-[#ea580c]">{idText("1 KG POUCH")}</div>
+                    <p className="text-[11px] text-[#666666] mt-1">{idText("Perfect portion for family cooking and easy storage.")}</p>
                   </div>
                 </div>
               </div>
@@ -1257,29 +1258,29 @@ export default function LandingPage() {
                   <div className="relative h-64 overflow-hidden bg-black">
                     <img
                       src="https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=600&q=80"
-                      alt="Public Traceability Web Engine"
+                      alt={idText("Public Traceability Web Engine")}
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
                     <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
                       / 04
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
-                      PUBLIC PORTAL
+                      {idText("PUBLIC PORTAL")}
                     </div>
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">PHONE SCAN</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">{idText("PHONE SCAN")}</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        Meet Your Grower with One Tap
+                        {idText("Meet Your Grower with One Tap")}
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        NO APP NEEDED
+                        {idText("NO APP NEEDED")}
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#ea580c] tracking-wider font-semibold">
-                        EXPLORE →
+                        {idText("EXPLORE →")}
                       </span>
                     </div>
                   </div>
@@ -1289,32 +1290,32 @@ export default function LandingPage() {
                 <div className="flip-face flip-back border border-[#f97316] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
                     <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-3">
-                      / Farm-to-Fork Story
+                      {idText("/ Farm-to-Fork Story")}
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">MEET YOUR GROWER</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">{idText("MEET YOUR GROWER")}</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Point your normal phone camera to view in seconds</span>
+                        <span>{idText("Point your normal phone camera to view in seconds")}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>See the grower name, highland village, and harvest date</span>
+                        <span>{idText("See the grower name, highland village, and harvest date")}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Know your food was grown responsibly and fairly traded</span>
+                        <span>{idText("Know your food was grown responsibly and fairly traded")}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Celebrate the local farming families who feed us</span>
+                        <span>{idText("Celebrate the local farming families who feed us")}</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Zero Downloads</div>
-                    <div className="font-display text-xl text-[#ea580c]">ANY SMARTPHONE</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Tap the link to immediately view the genuine harvest story.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">{idText("Zero Downloads")}</div>
+                    <div className="font-display text-xl text-[#ea580c]">{idText("ANY SMARTPHONE")}</div>
+                    <p className="text-[11px] text-[#666666] mt-1">{idText("Tap the link to immediately view the genuine harvest story.")}</p>
                   </div>
                 </div>
               </div>
@@ -1330,20 +1331,20 @@ export default function LandingPage() {
             <div className="lg:col-span-7">
               <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
                 <span className="w-8 h-[2px] bg-[#ea580c]"></span>
-                <span>04 — Voices from the Soil</span>
+                <span>{idText("04 — Voices from the Soil")}</span>
               </div>
               <h2 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9]">
-                Real harvests.<br />
-                <span className="text-[#ea580c]">Real families.</span>
+                {idText("Real harvests.")}<br />
+                <span className="text-[#ea580c]">{idText("Real families.")}</span>
               </h2>
             </div>
             <div className="lg:col-span-5 flex flex-col justify-end">
               <p className="text-[#666666] text-base leading-relaxed mb-4 font-body">
-                Behind every potato is a family of growers who rise before dawn. Meet the farmers and packhouse team of Garut whose livelihoods are protected by honest weighing and genuine community pride.
+                {idText("Behind every potato is a family of growers who rise before dawn. Meet the farmers and packhouse team of Garut whose livelihoods are protected by honest weighing and genuine community pride.")}
               </p>
               <div className="flex items-center gap-3 font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
                 <Icon name="users" size={13} className="text-[#ea580c]" />
-                <span>Swipeable · Real Stories · Verified Highlands</span>
+                <span>{idText("Swipeable · Real Stories · Verified Highlands")}</span>
               </div>
             </div>
           </div>
@@ -1364,46 +1365,46 @@ export default function LandingPage() {
                   <div className="relative h-56 overflow-hidden bg-black">
                     <img
                       src={story.img}
-                      alt={story.farmer}
+                      alt={idText(story.farmer)}
                       className="w-full h-full object-cover filter contrast-[1.2] brightness-90"
                     />
                     <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
-                      {story.caseId}
+                      {idText(story.caseId)}
                     </div>
                     <div className="absolute bottom-4 right-4 px-2.5 py-1 bg-[#ea580c] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
-                      {story.badge}
+                      {idText(story.badge)}
                     </div>
                   </div>
 
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-display text-2xl text-[#171717]">{story.farmer}</h3>
+                      <h3 className="font-display text-2xl text-[#171717]">{idText(story.farmer)}</h3>
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        {story.duration}
+                        {idText(story.duration)}
                       </span>
                     </div>
 
                     <p className="text-[#525252] text-sm leading-relaxed mb-6 italic font-body">
-                      "{story.quote}"
+                      "{idText(story.quote)}"
                     </p>
 
                     <div className="grid grid-cols-3 gap-2 pt-4 border-t border-[#eaeaea]">
                       <div>
-                        <div className="font-display text-2xl text-[#ea580c]">{story.metric1.val}</div>
+                        <div className="font-display text-2xl text-[#ea580c]">{idText(story.metric1.val)}</div>
                         <div className="font-mono-custom text-[9px] text-[#666666] tracking-wider uppercase">
-                          {story.metric1.label}
+                          {idText(story.metric1.label)}
                         </div>
                       </div>
                       <div>
-                        <div className="font-display text-2xl text-[#171717]">{story.metric2.val}</div>
+                        <div className="font-display text-2xl text-[#171717]">{idText(story.metric2.val)}</div>
                         <div className="font-mono-custom text-[9px] text-[#666666] tracking-wider uppercase">
-                          {story.metric2.label}
+                          {idText(story.metric2.label)}
                         </div>
                       </div>
                       <div>
-                        <div className="font-display text-2xl text-[#171717]">{story.metric3.val}</div>
+                        <div className="font-display text-2xl text-[#171717]">{idText(story.metric3.val)}</div>
                         <div className="font-mono-custom text-[9px] text-[#666666] tracking-wider uppercase">
-                          {story.metric3.label}
+                          {idText(story.metric3.label)}
                         </div>
                       </div>
                     </div>
@@ -1424,7 +1425,7 @@ export default function LandingPage() {
                   className={`transition-all duration-300 rounded-full h-1 ${
                     i === storyIndex ? 'w-8 bg-[#ea580c]' : 'w-2 bg-[#d1d5db]'
                   }`}
-                  aria-label={`Go to case ${i + 1}`}
+                  aria-label={idText(`Go to case ${i + 1}`)}
                 />
               ))}
             </div>
@@ -1434,14 +1435,14 @@ export default function LandingPage() {
               <button
                 onClick={handlePrevStory}
                 className="w-10 h-10 border border-[#eaeaea] bg-white hover:border-[#f97316] hover:text-[#ea580c] flex items-center justify-center transition-colors shadow-xs"
-                aria-label="Previous case"
+                aria-label={idText("Previous case")}
               >
                 <Icon name="arrow-left" size={14} />
               </button>
               <button
                 onClick={handleNextStory}
                 className="w-10 h-10 border border-[#eaeaea] bg-white hover:border-[#f97316] hover:text-[#ea580c] flex items-center justify-center transition-colors shadow-xs"
-                aria-label="Next case"
+                aria-label={idText("Next case")}
               >
                 <Icon name="arrow-right" size={14} />
               </button>
@@ -1456,11 +1457,11 @@ export default function LandingPage() {
           <div className="mb-14">
             <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
               <span className="w-8 h-[2px] bg-[#ea580c]"></span>
-              <span>05 — Connect with Our Community</span>
+              <span>{idText("05 — Connect with Our Community")}</span>
             </div>
             <h2 className="font-display text-6xl md:text-7xl lg:text-[7rem] leading-[0.9]">
-              JOIN OUR<br />
-              <span className="text-stroke">GROWING</span> <span className="text-[#ea580c]">COMMUNITY.</span>
+              {idText("JOIN OUR")}<br />
+              <span className="text-stroke">{idText("GROWING")}</span> <span className="text-[#ea580c]">{idText("COMMUNITY.")}</span>
             </h2>
           </div>
 
@@ -1469,34 +1470,34 @@ export default function LandingPage() {
             <div className="lg:col-span-7">
               <div className="booking-frame p-8 lg:p-12 shadow-sm">
                 <div className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase mb-2">
-                  // Connect with SmartGeulis
+                  {idText("// Connect with SmartGeulis")}
                 </div>
-                <h3 className="font-display text-4xl mb-2 text-[#171717]">PLAN A VISIT OR PARTNERSHIP</h3>
+                <h3 className="font-display text-4xl mb-2 text-[#171717]">{idText("PLAN A VISIT OR PARTNERSHIP")}</h3>
                 <p className="text-[#666666] text-sm mb-8 font-body">
-                  Whether you are a local farming cooperative, a fresh produce retailer, or a visitor wishing to tour our Garut highland packhouse, our doors are always open.
+                  {idText("Whether you are a local farming cooperative, a fresh produce retailer, or a visitor wishing to tour our Garut highland packhouse, our doors are always open.")}
                 </p>
 
                 <form onSubmit={handleBookingSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
                       <label className="block font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase mb-1">
-                        Contact Name
+                        {idText("Contact Name")}
                       </label>
                       <input
                         type="text"
                         required
-                        placeholder="John Doe"
+                        placeholder={idText("John Doe")}
                         className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#f97316] transition-colors"
                       />
                     </div>
                     <div>
                       <label className="block font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase mb-1">
-                        Phone / WhatsApp
+                        {idText("Phone / WhatsApp")}
                       </label>
                       <input
                         type="tel"
                         required
-                        placeholder="+62 812 3456 7890"
+                        placeholder={idText("+62 812 3456 7890")}
                         className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#f97316] transition-colors"
                       />
                     </div>
@@ -1504,12 +1505,12 @@ export default function LandingPage() {
 
                   <div>
                     <label className="block font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase mb-1">
-                      Organization / Packhouse Email
+                      {idText("Organization / Packhouse Email")}
                     </label>
                     <input
                       type="email"
                       required
-                      placeholder="packhouse@cooperative.id"
+                      placeholder={idText("packhouse@cooperative.id")}
                       className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#f97316] transition-colors"
                     />
                   </div>
@@ -1517,7 +1518,7 @@ export default function LandingPage() {
                   {/* Commodity Selector Pills */}
                   <div>
                     <label className="block font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase mb-2">
-                      Primary Potato Variety
+                      {idText("Primary Potato Variety")}
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {[
@@ -1536,7 +1537,7 @@ export default function LandingPage() {
                               : 'bg-white border-[#eaeaea] text-[#666666] hover:border-[#d1d5db]'
                           }`}
                         >
-                          {item.label}
+                          {idText(item.label)}
                         </button>
                       ))}
                     </div>
@@ -1545,7 +1546,7 @@ export default function LandingPage() {
                   {/* Preferred Shift Radios */}
                   <div>
                     <label className="block font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase mb-2">
-                      Preferred Demonstration Time
+                      {idText("Preferred Demonstration Time")}
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {[
@@ -1563,8 +1564,8 @@ export default function LandingPage() {
                               : 'bg-white border-[#eaeaea] text-[#666666] hover:border-[#d1d5db]'
                           }`}
                         >
-                          <div className="font-heading text-xs uppercase tracking-wider">{shift.label}</div>
-                          <div className="font-mono-custom text-[9px] mt-0.5 opacity-80">{shift.sub}</div>
+                          <div className="font-heading text-xs uppercase tracking-wider">{idText(shift.label)}</div>
+                          <div className="font-mono-custom text-[9px] mt-0.5 opacity-80">{idText(shift.sub)}</div>
                         </label>
                       ))}
                     </div>
@@ -1574,12 +1575,12 @@ export default function LandingPage() {
                     type="submit"
                     className="pulse-btn w-full bg-[#000000] text-white py-4 font-display text-2xl tracking-wider hover:bg-[#333333] transition-colors flex items-center justify-center gap-3 rounded-none"
                   >
-                    <span>SUBMIT DEPLOYMENT REQUEST</span>
+                    <span>{idText("SUBMIT DEPLOYMENT REQUEST")}</span>
                     <Icon name="arrow-right" size={20} />
                   </button>
 
                   <p className="text-center font-mono-custom text-[10px] text-[#666666] tracking-wider uppercase">
-                    Zero Commitment · Remote Modbus Verification Included · 24h Confirmation
+                    {idText("Zero Commitment · Remote Modbus Verification Included · 24h Confirmation")}
                   </p>
                 </form>
               </div>
@@ -1589,35 +1590,35 @@ export default function LandingPage() {
             <div className="lg:col-span-5 space-y-6">
               <div className="border border-[#eaeaea] bg-white p-7 shadow-xs">
                 <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-2">
-                  / Hub Locations
+                  {idText("/ Hub Locations")}
                 </div>
-                <h4 className="font-display text-2xl mb-2 text-[#171717]">CENTRAL PACKHOUSE PILOT</h4>
+                <h4 className="font-display text-2xl mb-2 text-[#171717]">{idText("CENTRAL PACKHOUSE PILOT")}</h4>
                 <p className="text-[#666666] text-sm leading-relaxed mb-4 font-body">
-                  Pangalengan Agricultural Complex<br />
-                  Bandung Regency, West Java 40378
+                  {idText("Pangalengan Agricultural Complex")}<br />
+                  {idText("Bandung Regency, West Java 40378")}
                 </p>
                 <div className="flex items-center gap-2 font-mono-custom text-[11px] text-[#ea580c]">
                   <Icon name="location" size={13} />
-                  <span>ELEVATION: 1,420M ASL · FIBER CONNECTED</span>
+                  <span>{idText("ELEVATION: 1,420M ASL · FIBER CONNECTED")}</span>
                 </div>
               </div>
 
               <div className="border border-[#eaeaea] bg-white p-7 shadow-xs">
                 <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-2">
-                  / Operating Schedule
+                  {idText("/ Operating Schedule")}
                 </div>
-                <h4 className="font-display text-2xl mb-3 text-[#171717]">ACTIVE INTAKE WINDOWS</h4>
+                <h4 className="font-display text-2xl mb-3 text-[#171717]">{idText("ACTIVE INTAKE WINDOWS")}</h4>
                 <div className="space-y-2 text-sm font-body">
                   <div className="flex justify-between border-b border-[#eaeaea] pb-2">
-                    <span className="text-[#666666]">Monday — Friday</span>
+                    <span className="text-[#666666]">{idText("Monday — Friday")}</span>
                     <span className="font-mono-custom font-semibold text-[#171717]">05:00 — 23:00</span>
                   </div>
                   <div className="flex justify-between border-b border-[#eaeaea] pb-2">
-                    <span className="text-[#666666]">Saturday (Peak Intake)</span>
+                    <span className="text-[#666666]">{idText("Saturday (Peak Intake)")}</span>
                     <span className="font-mono-custom font-semibold text-[#171717]">06:00 — 21:00</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#666666]">Sunday (Export Dispatch)</span>
+                    <span className="text-[#666666]">{idText("Sunday (Export Dispatch)")}</span>
                     <span className="font-mono-custom font-semibold text-[#171717]">07:00 — 18:00</span>
                   </div>
                 </div>
@@ -1625,23 +1626,23 @@ export default function LandingPage() {
 
               <div className="border border-[#eaeaea] bg-white p-7 shadow-xs">
                 <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-2">
-                  / Direct Engineer Contact
+                  {idText("/ Direct Engineer Contact")}
                 </div>
-                <h4 className="font-display text-2xl mb-3 text-[#171717]">TECHNICAL SUPPORT</h4>
+                <h4 className="font-display text-2xl mb-3 text-[#171717]">{idText("TECHNICAL SUPPORT")}</h4>
                 <div className="space-y-2.5 text-sm font-body">
                   <a
                     href="tel:+62215550100"
                     className="flex items-center gap-3 hover:text-[#ea580c] transition-colors text-[#525252]"
                   >
                     <Icon name="phone" size={14} className="text-[#ea580c]" />
-                    <span className="font-mono-custom">+62 (21) 555-0100 (Packhouse Ops)</span>
+                    <span className="font-mono-custom">{idText("+62 (21) 555-0100 (Packhouse Ops)")}</span>
                   </a>
                   <a
                     href="mailto:support@smartgeulisunpad.com"
                     className="flex items-center gap-3 hover:text-[#ea580c] transition-colors text-[#525252]"
                   >
                     <Icon name="send" size={14} className="text-[#ea580c]" />
-                    <span className="font-mono-custom">engineering@smartgeulisunpad.com</span>
+                    <span className="font-mono-custom">{idText("engineering@smartgeulisunpad.com")}</span>
                   </a>
                 </div>
               </div>
@@ -1657,7 +1658,7 @@ export default function LandingPage() {
           className="font-display text-[16vw] leading-none text-stroke opacity-15 absolute bottom-[-5%] left-0 right-0 text-center pointer-events-none select-none z-0"
           aria-hidden="true"
         >
-          TRACEABILITY
+          {idText("TRACEABILITY")}
         </div>
 
                 <div className="relative z-10 max-w-[1600px] mx-auto px-6 lg:px-10">
@@ -1667,14 +1668,14 @@ export default function LandingPage() {
               <div>
                 <div className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.25em] uppercase font-semibold mb-2 flex items-center gap-2">
                   <span className="w-2 h-2 bg-[#ea580c]"></span>
-                  STRATEGIC PARTNERS & COLLABORATION
+                  {idText("STRATEGIC PARTNERS & COLLABORATION")}
                 </div>
                 <h4 className="font-display text-3xl md:text-4xl tracking-wider text-[#171717]">
-                  SUPPORTED BY ACADEMIC & INDUSTRY LEADERS
+                  {idText("SUPPORTED BY ACADEMIC & INDUSTRY LEADERS")}
                 </h4>
               </div>
               <p className="text-xs text-[#666666] font-body max-w-lg leading-relaxed">
-                SmartGeulis Traceability System is co-developed and supported through active collaboration with the Ministry of Agriculture of the Republic of Indonesia, the ICARE program, Universitas Padjadjaran (UNPAD), and Eptilu Garut.
+                {idText("SmartGeulis Traceability System is co-developed and supported through active collaboration with the Ministry of Agriculture of the Republic of Indonesia, the ICARE program, Universitas Padjadjaran (UNPAD), and Eptilu Garut.")}
               </p>
             </div>
 
@@ -1684,19 +1685,19 @@ export default function LandingPage() {
                 <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
                   <img
                     src="/Ministry of Agriculture of the Republic of Indonesia.png"
-                    alt="Ministry of Agriculture of the Republic of Indonesia"
+                    alt={idText("Ministry of Agriculture of the Republic of Indonesia")}
                     className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
                   />
                 </div>
                 <div className="min-w-0">
                   <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
-                    Government Ministry
+                    {idText("Government Ministry")}
                   </span>
                   <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
-                    Ministry of Agriculture
+                    {idText("Ministry of Agriculture")}
                   </div>
                   <div className="text-xs text-[#666666] mt-1 leading-snug">
-                    National agricultural policy and horticulture governance support.
+                    {idText("National agricultural policy and horticulture governance support.")}
                   </div>
                 </div>
               </div>
@@ -1706,19 +1707,19 @@ export default function LandingPage() {
                 <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
                   <img
                     src="/I Care.png"
-                    alt="ICARE Program"
+                    alt={idText("ICARE Program")}
                     className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
                   />
                 </div>
                 <div className="min-w-0">
                   <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
-                    Development Program
+                    {idText("Development Program")}
                   </span>
                   <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
-                    ICARE
+                    {idText("ICARE")}
                   </div>
                   <div className="text-xs text-[#666666] mt-1 leading-snug">
-                    Integrated farming competitiveness and resilient ecosystem initiative.
+                    {idText("Integrated farming competitiveness and resilient ecosystem initiative.")}
                   </div>
                 </div>
               </div>
@@ -1728,19 +1729,19 @@ export default function LandingPage() {
                 <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
                   <img
                     src="/Unpad.png"
-                    alt="Universitas Padjadjaran (UNPAD)"
+                    alt={idText("Universitas Padjadjaran (UNPAD)")}
                     className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
                   />
                 </div>
                 <div className="min-w-0">
                   <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
-                    Academic & Research
+                    {idText("Academic & Research")}
                   </span>
                   <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
-                    Universitas Padjadjaran
+                    {idText("Universitas Padjadjaran")}
                   </div>
                   <div className="text-xs text-[#666666] mt-1 leading-snug">
-                    Lead research institution advancing agricultural traceability.
+                    {idText("Lead research institution advancing agricultural traceability.")}
                   </div>
                 </div>
               </div>
@@ -1750,19 +1751,19 @@ export default function LandingPage() {
                 <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
                   <img
                     src="/Eptilu.jpeg"
-                    alt="Eptilu Fresh Produce"
+                    alt={idText("Eptilu Fresh Produce")}
                     className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform rounded-sm"
                   />
                 </div>
                 <div className="min-w-0">
                   <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
-                    Agro-Industry Partner
+                    {idText("Agro-Industry Partner")}
                   </span>
                   <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
-                    Eptilu Garut
+                    {idText("Eptilu Garut")}
                   </div>
                   <div className="text-xs text-[#666666] mt-1 leading-snug">
-                    Agro-tourism & commercial packhouse partner in Garut highlands.
+                    {idText("Agro-tourism & commercial packhouse partner in Garut highlands.")}
                   </div>
                 </div>
               </div>
@@ -1774,50 +1775,49 @@ export default function LandingPage() {
                 <Logo className="h-8 w-auto" markOnly />
                 <div>
                   <div className="font-display text-2xl leading-none tracking-wider text-[#171717]">
-                    SmartGeulis
+                    {idText("SmartGeulis")}
                   </div>
                   <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
-                    TRACEABILITY SYSTEM
+                    {idText("TRACEABILITY SYSTEM")}
                   </div>
                 </div>
               </div>
               <p className="text-[#666666] text-sm leading-relaxed max-w-md mb-6 font-body">
-                Modular IoT platform uniting smart platform scales, optical grading classification, and GS1 Digital Link
-                pouch barcodes into a unified single source of truth for the potato supply chain.
+                {idText("Modular IoT platform uniting smart platform scales, optical grading classification, and GS1 Digital Link pouch barcodes into a unified single source of truth for the potato supply chain.")}
               </p>
               <div className="flex items-center gap-2">
                 <span className="text-xs bg-[#f5f5f5] text-[#525252] border border-[#eaeaea] px-2.5 py-1 font-mono-custom">
-                  Type: smartgeulis
+                  {idText("Type: smartgeulis")}
                 </span>
                 <span className="text-xs text-[#666666] font-mono-custom">
-                  v1.0.0 (Production)
+                  {idText("v1.0.0 (Production)")}
                 </span>
               </div>
             </div>
 
             <div className="md:col-span-2">
               <h5 className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase mb-4 font-semibold">
-                Workstations
+                {idText("Workstations")}
               </h5>
               <ul className="space-y-2 text-sm font-heading tracking-wider uppercase text-[#666666]">
                 <li>
                   <Link to="/dashboard/weighing" className="hover:text-[#171717] transition-colors">
-                    Intake Weighing
+                    {idText("Intake Weighing")}
                   </Link>
                 </li>
                 <li>
                   <Link to="/dashboard/sorting" className="hover:text-[#171717] transition-colors">
-                    Sorting Station
+                    {idText("Sorting Station")}
                   </Link>
                 </li>
                 <li>
                   <Link to="/dashboard/packaging" className="hover:text-[#171717] transition-colors">
-                    Pouch Packaging
+                    {idText("Pouch Packaging")}
                   </Link>
                 </li>
                 <li>
                   <Link to="/dashboard/warehouse" className="hover:text-[#171717] transition-colors">
-                    Warehouse Ledger
+                    {idText("Warehouse Ledger")}
                   </Link>
                 </li>
               </ul>
@@ -1825,27 +1825,27 @@ export default function LandingPage() {
 
             <div className="md:col-span-2">
               <h5 className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase mb-4 font-semibold">
-                Traceability
+                {idText("Traceability")}
               </h5>
               <ul className="space-y-2 text-sm font-heading tracking-wider uppercase text-[#666666]">
                 <li>
                   <Link to="/traceability" className="hover:text-[#171717] transition-colors">
-                    Public Scan Portal
+                    {idText("Public Scan Portal")}
                   </Link>
                 </li>
                 <li>
                   <a href="#pipeline" className="hover:text-[#171717] transition-colors">
-                    GS1 Digital Link
+                    {idText("GS1 Digital Link")}
                   </a>
                 </li>
                 <li>
                   <a href="#hardware" className="hover:text-[#171717] transition-colors">
-                    Modbus Telemetry
+                    {idText("Modbus Telemetry")}
                   </a>
                 </li>
                 <li>
                   <Link to="/login" className="hover:text-[#171717] transition-colors">
-                    Operator Login
+                    {idText("Operator Login")}
                   </Link>
                 </li>
               </ul>
@@ -1853,10 +1853,10 @@ export default function LandingPage() {
 
             <div className="md:col-span-3">
               <h5 className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase mb-4 font-semibold">
-                System Updates
+                {idText("System Updates")}
               </h5>
               <p className="text-[#666666] text-xs mb-3 font-body">
-                Subscribe for batch verification notices, firmware changelogs, and harvest summaries.
+                {idText("Subscribe for batch verification notices, firmware changelogs, and harvest summaries.")}
               </p>
               <form
                 onSubmit={(e) => {
@@ -1873,13 +1873,13 @@ export default function LandingPage() {
                 <input
                   type="email"
                   required
-                  placeholder="operator@cooperative.id"
+                  placeholder={idText("operator@cooperative.id")}
                   className="flex-1 bg-transparent px-3 py-2 text-xs text-[#171717] outline-none placeholder:text-[#999999]"
                 />
                 <button
                   type="submit"
                   className="px-3.5 bg-[#000000] text-white hover:bg-[#333333] transition-colors"
-                  aria-label="Subscribe"
+                  aria-label={idText("Subscribe")}
                 >
                   <Icon name="arrow-right" size={13} />
                 </button>
@@ -1888,16 +1888,16 @@ export default function LandingPage() {
           </div>
 
           <div className="border-t border-[#eaeaea] pt-6 flex flex-col md:flex-row justify-between gap-4 text-[#666666] font-mono-custom text-[11px] tracking-wider uppercase">
-            <div>© {new Date().getFullYear()} SmartGeulis · TRACEABILITY SYSTEM</div>
+            <div>© {idText(new Date().getFullYear())} {idText("SmartGeulis · TRACEABILITY SYSTEM")}</div>
             <div className="flex gap-6">
               <Link to="/traceability" className="hover:text-[#ea580c] transition-colors">
-                Public Trace
+                {idText("Public Trace")}
               </Link>
               <Link to="/login" className="hover:text-[#ea580c] transition-colors">
-                Sign In
+                {idText("Sign In")}
               </Link>
               <a href="#hero" className="hover:text-[#ea580c] transition-colors">
-                Back to Top ↑
+                {idText("Back to Top ↑")}
               </a>
             </div>
           </div>
@@ -1922,14 +1922,14 @@ export default function LandingPage() {
                     : 'bg-red-500'
                 }`}
               ></span>
-              <span>BACKEND STATUS · {backendStatus}</span>
+              <span>{idText("BACKEND STATUS ·")} {idText(backendStatus)}</span>
             </div>
             <div>
               <div className="font-display text-xl md:text-2xl leading-none text-[#171717]">
-                READY TO TRACE YOUR HARVEST?
+                {idText("READY TO TRACE YOUR HARVEST?")}
               </div>
               <div className="font-mono-custom text-[10px] text-[#666666] tracking-wider uppercase mt-0.5">
-                WEIGHING · GRADING · 1 KG POUCH PACKAGING · GS1 DIGITAL LINK
+                {idText("WEIGHING · GRADING · 1 KG POUCH PACKAGING · GS1 DIGITAL LINK")}
               </div>
             </div>
           </div>
@@ -1938,7 +1938,7 @@ export default function LandingPage() {
             href="#booking"
             className="pulse-btn bg-[#ea580c] text-white px-6 py-2.5 font-heading text-xs uppercase tracking-[0.18em] hover:bg-[#16a34a] transition-colors flex items-center gap-2 rounded-none shrink-0 font-semibold"
           >
-            <span>Deploy System</span>
+            <span>{idText("Deploy System")}</span>
             <Icon name="arrow-right" size={14} />
           </a>
         </div>
@@ -1957,10 +1957,10 @@ export default function LandingPage() {
           </div>
           <div>
             <div className="font-heading text-sm uppercase tracking-wider text-[#171717]">
-              {toastMessage.title}
+              {idText(toastMessage.title)}
             </div>
             <div className="text-[#666666] text-xs mt-1 font-body">
-              {toastMessage.desc}
+              {idText(toastMessage.desc)}
             </div>
           </div>
         </div>

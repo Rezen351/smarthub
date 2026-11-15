@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import Button from './Button'
@@ -88,9 +89,9 @@ export default function CameraScannerModal({
           setScannerReady(true)
           setErrorMessage('')
         }
-      } catch (err: any) {
+      } catch {
         if (!isStoppingRef.current) {
-          setErrorMessage(err?.message || 'Camera access failed')
+          setErrorMessage('Tidak dapat membuka kamera. Periksa izin kamera dan koneksi perangkat.')
         }
       }
     }, 100)
@@ -122,8 +123,8 @@ export default function CameraScannerModal({
         {/* Header */}
         <div className="p-3 border-b flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-sm">{title}</h3>
-            <p className="text-xs text-gray-500">{subtitle}</p>
+            <h3 className="font-semibold text-sm">{idText(title)}</h3>
+            <p className="text-xs text-gray-500">{idText(subtitle)}</p>
           </div>
           <Button variant="ghost" size="sm" icon="close" onClick={onClose} />
         </div>
@@ -139,13 +140,13 @@ export default function CameraScannerModal({
                 {errorMessage ? (
                   <>
                     <Icon name="alert" size={24} className="text-red-500 mb-2" />
-                    <p className="text-xs text-red-300 mb-1">{errorMessage}</p>
-                    <p className="text-[10px] text-gray-300">Use manual input below</p>
+                    <p className="text-xs text-red-300 mb-1">{idText(errorMessage)}</p>
+                    <p className="text-[10px] text-gray-300">{idText("Use manual input below")}</p>
                   </>
                 ) : (
                   <>
                     <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mb-2" />
-                    <p className="text-xs">Starting camera...</p>
+                    <p className="text-xs">{idText("Starting camera...")}</p>
                   </>
                 )}
               </div>
@@ -154,12 +155,12 @@ export default function CameraScannerModal({
 
           {/* Manual input */}
           <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-700">Or enter manually:</label>
+            <label className="text-xs font-medium text-gray-700">{idText("Or enter manually:")}</label>
             <div className="flex gap-2">
               <input
                 ref={manualInputRef}
                 type="text"
-                placeholder={manualPlaceholder}
+                placeholder={idText(manualPlaceholder)}
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value)}
                 onKeyDown={(e) => {
@@ -175,13 +176,13 @@ export default function CameraScannerModal({
                 onClick={() => manualCode.trim() && handleSuccessfulScan(manualCode)}
                 disabled={!manualCode.trim()}
               >
-                OK
+                {idText("OK")}
               </Button>
             </div>
           </div>
           {quickOptions.length > 0 && (
             <div className="space-y-2 pt-2 border-t">
-              <p className="text-xs text-gray-600 text-center">Quick select:</p>
+              <p className="text-xs text-gray-600 text-center">{idText("Quick select:")}</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
                 {quickOptions.map((opt) => (
                   <Button
@@ -191,7 +192,7 @@ export default function CameraScannerModal({
                     onClick={() => handleSuccessfulScan(opt.value)}
                     className="text-xs truncate"
                   >
-                    {opt.label}
+                    {idText(opt.label)}
                   </Button>
                 ))}
               </div>
@@ -202,7 +203,7 @@ export default function CameraScannerModal({
         {/* Footer */}
         <div className="p-3 border-t bg-gray-50 text-center">
           <Button variant="ghost" size="sm" onClick={onClose} className="text-sm">
-            Cancel
+            {idText("Cancel")}
           </Button>
         </div>
       </div>

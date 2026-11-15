@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useState, useEffect } from 'react'
 import Button from './Button'
 import Icon from './Icon'
@@ -93,14 +94,14 @@ export default function PalletCloseoutModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
       role="dialog"
       aria-modal="true"
-      aria-label={`Close and release pallet ${palletCode}`}
+      aria-label={idText(`Close and release pallet ${palletCode}`)}
     >
       <div className="bg-card border border-border p-6 shadow-xl max-w-lg w-full space-y-5 animate-in zoom-in-95 duration-150">
         <div className="flex items-start justify-between border-b border-border pb-3 gap-3">
           <div>
-            <h3 className="text-lg font-bold text-foreground">Close &amp; Release Pallet</h3>
+            <h3 className="text-lg font-bold text-foreground">{idText("Close & Release Pallet")}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Record the disposition of remaining weight so this pallet returns to Station 02 Sorting.
+              {idText("Record the disposition of remaining weight so this pallet returns to Station 02 Sorting.")}
             </p>
           </div>
           <button
@@ -116,15 +117,15 @@ export default function PalletCloseoutModal({
         <div className="p-3.5 bg-muted/30 border border-border flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
-              <span className="font-mono font-bold text-base text-foreground">{palletCode}</span>
-              {grade && <Badge tone="accent">Grade {grade}</Badge>}
+              <span className="font-mono font-bold text-base text-foreground">{idText(palletCode)}</span>
+              {grade && <Badge tone="accent">{idText("Grade")} {idText(grade)}</Badge>}
             </div>
-            {farmerName && <span className="text-xs text-muted-foreground block">Origin: {farmerName}</span>}
+            {farmerName && <span className="text-xs text-muted-foreground block">{idText("Origin:")} {farmerName}</span>}
           </div>
           <div className="text-right">
-            <span className="text-[11px] uppercase font-mono text-muted-foreground block">Remaining Stock</span>
+            <span className="text-[11px] uppercase font-mono text-muted-foreground block">{idText("Remaining Stock")}</span>
             <span className="font-mono text-xl font-black text-amber-700 dark:text-amber-400">
-              {formatWeight(remainingKg)} kg
+              {idText(formatWeight(remainingKg))} {idText("kg")}
             </span>
           </div>
         </div>
@@ -132,7 +133,7 @@ export default function PalletCloseoutModal({
         <form onSubmit={handleConfirm} className="space-y-4">
           <div className="space-y-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
-              Remainder Disposition
+              {idText("Remainder Disposition")}
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {DISPOSITION_OPTIONS.map((opt) => {
@@ -148,29 +149,29 @@ export default function PalletCloseoutModal({
                         : 'border-border bg-card hover:bg-muted/40'
                     }`}
                   >
-                    <div className="text-xs font-bold text-foreground">{opt.label}</div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{opt.description}</div>
+                    <div className="text-xs font-bold text-foreground">{idText(opt.label)}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{idText(opt.description)}</div>
                   </button>
                 )
               })}
             </div>
           </div>
 
-          <Field label="Notes (Optional)" hint="Recorded in the pallet closeout audit log">
+          <Field label="Notes (Optional)" hint={idText("Recorded in the pallet closeout audit log")}>
             <Input
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Transferred remaining tubers to loose crate..."
+              placeholder={idText("e.g. Transferred remaining tubers to loose crate...")}
               disabled={submitting}
             />
           </Field>
 
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
             <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
-              Cancel
+              {idText("Cancel")}
             </Button>
             <Button type="submit" variant="primary" icon="check" loading={submitting}>
-              {submitting ? 'Releasing…' : 'Settle & Release Pallet'}
+              {idText(submitting ? 'Releasing…' : 'Settle & Release Pallet')}
             </Button>
           </div>
         </form>

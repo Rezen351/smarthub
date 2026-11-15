@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
@@ -69,7 +70,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   return (
     <ToastContext.Provider value={value}>
-      {children}
+      {idText(children)}
       <div
         className="fixed left-1/2 bottom-6 -translate-x-1/2 flex flex-col gap-2 z-50 w-[min(420px,calc(100vw-32px))] pointer-events-none"
         role="status"
@@ -84,12 +85,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             )}
           >
             <Icon name={toneIcon[toast.tone]} size={16} />
-            <span className="flex-1">{toast.message}</span>
+            <span className="flex-1">{idText(toast.message)}</span>
             <button
               type="button"
               className="ml-auto p-1 opacity-60 hover:opacity-100 transition-opacity"
               onClick={() => dismiss(toast.id)}
-              aria-label="Dismiss notification"
+              aria-label={idText("Dismiss notification")}
             >
               <Icon name="close" size={14} />
             </button>

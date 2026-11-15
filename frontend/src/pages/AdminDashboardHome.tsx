@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -358,8 +359,8 @@ export default function AdminDashboardHome() {
       weekTotalKg += grossKg
       weekWarings += waringsCount
 
-      const dayLabel = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })
-      const fullDateLabel = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
+      const dayLabel = d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' })
+      const fullDateLabel = d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
 
       past7Days.push({
         date: dateStr,
@@ -386,8 +387,8 @@ export default function AdminDashboardHome() {
       {activities.length === 0 ? (
         <div className="py-8 text-center">
           <Icon name="history" size={22} className="mx-auto text-muted-foreground" />
-          <p className="mt-2 text-sm font-medium">No operational activity recorded.</p>
-          <p className="mt-1 text-xs text-muted-foreground">Transactions will appear after Station 01 records the first intake.</p>
+          <p className="mt-2 text-sm font-medium">{idText("No operational activity recorded.")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{idText("Transactions will appear after Station 01 records the first intake.")}</p>
         </div>
       ) : activities.map((activity) => (
         <div key={activity.id} className="flex items-center justify-between gap-4 py-3">
@@ -395,13 +396,13 @@ export default function AdminDashboardHome() {
             <span className="flex size-9 shrink-0 items-center justify-center border border-border bg-muted/40"><Icon name={activity.icon} size={17} /></span>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{activity.stage}</span>
-                <span className="text-[10px] font-mono text-muted-foreground">{activity.time}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{idText(activity.stage)}</span>
+                <span className="text-[10px] font-mono text-muted-foreground">{idText(activity.time)}</span>
               </div>
-              <p className="truncate text-sm font-medium text-foreground">{activity.action}</p>
+              <p className="truncate text-sm font-medium text-foreground">{idText(activity.action)}</p>
             </div>
           </div>
-          <Badge tone={activity.tone}>{activity.badge}</Badge>
+          <Badge tone={activity.tone}>{idText(activity.badge)}</Badge>
         </div>
       ))}
     </div>
@@ -414,29 +415,29 @@ export default function AdminDashboardHome() {
           className="fixed inset-0 z-[90] flex flex-col bg-[#0c0a09] text-white overflow-hidden p-3 xl:p-4 gap-2.5"
           role="dialog"
           aria-modal="true"
-          aria-label="Operations Presentation"
+          aria-label={idText("Operations Presentation")}
         >
           {/* Header */}
           <header className="shrink-0 h-11 flex items-center justify-between border-b border-white/10 bg-[#0c0a09]/95 px-3 backdrop-blur">
             <div className="flex items-center gap-3">
-              <span className="text-lg font-black tracking-tight">PACKHOUSE OPERATIONS</span>
+              <span className="text-lg font-black tracking-tight">{idText("PACKHOUSE OPERATIONS")}</span>
               <span className="border border-[#ea580c]/50 bg-[#ea580c]/15 px-2.5 py-0.5 text-xs font-mono font-bold uppercase tracking-widest text-[#fb923c]">
-                Live
+                {idText("Live")}
               </span>
-              <span className="hidden sm:inline text-xs xl:text-sm text-white/60">· SmartGeulis Traceability System</span>
+              <span className="hidden sm:inline text-xs xl:text-sm text-white/60">{idText("· SmartGeulis Traceability System")}</span>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <span className="font-mono text-lg xl:text-xl font-bold tabular-nums text-white">
-                  {currentTime.toLocaleTimeString('en-GB')}
+                  {idText(currentTime.toLocaleTimeString('id-ID'))}
                 </span>
                 <span className="text-xs uppercase tracking-wider text-white/60 ml-2">
-                  {currentTime.toLocaleDateString('en-GB', {
+                  {idText(currentTime.toLocaleDateString('id-ID', {
                     weekday: 'short',
                     day: '2-digit',
                     month: 'short',
                     year: 'numeric',
-                  })}
+                  }))}
                 </span>
               </div>
               <Button
@@ -445,7 +446,7 @@ export default function AdminDashboardHome() {
                 onClick={exitPresentationMode}
                 className="border-white/25 bg-white/5 text-white hover:bg-white/10 hover:text-white text-xs py-1 px-3"
               >
-                Exit
+                {idText("Exit")}
               </Button>
             </div>
           </header>
@@ -460,17 +461,17 @@ export default function AdminDashboardHome() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold uppercase tracking-wider text-white/70 truncate">
-                    Total Intake
+                    {idText("Total Intake")}
                   </p>
                   <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-[#ea580c]/20 text-[#fb923c]">
-                    St. 01
+                    {idText("St. 01")}
                   </span>
                 </div>
                 <p className="text-2xl xl:text-3xl font-black font-mono tabular-nums text-white leading-tight">
-                  {formatWeight(metrics.intakeKg)} <span className="text-sm font-bold text-[#f97316]">kg</span>
+                  {idText(formatWeight(metrics.intakeKg))} <span className="text-sm font-bold text-[#f97316]">{idText("kg")}</span>
                 </p>
                 <p className="text-xs text-white/60 truncate">
-                  {metrics.todayWarings} Warings weighed today
+                  {idText(metrics.todayWarings)} {idText("Warings weighed today")}
                 </p>
               </div>
             </div>
@@ -483,17 +484,17 @@ export default function AdminDashboardHome() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold uppercase tracking-wider text-white/70 truncate">
-                    Sorting &amp; Yield
+                    {idText("Sorting & Yield")}
                   </p>
                   <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
-                    {gradeMetrics.yieldPct > 0 ? `${gradeMetrics.yieldPct.toFixed(1)}%` : 'St. 02'}
+                    {idText(gradeMetrics.yieldPct > 0 ? `${gradeMetrics.yieldPct.toFixed(1)}%` : 'St. 02')}
                   </span>
                 </div>
                 <p className="text-2xl xl:text-3xl font-black font-mono tabular-nums text-white leading-tight">
-                  {formatWeight(gradeMetrics.totalGradedKg)} <span className="text-sm font-bold text-amber-400">kg</span>
+                  {idText(formatWeight(gradeMetrics.totalGradedKg))} <span className="text-sm font-bold text-amber-400">{idText("kg")}</span>
                 </p>
                 <p className="text-xs text-white/60 truncate">
-                  {metrics.sortedBatches} Batches · A: {formatWeight(gradeMetrics.gradeAKg)}k · B: {formatWeight(gradeMetrics.gradeBKg)}k
+                  {idText(metrics.sortedBatches)} {idText("Batches · A:")} {idText(formatWeight(gradeMetrics.gradeAKg))}{idText("k · B:")} {idText(formatWeight(gradeMetrics.gradeBKg))}{idText("k")}
                 </p>
               </div>
             </div>
@@ -506,17 +507,17 @@ export default function AdminDashboardHome() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold uppercase tracking-wider text-white/70 truncate">
-                    Packaging &amp; Outflow
+                    {idText("Packaging & Outflow")}
                   </p>
                   <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-[#f97316]/20 text-[#fb923c]">
-                    St. 03
+                    {idText("St. 03")}
                   </span>
                 </div>
                 <p className="text-2xl xl:text-3xl font-black font-mono tabular-nums text-white leading-tight">
-                  {metrics.finishedUnits} <span className="text-sm font-bold text-[#f97316]">pouches (1kg)</span>
+                  {idText(metrics.finishedUnits)} <span className="text-sm font-bold text-[#f97316]">{idText("pouches (1kg)")}</span>
                 </p>
                 <p className="text-xs text-white/60 truncate">
-                  {formatWeight(metrics.finishedWeightKg)} kg packed · {metrics.activeDeliveries} active shipments
+                  {idText(formatWeight(metrics.finishedWeightKg))} {idText("kg packed ·")} {idText(metrics.activeDeliveries)} {idText("active shipments")}
                 </p>
               </div>
             </div>
@@ -529,14 +530,14 @@ export default function AdminDashboardHome() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold uppercase tracking-wider text-white/70 truncate">
-                    Warehouse Capacity
+                    {idText("Warehouse Capacity")}
                   </p>
                   <span className="text-[10px] font-mono font-bold text-amber-400">
-                    {warehousePct.toFixed(1)}% Used
+                    {idText(warehousePct.toFixed(1))}{idText("% Used")}
                   </span>
                 </div>
                 <p className="text-2xl xl:text-3xl font-black font-mono tabular-nums text-white leading-tight">
-                  {formatWeight(totalWarehouseKg)} <span className="text-sm font-bold text-amber-400">kg</span>
+                  {idText(formatWeight(totalWarehouseKg))} <span className="text-sm font-bold text-amber-400">{idText("kg")}</span>
                 </p>
                 {/* Progress bar */}
                 <div className="mt-1 h-2 w-full bg-white/10 rounded-full overflow-hidden">
@@ -583,14 +584,14 @@ export default function AdminDashboardHome() {
               <div className="flex items-center justify-between mb-1.5 shrink-0">
                 <div className="flex items-center gap-1.5">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                    Farmer Leaderboard
+                    {idText("Farmer Leaderboard")}
                   </h3>
                   <span className="text-[10px] bg-[#ea580c]/20 border border-[#ea580c]/40 text-[#f97316] px-1.5 py-0.5 rounded font-mono font-bold">
-                    Top
+                    {idText("Top")}
                   </span>
                 </div>
                 <span className="font-mono text-xs text-[#f97316] font-bold">
-                  {liveRankings.length} Active
+                  {idText(liveRankings.length)} {idText("Active")}
                 </span>
               </div>
 
@@ -608,23 +609,23 @@ export default function AdminDashboardHome() {
                               : 'bg-amber-700 text-white'
                           }`}
                         >
-                          {f.rank === 1 ? '1 🥇' : f.rank === 2 ? '2 🥈' : '3 🥉'}
+                          {idText(f.rank === 1 ? '1 🥇' : f.rank === 2 ? '2 🥈' : '3 🥉')}
                         </span>
                         <div className="min-w-0">
                           <p className="font-bold text-sm text-white truncate leading-tight">
-                            {f.name}
+                            {idText(f.name)}
                           </p>
                           <p className="text-xs text-white/55 truncate">
-                            {f.code} · {f.village || 'Garut'}
+                            {idText(f.code)} · {idText(f.village || 'Garut')}
                           </p>
                         </div>
                       </div>
                       <div className="text-right shrink-0">
                         <p className="font-mono text-sm font-bold text-[#fb923c] tabular-nums">
-                          {formatWeight(f.totalKg)} kg
+                          {idText(formatWeight(f.totalKg))} {idText("kg")}
                         </p>
                         <p className="text-xs font-mono text-white/55">
-                          {f.totalWarings}w · {f.sharePct.toFixed(0)}%
+                          {idText(f.totalWarings)}{idText("w ·")} {idText(f.sharePct.toFixed(0))}%
                         </p>
                       </div>
                     </div>
@@ -637,9 +638,9 @@ export default function AdminDashboardHome() {
             <div className="col-span-4 border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between overflow-hidden">
               <div className="flex items-center justify-between mb-1.5 shrink-0">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                  Activity Log
+                  {idText("Activity Log")}
                 </h3>
-                <span className="font-mono text-xs text-white/60">{activities.length} events</span>
+                <span className="font-mono text-xs text-white/60">{idText(activities.length)} {idText("events")}</span>
               </div>
               <div className="flex-1 min-h-0 divide-y divide-white/10 overflow-hidden flex flex-col justify-around">
                 {activities.slice(0, 3).map((activity) => (
@@ -649,9 +650,9 @@ export default function AdminDashboardHome() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[11px] font-bold uppercase tracking-wider text-[#fb923c] leading-tight">
-                        {activity.stage} · {activity.time}
+                        {idText(activity.stage)} · {idText(activity.time)}
                       </p>
-                      <p className="truncate text-xs xl:text-sm text-white/90">{activity.action}</p>
+                      <p className="truncate text-xs xl:text-sm text-white/90">{idText(activity.action)}</p>
                     </div>
                   </div>
                 ))}
@@ -663,12 +664,12 @@ export default function AdminDashboardHome() {
               <div className="flex items-center justify-between mb-1.5 shrink-0">
                 <div className="flex items-center gap-1.5">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                    Scale Telemetry
+                    {idText("Scale Telemetry")}
                   </h3>
                   <span className="size-2 rounded-full bg-[#ea580c] animate-pulse" />
                 </div>
                 <span className="text-xs font-mono text-[#f97316] font-bold">
-                  {metrics.onlineScales}/3 Online
+                  {idText(metrics.onlineScales)}{idText("/3 Online")}
                 </span>
               </div>
 
@@ -679,7 +680,7 @@ export default function AdminDashboardHome() {
                     <div key={scale.stationId} className="py-1 first:pt-0 last:pb-0 flex items-center justify-between gap-2.5">
                       <div className="w-[90px] shrink-0">
                         <p className="text-xs font-bold uppercase text-white truncate">
-                          St. {scale.stationId} {scale.label}
+                          {idText("St.")} {idText(scale.stationId)} {idText(scale.label)}
                         </p>
                         <span
                           className={`text-[9.5px] font-mono px-1.5 py-0.5 rounded font-bold uppercase ${
@@ -690,7 +691,7 @@ export default function AdminDashboardHome() {
                               : 'bg-white/5 text-white/40'
                           }`}
                         >
-                          {scale.online ? (scale.isStable !== false ? 'STABLE' : 'MOTION') : 'OFF'}
+                          {idText(scale.online ? (scale.isStable !== false ? 'STABLE' : 'MOTION') : 'OFF')}
                         </span>
                       </div>
 
@@ -708,10 +709,10 @@ export default function AdminDashboardHome() {
 
                       <div className="w-[70px] text-right shrink-0">
                         <p className="font-mono text-sm xl:text-base font-black tabular-nums text-white leading-tight">
-                          {scale.weightKg === null ? '—' : `${formatWeight(scale.weightKg)}k`}
+                          {idText(scale.weightKg === null ? '—' : `${formatWeight(scale.weightKg)}k`)}
                         </p>
                         <p className={`text-[10px] font-bold uppercase ${scale.online ? 'text-[#fb923c]' : 'text-amber-400'}`}>
-                          {scale.online ? 'Online' : 'Offline'}
+                          {idText(scale.online ? 'Online' : 'Offline')}
                         </p>
                       </div>
                     </div>
@@ -725,7 +726,7 @@ export default function AdminDashboardHome() {
 
       <div className="space-y-6">
         <PageHeader
-          title={`Operations Dashboard${user?.name ? ` · ${user.name}` : ''}`}
+          title={idText(`Operations Dashboard${user?.name ? ` · ${user.name}` : ''}`)}
           subtitle="Live operational status from Reception through Dispatch."
           actions={
             <div className="flex items-center gap-2">
@@ -734,22 +735,22 @@ export default function AdminDashboardHome() {
                 icon="clipboard"
                 onClick={() => window.open('/docs', '_blank')}
               >
-                OpenAPI Docs
+                {idText("OpenAPI Docs")}
               </Button>
               <Button
                 variant="primary"
                 icon="expand"
                 onClick={enterPresentationMode}
               >
-                Presentation Mode
+                {idText("Presentation Mode")}
               </Button>
             </div>
           }
         />
 
         <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-card px-4 py-3">
-          <div className="flex items-center gap-3"><Badge tone={dataOnline ? 'success' : 'warning'} dot live>{dataOnline ? 'Data Connected' : 'Data Unavailable'}</Badge><span className="text-xs text-muted-foreground">Last refresh {currentTime.toLocaleTimeString('en-GB')}</span></div>
-          <span className="text-xs font-mono text-muted-foreground">{loading ? 'Loading system data…' : `${metrics.onlineScales}/3 scales online`}</span>
+          <div className="flex items-center gap-3"><Badge tone={dataOnline ? 'success' : 'warning'} dot live>{idText(dataOnline ? 'Data Connected' : 'Data Unavailable')}</Badge><span className="text-xs text-muted-foreground">{idText("Last refresh")} {idText(currentTime.toLocaleTimeString('id-ID'))}</span></div>
+          <span className="text-xs font-mono text-muted-foreground">{idText(loading ? 'Loading system data…' : `${metrics.onlineScales}/3 scales online`)}</span>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -787,11 +788,11 @@ export default function AdminDashboardHome() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-          <Card title="Farmer Leaderboard" subtitle="Top growers by intake volume.">
+          <Card title={idText("Farmer Leaderboard")} subtitle="Top growers by intake volume.">
             {liveRankings.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
                 <Icon name="users" size={22} className="mx-auto text-muted-foreground mb-2" />
-                <p>No intake records available.</p>
+                <p>{idText("No intake records available.")}</p>
               </div>
             ) : (
               <div className="divide-y divide-border">
@@ -810,21 +811,21 @@ export default function AdminDashboardHome() {
                               : 'border border-border text-muted-foreground'
                           }`}
                         >
-                          {f.rank}
+                          {idText(f.rank)}
                         </span>
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold truncate text-foreground">{f.name}</p>
+                          <p className="text-xs font-semibold truncate text-foreground">{idText(f.name)}</p>
                           <p className="text-[10px] text-muted-foreground truncate">
-                            {f.code} · {f.village || 'Garut'}
+                            {idText(f.code)} · {idText(f.village || 'Garut')}
                           </p>
                         </div>
                       </div>
                       <div className="text-right shrink-0">
                         <p className="font-mono text-xs font-bold text-foreground">
-                          {formatWeight(f.totalKg)} kg
+                          {idText(formatWeight(f.totalKg))} {idText("kg")}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
-                          {f.totalWarings} Warings
+                          {idText(f.totalWarings)} {idText("Warings")}
                         </p>
                       </div>
                     </div>
@@ -833,8 +834,8 @@ export default function AdminDashboardHome() {
               </div>
             )}
           </Card>
-          <Card title="Recent Activity" subtitle="Station 01 through final dispatch.">{activityFeed}</Card>
-          <Card title="Scale Network" subtitle="Live Modbus TCP status and telemetry.">
+          <Card title={idText("Recent Activity")} subtitle="Station 01 through final dispatch.">{idText(activityFeed)}</Card>
+          <Card title={idText("Scale Network")} subtitle="Live Modbus TCP status and telemetry.">
             <div className="divide-y divide-border">
               {scales.map((scale) => {
                 const hist = scaleHistories[scale.stationId] || []
@@ -844,7 +845,7 @@ export default function AdminDashboardHome() {
                       <div>
                         <div className="flex items-center gap-1.5">
                           <p className="text-xs font-bold uppercase tracking-wider">
-                            Station {scale.stationId} · {scale.label}
+                            {idText("Station")} {idText(scale.stationId)} · {idText(scale.label)}
                           </p>
                           <span
                             className={`text-[8.5px] font-mono px-1 py-0.2 rounded font-bold uppercase ${
@@ -855,17 +856,17 @@ export default function AdminDashboardHome() {
                                 : 'bg-muted text-muted-foreground'
                             }`}
                           >
-                            {scale.online ? (scale.isStable !== false ? 'STABLE' : 'MOTION') : 'OFFLINE'}
+                            {idText(scale.online ? (scale.isStable !== false ? 'STABLE' : 'MOTION') : 'OFFLINE')}
                           </span>
                         </div>
-                        <p className="font-mono text-[10.5px] text-muted-foreground">{scale.endpoint}</p>
+                        <p className="font-mono text-[10.5px] text-muted-foreground">{idText(scale.endpoint)}</p>
                       </div>
                       <div className="text-right">
                         <p className="font-mono text-sm font-bold text-foreground">
-                          {scale.weightKg === null ? '—' : `${formatWeight(scale.weightKg)} kg`}
+                          {idText(scale.weightKg === null ? '—' : `${formatWeight(scale.weightKg)} kg`)}
                         </p>
                         <Badge tone={scale.online ? 'accent' : 'warning'} dot>
-                          {scale.online ? 'Online' : 'Offline'}
+                          {idText(scale.online ? 'Online' : 'Offline')}
                         </Badge>
                       </div>
                     </div>
@@ -887,12 +888,12 @@ export default function AdminDashboardHome() {
         </div>
 
         <section>
-          <div className="mb-3"><h2 className="text-base font-bold">Operations</h2><p className="text-xs text-muted-foreground">Open a live console or transaction report.</p></div>
+          <div className="mb-3"><h2 className="text-base font-bold">{idText("Operations")}</h2><p className="text-xs text-muted-foreground">{idText("Open a live console or transaction report.")}</p></div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {quickActions.map((action) => (
               <Link key={action.path} to={action.path} className="flex items-center gap-3 border border-border bg-card p-4 transition-colors hover:border-[#ea580c]">
                 <span className="flex size-10 shrink-0 items-center justify-center bg-[#fff7ed] text-[#ea580c]"><Icon name={action.icon} size={18} /></span>
-                <span className="min-w-0"><span className="block text-sm font-semibold">{action.label}</span><span className="block truncate text-xs text-muted-foreground">{action.description}</span></span>
+                <span className="min-w-0"><span className="block text-sm font-semibold">{idText(action.label)}</span><span className="block truncate text-xs text-muted-foreground">{idText(action.description)}</span></span>
               </Link>
             ))}
           </div>

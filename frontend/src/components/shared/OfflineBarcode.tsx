@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useMemo } from 'react'
 
 interface OfflineBarcodeProps {
@@ -46,7 +47,7 @@ export default function OfflineBarcode({
         height={height}
         viewBox={`0 0 ${width} ${height}`}
         className="bg-white"
-        aria-label={`Barcode ${value}`}
+        aria-label={idText(`Barcode ${value}`)}
       >
         <rect width={width} height={height} fill="#ffffff" />
         {bars.map((w, idx) => {
@@ -70,7 +71,7 @@ export default function OfflineBarcode({
       </svg>
       {showText && (
         <span className="font-mono text-[10px] tracking-widest text-foreground font-semibold">
-          *{value}*
+          *{idText(value)}*
         </span>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useState, FormEvent } from 'react'
 import { useNavigate, Navigate, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -44,7 +45,7 @@ export default function LoginPage() {
       />
 
       {/* ── Scoped Button Animation ── */}
-      <style>{`
+      <style>{idText(`
         @keyframes pulse-btn-glow {
           0%, 100% {
             box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.45), 0 4px 12px rgba(234, 88, 12, 0.25);
@@ -56,19 +57,19 @@ export default function LoginPage() {
         .pulse-btn {
           animation: pulse-btn-glow 2.4s ease-out infinite;
         }
-      `}</style>
+      `)}</style>
 
       {/* ── Top Header Bar ── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#eaeaea]">
         <div className="max-w-[1500px] mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group" aria-label="SmartGeulis home">
+          <Link to="/" className="flex items-center gap-3 group" aria-label={idText("SmartGeulis home")}>
             <Logo className="h-8 w-auto" markOnly />
             <div>
               <div className="font-display text-2xl leading-none tracking-wider text-[#171717] flex items-center gap-2">
-                SmartGeulis
+                {idText("SmartGeulis")}
               </div>
               <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
-                TRACEABILITY SYSTEM
+                {idText("TRACEABILITY SYSTEM")}
               </div>
             </div>
           </Link>
@@ -79,13 +80,13 @@ export default function LoginPage() {
               className="inline-flex items-center gap-1.5 font-heading text-xs uppercase tracking-wider text-[#666666] hover:text-[#171717] transition-colors"
             >
               <Icon name="arrow-left" size={13} />
-              <span>Kembali ke Beranda</span>
+              <span>{idText("Kembali ke Beranda")}</span>
             </Link>
             <Link
               to="/traceability"
               className="hidden md:inline-flex items-center gap-1.5 font-heading text-xs uppercase tracking-wider text-[#ea580c] hover:text-[#c2410c] font-semibold transition-colors"
             >
-              <span>Lacak Publik</span>
+              <span>{idText("Lacak Publik")}</span>
             </Link>
           </div>
         </div>
@@ -102,14 +103,14 @@ export default function LoginPage() {
                 {/* Station Authentication Tag */}
                 <div className="flex items-start gap-2.5 font-mono-custom text-[10px] sm:text-xs text-[#ea580c] tracking-[0.08em] sm:tracking-[0.25em] uppercase mb-2">
                   <span className="w-6 h-[2px] bg-[#ea580c] shrink-0 mt-2"></span>
-                  <span className="min-w-0">AUTENTIKASI STASIUN · JARINGAN PABRIK</span>
+                  <span className="min-w-0">{idText("AUTENTIKASI STASIUN · JARINGAN PABRIK")}</span>
                 </div>
 
                 <h1 className="font-display text-4xl sm:text-5xl tracking-tight text-[#171717] leading-none mb-2">
-                  MASUK SISTEM
+                  {idText("MASUK SISTEM")}
                 </h1>
                 <p className="text-xs sm:text-sm text-[#666666] font-body mb-6 leading-relaxed">
-                  Masukkan kredensial untuk mengakses terminal Anda.
+                  {idText("Masukkan kredensial untuk mengakses terminal Anda.")}
                 </p>
 
                 {/* Error Message */}
@@ -119,7 +120,7 @@ export default function LoginPage() {
                     role="alert"
                   >
                     <Icon name="alert" size={16} className="text-red-600 shrink-0" />
-                    <span>{error}</span>
+                    <span>{idText(error)}</span>
                   </div>
                 )}
 
@@ -130,7 +131,7 @@ export default function LoginPage() {
                       htmlFor="email"
                       className="block font-mono-custom text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666666] mb-1.5"
                     >
-                      Email Operator
+                      {idText("Email Operator")}
                     </label>
                     <div className="relative">
                       <input
@@ -140,7 +141,7 @@ export default function LoginPage() {
                         autoComplete="username"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="admin@smartgeulisunpad.com"
+                        placeholder={idText("admin@smartgeulisunpad.com")}
                         required
                         className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#ea580c] focus:ring-2 focus:ring-[#ea580c]/20 transition-all pr-10"
                       />
@@ -155,7 +156,7 @@ export default function LoginPage() {
                       htmlFor="password"
                       className="block font-mono-custom text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666666] mb-1.5"
                     >
-                      Kata Sandi
+                      {idText("Kata Sandi")}
                     </label>
                     <div className="relative">
                       <input
@@ -164,7 +165,7 @@ export default function LoginPage() {
                         autoComplete="current-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
+                        placeholder={idText("••••••••")}
                         required
                         className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#ea580c] focus:ring-2 focus:ring-[#ea580c]/20 transition-all pr-10"
                       />
@@ -172,7 +173,7 @@ export default function LoginPage() {
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#171717] transition-colors focus:outline-none"
-                        aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                        aria-label={idText(showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi')}
                       >
                         <Icon name="eye" size={16} />
                       </button>
@@ -184,7 +185,7 @@ export default function LoginPage() {
                     disabled={loading}
                     className="pulse-btn w-full bg-[#000000] text-white py-3.5 font-heading text-sm uppercase tracking-[0.2em] hover:bg-[#ea580c] transition-all flex items-center justify-center gap-2 rounded-none font-semibold cursor-pointer disabled:opacity-50 mt-6"
                   >
-                    <span>{loading ? 'MEMVERIFIKASI…' : 'MASUK KE TERMINAL'}</span>
+                    <span>{idText(loading ? 'MEMVERIFIKASI…' : 'MASUK KE TERMINAL')}</span>
                     <Icon name="arrow-right" size={16} />
                   </button>
                 </form>
@@ -205,12 +206,12 @@ export default function LoginPage() {
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 bg-[#ea580c] shrink-0"></span>
                     <span className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase font-semibold">
-                      OFFICIAL FACILITY SIGNBOARD
+                      {idText("OFFICIAL FACILITY SIGNBOARD")}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 font-mono-custom text-[11px] text-white/80 bg-white/5 border border-white/10 px-3 py-1">
                     <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-ping shrink-0"></span>
-                    <span className="tracking-wider uppercase">NODE SG-GARUT-01 · ACTIVE</span>
+                    <span className="tracking-wider uppercase">{idText("NODE SG-GARUT-01 · ACTIVE")}</span>
                   </div>
                 </div>
 
@@ -219,13 +220,13 @@ export default function LoginPage() {
                   <div className="relative overflow-hidden bg-black/40">
                     <img
                       src="/Papan Nama Warehouse.png"
-                      alt="SmartGeulis Packhouse and Warehouse Signboard"
+                      alt={idText("SmartGeulis Packhouse and Warehouse Signboard")}
                       className="w-full h-auto max-h-[420px] object-contain mx-auto transition-transform duration-700 group-hover:scale-[1.02]"
                     />
                     {/* Badge Overlay on Image */}
                     <div className="absolute bottom-3 left-3 bg-black/85 backdrop-blur-md border border-white/20 text-white px-3 py-1 text-[10px] font-mono-custom uppercase tracking-wider flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#ea580c]"></span>
-                      <span>Garut Highland Packhouse & Warehouse</span>
+                      <span>{idText("Garut Highland Packhouse & Warehouse")}</span>
                     </div>
                   </div>
                 </div>
@@ -233,21 +234,21 @@ export default function LoginPage() {
                 {/* Partner Ecosystem Bar */}
                 <div className="relative z-10">
                   <div className="font-mono-custom text-[10px] text-white/60 uppercase tracking-[0.2em] mb-2.5 flex items-center gap-2">
-                    <span>OPERATED IN COLLABORATION WITH</span>
+                    <span>{idText("OPERATED IN COLLABORATION WITH")}</span>
                     <span className="flex-1 h-[1px] bg-white/10"></span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <div className="bg-white p-2 flex items-center justify-center h-12 border border-white/20 shadow-xs">
-                      <img src="/Unpad.png" alt="Universitas Padjadjaran" className="max-h-8 max-w-full object-contain" />
+                      <img src="/Unpad.png" alt={idText("Universitas Padjadjaran")} className="max-h-8 max-w-full object-contain" />
                     </div>
                     <div className="bg-white p-2 flex items-center justify-center h-12 border border-white/20 shadow-xs">
-                      <img src="/Ministry of Agriculture of the Republic of Indonesia.png" alt="Ministry of Agriculture" className="max-h-8 max-w-full object-contain" />
+                      <img src="/Ministry of Agriculture of the Republic of Indonesia.png" alt={idText("Ministry of Agriculture")} className="max-h-8 max-w-full object-contain" />
                     </div>
                     <div className="bg-white p-2 flex items-center justify-center h-12 border border-white/20 shadow-xs">
-                      <img src="/I Care.png" alt="I-CARE Initiative" className="max-h-8 max-w-full object-contain" />
+                      <img src="/I Care.png" alt={idText("I-CARE Initiative")} className="max-h-8 max-w-full object-contain" />
                     </div>
                     <div className="bg-white p-2 flex items-center justify-center h-12 border border-white/20 shadow-xs">
-                      <img src="/Eptilu.jpeg" alt="Eptilu Fresh Produce" className="max-h-8 max-w-full object-contain" />
+                      <img src="/Eptilu.jpeg" alt={idText("Eptilu Fresh Produce")} className="max-h-8 max-w-full object-contain" />
                     </div>
                   </div>
                 </div>
@@ -261,15 +262,15 @@ export default function LoginPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-[#eaeaea] bg-white py-5 text-xs text-[#666666]">
         <div className="max-w-[1500px] mx-auto px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© {new Date().getFullYear()} SmartGeulis. All rights reserved.</p>
+          <p>© {idText(new Date().getFullYear())} {idText("SmartGeulis. All rights reserved.")}</p>
           <div className="flex flex-wrap items-center justify-center gap-3 font-mono-custom text-[11px]">
             <span className="bg-[#f5f5f5] px-2 py-0.5 border border-[#eaeaea] text-[#171717]">
-              Type: smartgeulis
+              {idText("Type: smartgeulis")}
             </span>
-            <span>Traceability System v1.0.0</span>
+            <span>{idText("Traceability System v1.0.0")}</span>
           </div>
           <Link to="/traceability" className="text-[#ea580c] hover:underline font-medium">
-            Public Traceability Portal
+            {idText("Public Traceability Portal")}
           </Link>
         </div>
       </footer>

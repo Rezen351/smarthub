@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import React from 'react'
 import Icon from './Icon'
 import OfflineQrCode from './OfflineQrCode'
@@ -168,7 +169,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <img
             src="/Smart%20Geulis.png"
-            alt="Logo"
+            alt={idText("Logo")}
             style={{ height: '20px', width: 'auto', objectFit: 'contain' }}
             onError={(e) => {
               ;(e.target as HTMLElement).style.display = 'none'
@@ -176,7 +177,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
           />
           <div>
             <div style={{ fontSize: '11.5px', fontWeight: 900, letterSpacing: '0.08em', lineHeight: 1 }}>
-              SmartGeulis
+              {idText("SmartGeulis")}
             </div>
             <div
               style={{
@@ -189,7 +190,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
                 marginTop: '2.5px',
               }}
             >
-              TRACEABILITY SYSTEM
+              {idText("TRACEABILITY SYSTEM")}
             </div>
           </div>
         </div>
@@ -221,7 +222,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
               display: 'inline-block',
             }}
           />
-          <span>{theme.roleBadge}</span>
+          <span>{idText(theme.roleBadge)}</span>
         </div>
       </div>
 
@@ -242,7 +243,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
         {/* Subtle Watermark Logo Background */}
         <img
           src="/Smart%20Geulis.png"
-          alt=""
+          alt={idText("")}
           aria-hidden="true"
           style={{
             position: 'absolute',
@@ -272,7 +273,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
                 fontWeight: 700,
               }}
             >
-              Full Name
+              {idText("Full Name")}
             </div>
             <div
               style={{
@@ -303,7 +304,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
                 fontWeight: 700,
               }}
             >
-              Identification Code
+              {idText("Identification Code")}
             </div>
             <div
               style={{
@@ -319,7 +320,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
                 marginTop: '1px',
               }}
             >
-              {code}
+              {idText(code)}
             </div>
           </div>
 
@@ -334,7 +335,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
                 fontWeight: 700,
               }}
             >
-              Domicile / Facility
+              {idText("Domicile / Facility")}
             </div>
             <div
               style={{
@@ -382,7 +383,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
               textTransform: 'uppercase',
             }}
           >
-            SCAN · VERIFY
+            {idText("SCAN · VERIFY")}
           </span>
         </div>
       </div>
@@ -412,11 +413,11 @@ export function IdCard({ data, className = '' }: IdCardProps) {
             }}
           />
           <span style={{ fontWeight: 800, color: '#171717', letterSpacing: '0.12em' }}>
-            AUTHENTICATED PASS
+            {idText("AUTHENTICATED PASS")}
           </span>
         </span>
         <span style={{ color: '#171717', fontWeight: 800, letterSpacing: '0.12em' }}>
-          SMARTGEULIS
+          {idText("SMARTGEULIS")}
         </span>
       </div>
     </div>
@@ -475,14 +476,14 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
 
   ctx.fillStyle = '#ffffff'
   ctx.font = 'bold 36px Inter, sans-serif'
-  ctx.fillText('SmartGeulis', textStartX, 58)
+  ctx.fillText(idText('SmartGeulis'), textStartX, 58)
 
   ctx.fillStyle = theme.headerSub
   ctx.font = 'bold 20px monospace'
-  ctx.fillText('TRACEABILITY SYSTEM', textStartX, 96)
+  ctx.fillText(idText('TRACEABILITY SYSTEM'), textStartX, 96)
 
   // Role Pill Badge (Top Right)
-  const roleText = theme.roleBadge
+  const roleText = idText(theme.roleBadge)
   ctx.font = 'bold 18px monospace'
   const textWidth = ctx.measureText(roleText).width
   const pillW = textWidth + 40
@@ -503,13 +504,13 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
   ctx.fill()
 
   ctx.fillStyle = theme.accentText
-  ctx.fillText(roleText, pillX + 28, pillY + 28)
+  ctx.fillText(idText(roleText), pillX + 28, pillY + 28)
 
   // 3. User Details Left Column
   // FULL NAME
   ctx.fillStyle = '#555555'
   ctx.font = 'bold 18px monospace'
-  ctx.fillText('FULL NAME', 45, 185)
+  ctx.fillText(idText('FULL NAME'), 45, 185)
 
   ctx.fillStyle = '#171717'
   ctx.font = 'bold 36px Inter, sans-serif'
@@ -526,7 +527,7 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
   // IDENTIFICATION CODE
   ctx.fillStyle = '#555555'
   ctx.font = 'bold 18px monospace'
-  ctx.fillText('IDENTIFICATION CODE', 45, 290)
+  ctx.fillText(idText('IDENTIFICATION CODE'), 45, 290)
 
   // Code Chip
   ctx.font = 'bold 30px monospace'
@@ -543,7 +544,7 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
   // DOMICILE / FACILITY
   ctx.fillStyle = '#555555'
   ctx.font = 'bold 18px monospace'
-  ctx.fillText('DOMICILE / FACILITY', 45, 400)
+  ctx.fillText(idText('DOMICILE / FACILITY'), 45, 400)
 
   ctx.fillStyle = '#222222'
   ctx.font = '600 24px Inter, sans-serif'
@@ -552,11 +553,11 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
   // ROLE / POSITION
   ctx.fillStyle = '#555555'
   ctx.font = 'bold 18px monospace'
-  ctx.fillText('ROLE / POSITION', 45, 495)
+  ctx.fillText(idText('ROLE / POSITION'), 45, 495)
 
   ctx.fillStyle = '#171717'
   ctx.font = '600 22px Inter, sans-serif'
-  ctx.fillText(theme.name, 45, 530)
+  ctx.fillText(idText(theme.name), 45, 530)
 
   // 4. Architectural QR Frame (Right Column)
   const qrBoxX = 585
@@ -595,7 +596,7 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
   ctx.fillStyle = '#333333'
   ctx.font = 'bold 16px monospace'
   ctx.textAlign = 'center'
-  ctx.fillText('SCAN · VERIFY ACCESS', qrBoxX + qrBoxSize / 2, qrBoxY + qrBoxSize - 12)
+  ctx.fillText(idText('SCAN · VERIFY ACCESS'), qrBoxX + qrBoxSize / 2, qrBoxY + qrBoxSize - 12)
   ctx.textAlign = 'left'
 
   // 5. Minimalist Footer
@@ -613,11 +614,11 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
 
   ctx.fillStyle = '#171717'
   ctx.font = 'bold 20px monospace'
-  ctx.fillText('AUTHENTICATED PASS', 64, 618)
+  ctx.fillText(idText('AUTHENTICATED PASS'), 64, 618)
 
   ctx.fillStyle = '#171717'
   ctx.font = 'bold 20px monospace'
-  ctx.fillText('SMARTGEULIS', canvas.width - 200, 618)
+  ctx.fillText(idText('SMARTGEULIS'), canvas.width - 200, 618)
 
   // 6. Signature Notch Corner Brackets (Landing Page Motif)
   const bracketSize = 28
@@ -676,10 +677,10 @@ export function printIdCard(data: IdCardData): void {
   const logoUrl = `${window.location.origin}/Smart%20Geulis.png`
 
   const html = `<!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
   <meta charset="utf-8">
-  <title>SmartGeulis ID Card - ${formatUserName(data.name)}</title>
+  <title>Kartu Identitas SmartGeulis - ${formatUserName(data.name)}</title>
   <style>
     @page {
       size: 80mm 55mm landscape;
@@ -887,22 +888,22 @@ export function printIdCard(data: IdCardData): void {
         <img src="${logoUrl}" style="height:5.5mm;width:auto;" alt="" />
         <div>
           <div class="header-title">SmartGeulis</div>
-          <div class="header-sub">TRACEABILITY SYSTEM</div>
+          <div class="header-sub">SISTEM KETERTELUSURAN</div>
         </div>
       </div>
       <div class="badge">
         <span class="dot"></span>
-        <span>${theme.roleBadge}</span>
+        <span>${idText(theme.roleBadge)}</span>
       </div>
     </div>
     <div class="body">
       <img class="watermark" src="${logoUrl}" alt="" />
       <div class="content-left">
-        <div class="field-label">Full Name</div>
+        <div class="field-label">Nama Lengkap</div>
         <div class="field-name">${formatUserName(data.name)}</div>
-        <div class="field-label">Identification Code</div>
+        <div class="field-label">Kode Identitas</div>
         <div class="code-chip">${code}</div>
-        <div class="field-label">Domicile / Facility</div>
+        <div class="field-label">Domisili / Fasilitas</div>
         <div class="field-domicile">${domicile}</div>
       </div>
       <div class="qr-frame" style="position:relative;z-index:1;">
@@ -910,11 +911,11 @@ export function printIdCard(data: IdCardData): void {
           <rect width="${dim}" height="${dim}" fill="#ffffff" />
           <path d="${qrSvgPath}" fill="#000000" />
         </svg>
-        <span class="qr-caption">SCAN · VERIFY</span>
+        <span class="qr-caption">PINDAI · VERIFIKASI</span>
       </div>
     </div>
     <div class="footer">
-      <span style="font-weight:900;color:#171717;">AUTHENTICATED PASS</span>
+      <span style="font-weight:900;color:#171717;">IDENTITAS TERVERIFIKASI</span>
       <span style="color:#171717;font-weight:900">SMARTGEULIS</span>
     </div>
   </div>
@@ -973,7 +974,7 @@ export function IdCardModal({
           <div className="flex items-center justify-between">
             <div>
               <div className="font-mono-custom text-[9px] text-[#ea580c] tracking-[0.25em] uppercase font-semibold">
-                Card Preview
+                {idText("Card Preview")}
               </div>
               <DialogTitle className="font-display text-xl font-bold text-[#171717] dark:text-zinc-100 tracking-tight">
                 {formatUserName(data.name)}
@@ -983,7 +984,7 @@ export function IdCardModal({
               type="button"
               className="p-1.5 text-[#888888] hover:text-[#171717] dark:hover:text-zinc-200 transition-colors"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={idText("Close")}
             >
               <Icon name="close" size={18} />
             </button>
@@ -998,11 +999,11 @@ export function IdCardModal({
         {/* Direct Details Table */}
         <div className="bg-[#fcfcfc] dark:bg-zinc-900/80 border border-[#eaeaea] dark:border-zinc-800 p-3 text-xs text-[#666666] dark:text-zinc-300 space-y-1.5 font-body">
           <div className="flex justify-between items-center">
-            <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">Role:</span>
-            <span className="font-mono-custom text-[11px] font-bold text-[#171717] dark:text-zinc-100 capitalize">{data.role?.toLowerCase() || 'operator'}</span>
+            <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">{idText("Role:")}</span>
+            <span className="font-mono-custom text-[11px] font-bold text-[#171717] dark:text-zinc-100 capitalize">{idText(data.role?.toLowerCase() || 'operator')}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">User ID:</span>
+            <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">{idText("User ID:")}</span>
             <span
               className="font-mono text-xs font-bold px-2 py-0.5 border"
               style={{
@@ -1011,11 +1012,11 @@ export function IdCardModal({
                 borderColor: theme.accentBorder,
               }}
             >
-              {formatUserCode(data)}
+              {idText(formatUserCode(data))}
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">Domicile:</span>
+            <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">{idText("Domicile:")}</span>
             <span className="font-medium text-[#171717] dark:text-zinc-100">{data.domicile || 'Garut, Jawa Barat'}</span>
           </div>
         </div>
@@ -1028,7 +1029,7 @@ export function IdCardModal({
             onClick={handlePrint}
           >
             <Icon name="print" size={16} />
-            <span>Print Card</span>
+            <span>{idText("Print Card")}</span>
           </button>
           <button
             type="button"
@@ -1037,7 +1038,7 @@ export function IdCardModal({
             onClick={handleExport}
           >
             <Icon name="download" size={16} />
-            <span>{exporting ? 'Exporting...' : 'Export PNG'}</span>
+            <span>{idText(exporting ? 'Exporting...' : 'Export PNG')}</span>
           </button>
         </div>
       </DialogContent>

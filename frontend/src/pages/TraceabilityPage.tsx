@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import Card from '../components/shared/Card'
@@ -41,9 +42,9 @@ export default function TraceabilityPage() {
   return (
     <div className="stack stack-lg" style={{ maxWidth: 640 }}>
       <PageHeader
-        title="My QR"
+        title={idText("My QR")}
         subtitle="Show this code at the receiving station so every weighing is linked to your ID."
-        actions={<Badge tone="accent" dot>Active</Badge>}
+        actions={<Badge tone="accent" dot>{idText("Active")}</Badge>}
       />
 
       <Card>
@@ -58,11 +59,11 @@ export default function TraceabilityPage() {
 
             <div className="text-center stack-xs">
               <p className="t-h2">{farmerName}</p>
-              <p className="t-small text-text-secondary">{farmerEmail}</p>
+              <p className="t-small text-text-secondary">{idText(farmerEmail)}</p>
               <div className="row gap-sm justify-center">
-                <span className="mono t-medium">{farmerId}</span>
+                <span className="mono t-medium">{idText(farmerId)}</span>
                 <Button size="sm" variant="outline" icon={copied ? 'check' : 'clipboard'} onClick={handleCopy}>
-                  {copied ? 'Copied' : 'Copy ID'}
+                  {idText(copied ? 'Copied' : 'Copy ID')}
                 </Button>
               </div>
             </div>
@@ -71,16 +72,16 @@ export default function TraceabilityPage() {
           <div className="divider" />
 
           <div className="stack-sm">
-            <p className="field-label">Your QR code</p>
-            <div className="code-block">{farmerId}</div>
+            <p className="field-label">{idText("Your QR code")}</p>
+            <div className="code-block">{idText(farmerId)}</div>
             <p className="field-hint">
-              The operator scans this code to link your session before weighing your harvest.
+              {idText("The operator scans this code to link your session before weighing your harvest.")}
             </p>
           </div>
         </div>
       </Card>
 
-      <Card title="How deposits are recorded" subtitle="Station 01: Reception & Intake">
+      <Card title={idText("How deposits are recorded")} subtitle="Station 01: Reception & Intake">
         <ol className="journey">
           {[
             { title: 'Scan Farmer QR', desc: 'Operator scans this code at Station 01 Reception to load your profile.' },
@@ -93,8 +94,8 @@ export default function TraceabilityPage() {
                 <Icon name={index < 2 ? 'check' : 'clock'} size={12} />
               </span>
               <div className="min-w-0">
-                <p className="journey-title">{step.title}</p>
-                <p className="journey-meta">{step.desc}</p>
+                <p className="journey-title">{idText(step.title)}</p>
+                <p className="journey-meta">{idText(step.desc)}</p>
               </div>
             </li>
           ))}

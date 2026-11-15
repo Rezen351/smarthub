@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useMemo, useState, useEffect } from 'react'
 import Card from '../components/shared/Card'
 import Badge from '../components/shared/Badge'
@@ -235,7 +236,7 @@ export default function UsersPage() {
       key: 'role',
       label: 'Role',
       priority: true,
-      render: (row) => <Badge tone={ROLE_TONE[row.role]}>{ROLE_LABEL[row.role]}</Badge>,
+      render: (row) => <Badge tone={ROLE_TONE[row.role]}>{idText(ROLE_LABEL[row.role])}</Badge>,
     },
     {
       key: 'farmerCode',
@@ -243,7 +244,7 @@ export default function UsersPage() {
       render: (row) =>
         row.farmerCode ? (
           <span className="mono font-semibold text-xs bg-slate-100 px-2 py-0.5 border border-slate-200 text-slate-800">
-            {row.farmerCode}
+            {idText(row.farmerCode)}
           </span>
         ) : (
           <span className="text-text-muted text-xs">-</span>
@@ -257,7 +258,7 @@ export default function UsersPage() {
     {
       key: 'status',
       label: 'Status',
-      render: (row) => <Badge tone={row.status === 'ACTIVE' ? 'success' : 'warning'} dot>{row.status}</Badge>,
+      render: (row) => <Badge tone={row.status === 'ACTIVE' ? 'success' : 'warning'} dot>{idText(row.status)}</Badge>,
     },
     {
       key: 'actions',
@@ -266,13 +267,13 @@ export default function UsersPage() {
       render: (row) => (
         <div className="flex items-center justify-end gap-1.5">
           <Button size="sm" variant="outline" icon="qr" onClick={() => openIdCard(row)}>
-            ID Card
+            {idText("ID Card")}
           </Button>
           <Button size="sm" variant="outline" icon="edit" onClick={() => openEdit(row)}>
-            Edit
+            {idText("Edit")}
           </Button>
           <Button size="sm" variant="danger-soft" icon="trash" onClick={() => setConfirmDelete(row)}>
-            Delete
+            {idText("Delete")}
           </Button>
         </div>
       ),
@@ -282,40 +283,40 @@ export default function UsersPage() {
   return (
     <div className="stack stack-lg">
       <PageHeader
-        title="Users"
+        title={idText("Users")}
         subtitle="Manage accounts, security credentials, and farmer profiles across the facility."
         actions={
           <Button variant="primary" size="sm" icon="plus" touch onClick={() => setFormOpen((open) => !open)}>
-            {formOpen ? 'Close' : 'Add User'}
+            {idText(formOpen ? 'Close' : 'Add User')}
           </Button>
         }
       />
 
       <div className="grid-stats">
         <div className="stat-card">
-          <p className="stat-label">Total users</p>
-          <p className="stat-value">{users.length}</p>
-          <p className="stat-sub">Across 3 roles</p>
+          <p className="stat-label">{idText("Total users")}</p>
+          <p className="stat-value">{idText(users.length)}</p>
+          <p className="stat-sub">{idText("Across 3 roles")}</p>
         </div>
         <div className="stat-card">
-          <p className="stat-label">Operators</p>
-          <p className="stat-value">{users.filter((user) => user.role !== 'FARMER' && user.role !== 'ADMIN').length}</p>
-          <p className="stat-sub">Weighing, sorting, warehouse, delivery</p>
+          <p className="stat-label">{idText("Operators")}</p>
+          <p className="stat-value">{idText(users.filter((user) => user.role !== 'FARMER' && user.role !== 'ADMIN').length)}</p>
+          <p className="stat-sub">{idText("Weighing, sorting, warehouse, delivery")}</p>
         </div>
         <div className="stat-card">
-          <p className="stat-label">Farmers</p>
-          <p className="stat-value">{users.filter((user) => user.role === 'FARMER').length}</p>
-          <p className="stat-sub">Deposit accounts</p>
+          <p className="stat-label">{idText("Farmers")}</p>
+          <p className="stat-value">{idText(users.filter((user) => user.role === 'FARMER').length)}</p>
+          <p className="stat-sub">{idText("Deposit accounts")}</p>
         </div>
         <div className="stat-card">
-          <p className="stat-label">Admins</p>
-          <p className="stat-value">{users.filter((user) => user.role === 'ADMIN').length}</p>
-          <p className="stat-sub">Full access</p>
+          <p className="stat-label">{idText("Admins")}</p>
+          <p className="stat-value">{idText(users.filter((user) => user.role === 'ADMIN').length)}</p>
+          <p className="stat-sub">{idText("Full access")}</p>
         </div>
       </div>
 
       {formOpen && (
-        <Card title="Add user" subtitle="Role is enforced by RBAC on every endpoint.">
+        <Card title={idText("Add user")} subtitle="Role is enforced by RBAC on every endpoint.">
           <form className="stack-md" onSubmit={handleCreate}>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-md">
               <Field label="Full name" htmlFor="user-name" required>
@@ -323,7 +324,7 @@ export default function UsersPage() {
                   id="user-name"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Nina Operator"
+                  placeholder={idText("Nina Operator")}
                   required
                 />
               </Field>
@@ -334,7 +335,7 @@ export default function UsersPage() {
                   inputMode="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="nina@smartgeulisunpad.com"
+                  placeholder={idText("nina@smartgeulisunpad.com")}
                   required
                 />
               </Field>
@@ -346,7 +347,7 @@ export default function UsersPage() {
                 >
                   {(Object.keys(ROLE_LABEL) as Role[]).map((role) => (
                     <option key={role} value={role}>
-                      {ROLE_LABEL[role]}
+                      {idText(ROLE_LABEL[role])}
                     </option>
                   ))}
                 </Select>
@@ -357,13 +358,13 @@ export default function UsersPage() {
                   type="password"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  placeholder="Default: password123"
+                  placeholder={idText("Default: password123")}
                 />
               </Field>
             </div>
             <div className="row gap-sm">
               <Button type="submit" variant="primary" icon="check" touch>
-                Create Account
+                {idText("Create Account")}
               </Button>
             </div>
           </form>
@@ -371,15 +372,15 @@ export default function UsersPage() {
       )}
 
       <Card
-        title="Accounts"
-        subtitle={`${filtered.length} of ${users.length} shown`}
+        title={idText("Accounts")}
+        subtitle={idText(`${filtered.length} of ${users.length} shown`)}
         action={
           <div style={{ minWidth: 220 }}>
             <Input
-              placeholder="Search name, email, village or role"
+              placeholder={idText("Search name, email, village or role")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              aria-label="Search users"
+              aria-label={idText("Search users")}
             />
           </div>
         }
@@ -388,11 +389,11 @@ export default function UsersPage() {
           columns={columns}
           data={filtered}
           rowKey={(row) => row.id}
-          emptyTitle="No users match your search."
-          emptyDescription="Clear the search field or add a new account."
+          emptyTitle={idText("No users match your search.")}
+          emptyDescription={idText("Clear the search field or add a new account.")}
           emptyAction={
             <Button variant="outline" icon="refresh" onClick={() => setSearch('')}>
-              Clear Search
+              {idText("Clear Search")}
             </Button>
           }
         />
@@ -400,7 +401,7 @@ export default function UsersPage() {
 
       <div className="alert alert-info">
         <Icon name="shield" size={16} />
-        <span>Roles map to JWT claims verified by middleware on every endpoint.</span>
+        <span>{idText("Roles map to JWT claims verified by middleware on every endpoint.")}</span>
       </div>
 
       {/* Edit User Modal Dialog */}
@@ -408,17 +409,17 @@ export default function UsersPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader className="text-left space-y-1">
             <DialogTitle className="text-xl font-bold">
-              Edit User {editUser?.farmerCode ? `— ${editUser.farmerCode}` : ''}
+              {idText("Edit User")} {idText(editUser?.farmerCode ? `— ${editUser.farmerCode}` : '')}
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              Update authentication credentials, role permissions, and profile parameters.
+              {idText("Update authentication credentials, role permissions, and profile parameters.")}
             </DialogDescription>
           </DialogHeader>
 
           <form className="stack-md mt-4" onSubmit={handleUpdate}>
             <div className="p-3 bg-slate-50 border border-slate-200">
               <h3 className="font-semibold text-xs tracking-wider uppercase text-slate-700 mb-3">
-                Account Credentials
+                {idText("Account Credentials")}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
                 <Field label="Full Name" htmlFor="edit-name" required>
@@ -447,7 +448,7 @@ export default function UsersPage() {
                   >
                     {(Object.keys(ROLE_LABEL) as Role[]).map((role) => (
                       <option key={role} value={role}>
-                        {ROLE_LABEL[role]}
+                        {idText(ROLE_LABEL[role])}
                       </option>
                     ))}
                   </Select>
@@ -456,7 +457,7 @@ export default function UsersPage() {
                   <Input
                     id="edit-password"
                     type="password"
-                    placeholder="Leave blank to keep existing"
+                    placeholder={idText("Leave blank to keep existing")}
                     value={editForm.password}
                     onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
                   />
@@ -468,11 +469,11 @@ export default function UsersPage() {
               <div className="p-3 bg-emerald-50/50 border border-emerald-200">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-semibold text-xs tracking-wider uppercase text-emerald-800">
-                    Farmer Profile Parameters
+                    {idText("Farmer Profile Parameters")}
                   </h3>
                   {editUser?.farmerCode && (
                     <span className="mono font-bold text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 border border-emerald-300">
-                      {editUser.farmerCode}
+                      {idText(editUser.farmerCode)}
                     </span>
                   )}
                 </div>
@@ -483,7 +484,7 @@ export default function UsersPage() {
                       id="edit-nik"
                       value={editForm.nik}
                       onChange={(e) => setEditForm({ ...editForm, nik: e.target.value })}
-                      placeholder="e.g. 3205181211930001"
+                      placeholder={idText("e.g. 3205181211930001")}
                     />
                   </Field>
                   <Field label="Phone Number" htmlFor="edit-phone">
@@ -493,7 +494,7 @@ export default function UsersPage() {
                       inputMode="tel"
                       value={editForm.phone}
                       onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      placeholder="e.g. 081234567890"
+                      placeholder={idText("e.g. 081234567890")}
                     />
                   </Field>
                   <Field label="Gender" htmlFor="edit-gender">
@@ -502,8 +503,8 @@ export default function UsersPage() {
                       value={editForm.gender}
                       onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
                     >
-                      <option value="Laki-laki">Laki-laki</option>
-                      <option value="Perempuan">Perempuan</option>
+                      <option value="Laki-laki">{idText("Laki-laki")}</option>
+                      <option value="Perempuan">{idText("Perempuan")}</option>
                     </Select>
                   </Field>
                   <Field label="Age (Years)" htmlFor="edit-age">
@@ -514,7 +515,7 @@ export default function UsersPage() {
                       max={120}
                       value={editForm.age}
                       onChange={(e) => setEditForm({ ...editForm, age: e.target.value })}
-                      placeholder="e.g. 42"
+                      placeholder={idText("e.g. 42")}
                     />
                   </Field>
                   <Field label="Village (Desa/Kelurahan)" htmlFor="edit-village">
@@ -522,7 +523,7 @@ export default function UsersPage() {
                       id="edit-village"
                       value={editForm.village}
                       onChange={(e) => setEditForm({ ...editForm, village: e.target.value })}
-                      placeholder="e.g. Barusuda"
+                      placeholder={idText("e.g. Barusuda")}
                     />
                   </Field>
                   <Field label="District (Kecamatan)" htmlFor="edit-district">
@@ -530,7 +531,7 @@ export default function UsersPage() {
                       id="edit-district"
                       value={editForm.district}
                       onChange={(e) => setEditForm({ ...editForm, district: e.target.value })}
-                      placeholder="e.g. Cigedug"
+                      placeholder={idText("e.g. Cigedug")}
                     />
                   </Field>
                   <Field label="Full Address" htmlFor="edit-address" className="sm:col-span-2">
@@ -538,7 +539,7 @@ export default function UsersPage() {
                       id="edit-address"
                       value={editForm.address}
                       onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                      placeholder="Desa Barusuda, Kec. Cigedug, Kab. Garut"
+                      placeholder={idText("Desa Barusuda, Kec. Cigedug, Kab. Garut")}
                     />
                   </Field>
                   <Field label="Land Ownership Status" htmlFor="edit-landStatus">
@@ -547,8 +548,8 @@ export default function UsersPage() {
                       value={editForm.landStatus}
                       onChange={(e) => setEditForm({ ...editForm, landStatus: e.target.value })}
                     >
-                      <option value="Milik Sendiri">Milik Sendiri</option>
-                      <option value="Sewa">Sewa</option>
+                      <option value="Milik Sendiri">{idText("Milik Sendiri")}</option>
+                      <option value="Sewa">{idText("Sewa")}</option>
                     </Select>
                   </Field>
                   <div className="grid grid-cols-2 gap-sm">
@@ -557,7 +558,7 @@ export default function UsersPage() {
                         id="edit-landArea"
                         value={editForm.landArea}
                         onChange={(e) => setEditForm({ ...editForm, landArea: e.target.value })}
-                        placeholder="e.g. 0.5"
+                        placeholder={idText("e.g. 0.5")}
                       />
                     </Field>
                     <Field label="Unit" htmlFor="edit-landAreaUnit">
@@ -566,12 +567,12 @@ export default function UsersPage() {
                         value={editForm.landAreaUnit}
                         onChange={(e) => setEditForm({ ...editForm, landAreaUnit: e.target.value })}
                       >
-                        <option value="hektar">hektar</option>
-                        <option value="Patok">Patok</option>
-                        <option value="patok">patok</option>
-                        <option value="tumbak">tumbak</option>
-                        <option value="bata">bata</option>
-                        <option value="meter persegi">meter persegi</option>
+                        <option value="hektar">{idText("hektar")}</option>
+                        <option value="Patok">{idText("Patok")}</option>
+                        <option value="patok">{idText("patok")}</option>
+                        <option value="tumbak">{idText("tumbak")}</option>
+                        <option value="bata">{idText("bata")}</option>
+                        <option value="meter persegi">{idText("meter persegi")}</option>
                       </Select>
                     </Field>
                   </div>
@@ -580,7 +581,7 @@ export default function UsersPage() {
                       id="edit-joinYear"
                       value={editForm.joinYear}
                       onChange={(e) => setEditForm({ ...editForm, joinYear: e.target.value })}
-                      placeholder="e.g. 2021"
+                      placeholder={idText("e.g. 2021")}
                     />
                   </Field>
                   <Field label="Avg Production / Season" htmlFor="edit-prod">
@@ -588,7 +589,7 @@ export default function UsersPage() {
                       id="edit-prod"
                       value={editForm.averageProduction}
                       onChange={(e) => setEditForm({ ...editForm, averageProduction: e.target.value })}
-                      placeholder="e.g. 5.0 Ton"
+                      placeholder={idText("e.g. 5.0 Ton")}
                     />
                   </Field>
                 </div>
@@ -597,10 +598,10 @@ export default function UsersPage() {
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
               <Button type="button" variant="outline" onClick={() => setEditUser(null)}>
-                Cancel
+                {idText("Cancel")}
               </Button>
               <Button type="submit" variant="primary" icon="check" touch>
-                Save Changes
+                {idText("Save Changes")}
               </Button>
             </div>
           </form>
@@ -610,12 +611,11 @@ export default function UsersPage() {
       <ConfirmDialog
         open={Boolean(confirmDelete)}
         tone="danger"
-        title="Delete user?"
+        title={idText("Delete user?")}
         description={
           confirmDelete ? (
             <>
-              Delete user <strong>{confirmDelete.name}</strong> ({ROLE_LABEL[confirmDelete.role]})? All sessions
-              will be invalidated immediately.
+              {idText("Delete user")} <strong>{idText(confirmDelete.name)}</strong> ({idText(ROLE_LABEL[confirmDelete.role])}{idText(")? All sessions will be invalidated immediately.")}
             </>
           ) : null
         }

@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useEffect, useState } from 'react'
 import {
   Dialog,
@@ -91,10 +92,10 @@ export default function CancelTransactionModal({
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-foreground">
-                Batalkan & Hapus Transaksi
+                {idText("Batalkan & Hapus Transaksi")}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground font-mono">
-                {waringCode || inspectionData?.waringCode || 'Waring Intake'}
+                {idText(waringCode || inspectionData?.waringCode || 'Waring Intake')}
               </DialogDescription>
             </div>
           </div>
@@ -102,31 +103,31 @@ export default function CancelTransactionModal({
           {loading ? (
             <div className="py-8 flex flex-col items-center justify-center gap-2 text-muted-foreground text-xs font-mono">
               <span className="inline-block animate-spin">⏳</span>
-              <span>Memeriksa keterhubungan data transaksi…</span>
+              <span>{idText("Memeriksa keterhubungan data transaksi…")}</span>
             </div>
           ) : errorMsg ? (
             <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs">
-              {errorMsg}
+              {idText(errorMsg)}
             </div>
           ) : (
             <div className="space-y-3 text-xs">
               <div className="bg-muted/30 p-3 border border-border space-y-1.5 font-mono">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Petani:</span>
+                  <span className="text-muted-foreground">{idText("Petani:")}</span>
                   <span className="font-semibold text-foreground">
-                    {inspectionData?.farmerName || farmerName || '-'} ({inspectionData?.farmerCode || '-'})
+                    {idText(inspectionData?.farmerName || farmerName || '-')} ({idText(inspectionData?.farmerCode || '-')})
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Bobot Bruto / Neto:</span>
+                  <span className="text-muted-foreground">{idText("Bobot Bruto / Neto:")}</span>
                   <span className="font-semibold text-foreground">
-                    {inspectionData?.grossWeightKg?.toFixed(2) ?? '-'} kg / {inspectionData?.netWeightKg?.toFixed(2) ?? '-'} kg
+                    {idText(inspectionData?.grossWeightKg?.toFixed(2) ?? '-')} {idText("kg /")} {idText(inspectionData?.netWeightKg?.toFixed(2) ?? '-')} {idText("kg")}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status Alur:</span>
+                  <span className="text-muted-foreground">{idText("Status Alur:")}</span>
                   <span className="font-bold text-primary">
-                    {inspectionData?.status === 'SORTED' ? 'SUDAH DIPILAH' : 'BELUM DIPILAH (PENERIMAAN)'}
+                    {idText(inspectionData?.status === 'SORTED' ? 'SUDAH DIPILAH' : 'BELUM DIPILAH (PENERIMAAN)')}
                   </span>
                 </div>
               </div>
@@ -134,32 +135,32 @@ export default function CancelTransactionModal({
               {/* Connected Data Cleanup Details */}
               <div className="border border-border p-3 space-y-2 bg-card">
                 <span className="font-semibold uppercase tracking-wider text-[11px] text-muted-foreground block">
-                  Dampak Pembatalan Transaksi:
+                  {idText("Dampak Pembatalan Transaksi:")}
                 </span>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                   <li>
-                    Data waring <strong className="text-foreground">{waringCode || inspectionData?.waringCode}</strong> akan dihapus permanen.
+                    {idText("Data waring")} <strong className="text-foreground">{idText(waringCode || inspectionData?.waringCode)}</strong> {idText("akan dihapus permanen.")}
                   </li>
                   {inspectionData?.hasSortingBatch && (
                     <>
                       <li>
-                        Data pemilahan terkait ({((inspectionData.gradeAKg || 0) + (inspectionData.gradeBKg || 0) + (inspectionData.gradeCKg || 0)).toFixed(1)} kg) akan dihapus.
+                        {idText("Data pemilahan terkait (")}{idText(((inspectionData.gradeAKg || 0) + (inspectionData.gradeBKg || 0) + (inspectionData.gradeCKg || 0)).toFixed(1))} {idText("kg) akan dihapus.")}
                       </li>
                       {inspectionData?.linkedPalletCodes?.length > 0 && (
                         <li>
-                          Palet fisik <strong className="text-foreground">{inspectionData.linkedPalletCodes.join(', ')}</strong> akan{' '}
-                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">DIRESET ke status TERSEDIA</span>.
+                          {idText("Palet fisik")} <strong className="text-foreground">{idText(inspectionData.linkedPalletCodes.join(', '))}</strong> {idText("akan")}{idText(' ')}
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">{idText("DIRESET ke status TERSEDIA")}</span>.
                         </li>
                       )}
                       {inspectionData?.packageUnitsCount > 0 && (
                         <li>
-                          {inspectionData.packageUnitsCount} unit kemasan terkait akan dihapus dari stok gudang.
+                          {idText(inspectionData.packageUnitsCount)} {idText("unit kemasan terkait akan dihapus dari stok gudang.")}
                         </li>
                       )}
                     </>
                   )}
                   <li>
-                    Operator dapat langsung melakukan penimbangan atau transaksi ulang.
+                    {idText("Operator dapat langsung melakukan penimbangan atau transaksi ulang.")}
                   </li>
                 </ul>
               </div>
@@ -167,21 +168,21 @@ export default function CancelTransactionModal({
               {!canCancel && (
                 <div className="p-3 bg-destructive/15 border-2 border-destructive/40 text-destructive font-semibold flex items-center gap-2">
                   <Icon name="alert-triangle" size={16} />
-                  <span>{inspectionData?.blockReason || 'Transaksi tidak dapat dibatalkan karena kemasan telah terkirim.'}</span>
+                  <span>{idText(inspectionData?.blockReason || 'Transaksi tidak dapat dibatalkan karena kemasan telah terkirim.')}</span>
                 </div>
               )}
 
               {canCancel && (
                 <div className="space-y-1">
                   <label htmlFor="cancel-reason" className="text-[11px] font-semibold text-muted-foreground">
-                    Alasan Pembatalan (Opsional):
+                    {idText("Alasan Pembatalan (Opsional):")}
                   </label>
                   <input
                     id="cancel-reason"
                     type="text"
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
-                    placeholder="Contoh: Salah pilih petani / timbangan ulang"
+                    placeholder={idText("Contoh: Salah pilih petani / timbangan ulang")}
                     className="w-full text-xs px-2.5 py-1.5 border border-border bg-background focus:outline-hidden focus:ring-1 focus:ring-primary"
                   />
                 </div>
@@ -191,7 +192,7 @@ export default function CancelTransactionModal({
 
           <DialogFooter className="flex flex-row justify-end gap-2 pt-2 border-t border-border">
             <Button variant="outline" onClick={onClose} disabled={cancelling}>
-              Kembali
+              {idText("Kembali")}
             </Button>
             {canCancel && !loading && !errorMsg && (
               <Button
@@ -200,7 +201,7 @@ export default function CancelTransactionModal({
                 loading={cancelling}
                 onClick={handleConfirmCancel}
               >
-                Batalkan & Hapus Transaksi
+                {idText("Batalkan & Hapus Transaksi")}
               </Button>
             )}
           </DialogFooter>

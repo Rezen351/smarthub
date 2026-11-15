@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -72,7 +73,7 @@ export default function Button({
         />
       )}
       {!loading && icon && <Icon name={icon} size={size === 'sm' ? 15 : 16} />}
-      {children}
+      {idText(children)}
       {iconRight && !loading && <Icon name={iconRight} size={size === 'sm' ? 15 : 16} />}
     </button>
   )

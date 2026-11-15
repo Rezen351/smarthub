@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useState } from 'react'
 import Badge from '../shared/Badge'
 import Icon from '../shared/Icon'
@@ -25,40 +26,40 @@ export default function ContextBar() {
         <div className={`context-bar ${offline ? 'is-offline' : ''}`} data-testid="context-bar">
           <span className="context-chip">
             <Icon name="user" size={14} />
-            <span className="context-chip-label">Farmer</span>
+            <span className="context-chip-label">{idText("Farmer")}</span>
             <span className="context-chip-value">{farmer.name}</span>
           </span>
           {pallet?.code && (
             <span className="context-chip">
               <Icon name="pallet" size={14} />
-              <span className="context-chip-label">Pallet</span>
-              <span className="context-chip-value mono">{pallet.code}</span>
+              <span className="context-chip-label">{idText("Pallet")}</span>
+              <span className="context-chip-value mono">{idText(pallet.code)}</span>
             </span>
           )}
           {defaultGrade && (
             <span className="context-chip hide-mobile">
               <Icon name="grade" size={14} />
-              <span className="context-chip-label">Default grade</span>
-              <span className="context-chip-value">{defaultGrade}</span>
+              <span className="context-chip-label">{idText("Default grade")}</span>
+              <span className="context-chip-value">{idText(defaultGrade)}</span>
             </span>
           )}
           {offline ? (
             <Badge tone="warning" icon="wifi-off">
-              Offline — not synced
+              {idText("Offline — not synced")}
             </Badge>
           ) : (
             <Badge tone="accent" dot className="hide-mobile">
-              Session {hours}h {minutes}m left
+              {idText("Session")} {idText(hours)}{idText("h")} {idText(minutes)}{idText("m left")}
             </Badge>
           )}
           <button
             type="button"
             className="context-reset"
             onClick={() => setConfirmOpen(true)}
-            aria-label="Reset session context"
+            aria-label={idText("Reset session context")}
           >
             <Icon name="trash" size={14} />
-            Reset
+            {idText("Reset")}
           </button>
         </div>
         <div className="context-progress" aria-hidden="true">
@@ -69,16 +70,16 @@ export default function ContextBar() {
       <ConfirmDialog
         open={confirmOpen}
         tone="danger"
-        title="Reset session context?"
+        title={idText("Reset session context?")}
         description={
           <>
-            Farmer <strong>{farmer.name}</strong>
+            {idText("Farmer")} <strong>{farmer.name}</strong>
             {pallet?.code ? (
               <>
-                {' '}and pallet <strong>{pallet.code}</strong>
+                {idText(' ')}{idText("and pallet")} <strong>{idText(pallet.code)}</strong>
               </>
-            ) : null}{' '}
-            will be cleared. Any unsaved weighing will be lost.
+            ) : null}{idText(' ')}
+            {idText("will be cleared. Any unsaved weighing will be lost.")}
           </>
         }
         confirmLabel="Yes, Reset"

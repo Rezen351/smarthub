@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useCallback, useEffect, useState } from 'react'
 import Badge from '../components/shared/Badge'
 import Button from '../components/shared/Button'
@@ -42,7 +43,7 @@ export default function DeliveriesPage() {
     }
   }, [toast])
 
-  useEffect(() => { void refresh() }, [refresh])
+  useEffect(() => { void refresh()}, [refresh])
 
   const create = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -57,7 +58,7 @@ export default function DeliveriesPage() {
       toast.success(`Delivery ${saved.code} created. Scan each assigned package.`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not create delivery.')
-    } finally { setBusy(false) }
+    } finally { setBusy(false)}
   }
 
   const verify = async (event: React.FormEvent) => {
@@ -72,7 +73,7 @@ export default function DeliveriesPage() {
       toast.success(`${result.code} verified. ${result.remainingUnits} package(s) remaining.`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Package verification failed.')
-    } finally { setBusy(false) }
+    } finally { setBusy(false)}
   }
 
   const depart = async () => {
@@ -85,47 +86,47 @@ export default function DeliveriesPage() {
       setConfirmDepart(null)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not record departure.')
-    } finally { setBusy(false) }
+    } finally { setBusy(false)}
   }
 
   const selected = deliveries.find((delivery) => delivery.id === selectedId)
   const columns: Column<Delivery>[] = [
-    { key: 'code', label: 'Pengiriman', priority: true, render: (row) => <span className="font-mono">{row.code}</span> },
+    { key: 'code', label: 'Pengiriman', priority: true, render: (row) => <span className="font-mono">{idText(row.code)}</span> },
     { key: 'truckPlate', label: 'Truk', priority: true },
     { key: 'destination', label: 'Tujuan', priority: true },
     { key: 'units', label: 'Kemasan', render: (row) => `${row.verifiedUnits}/${row.units} terverifikasi` },
-    { key: 'status', label: 'Status', render: (row) => <Badge tone={row.status === 'DEPARTED' ? 'success' : row.status === 'READY' ? 'accent' : 'warning'}>{row.status === 'DEPARTED' ? 'BERANGKAT' : row.status === 'READY' ? 'SIAP' : 'MEMUAT'}</Badge> },
-    { key: 'actions', label: 'Aksi', render: (row) => row.status === 'DEPARTED' ? null : <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setSelectedId(row.id)}>Pilih</Button><Button size="sm" variant="primary" disabled={row.status !== 'READY' || busy} onClick={() => setConfirmDepart(row)}>Berangkat</Button></div> },
+    { key: 'status', label: 'Status', render: (row) => <Badge tone={row.status === 'DEPARTED' ? 'success' : row.status === 'READY' ? 'accent' : 'warning'}>{idText(row.status === 'DEPARTED' ? 'BERANGKAT' : row.status === 'READY' ? 'SIAP' : 'MEMUAT')}</Badge> },
+    { key: 'actions', label: 'Aksi', render: (row) => row.status === 'DEPARTED' ? null : <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setSelectedId(row.id)}>{idText("Pilih")}</Button><Button size="sm" variant="primary" disabled={row.status !== 'READY' || busy} onClick={() => setConfirmDepart(row)}>{idText("Berangkat")}</Button></div> },
   ]
 
   return <div className="stack stack-lg">
-    <PageHeader title="Pengiriman" subtitle="Alokasikan kemasan, pindai setiap label, dan catat keberangkatan truk." />
+    <PageHeader title={idText("Pengiriman")} subtitle="Alokasikan kemasan, pindai setiap label, dan catat keberangkatan truk." />
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-md">
-      <Card title="Buat Pengiriman" subtitle="Alokasikan kemasan tersimpan berdasarkan grade.">
+      <Card title={idText("Buat Pengiriman")} subtitle="Alokasikan kemasan tersimpan berdasarkan grade.">
         <form className="stack-md" onSubmit={create}>
           <Field label="Plat nomor truk" htmlFor="delivery-plate" required><Input id="delivery-plate" value={form.truckPlate} onChange={(e) => setForm({ ...form, truckPlate: e.target.value })} required /></Field>
           <Field label="Tujuan" htmlFor="delivery-destination" required><Input id="delivery-destination" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} required /></Field>
           <Field label="Nama pengemudi" htmlFor="delivery-driver"><Input id="delivery-driver" value={form.driverName} onChange={(e) => setForm({ ...form, driverName: e.target.value })} /></Field>
-          <Field label="Grade" htmlFor="delivery-grade" required><select id="delivery-grade" className="form-input" value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value as 'A' | 'B' | 'C' })}><option value="A">Grade A</option><option value="B">Grade B</option><option value="C">Grade C</option></select></Field>
+          <Field label="Grade" htmlFor="delivery-grade" required><select id="delivery-grade" className="form-input" value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value as 'A' | 'B' | 'C' })}><option value="A">{idText("Grade A")}</option><option value="B">{idText("Grade B")}</option><option value="C">{idText("Grade C")}</option></select></Field>
           <Field label="Jumlah unit kemasan" htmlFor="delivery-units" required><Input id="delivery-units" type="number" min="1" step="1" value={form.units} onChange={(e) => setForm({ ...form, units: e.target.value })} required /></Field>
-          <Button type="submit" variant="primary" disabled={busy}>Buat Pengiriman</Button>
+          <Button type="submit" variant="primary" disabled={busy}>{idText("Buat Pengiriman")}</Button>
         </form>
       </Card>
-      <Card title="Verifikasi Muatan" subtitle={selected ? `${selected.code} · ${selected.verifiedUnits}/${selected.units} kemasan terverifikasi` : 'Pilih pengiriman dari tabel di bawah.'}>
+      <Card title={idText("Verifikasi Muatan")} subtitle={idText(selected ? `${selected.code} · ${selected.verifiedUnits}/${selected.units} kemasan terverifikasi` : 'Pilih pengiriman dari tabel di bawah.')}>
         <form className="stack-md" onSubmit={verify}>
-          {selected && <p className="text-xs text-muted-foreground">Label teralokasi: {selected.packageCodes.join(', ')}</p>}
-          <Field label="Kode kemasan atau barcode" htmlFor="delivery-scan" required><Input id="delivery-scan" mono value={scanCode} onChange={(e) => setScanCode(e.target.value)} placeholder="Pindai label kemasan" required /></Field>
-          <Button type="submit" variant="primary" disabled={busy || !selected || selected.status === 'DEPARTED'}>Pindai & Verifikasi</Button>
+          {selected && <p className="text-xs text-muted-foreground">{idText("Label teralokasi:")} {idText(selected.packageCodes.join(', '))}</p>}
+          <Field label="Kode kemasan atau barcode" htmlFor="delivery-scan" required><Input id="delivery-scan" mono value={scanCode} onChange={(e) => setScanCode(e.target.value)} placeholder={idText("Pindai label kemasan")} required /></Field>
+          <Button type="submit" variant="primary" disabled={busy || !selected || selected.status === 'DEPARTED'}>{idText("Pindai & Verifikasi")}</Button>
         </form>
       </Card>
     </div>
-    <Card title="Daftar Pengiriman" subtitle="Pantau kemasan yang dimuat dan konfirmasi keberangkatan.">
+    <Card title={idText("Daftar Pengiriman")} subtitle="Pantau kemasan yang dimuat dan konfirmasi keberangkatan.">
       <DataTable rowKey={(row) => row.id} columns={columns} data={deliveries} />
     </Card>
     <ConfirmDialog
       open={confirmDepart !== null}
-      title="Konfirmasi Keberangkatan Truk"
-      description={`Tandai pengiriman ${confirmDepart?.code ?? ''} (${confirmDepart?.truckPlate ?? ''}) sebagai telah berangkat?`}
+      title={idText("Konfirmasi Keberangkatan Truk")}
+      description={idText(`Tandai pengiriman ${confirmDepart?.code ?? ''} (${confirmDepart?.truckPlate ?? ''}) sebagai telah berangkat?`)}
       confirmLabel="Konfirmasi Berangkat"
       onConfirm={depart}
       onCancel={() => setConfirmDepart(null)}

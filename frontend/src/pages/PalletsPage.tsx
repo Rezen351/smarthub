@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useState, useEffect, useMemo } from 'react'
 import Card from '../components/shared/Card'
 import Badge from '../components/shared/Badge'
@@ -295,9 +296,9 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
             size="sm"
             icon="check"
             onClick={() => setReleaseTarget(row)}
-            title="Lepas palet kembali ke status Tersedia"
+            title={idText("Lepas palet kembali ke status Tersedia")}
           >
-            Lepas Palet
+            {idText("Lepas Palet")}
           </Button>
         )}
         <Button
@@ -306,18 +307,18 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
           icon="print"
           disabled={isPrinting}
           onClick={() => handlePrint(row.code)}
-          title="Kirim cetak label QR ke printer palet"
+          title={idText("Kirim cetak label QR ke printer palet")}
         >
-          {isPrinting ? 'Mencetak…' : 'Cetak QR'}
+          {idText(isPrinting ? 'Mencetak…' : 'Cetak QR')}
         </Button>
         <Button
           variant="ghost"
           size="sm"
           icon="eye"
           onClick={() => setPreviewPallet(row)}
-          title="Pratinjau QR Code & Label"
+          title={idText("Pratinjau QR Code & Label")}
         >
-          Pratinjau
+          {idText("Pratinjau")}
         </Button>
         {canDelete && (
           <Button
@@ -326,7 +327,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
             icon="trash"
             className="text-destructive hover:bg-destructive/10"
             onClick={() => setConfirmDelete(row)}
-            title="Hapus palet fisik kosong"
+            title={idText("Hapus palet fisik kosong")}
           />
         )}
       </div>
@@ -341,7 +342,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
       render: (row) => (
         <div className="flex items-center gap-2">
           <Icon name="pallet" size={18} className="text-muted-foreground shrink-0" />
-          <span className="font-mono font-bold text-sm tracking-wide text-foreground">{row.code}</span>
+          <span className="font-mono font-bold text-sm tracking-wide text-foreground">{idText(row.code)}</span>
         </div>
       ),
     },
@@ -357,7 +358,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
             tone={isAvail ? 'success' : isDepleted ? 'neutral' : 'accent'}
             dot={isAvail}
           >
-            {row.status === 'AVAILABLE' ? 'TERSEDIA' : row.status === 'IN_USE' ? 'DIGUNAKAN' : 'HABIS'}
+            {idText(row.status === 'AVAILABLE' ? 'TERSEDIA' : row.status === 'IN_USE' ? 'DIGUNAKAN' : 'HABIS')}
           </Badge>
         )
       },
@@ -368,7 +369,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
       align: 'right',
       render: (row) => (
         <span className="font-mono text-xs font-semibold text-muted-foreground">
-          {formatWeight(row.tareKg ?? 15.0)} kg
+          {idText(formatWeight(row.tareKg ?? 15.0))} {idText("kg")}
         </span>
       ),
     },
@@ -378,7 +379,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
       render: (row) => (
         <span className="font-mono text-xs">
           {row.grade ? (
-            <Badge tone="accent">Grade {row.grade}</Badge>
+            <Badge tone="accent">{idText("Grade")} {idText(row.grade)}</Badge>
           ) : (
             <span className="text-muted-foreground">—</span>
           )}
@@ -393,7 +394,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
         const net = row.remainingKg || row.weightKg || 0
         return (
           <span className={`font-mono text-xs font-bold ${net > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
-            {net > 0 ? `${formatWeight(net)} kg` : '0 kg'}
+            {idText(net > 0 ? `${formatWeight(net)} kg` : '0 kg')}
           </span>
         )
       },
@@ -421,12 +422,12 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
         <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold text-foreground">Daftar Palet</h2>
+              <h2 className="text-lg font-semibold text-foreground">{idText("Daftar Palet")}</h2>
               <Badge tone={palletPrinter.status === 'ONLINE' ? 'success' : 'warning'} dot>
-                {palletPrinter.status === 'ONLINE' ? `Printer Online (${palletPrinter.ip})` : 'Printer Offline'}
+                {idText(palletPrinter.status === 'ONLINE' ? `Printer Online (${palletPrinter.ip})` : 'Printer Offline')}
               </Badge>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Registrasi palet fisik, atur tara, dan cetak label QR.</p>
+            <p className="mt-1 text-sm text-muted-foreground">{idText("Registrasi palet fisik, atur tara, dan cetak label QR.")}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -434,18 +435,18 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
               icon="settings"
               touch
               onClick={() => setPrinterModalOpen(true)}
-              title="Konfigurasi printer termal palet"
+              title={idText("Konfigurasi printer termal palet")}
             >
-              Pengaturan Printer
+              {idText("Pengaturan Printer")}
             </Button>
             <Button variant="primary" icon="plus" touch onClick={handleOpenRegister}>
-              Daftar Palet Baru
+              {idText("Daftar Palet Baru")}
             </Button>
           </div>
         </div>
       ) : (
         <PageHeader
-          title="Daftar Palet"
+          title={idText("Daftar Palet")}
           subtitle="Registrasi palet fisik, atur tara, dan cetak label QR."
           actions={
             <div className="flex items-center gap-2">
@@ -454,12 +455,12 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                 icon="settings"
                 touch
                 onClick={() => setPrinterModalOpen(true)}
-                title="Konfigurasi printer termal palet"
+                title={idText("Konfigurasi printer termal palet")}
               >
-                Pengaturan Printer
+                {idText("Pengaturan Printer")}
               </Button>
               <Button variant="primary" icon="plus" touch onClick={handleOpenRegister}>
-                Daftar Palet Baru
+                {idText("Daftar Palet Baru")}
               </Button>
             </div>
           }
@@ -501,13 +502,13 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search pallets by code, notes, grade..."
+              placeholder={idText("Search pallets by code, notes, grade...")}
               className="text-sm"
             />
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
-            <span className="text-xs text-muted-foreground uppercase font-mono">Filter:</span>
+            <span className="text-xs text-muted-foreground uppercase font-mono">{idText("Filter:")}</span>
             <div className="flex border border-border divide-x divide-border text-xs">
               {(['ALL', 'AVAILABLE', 'IN_USE'] as const).map((mode) => (
                 <button
@@ -520,12 +521,12 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                       : 'bg-card text-muted-foreground hover:bg-muted/50'
                   }`}
                 >
-                  {mode === 'ALL' ? 'All' : mode === 'AVAILABLE' ? 'Available' : 'In Use'}
+                  {idText(mode === 'ALL' ? 'All' : mode === 'AVAILABLE' ? 'Available' : 'In Use')}
                 </button>
               ))}
             </div>
             <Button variant="outline" size="sm" icon="refresh" onClick={fetchPallets}>
-              Refresh
+              {idText("Refresh")}
             </Button>
           </div>
         </div>
@@ -536,11 +537,11 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
           data={filteredPallets}
           rowKey={(p) => p.id || p.code}
           mobileActions={renderActions}
-          emptyTitle="No Pallets Found"
-          emptyDescription="Register physical pallets to make them selectable at Station 2: Sorting."
+          emptyTitle={idText("No Pallets Found")}
+          emptyDescription={idText("Register physical pallets to make them selectable at Station 2: Sorting.")}
           emptyAction={
             <Button variant="primary" icon="plus" size="sm" onClick={handleOpenRegister}>
-              Register First Pallet
+              {idText("Register First Pallet")}
             </Button>
           }
         />
@@ -551,10 +552,10 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
         <Card padding="none">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-foreground">Recent Remainder Closeouts</h3>
-              <p className="text-xs text-muted-foreground">Audited pallet releases returning stock to Available.</p>
+              <h3 className="text-sm font-bold text-foreground">{idText("Recent Remainder Closeouts")}</h3>
+              <p className="text-xs text-muted-foreground">{idText("Audited pallet releases returning stock to Available.")}</p>
             </div>
-            <Badge tone="neutral">{closeouts.length} records</Badge>
+            <Badge tone="neutral">{idText(closeouts.length)} {idText("records")}</Badge>
           </div>
           <DataTable<PalletCloseout>
             rowKey={(row) => row.id}
@@ -564,29 +565,29 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                 key: 'palletCode',
                 label: 'Pallet',
                 priority: true,
-                render: (row) => <span className="font-mono font-bold text-foreground">{row.palletCode}</span>,
+                render: (row) => <span className="font-mono font-bold text-foreground">{idText(row.palletCode)}</span>,
               },
               {
                 key: 'grade',
                 label: 'Grade',
-                render: (row) => (row.grade ? <Badge tone="accent">Grade {row.grade}</Badge> : <span className="text-muted-foreground">—</span>),
+                render: (row) => (row.grade ? <Badge tone="accent">{idText("Grade")} {idText(row.grade)}</Badge> : <span className="text-muted-foreground">—</span>),
               },
               {
                 key: 'leftoverKg',
                 label: 'Settled Weight',
                 align: 'right',
                 priority: true,
-                render: (row) => <span className="font-mono font-bold text-amber-700 dark:text-amber-400">{formatWeight(row.leftoverKg)} kg</span>,
+                render: (row) => <span className="font-mono font-bold text-amber-700 dark:text-amber-400">{idText(formatWeight(row.leftoverKg))} {idText("kg")}</span>,
               },
               {
                 key: 'disposition',
                 label: 'Disposition',
-                render: (row) => <Badge tone="neutral">{DISPOSITION_LABELS[row.disposition] || row.disposition}</Badge>,
+                render: (row) => <Badge tone="neutral">{idText(DISPOSITION_LABELS[row.disposition] || row.disposition)}</Badge>,
               },
               {
                 key: 'operatorName',
                 label: 'Released By',
-                render: (row) => <span className="text-xs text-muted-foreground">{row.operatorName || 'System'}</span>,
+                render: (row) => <span className="text-xs text-muted-foreground">{idText(row.operatorName || 'System')}</span>,
               },
               {
                 key: 'notes',
@@ -598,7 +599,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                 label: 'Time',
                 render: (row) => (
                   <span className="font-mono text-xs text-muted-foreground">
-                    {new Date(row.createdAt).toLocaleString('en-GB', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    {idText(new Date(row.createdAt).toLocaleString('id-ID', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' }))}
                   </span>
                 ),
               },
@@ -613,9 +614,9 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
           <div className="bg-card border border-border p-6 shadow-xl max-w-md w-full space-y-5 animate-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between border-b border-border pb-3">
               <div>
-                <h3 className="text-lg font-bold text-foreground">Register Physical Pallet</h3>
+                <h3 className="text-lg font-bold text-foreground">{idText("Register Physical Pallet")}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Assign a unique, static ID code for physical barcode / QR tagging.
+                  {idText("Assign a unique, static ID code for physical barcode / QR tagging.")}
                 </p>
               </div>
               <button
@@ -628,34 +629,34 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
             </div>
 
             <form onSubmit={handleRegister} className="space-y-4">
-              <Field label="Pallet Identifier Code" hint="Unique static identifier attached to the pallet">
+              <Field label="Pallet Identifier Code" hint={idText("Unique static identifier attached to the pallet")}>
                 <Input
                   value={formCode}
                   onChange={(e) => setFormCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. PLT-011"
+                  placeholder={idText("e.g. PLT-011")}
                   required
                   className="font-mono text-base font-bold uppercase tracking-wider"
                 />
               </Field>
 
-              <Field label="Tare Weight (kg)" hint="Weight of the empty wooden/plastic pallet">
+              <Field label="Tare Weight (kg)" hint={idText("Weight of the empty wooden/plastic pallet")}>
                 <Input
                   type="number"
                   step="0.1"
                   min="0"
                   value={formTareKg}
                   onChange={(e) => setFormTareKg(e.target.value)}
-                  placeholder="15.0"
+                  placeholder={idText("15.0")}
                   required
                   className="font-mono"
                 />
               </Field>
 
-              <Field label="Specification & Material Notes" hint="Optional notes (e.g. Euro wood, plastic, bay area)">
+              <Field label="Specification & Material Notes" hint={idText("Optional notes (e.g. Euro wood, plastic, bay area)")}>
                 <Input
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
-                  placeholder="Standard wood pallet"
+                  placeholder={idText("Standard wood pallet")}
                 />
               </Field>
 
@@ -667,16 +668,16 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                   className="rounded-none border-border"
                 />
                 <span className="text-xs font-semibold text-foreground">
-                  Print QR label on Pallet Printer immediately upon registration
+                  {idText("Print QR label on Pallet Printer immediately upon registration")}
                 </span>
               </label>
 
               <div className="flex justify-end items-center gap-2 pt-3 border-t border-border">
                 <Button type="button" variant="ghost" onClick={() => setRegisterOpen(false)}>
-                  Cancel
+                  {idText("Cancel")}
                 </Button>
                 <Button type="submit" variant="primary" icon="check" disabled={submitting}>
-                  {submitting ? 'Registering…' : 'Register Pallet'}
+                  {idText(submitting ? 'Registering…' : 'Register Pallet')}
                 </Button>
               </div>
             </form>
@@ -690,8 +691,8 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
           <div className="bg-card border border-border p-6 shadow-xl max-w-sm w-full space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between border-b border-border pb-3">
               <div>
-                <h3 className="text-base font-bold text-foreground">Pallet Label Preview</h3>
-                <p className="text-xs text-muted-foreground mt-0.5 font-mono">{previewPallet.code}</p>
+                <h3 className="text-base font-bold text-foreground">{idText("Pallet Label Preview")}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5 font-mono">{idText(previewPallet.code)}</p>
               </div>
               <button
                 type="button"
@@ -727,10 +728,10 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                 disabled={printingCode === previewPallet.code}
                 onClick={() => handlePrint(previewPallet.code)}
               >
-                {printingCode === previewPallet.code ? 'Printing Label…' : 'Print ESC/POS Label (Pallet Printer)'}
+                {idText(printingCode === previewPallet.code ? 'Printing Label…' : 'Print ESC/POS Label (Pallet Printer)')}
               </Button>
               <Button variant="ghost" onClick={() => setPreviewPallet(null)} className="w-full">
-                Close Preview
+                {idText("Close Preview")}
               </Button>
             </div>
           </div>
@@ -743,8 +744,8 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
           <div className="bg-card border border-border p-6 shadow-xl max-w-md w-full space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between border-b border-border pb-3">
               <div>
-                <h3 className="text-base font-bold text-foreground">Pallet Printer Settings</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Dedicated thermal printer for Pallet QR labels</p>
+                <h3 className="text-base font-bold text-foreground">{idText("Pallet Printer Settings")}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{idText("Dedicated thermal printer for Pallet QR labels")}</p>
               </div>
               <button
                 type="button"
@@ -757,13 +758,13 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
 
             <div className="flex items-center justify-between p-3 bg-muted/20 border border-border">
               <div>
-                <div className="text-xs font-semibold text-foreground">Connection Status</div>
+                <div className="text-xs font-semibold text-foreground">{idText("Connection Status")}</div>
                 <div className="text-xs text-muted-foreground font-mono">
-                  {palletPrinter.ip ? `${palletPrinter.ip}:${palletPrinter.port}` : 'Not configured'}
+                  {idText(palletPrinter.ip ? `${palletPrinter.ip}:${palletPrinter.port}` : 'Not configured')}
                 </div>
               </div>
               <Badge tone={palletPrinter.status === 'ONLINE' ? 'success' : 'warning'} dot>
-                {palletPrinter.status === 'ONLINE' ? 'Online' : 'Offline'}
+                {idText(palletPrinter.status === 'ONLINE' ? 'Online' : 'Offline')}
               </Badge>
             </div>
 
@@ -781,24 +782,24 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                 <Input value={`${palletPrinter.connection} (RAW TCP)`} readOnly className="font-mono bg-muted/30" />
               </Field>
 
-              <Field label="Printer IP Address" required hint="e.g. 192.168.8.115">
+              <Field label="Printer IP Address" required hint={idText("e.g. 192.168.8.115")}>
                 <Input
                   value={palletPrinter.ip}
                   onChange={(e) => setPalletPrinter((prev) => ({ ...prev, ip: e.target.value }))}
-                  placeholder="192.168.8.115"
+                  placeholder={idText("192.168.8.115")}
                   required
                   className="font-mono"
                 />
               </Field>
 
-              <Field label="TCP Port" required hint="Default raw thermal port is 9100">
+              <Field label="TCP Port" required hint={idText("Default raw thermal port is 9100")}>
                 <Input
                   type="number"
                   min="1"
                   max="65535"
                   value={palletPrinter.port}
                   onChange={(e) => setPalletPrinter((prev) => ({ ...prev, port: e.target.value }))}
-                  placeholder="9100"
+                  placeholder={idText("9100")}
                   required
                   className="font-mono"
                 />
@@ -812,14 +813,14 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                   disabled={testingPrinter || !palletPrinter.ip}
                   onClick={handleTestPrinter}
                 >
-                  {testingPrinter ? 'Testing…' : 'Test Connection'}
+                  {idText(testingPrinter ? 'Testing…' : 'Test Connection')}
                 </Button>
                 <div className="flex items-center gap-2">
                   <Button type="button" variant="ghost" onClick={() => setPrinterModalOpen(false)}>
-                    Cancel
+                    {idText("Cancel")}
                   </Button>
                   <Button type="submit" variant="primary" icon="check" disabled={savingPrinter}>
-                    {savingPrinter ? 'Saving…' : 'Save Settings'}
+                    {idText(savingPrinter ? 'Saving…' : 'Save Settings')}
                   </Button>
                 </div>
               </div>
@@ -831,9 +832,9 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
       {/* ── DELETE CONFIRMATION ── */}
       <ConfirmDialog
         open={confirmDelete !== null}
-        title="Remove Pallet"
-        description={`Are you sure you want to remove pallet "${confirmDelete?.code}" from the registry?`}
-        confirmLabel={deleting ? 'Removing…' : 'Remove Pallet'}
+        title={idText("Remove Pallet")}
+        description={idText(`Are you sure you want to remove pallet "${confirmDelete?.code}" from the registry?`)}
+        confirmLabel={idText(deleting ? 'Removing…' : 'Remove Pallet')}
         tone="danger"
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}

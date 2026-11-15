@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import Badge from '../components/shared/Badge'
@@ -214,11 +215,11 @@ export default function OperatorDashboardHome() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Workstation Hub"
+        title={idText("Workstation Hub")}
         subtitle="Select a physical workstation console to operate."
         actions={
           <Badge tone={allScalesOnline ? 'success' : 'warning'} dot live>
-            {allScalesOnline ? 'All 3 Scales Online' : onlineScaleCount > 0 ? `${onlineScaleCount}/3 Scales Online` : 'All Scales Offline'}
+            {idText(allScalesOnline ? 'All 3 Scales Online' : onlineScaleCount > 0 ? `${onlineScaleCount}/3 Scales Online` : 'All Scales Offline')}
           </Badge>
         }
       />
@@ -264,14 +265,14 @@ export default function OperatorDashboardHome() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-bold text-foreground tracking-tight">
-              Workstations
+              {idText("Workstations")}
             </h2>
             <p className="text-xs text-muted-foreground">
-              Select a physical workstation to operate.
+              {idText("Select a physical workstation to operate.")}
             </p>
           </div>
           <span className="text-xs font-mono text-muted-foreground">
-            {onlineScaleCount} Online
+            {idText(onlineScaleCount)} {idText("Online")}
           </span>
         </div>
 
@@ -285,36 +286,36 @@ export default function OperatorDashboardHome() {
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="w-12 h-12 border border-border bg-muted/40 group-hover:bg-emerald-50 group-hover:border-emerald-300 text-foreground group-hover:text-emerald-800 flex items-center justify-center font-bold text-lg font-mono transition-colors">
-                    {ws.number}
+                    {idText(ws.number)}
                   </div>
                   <Badge tone={ws.badgeTone}>
-                    {ws.tag}
+                    {idText(ws.tag)}
                   </Badge>
                 </div>
 
                 <div>
                   <h3 className="text-lg font-bold text-foreground tracking-tight group-hover:text-[#0E5030] transition-colors">
-                    {ws.title}
+                    {idText(ws.title)}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                    {ws.subtitle}
+                    {idText(ws.subtitle)}
                   </p>
                 </div>
 
                 <div className="p-3 bg-muted/20 border border-border/80 text-xs space-y-1.5 font-mono">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Scale:</span>
-                    <span className="font-semibold text-foreground">{ws.scaleName}</span>
+                    <span className="text-muted-foreground">{idText("Scale:")}</span>
+                    <span className="font-semibold text-foreground">{idText(ws.scaleName)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Today Run:</span>
-                    <span className="font-semibold text-[#0E5030]">{ws.metric}</span>
+                    <span className="text-muted-foreground">{idText("Today Run:")}</span>
+                    <span className="font-semibold text-[#0E5030]">{idText(ws.metric)}</span>
                   </div>
                 </div>
               </div>
 
               <div className="pt-4 border-t border-border mt-4 flex items-center justify-between text-xs font-bold text-[#0E5030]">
-                <span>Open Console</span>
+                <span>{idText("Open Console")}</span>
                 <Icon name="check" size={16} />
               </div>
             </Link>

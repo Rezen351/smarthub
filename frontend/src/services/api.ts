@@ -1,3 +1,4 @@
+import { translateApiError } from '../lib/indonesian'
 /**
  * E-Tani SmartHub Centralized API Client
  * Connects the frontend to the Go REST backend at /api/v1
@@ -31,7 +32,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       localStorage.removeItem('user')
     }
     const errorMsg = payload?.error?.message || `Request failed with status ${response.status}`
-    throw new Error(errorMsg)
+    throw new Error(translateApiError(errorMsg, response.status))
   }
 
   return payload
@@ -55,7 +56,7 @@ async function downloadFile(endpoint: string, filename: string): Promise<void> {
     } catch {
       // payload not JSON
     }
-    throw new Error(errorMsg)
+    throw new Error(translateApiError(errorMsg, response.status))
   }
 
   const blob = await response.blob()

@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 /* Inline SVG icon set (no external icon dependency).
    All icons use currentColor and a 24x24 viewBox. */
 import type { CSSProperties, ReactElement } from 'react'
@@ -102,7 +103,7 @@ export default function Icon({ name, size = 18, className, style }: IconProps) {
       aria-hidden="true"
       focusable="false"
     >
-      {path ?? null}
+      {idText(path ?? null)}
     </svg>
   )
 }

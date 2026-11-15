@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import {
   forwardRef,
   type InputHTMLAttributes,
@@ -27,7 +28,7 @@ export function Field({ label, hint, error, required, htmlFor, children, classNa
     <div className={cn('flex flex-col gap-1.5', className)}>
       {label && (
         <Label htmlFor={htmlFor} className="text-sm font-medium text-foreground">
-          {label}
+          {idText(label)}
           {required && (
             <span className="text-destructive ml-0.5" aria-hidden="true">
               *
@@ -35,11 +36,11 @@ export function Field({ label, hint, error, required, htmlFor, children, classNa
           )}
         </Label>
       )}
-      {children}
+      {idText(children)}
       {error ? (
-        <p className="text-xs text-destructive font-medium">{error}</p>
+        <p className="text-xs text-destructive font-medium">{idText(error)}</p>
       ) : hint ? (
-        <p className="text-xs text-muted-foreground">{hint}</p>
+        <p className="text-xs text-muted-foreground">{idText(hint)}</p>
       ) : null}
     </div>
   )
@@ -86,7 +87,7 @@ export function Select({ invalid, mono, className = '', children, ...rest }: Sel
       aria-invalid={invalid || undefined}
       {...rest}
     >
-      {children}
+      {idText(children)}
     </select>
   )
 }

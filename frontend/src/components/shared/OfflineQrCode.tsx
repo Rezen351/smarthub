@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import { useMemo } from 'react'
 import { encodeQr } from '../../lib/qrEncoder'
 
@@ -33,7 +34,7 @@ export default function OfflineQrCode({ value, size = 180, className = '', dataA
   if (!dim) {
     return (
       <div className={`bg-white text-xs text-center ${className}`} style={{ width: size, height: size }}>
-        QR payload too long
+        {idText("QR payload too long")}
       </div>
     )
   }
@@ -55,7 +56,7 @@ export default function OfflineQrCode({ value, size = 180, className = '', dataA
         display: 'block',
       }}
       role="img"
-      aria-label={`QR Code for ${value}`}
+      aria-label={idText(`QR Code for ${value}`)}
       data-farmer-qr={dataAttribute}
     >
       <rect width={dim} height={dim} fill="#ffffff" />

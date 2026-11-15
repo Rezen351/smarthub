@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 import React from 'react'
 import { formatWeight } from '../../lib/utils'
 
@@ -34,7 +35,6 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
   const grades = [
     {
       code: 'Grade A',
-      label: 'Super / Retail',
       kg: gradeAKg,
       pct: pctA,
       barColor: 'bg-emerald-500',
@@ -44,7 +44,6 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
     },
     {
       code: 'Grade B',
-      label: 'Medium / HoReCa',
       kg: gradeBKg,
       pct: pctB,
       barColor: 'bg-sky-500',
@@ -54,7 +53,6 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
     },
     {
       code: 'Grade C',
-      label: 'Small / Industrial',
       kg: gradeCKg,
       pct: pctC,
       barColor: 'bg-amber-500',
@@ -77,7 +75,7 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
         <div>
           <div className="flex items-center gap-1.5">
             <h3 className={`text-sm xl:text-base font-bold tracking-tight uppercase ${isDark ? 'text-white' : 'text-foreground'}`}>
-              Grade Distribution
+              {idText("Grade Distribution")}
             </h3>
             <span
               className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 border ${
@@ -86,21 +84,21 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
                   : 'border-amber-500/30 bg-amber-50 text-amber-700'
               }`}
             >
-              Station 02
+              {idText("Station 02")}
             </span>
           </div>
           <p className={`text-xs ${isDark ? 'text-white/60' : 'text-muted-foreground'}`}>
-            Grade ratio &amp; sorting shrinkage
+            {idText("Grade ratio & sorting shrinkage")}
           </p>
         </div>
 
         {/* Recovery Yield Badge */}
         <div className="text-right shrink-0">
           <p className={`font-mono text-base xl:text-lg font-black tabular-nums leading-tight ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
-            {yieldPct > 0 ? `${yieldPct.toFixed(1)}%` : '—'}
+            {idText(yieldPct > 0 ? `${yieldPct.toFixed(1)}%` : '—')}
           </p>
           <p className={`text-xs font-mono ${isDark ? 'text-white/65' : 'text-muted-foreground'}`}>
-            Recovery Yield
+            {idText("Recovery Yield")}
           </p>
         </div>
       </div>
@@ -113,17 +111,17 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
               <div
                 style={{ width: `${pctA}%` }}
                 className="h-full bg-emerald-500 transition-all duration-300"
-                title={`Grade A: ${pctA.toFixed(1)}%`}
+                title={idText(`Grade A: ${pctA.toFixed(1)}%`)}
               />
               <div
                 style={{ width: `${pctB}%` }}
                 className="h-full bg-sky-500 transition-all duration-300"
-                title={`Grade B: ${pctB.toFixed(1)}%`}
+                title={idText(`Grade B: ${pctB.toFixed(1)}%`)}
               />
               <div
                 style={{ width: `${pctC}%` }}
                 className="h-full bg-amber-500 transition-all duration-300"
-                title={`Grade C: ${pctC.toFixed(1)}%`}
+                title={idText(`Grade C: ${pctC.toFixed(1)}%`)}
               />
             </>
           ) : (
@@ -140,18 +138,15 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
               <span
                 className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded border ${g.borderColor} ${g.badgeBg} ${g.textColor}`}
               >
-                {g.code}
-              </span>
-              <span className={`text-xs truncate hidden xl:inline ${isDark ? 'text-white/70' : 'text-muted-foreground'}`}>
-                {g.label}
+                {idText(g.code)}
               </span>
             </div>
             <div className="text-right shrink-0">
               <span className={`font-mono text-sm font-bold tabular-nums mr-1.5 ${isDark ? 'text-white' : 'text-foreground'}`}>
-                {formatWeight(g.kg)} kg
+                {idText(formatWeight(g.kg))} {idText("kg")}
               </span>
               <span className={`font-mono text-xs font-bold ${g.textColor}`}>
-                {g.pct > 0 ? `${g.pct.toFixed(0)}%` : '0%'}
+                {idText(g.pct > 0 ? `${g.pct.toFixed(0)}%` : '0%')}
               </span>
             </div>
           </div>
@@ -167,18 +162,18 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
                   : 'border-rose-300 bg-rose-50 text-rose-700'
               }`}
             >
-              Shrinkage &amp; Reject
+              {idText("Shrinkage & Reject")}
             </span>
             <span className={`text-xs truncate hidden xl:inline ${isDark ? 'text-white/50' : 'text-muted-foreground'}`}>
-              Soil / Spoilage
+              {idText("Soil / Spoilage")}
             </span>
           </div>
           <div className="text-right shrink-0">
             <span className={`font-mono text-sm font-bold tabular-nums mr-1.5 ${isDark ? 'text-rose-300' : 'text-rose-700'}`}>
-              {formatWeight(shrinkageKg)} kg
+              {idText(formatWeight(shrinkageKg))} {idText("kg")}
             </span>
             <span className={`font-mono text-xs font-bold ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
-              {shrinkagePct > 0 ? `${shrinkagePct.toFixed(0)}%` : '0%'}
+              {idText(shrinkagePct > 0 ? `${shrinkagePct.toFixed(0)}%` : '0%')}
             </span>
           </div>
         </div>
