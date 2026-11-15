@@ -1,10 +1,15 @@
 import { translateApiError } from '../lib/indonesian'
+import type { ReceptionBatch, ReceptionCapture } from '../lib/receptionSession'
 /**
  * E-Tani SmartHub Centralized API Client
  * Connects the frontend to the Go REST backend at /api/v1
  */
 
 const BASE_URL = '/api/v1'
+
+export class APIError extends Error {
+  constructor(message: string, public status: number, public code?: string) { super(message) }
+}
 
 function getAuthHeader(): Record<string, string> {
   const token = localStorage.getItem('auth_token')
@@ -32,7 +37,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       localStorage.removeItem('user')
     }
     const errorMsg = payload?.error?.message || `Request failed with status ${response.status}`
-    throw new Error(translateApiError(errorMsg, response.status))
+    throw new APIError(endpoint.startsWith('/weighing/batches') ? errorMsg : translateApiError(errorMsg, response.status), response.status, payload?.error?.code)
   }
 
   return payload
@@ -210,6 +215,18 @@ export const api = {
 
   // Station 01: Weighing & Reception
   weighing: {
+    saveBatch: async (data: { id: string; farmerCode: string; items: ReceptionCapture[] }) => {
+      const res = await request<ApiResponse<ReceptionBatch>>('/weighing/batches', { method: 'POST', body: JSON.stringify(data) })
+      return res.data
+    },
+    getBatch: async (id: string) => {
+      const res = await request<ApiResponse<ReceptionBatch>>(`/weighing/batches/${encodeURIComponent(id)}`, { cache: 'no-store' })
+      return res.data
+    },
+    printBatch: async (id: string, document: 'all' | 'receipt' | 'label' = 'all', waringId?: string) => {
+      const res = await request<ApiResponse<{ jobs: number; message: string }>>(`/weighing/batches/${encodeURIComponent(id)}/print`, { method: 'POST', body: JSON.stringify({ document, waringId }) })
+      return res.data
+    },
     list: async (status?: string) => {
       const query = status ? `?status=${encodeURIComponent(status)}` : ''
       const res = await request<ApiResponse<any[]>>(`/weighing${query}`)

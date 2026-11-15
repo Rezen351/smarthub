@@ -1,3 +1,4 @@
+import { idText } from '@/lib/indonesian'
 /**
  * Weighing — Receiving Intake Station.
  *
@@ -19,6 +20,8 @@ import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import LabelPreview from '../components/operator/LabelPreview'
+import ReceptionSession from '../components/operator/ReceptionSession'
+import { readReceptionDraft } from '../lib/receptionSession'
 import { printThermal } from '../lib/thermalPrint'
 import { saveReceptionIntake } from '../lib/receptionIntake'
 import { useSessionContext } from '../hooks/useSessionContext'
@@ -41,6 +44,7 @@ type WeighingRecord = {
   time: string
   status: WeighingStatus
   waringCode?: string
+  receptionBatchId?: string
 }
 
 const FARMERS: any[] = []
@@ -55,17 +59,20 @@ const statusTone: Record<WeighingStatus, 'success' | 'warning'> = {
 const STEPS = [
   { id: 1, label: 'Farmer ID' },
   { id: 2, label: 'Weigh Harvest' },
-  { id: 3, label: 'Approve & Label' },
+  { id: 3, label: 'Receipt & Labels' },
 ] as const
 
 export default function WeighingPage() {
   const toast = useToast()
-  const { farmer, active, startScan } = useSessionContext()
+  const { farmer, active, startScan, reset } = useSessionContext()
   const { syncWithBackend } = usePackhouseStore()
 
   /* ── Mode State ── */
   const [focusMode, setFocusMode] = useState(false)
   const [activeStep, setActiveStep] = useState<1 | 2 | 3>(1)
+  const [batchMode, setBatchMode] = useState(false)
+  const [receptionFarmer, setReceptionFarmer] = useState<{ id: string; name: string } | null>(null)
+  const [openedBatchId, setOpenedBatchId] = useState<string | undefined>()
 
   /* ── Step 1: Scan & Farmer Identification ── */
   const [scanFarmerId, setScanFarmerId] = useState('')
@@ -102,6 +109,26 @@ export default function WeighingPage() {
   const { user } = useAuth()
   const [cancelModalRecord, setCancelModalRecord] = useState<WeighingRecord | null>(null)
 
+  useEffect(() => {
+    if (!user?.id) return
+    const draft = readReceptionDraft(user.id)
+    if (!draft) return
+    const recoveredFarmer = { id: draft.farmerCode, name: draft.farmerName }
+    setReceptionFarmer(recoveredFarmer)
+    startScan(recoveredFarmer)
+    setBatchMode(true)
+    setActiveStep(draft.saved ? 3 : 2)
+  }, [user?.id, startScan])
+
+  const canLeaveReception = () => {
+    const draft = user?.id ? readReceptionDraft(user.id) : null
+    if (draft && !draft.saved && (draft.items.length || draft.weight || draft.pending)) {
+      toast.warning('Finish the current Reception first.')
+      return false
+    }
+    return true
+  }
+
   /* ── Records Ledger ── */
   const [records, setRecords] = useState<WeighingRecord[]>([])
   const [farmersList, setFarmersList] = useState(FARMERS)
@@ -122,6 +149,7 @@ export default function WeighingPage() {
               time: formatSafeTime(w.createdAt || w.approvedAt),
               status: w.status === 'PENDING' ? 'PENDING' : 'BUFFER_WAITING',
               waringCode: w.code,
+              receptionBatchId: w.receptionBatchId || undefined,
             }))
           )
         }
@@ -250,7 +278,11 @@ export default function WeighingPage() {
 
   /* ── Step 1: Handle Farmer Identification ── */
   const selectFarmer = (targetFarmer: { id: string; code?: string; name: string; village: string }) => {
+    if (!canLeaveReception()) return
     setScanError('')
+    setReceptionFarmer({ id: targetFarmer.id, name: targetFarmer.name })
+    setOpenedBatchId(undefined)
+    setBatchMode(true)
     startScan({ id: targetFarmer.id, name: targetFarmer.name })
     setScanFarmerId(targetFarmer.code || targetFarmer.id)
     toast.success(`Farmer verified: ${targetFarmer.name} (${targetFarmer.code || targetFarmer.id})`)
@@ -403,6 +435,10 @@ export default function WeighingPage() {
 
   /* Reset for next farmer weighing */
   const handleNextWeighing = () => {
+    setBatchMode(false)
+    setReceptionFarmer(null)
+    setOpenedBatchId(undefined)
+    reset()
     setSaveError('')
     setPrintStatus('Not sent to printer')
     setWeightKg('')
@@ -536,7 +572,7 @@ export default function WeighingPage() {
       render: (row) => (
         <div>
           <span className="font-semibold block text-foreground">{row.farmerName}</span>
-          <span className="font-mono text-xs text-muted-foreground">{row.farmerId}</span>
+          <span className="font-mono text-xs text-muted-foreground">{idText(row.farmerId)}</span>
         </div>
       ),
     },
@@ -547,7 +583,7 @@ export default function WeighingPage() {
       align: 'right',
       render: (row) => (
         <span className="font-mono font-bold text-base text-foreground">
-          {formatWeight(row.weightKg)} kg
+          {idText(formatWeight(row.weightKg))} {idText("kg")}
         </span>
       ),
     },
@@ -557,8 +593,8 @@ export default function WeighingPage() {
       priority: true,
       render: (row) => (
         <div>
-          <span className="font-mono text-xs block text-foreground">{row.depositDate}</span>
-          <span className="text-xs text-muted-foreground">{row.time}</span>
+          <span className="font-mono text-xs block text-foreground">{idText(row.depositDate)}</span>
+          <span className="text-xs text-muted-foreground">{idText(row.time)}</span>
         </div>
       ),
     },
@@ -568,7 +604,7 @@ export default function WeighingPage() {
       priority: true,
       render: (row) => (
         <Badge tone={statusTone[row.status]} dot>
-          {row.status === 'BUFFER_WAITING' ? 'GUDANG PENYANGGA' : row.status === 'PENDING' ? 'MENUNGGU' : row.status}
+          {idText(row.status === 'BUFFER_WAITING' ? 'GUDANG PENYANGGA' : row.status === 'PENDING' ? 'MENUNGGU' : row.status)}
         </Badge>
       ),
     },
@@ -578,9 +614,9 @@ export default function WeighingPage() {
       priority: true,
       render: (row) =>
         row.waringCode ? (
-          <span className="font-mono font-medium tabular-nums text-foreground">{row.waringCode}</span>
+          <span className="font-mono font-medium tabular-nums text-foreground">{idText(row.waringCode)}</span>
         ) : (
-          <span className="text-xs text-muted-foreground italic">Diberikan saat disetujui</span>
+          <span className="text-xs text-muted-foreground italic">{idText("Diberikan saat disetujui")}</span>
         ),
     },
     {
@@ -589,23 +625,36 @@ export default function WeighingPage() {
       align: 'right',
       render: (row) => (
         <div className="flex items-center gap-1.5 justify-end">
-          {row.status === 'PENDING' ? (
+          {row.receptionBatchId ? (
+            <Button size="sm" variant="outline" icon="print" onClick={() => {
+              if (!canLeaveReception()) return
+              const selected = { id: row.farmerId, name: row.farmerName }
+              setReceptionFarmer(selected)
+              startScan(selected)
+              setBatchMode(true)
+              setOpenedBatchId(row.receptionBatchId)
+              setActiveStep(3)
+              document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
+            }}><span>Receipt & Labels</span></Button>
+          ) : row.status === 'PENDING' ? (
             <>
               <Button
                 size="sm"
                 variant="primary"
                 icon="check"
                 onClick={() => {
+                  if (!canLeaveReception()) return
+                  setBatchMode(false)
                   setConfirmApprove(row)
                   setApprovedSuccessRecord(null)
                   setActiveStep(3)
                   document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
                 }}
               >
-                Setujui
+                {idText("Setujui")}
               </Button>
-              <Button size="sm" variant="outline" icon="refresh" onClick={() => handleKoreksi(row)}>
-                Koreksi
+              <Button size="sm" variant="outline" icon="refresh" onClick={() => { if (canLeaveReception()) { setBatchMode(false); handleKoreksi(row) } }}>
+                {idText("Koreksi")}
               </Button>
             </>
           ) : (
@@ -621,7 +670,7 @@ export default function WeighingPage() {
                 document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
               }}
             >
-              Cetak Ulang
+              {idText("Cetak Ulang")}
             </Button>
           )}
           {user?.role === 'ADMIN' && (
@@ -632,7 +681,7 @@ export default function WeighingPage() {
               className="text-destructive hover:bg-destructive/10 border-destructive/30"
               onClick={() => setCancelModalRecord(row)}
             >
-              Batalkan
+              {idText("Batalkan")}
             </Button>
           )}
         </div>
@@ -647,17 +696,17 @@ export default function WeighingPage() {
      STEPPER PROGRESS BAR COMPONENT
   ───────────────────────────────────────────────────────────── */
   const renderStepperBar = () => (
-    <nav className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto scrollbar-none" aria-label="Weighing steps">
+    <nav className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto scrollbar-none" aria-label={idText("Weighing steps")}>
       {STEPS.map((step, idx) => {
         const isCurrent = activeStep === step.id
-        const isDone = activeStep > step.id || (step.id === 3 && approvedSuccessRecord !== null)
+        const isDone = activeStep > step.id || (step.id === 3 && (approvedSuccessRecord !== null || (batchMode && activeStep === 3)))
         const compactLabel = step.id === 1 ? 'Farmer' : step.id === 2 ? 'Weigh' : 'Print'
 
         return (
           <div key={step.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <button
               type="button"
-              disabled={isSaving || isPrinting}
+              disabled={isSaving || isPrinting || batchMode}
               onClick={() => {
                 if (step.id < activeStep || approvedSuccessRecord) {
                   setActiveStep(step.id as 1 | 2 | 3)
@@ -680,10 +729,10 @@ export default function WeighingPage() {
                     : 'bg-muted border border-border text-muted-foreground'
                 }`}
               >
-                {isDone ? '✓' : step.id}
+                {idText(isDone ? '✓' : step.id)}
               </span>
-              <span className="sm:hidden">{compactLabel}</span>
-              <span className="hidden sm:inline">{step.label}</span>
+              <span className="sm:hidden">{idText(compactLabel)}</span>
+              <span className="hidden sm:inline">{idText(step.label)}</span>
             </button>
             {idx < STEPS.length - 1 && <span className="text-muted-foreground/40 text-xs mx-0.5 sm:mx-1">/</span>}
           </div>
@@ -703,14 +752,14 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 1 of 3">
-                Langkah 1 dari 3
+                {idText("Langkah 1 dari 3")}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Scan Farmer Card">
-                Pindai Kartu Petani
+                {idText("Pindai Kartu Petani")}
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
-              Awaiting Scan
+              {idText("Awaiting Scan")}
             </Badge>
           </div>
 
@@ -720,10 +769,10 @@ export default function WeighingPage() {
             </div>
             <div className="space-y-1">
               <h3 className="text-base font-bold text-foreground">
-                2D Scanner and Camera
+                {idText("2D Scanner and Camera")}
               </h3>
               <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                Scan the barcode on the farmer ID card with a USB 2D hardware scanner or device camera.
+                {idText("Scan the barcode on the farmer ID card with a USB 2D hardware scanner or device camera.")}
               </p>
             </div>
 
@@ -735,23 +784,23 @@ export default function WeighingPage() {
                   setManualSearch(e.target.value)
                   setScanError('')
                 }}
-                placeholder="Scan 2D barcode or enter name / ID..."
+                placeholder={idText("Scan 2D barcode or enter name / ID...")}
                 className="font-mono text-sm py-2.5 flex-1 min-w-0"
                 autoFocus
               />
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <Button type="submit" variant="primary" icon="check" className="w-full sm:w-auto">
-                  Verify
+                  {idText("Verify")}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   icon="scan"
                   onClick={openCameraModal}
-                  title="Open Camera Scanner"
+                  title={idText("Open Camera Scanner")}
                   className="w-full sm:w-auto"
                 >
-                  Camera
+                  {idText("Camera")}
                 </Button>
               </div>
             </form>
@@ -760,8 +809,8 @@ export default function WeighingPage() {
               <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-left flex items-start gap-2.5 max-w-md mx-auto animate-in fade-in">
                 <Icon name="alert-triangle" size={16} className="text-destructive shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
-                  <p className="text-xs font-semibold text-destructive">Verification Rejected</p>
-                  <p className="text-xs text-destructive/90">{scanError}</p>
+                  <p className="text-xs font-semibold text-destructive">{idText("Verification Rejected")}</p>
+                  <p className="text-xs text-destructive/90">{idText(scanError)}</p>
                 </div>
               </div>
             )}
@@ -771,23 +820,29 @@ export default function WeighingPage() {
       )}
 
       {/* ── STEP 2: Harvest Weighing ── */}
-      {activeStep === 2 && (
+      {batchMode && receptionFarmer && user && (activeStep === 2 || activeStep === 3) && (
+        <ReceptionSession key={`${user.id}:${receptionFarmer.id}:${openedBatchId || 'draft'}`}
+          operatorId={user.id} farmer={receptionFarmer} capacityKg={scaleCapacityKg ?? 0}
+          initialBatchId={openedBatchId} onFinished={() => setActiveStep(3)}
+          onNextFarmer={handleNextWeighing} onSaved={() => { refreshRecords(); void syncWithBackend() }} />
+      )}
+      {activeStep === 2 && !batchMode && (
         <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 2 of 3">
-                Langkah 2 dari 3
+                {idText("Langkah 2 dari 3")}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Weigh Harvest">
-                Timbang Panen
+                {idText("Timbang Panen")}
               </h2>
             </div>
             <div className="flex items-center gap-2">
               <Badge tone="success" dot>
-                Farmer: {farmer?.name}
+                {idText("Farmer:")} {farmer?.name}
               </Badge>
               <Button size="sm" variant="ghost" icon="edit" onClick={() => setActiveStep(1)}>
-                Change Farmer
+                {idText("Change Farmer")}
               </Button>
             </div>
           </div>
@@ -808,7 +863,7 @@ export default function WeighingPage() {
               {formError && (
                 <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-none flex items-center gap-2 font-medium">
                   <Icon name="alert" size={16} />
-                  <span>{formError}</span>
+                  <span>{idText(formError)}</span>
                 </div>
               )}
             </div>
@@ -816,27 +871,27 @@ export default function WeighingPage() {
             <div className="space-y-4">
               <div className="station-secondary-panel p-4 bg-muted/30 border border-border rounded-none space-y-3">
                 <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                  <Icon name="info" size={14} /> Intake Metadata
+                  <Icon name="info" size={14} /> {idText("Intake Metadata")}
                 </span>
                 <div className="space-y-2 text-sm pt-1">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Farmer:</span>
+                    <span className="text-muted-foreground">{idText("Farmer:")}</span>
                     <span className="font-semibold text-foreground">{farmer?.name}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Commodity:</span>
-                    <span className="font-semibold text-foreground">Potatoes</span>
+                    <span className="text-muted-foreground">{idText("Commodity:")}</span>
+                    <span className="font-semibold text-foreground">{idText("Potatoes")}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Deposit Date:</span>
+                    <span className="text-muted-foreground">{idText("Deposit Date:")}</span>
                     <span className="font-mono font-semibold text-foreground flex items-center gap-1">
-                      {today()} <Badge tone="accent">Auto</Badge>
+                      {idText(today())} <Badge tone="accent">{idText("Auto")}</Badge>
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Waring Code:</span>
+                    <span className="text-muted-foreground">{idText("Waring Code:")}</span>
                     <span className="font-mono text-xs font-semibold text-foreground">
-                      Assigned after saving
+                      {idText("Assigned after saving")}
                     </span>
                   </div>
                 </div>
@@ -847,7 +902,7 @@ export default function WeighingPage() {
 
           <div className="flex items-center justify-between border-t border-border pt-4">
             <Button variant="outline" onClick={() => setActiveStep(1)}>
-              Back to Farmer
+              {idText("Back to Farmer")}
             </Button>
             <Button
               variant="primary"
@@ -856,31 +911,31 @@ export default function WeighingPage() {
               disabled={!(Number(weightKg) > 0)}
               onClick={handleProceedToApproval}
             >
-              Review Weight
+              {idText("Review Weight")}
             </Button>
           </div>
         </div>
       )}
 
       {/* ── STEP 3: Approve & Print Label ── */}
-      {activeStep === 3 && (
+      {activeStep === 3 && !batchMode && (
         <div className="station-step bg-card border border-border rounded-none p-4 shadow-sm space-y-3 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-2 flex-wrap gap-2 no-print">
             <div>
               <span className="text-[10px] uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 3 of 3">
-                Langkah 3 dari 3
+                {idText("Langkah 3 dari 3")}
               </span>
               <h2 className="text-xl font-bold tracking-tight text-foreground" data-title="Approve & Print">
-                Setujui & Cetak
+                {idText("Setujui & Cetak")}
               </h2>
             </div>
             {approvedSuccessRecord ? (
               <Badge tone="success" dot>
-                Intake Saved
+                {idText("Intake Saved")}
               </Badge>
             ) : (
               <Badge tone="warning" dot>
-                Status: PENDING OPERATOR APPROVAL
+                {idText("Status: PENDING OPERATOR APPROVAL")}
               </Badge>
             )}
           </div>
@@ -888,32 +943,32 @@ export default function WeighingPage() {
           {/* Intake Verification Box */}
           <div className="p-3 bg-muted/30 border border-border rounded-none grid grid-cols-1 sm:grid-cols-4 gap-2 no-print">
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Farmer</span>
+              <span className="text-xs text-muted-foreground block font-medium">{idText("Farmer")}</span>
               <span className="font-semibold text-base text-foreground block">
-                {confirmApprove?.farmerName ?? farmer?.name}
+                {idText(confirmApprove?.farmerName ?? farmer?.name)}
               </span>
               <span className="font-mono text-xs text-muted-foreground block">
-                {confirmApprove?.farmerId ?? farmer?.id}
+                {idText(confirmApprove?.farmerId ?? farmer?.id)}
               </span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Captured Weight</span>
+              <span className="text-xs text-muted-foreground block font-medium">{idText("Captured Weight")}</span>
               <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 block tracking-tight">
-                {formatWeight(confirmApprove?.weightKg ?? weightKg)}
-                <span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
+                {idText(formatWeight(confirmApprove?.weightKg ?? weightKg))}
+                <span className="text-sm font-normal text-muted-foreground ml-1">{idText("kg")}</span>
               </span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Deposit Date</span>
-              <span className="font-mono font-semibold text-foreground block">{today()}</span>
-              <span className="text-xs text-muted-foreground block">System timestamped</span>
+              <span className="text-xs text-muted-foreground block font-medium">{idText("Deposit Date")}</span>
+              <span className="font-mono font-semibold text-foreground block">{idText(today())}</span>
+              <span className="text-xs text-muted-foreground block">{idText("System timestamped")}</span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Assigned Waring ID</span>
+              <span className="text-xs text-muted-foreground block font-medium">{idText("Assigned Waring ID")}</span>
               <span className="font-mono font-bold text-base text-primary block">
-                {approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? 'Assigned after saving'}
+                {idText(approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? 'Assigned after saving')}
               </span>
-              <span className="text-xs text-muted-foreground block">QR Waring Label</span>
+              <span className="text-xs text-muted-foreground block">{idText("QR Waring Label")}</span>
             </div>
           </div>
 
@@ -948,11 +1003,11 @@ export default function WeighingPage() {
           {/* Action Bar */}
           {saveError && (
             <p role="alert" className="alert alert-danger">
-              {saveError} Your weight is retained. Retry saving below.
+              {idText(saveError)} {idText("Your weight is retained. Retry saving below.")}
             </p>
           )}
           <p role="status" className={printStatus.includes('failed') ? 'alert alert-warning' : 'text-sm text-muted-foreground'}>
-            {isSaving ? 'Saving intake…' : approvedSuccessRecord ? `Saved · ${printStatus}` : 'Review the captured weight before saving.'}
+            {idText(isSaving ? 'Saving intake…' : approvedSuccessRecord ? `Saved · ${printStatus}` : 'Review the captured weight before saving.')}
           </p>
           <div className="flex items-center justify-between border-t border-border pt-3 flex-wrap gap-2 no-print">
             {!approvedSuccessRecord ? (
@@ -963,7 +1018,7 @@ export default function WeighingPage() {
                   disabled={isSaving}
                   onClick={() => confirmApprove && handleKoreksi(confirmApprove)}
                 >
-                  Correct Weight
+                  {idText("Correct Weight")}
                 </Button>
                 <div className="flex items-center gap-2">
                   <Button
@@ -976,7 +1031,7 @@ export default function WeighingPage() {
                       if (saved) triggerPrintBoth(saved)
                     }}
                   >
-                    {isSaving ? 'Saving…' : saveError ? 'Retry Save & Print' : 'Approve & Print'}
+                    {idText(isSaving ? 'Saving…' : saveError ? 'Retry Save & Print' : 'Approve & Print')}
                   </Button>
                 </div>
               </>
@@ -984,22 +1039,22 @@ export default function WeighingPage() {
               <>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintBoth()}>
-                    {printStatus.includes('failed') ? 'Retry Print' : 'Print Again'}
+                    {idText(printStatus.includes('failed') ? 'Retry Print' : 'Print Again')}
                   </Button>
                   <details>
-                    <summary className="cursor-pointer text-sm p-3">More Print Options</summary>
+                    <summary className="cursor-pointer text-sm p-3">{idText("More Print Options")}</summary>
                     <div className="flex flex-wrap gap-2 pt-2">
                       <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintReceipt()}>
-                        Re-print Receipt
+                        {idText("Re-print Receipt")}
                       </Button>
                       <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintWaringLabel()}>
-                        Re-print Waring Label
+                        {idText("Re-print Waring Label")}
                       </Button>
                     </div>
                   </details>
                 </div>
                 <Button variant="primary" icon="check" touch disabled={isPrinting} onClick={handleNextWeighing}>
-                  Next Weighing
+                  {idText("Next Weighing")}
                 </Button>
               </>
             )}
@@ -1015,30 +1070,30 @@ export default function WeighingPage() {
          FULLSCREEN FOCUS MODE OVERLAY
          ═══════════════════════════════════════════════════════════════════ */}
       {focusMode && (
-        <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto" role="dialog" aria-modal="true" aria-label="Weighing Focus Mode">
+        <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto" role="dialog" aria-modal="true" aria-label={idText("Weighing Focus Mode")}>
           <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
             <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
-              STATION 01 · RECEPTION
+              {idText("STATION 01 · RECEPTION")}
             </div>
 
             {/* Stepper Progress */}
             <div className="hidden md:flex">
-              {renderStepperBar()}
+              {idText(renderStepperBar())}
             </div>
 
             {/* Controls */}
             <div className="flex shrink-0 items-center gap-2">
               <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode} className="whitespace-nowrap">
-                Exit Focus Mode
+                {idText("Exit Focus Mode")}
               </Button>
             </div>
           </header>
 
           <main className="station-focus-main flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto space-y-6">
             <div className="md:hidden">
-              {renderStepperBar()}
+              {idText(renderStepperBar())}
             </div>
-            {renderFocusContent()}
+            {idText(renderFocusContent())}
           </main>
         </div>
       )}
@@ -1049,7 +1104,7 @@ export default function WeighingPage() {
       <div className="station-page space-y-6">
         <div className="no-print">
           <PageHeader
-            title="Station 01: Reception"
+            title={idText("Station 01: Reception")}
             subtitle="Farmer verification, intake weighing, and buffer queue."
             actions={
               <Button
@@ -1058,7 +1113,7 @@ export default function WeighingPage() {
                 icon="history"
                 onClick={() => document.getElementById('weighing-records')?.scrollIntoView({ behavior: 'smooth' })}
               >
-                Records ({records.length})
+                {idText("Records (")}{idText(records.length)})
               </Button>
             }
           />
@@ -1067,61 +1122,61 @@ export default function WeighingPage() {
         {/* Quick Stats Grid */}
         <div className="station-quick-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Menunggu persetujuan</p>
-            <p className="text-2xl font-bold tracking-tight text-foreground">{pendingCount}</p>
-            <p className="text-xs text-muted-foreground">Perlu verifikasi</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{idText("Menunggu persetujuan")}</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">{idText(pendingCount)}</p>
+            <p className="text-xs text-muted-foreground">{idText("Perlu verifikasi")}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Disetujui hari ini</p>
-            <p className="text-2xl font-bold tracking-tight text-foreground">{approvedToday}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{idText("Disetujui hari ini")}</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">{idText(approvedToday)}</p>
             <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              Waring siap dipilah
+              {idText("Waring siap dipilah")}
             </p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Timbangan</p>
-            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
-            <p className="text-xs text-muted-foreground font-mono">{scaleEndpoint}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{idText("Timbangan")}</p>
+            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{idText(scaleOnline ? 'Online' : 'Offline')}</p>
+            <p className="text-xs text-muted-foreground font-mono">{idText(scaleEndpoint)}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Printer Struk</p>
-            <p className={`text-2xl font-bold tracking-tight ${printerOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{printerOnline ? 'Online' : 'Offline'}</p>
-            <p className="text-xs text-muted-foreground font-mono">{printerEndpoint}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{idText("Printer Struk")}</p>
+            <p className={`text-2xl font-bold tracking-tight ${printerOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{idText(printerOnline ? 'Online' : 'Offline')}</p>
+            <p className="text-xs text-muted-foreground font-mono">{idText(printerEndpoint)}</p>
           </div>
         </div>
 
         {/* Sequential Stepper in Standard View */}
         <div id="weighing-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
-            <span className="font-semibold text-base text-foreground">Alur Penerimaan</span>
+            <span className="font-semibold text-base text-foreground">{idText("Alur Penerimaan")}</span>
             <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-              Mode Fokus
+              {idText("Mode Fokus")}
             </Button>
           </div>
 
           {/* Stepper Navigation Bar */}
           <div className="no-print">
-            {renderStepperBar()}
+            {idText(renderStepperBar())}
           </div>
 
           {/* Embed the same sequential step logic */}
-          {renderFocusContent()}
+          {idText(renderFocusContent())}
         </div>
 
         {/* ── Today's Harvest Weighing Records Ledger ── */}
         <div id="weighing-records" className="space-y-3 no-print">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight text-foreground">Buku Besar Penerimaan Hari Ini</h2>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">{idText("Buku Besar Penerimaan Hari Ini")}</h2>
             <span className="text-xs text-muted-foreground font-mono">
-              {pendingCount} menunggu · {approvedToday} disetujui
+              {idText(pendingCount)} {idText("menunggu ·")} {idText(approvedToday)} {idText("disetujui")}
             </span>
           </div>
           <DataTable
             columns={columns}
             data={records}
             rowKey={(row) => row.id}
-            emptyTitle="Belum ada rekaman panen hari ini."
-            emptyDescription="Pilih petani dan lakukan penimbangan panen pertama."
+            emptyTitle={idText("Belum ada rekaman panen hari ini.")}
+            emptyDescription={idText("Pilih petani dan lakukan penimbangan panen pertama.")}
           />
         </div>
       </div>
@@ -1131,7 +1186,7 @@ export default function WeighingPage() {
         isOpen={cameraModalOpen}
         onClose={closeCameraModal}
         onScan={handleVerifyScannedCode}
-        title="Scan Farmer ID Card · Station 01 Reception"
+        title={idText("Scan Farmer ID Card · Station 01 Reception")}
         subtitle="Align the QR code or 1D barcode on the farmer ID card within the camera viewport."
         manualPlaceholder="Scan barcode or enter farmer ID / name..."
       />

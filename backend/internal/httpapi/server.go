@@ -58,16 +58,17 @@ type printerSettings struct {
 	Protocol     string `json:"protocol"`
 }
 type printJob struct {
-	Type       string  `json:"type"`
-	Code       string  `json:"code"`
-	FarmerName string  `json:"farmerName"`
-	FarmerID   string  `json:"farmerId"`
-	Grade      string  `json:"grade"`
-	WeightKg   float64 `json:"weightKg"`
-	Date       string  `json:"date"`
-	Time       string  `json:"time"`
-	Commodity  string  `json:"commodity"`
-	Station    string  `json:"stationName"`
+	Type         string            `json:"type"`
+	Code         string            `json:"code"`
+	FarmerName   string            `json:"farmerName"`
+	FarmerID     string            `json:"farmerId"`
+	Grade        string            `json:"grade"`
+	WeightKg     float64           `json:"weightKg"`
+	Date         string            `json:"date"`
+	Time         string            `json:"time"`
+	Commodity    string            `json:"commodity"`
+	Station      string            `json:"stationName"`
+	ReceiptItems []receptionWaring `json:"receiptItems,omitempty"`
 }
 type response struct {
 	Success bool      `json:"success"`
@@ -964,8 +965,12 @@ func (s *server) farmers(w http.ResponseWriter, r *http.Request, p []string) {
 	write(w, map[string]any{"success": true, "data": map[string]any{"id": id, "code": code, "name": name, "village": village, "createdAt": created}})
 }
 func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
+	if len(p) > 0 && p[0] == "batches" {
+		s.receptionBatches(w, r, p[1:])
+		return
+	}
 	if r.Method == "GET" && len(p) == 0 {
-		rows, err := s.db.Query(r.Context(), `SELECT w.id,w.code,f.code,f.name,w."grossWeightKg",w."tareWeightKg",w."netWeightKg",w.status,w."createdAt" FROM warings w JOIN farmers f ON f.id=w."farmerId" ORDER BY w."createdAt" DESC`)
+		rows, err := s.db.Query(r.Context(), `SELECT w.id,w.code,f.code,f.name,w."grossWeightKg",w."tareWeightKg",w."netWeightKg",w.status,w."createdAt",w."receptionBatchId" FROM warings w JOIN farmers f ON f.id=w."farmerId" ORDER BY w."createdAt" DESC`)
 		if err != nil {
 			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to list warings")
 			return
@@ -975,9 +980,10 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 		for rows.Next() {
 			var id, code, fc, fn, status string
 			var gross, tare, net float64
+			var receptionBatchID *string
 			var at time.Time
-			if rows.Scan(&id, &code, &fc, &fn, &gross, &tare, &net, &status, &at) == nil {
-				out = append(out, map[string]any{"id": id, "code": code, "farmerCode": fc, "farmerId": fc, "farmerName": fn, "grossWeightKg": gross, "tareWeightKg": tare, "netWeightKg": net, "status": status, "createdAt": at})
+			if rows.Scan(&id, &code, &fc, &fn, &gross, &tare, &net, &status, &at, &receptionBatchID) == nil {
+				out = append(out, map[string]any{"id": id, "code": code, "farmerCode": fc, "farmerId": fc, "farmerName": fn, "grossWeightKg": gross, "tareWeightKg": tare, "netWeightKg": net, "status": status, "createdAt": at, "receptionBatchId": receptionBatchID})
 			}
 		}
 		write(w, map[string]any{"success": true, "data": out})
@@ -1033,7 +1039,12 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 		}
 		var id string
 		now := time.Now()
-		war := fmt.Sprintf("WRG-%s-%04d", now.Format("20060102"), now.Unix()%10000)
+		var sequence int64
+		if err := s.db.QueryRow(r.Context(), `SELECT nextval('waring_code_seq')`).Scan(&sequence); err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to allocate waring code")
+			return
+		}
+		war := fmt.Sprintf("WRG-%s-%06d", now.Format("20060102"), sequence)
 		err = s.db.QueryRow(r.Context(), `INSERT INTO warings(id,code,"farmerId","commodityId","grossWeightKg","tareWeightKg","netWeightKg",status,"createdAt") VALUES(gen_random_uuid(),$1,$2,$3,$4,$5,GREATEST(0::double precision,$4::double precision-$5::double precision),'PENDING',NOW()) RETURNING id::text`, war, fid, cid, v.Gross, v.Tare).Scan(&id)
 		if err != nil {
 			slog.Error("failed to insert waring", "error", err)
@@ -1621,7 +1632,10 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 			out = appendText(out, "--------------------------------\n")
 		}
 
-		if job.WeightKg > 0 && job.Type != "pallet" {
+		if job.Type == "receipt" && len(job.ReceiptItems) > 0 {
+			out = appendText(out, formatReceptionReceipt(job.ReceiptItems))
+		}
+		if job.WeightKg > 0 && job.Type != "pallet" && len(job.ReceiptItems) == 0 {
 			out = appendText(out, fmt.Sprintf("%.3f kg\n", job.WeightKg))
 		}
 		out = appendText(out, job.Code+"\n")

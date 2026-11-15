@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { idText } from '@/lib/indonesian'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Badge from '../shared/Badge'
 import Button from '../shared/Button'
 import { Field, Input } from '../shared/Form'
@@ -6,6 +7,7 @@ import Icon from '../shared/Icon'
 import { useToast } from '../feedback/Toast'
 import { formatWeight } from '../../lib/utils'
 import { api } from '../../services/api'
+import { ReceptionWeightCapture } from '../../lib/receptionSession'
 
 /**
  * Weight input with Auto (live Modbus TCP scale) and Manual modes.
@@ -37,6 +39,8 @@ interface ScaleWeightInputProps {
   capacityKg?: number
   maxAllowedWeightKg?: number
   allowZero?: boolean
+  autoFill?: boolean
+  autoFillPaused?: boolean
 }
 
 function readMode(): Mode {
@@ -78,6 +82,8 @@ export default function ScaleWeightInput({
   capacityKg = 150,
   maxAllowedWeightKg,
   allowZero = false,
+  autoFill = false,
+  autoFillPaused = false,
 }: ScaleWeightInputProps) {
   const [mode, setMode] = useState<Mode>(readMode)
   const [connection, setConnection] = useState<Connection>('reconnecting')
@@ -88,6 +94,15 @@ export default function ScaleWeightInput({
   const [captured, setCaptured] = useState(false)
   const [tarePending, setTarePending] = useState(false)
   const toast = useToast()
+  const automatic = useRef(new ReceptionWeightCapture())
+  const [waitingForEmpty, setWaitingForEmpty] = useState(true)
+  const current = useRef({ value, onChange, capacityKg, autoFillPaused })
+  current.current = { value, onChange, capacityKg, autoFillPaused }
+
+  useEffect(() => {
+    automatic.current = new ReceptionWeightCapture()
+    setWaitingForEmpty(true)
+  }, [mode, autoFillPaused])
 
   /* Persist the chosen mode per station (session-level preference). */
   useEffect(() => {
@@ -124,10 +139,26 @@ export default function ScaleWeightInput({
           setIsStable(telemetry.isStable !== undefined ? Boolean(telemetry.isStable) : true)
           setConnection(telemetry.online !== false ? 'connected' : 'reconnecting')
           setLastReadingAt(new Date(telemetry.timestamp || Date.now()))
+          if (autoFill && !current.current.autoFillPaused && !current.current.value) {
+            let tolerance = 20
+            try {
+              tolerance = Number(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || '{}')?.intake?.stabilityGrams) || 20
+            } catch { /* Use the Reception stability default. */ }
+            const filled = automatic.current.accept({ ...telemetry, weightKg: liveWeight }, current.current.capacityKg, tolerance)
+            setWaitingForEmpty(automatic.current.waitingForEmpty)
+            if (filled !== null) {
+              current.current.onChange(String(filled))
+              setCaptured(true)
+            }
+          }
           return true
         }
+        automatic.current.disconnect()
+        setWaitingForEmpty(true)
         return false
       } catch {
+        automatic.current.disconnect()
+        if (isSubscribed) setWaitingForEmpty(true)
         if (isSubscribed) {
           setConnection('reconnecting')
         }
@@ -152,13 +183,13 @@ export default function ScaleWeightInput({
       isSubscribed = false
       window.clearTimeout(timerId)
     }
-  }, [mode, stationId])
+  }, [mode, stationId, autoFill])
 
   const readingSource = readReadingSource(stationId)
   const reading = readingSource === 'stable' ? stableReading : instantaneousReading
   const numericValue = Number(value)
 
-  // A live reading becomes a form value only after explicit capture.
+  // Other stations use explicit capture; Reception can fill the field automatically.
   useEffect(() => {
     if (!value) setCaptured(false)
   }, [value])
@@ -228,7 +259,7 @@ export default function ScaleWeightInput({
 
   return (
     <div className="stack-md">
-      <div className="radio-row" role="group" aria-label="Weight input mode">
+      <div className="radio-row" role="group" aria-label={idText("Weight input mode")}>
         <label className={`radio-card ${mode === 'auto' ? 'is-active' : ''}`}>
           <input
             type="radio"
@@ -238,7 +269,7 @@ export default function ScaleWeightInput({
             onChange={() => setMode('auto')}
           />
           <Icon name="flash" size={15} />
-          Live Scale
+          {idText("Live Scale")}
         </label>
         <label className={`radio-card ${mode === 'manual' ? 'is-active' : ''}`}>
           <input
@@ -249,7 +280,7 @@ export default function ScaleWeightInput({
             onChange={() => setMode('manual')}
           />
           <Icon name="edit" size={15} />
-          Manual Keypad
+          {idText("Manual Keypad")}
         </label>
       </div>
 
@@ -259,11 +290,11 @@ export default function ScaleWeightInput({
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
                 <p className="t-caption" style={{ opacity: 0.75 }}>
-                  Live Weight · Station {stationId}
+                  {idText("Live Weight · Station")} {idText(stationId)}
                 </p>
                 <p className="scale-value">
-                  {connection === 'connected' ? formatKg(reading) : '—'}
-                  <span className="scale-unit">kg</span>
+                  {idText(connection === 'connected' ? formatKg(reading) : '—')}
+                  <span className="scale-unit">{idText("kg")}</span>
                 </p>
               </div>
               <div className="stack stack-xs" style={{ alignItems: 'flex-end' }}>
@@ -272,22 +303,22 @@ export default function ScaleWeightInput({
                   dot
                   live={connection === 'connected'}
                 >
-                  {connection === 'connected' ? 'Scale Online' : 'Scale Offline'}
+                  {idText(connection === 'connected' ? 'Scale Online' : 'Scale Offline')}
                 </Badge>
                 <span className="t-caption mono font-bold" style={{ opacity: 0.85 }}>
-                  Station {stationId}
+                  {idText("Station")} {idText(stationId)}
                 </span>
                 <span className="t-caption" style={{ opacity: 0.7 }}>
-                  Updated {lastReadingAt.toLocaleTimeString('en-GB')}
+                  {idText("Updated")} {idText(lastReadingAt.toLocaleTimeString('id-ID'))}
                 </span>
               </div>
             </div>
             <div className="scale-meta">
               <span className="flex items-center gap-1">
                 <Icon name={isStable ? 'check-circle' : 'refresh'} size={13} />
-                {connection !== 'connected' ? 'Waiting for scale' : isStable ? 'Weight Stable' : 'Reading settling…'}
+                {idText(connection !== 'connected' ? 'Waiting for scale' : isStable ? 'Weight Stable' : 'Reading settling…')}
               </span>
-              <span>Maximum Load {capacityKg} kg</span>
+              <span>{idText("Maximum Load")} {idText(capacityKg)} {idText("kg")}</span>
             </div>
           </div>
 
@@ -295,12 +326,12 @@ export default function ScaleWeightInput({
             {targetKg !== undefined && (
               <div className="stack-xs">
                 <div className="scale-target">
-                  Target <strong>{targetKg} kg</strong>
+                  {idText("Target")} <strong>{idText(targetKg)} {idText("kg")}</strong>
                   <span>
-                    tolerance ±{toleranceKg * 1000} g
+                    {idText("tolerance ±")}{idText(toleranceKg * 1000)} {idText("g")}
                   </span>
                   {remaining !== null && remaining > 0 && (
-                    <span className="mono">· remaining {remaining} kg</span>
+                    <span className="mono">{idText("· remaining")} {idText(remaining)} {idText("kg")}</span>
                   )}
                 </div>
                 <div className="progress-track">
@@ -314,12 +345,12 @@ export default function ScaleWeightInput({
 
             {readingExceedsMax && (
               <div className="p-2.5 bg-destructive/10 border border-destructive/30 rounded text-xs text-destructive font-semibold">
-                Scale reading ({formatKg(reading)} kg) exceeds remaining pallet stock ({formatKg(maxAllowedWeightKg)} kg).
+                {idText("Scale reading (")}{idText(formatKg(reading))} {idText("kg) exceeds remaining pallet stock (")}{idText(formatKg(maxAllowedWeightKg))} {idText("kg).")}
               </div>
             )}
 
             <div className="flex gap-2 flex-wrap items-center">
-              <Button
+              {!autoFill && <Button
                 variant="primary"
                 icon="check"
                 disabled={
@@ -333,37 +364,37 @@ export default function ScaleWeightInput({
                 }
                 onClick={useReading}
                 title={
-                  readingExceedsMax
+                  idText(readingExceedsMax
                     ? `Cannot capture: Scale reading exceeds pallet stock (${formatKg(maxAllowedWeightKg)} kg)`
-                    : undefined
+                    : undefined)
                 }
               >
-                Capture Weight
-              </Button>
-              <Button
+                {idText("Capture Weight")}
+              </Button>}
+              {!autoFill && <Button
                 variant="outline"
                 icon="scale"
                 disabled={tarePending || connection !== 'connected'}
                 onClick={handleTare}
               >
-                Tare (Offset)
-              </Button>
+                {idText("Tare (Offset)")}
+              </Button>}
               <Button
                 variant="ghost"
                 icon="refresh"
                 disabled={connection !== 'connected'}
                 onClick={handleZero}
               >
-                Zero
+                {idText("Zero")}
               </Button>
             </div>
           </div>
         </div>
       ) : (
         <Field
-          label={label}
+          label={idText(label)}
           htmlFor={id}
-          hint={hint ?? 'Type the weight shown on the scale indicator.'}
+          hint={idText(hint ?? 'Type the weight shown on the scale indicator.')}
           error={effectiveError}
         >
           <Input
@@ -376,7 +407,7 @@ export default function ScaleWeightInput({
             className="input-lg"
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            placeholder="0"
+            placeholder={idText("0")}
             invalid={invalid}
             required
           />
@@ -385,9 +416,9 @@ export default function ScaleWeightInput({
 
       {mode === 'auto' && (
         <Field
-          label={label ? `Captured ${label}` : 'Captured Weight (kg)'}
+          label={idText(label ? `Captured ${label}` : 'Captured Weight (kg)')}
           htmlFor={id}
-          hint={captured || numericValue > 0 ? 'This weight will be saved. Capture again to update it.' : 'Wait for a stable reading, then select Capture Weight.'}
+          hint={autoFill ? (autoFillPaused ? 'Paused' : value ? 'Ready to assign.' : waitingForEmpty ? 'Clear the scale.' : 'Waiting for stable weight.') : idText(captured || numericValue > 0 ? 'This weight will be saved. Capture again to update it.' : 'Wait for a stable reading, then select Capture Weight.')}
           error={effectiveError}
         >
           <Input
@@ -400,7 +431,7 @@ export default function ScaleWeightInput({
             className="input-lg"
             value={value}
             readOnly
-            placeholder="0"
+            placeholder={idText("0")}
             invalid={invalid}
           />
         </Field>
