@@ -34,27 +34,32 @@ note right
   Identifikasi awal sebelum penimbangan.
 end note
 
-|Konsol 01: Penerimaan (Timbangan 01)|
-label timbang_intake
-:Timbang Bruto Hasil Panen (Timbangan Intake RS485)\n& Masukkan Panen ke Karung Waring;
-if (Berat Sesuai?) then (Tidak)
-  :Koreksi / Timbang Ulang;
-  goto timbang_intake
-else (Ya)
-  :Verifikasi & Approve Berat Intake;
-endif
+repeat
+  |Konsol 01: Penerimaan (Timbangan 01)|
+  :Bobot Stabil Mengisi Field Otomatis\natau Operator Memasukkan Bobot Manual;
+  :Periksa Bobot dan Pilih Next Waring atau Finish;
+  |Sistem (Otomasi Buffer & Silsilah)|
+  :Tambahkan Bobot ke Draft Sesi Petani;
+  note right
+    Next Waring: tunggu timbangan kosong,
+    lalu isi bobot waring berikutnya.
+    Finish dapat menyelesaikan daftar
+    tanpa menambahkan field kosong.
+  end note
+repeat while (Next Waring?) is (Ya) not (Finish)
 
-|Sistem (Otomasi Buffer & Silsilah)|
-:Approve Resmi & Generate Waring ID (WRG-…);
-:Otomatis Masukkan Waring ke Antrean Buffer FIFO;
+:Simpan Seluruh Reception dalam Satu Transaksi\n& Generate Waring ID (WRG-...) per Waring;
+:Otomatis Masukkan Seluruh Waring ke Antrean Buffer FIFO;
 note right
-  Transisi Pasif Otomatis:
-  Status Waring: BUFFER_WAITING.
-  Waring langsung siap ditarik di Konsol 02.
+  Draft belum dihitung sebagai setoran.
+  Setelah Finish, status database: PENDING.
+  Waring langsung tersedia untuk Sorting.
+  Tara: 1,2 kg per waring.
 end note
 
 |Konsol 01: Penerimaan (Timbangan 01)|
-:Cetak Struk Bukti Timbang Petani (Thermal)\n& Cetak Label QR Waring (WRG-…);
+:Cetak Satu Receipt Rekap Seluruh Sesi\n& Satu Label QR untuk Setiap Waring;
+:Potong Kertas Setelah Receipt dan Setiap Label;
 :Tempel Label QR pada Fisik Waring;
 
 |Petani|
@@ -84,15 +89,17 @@ end note
 :Kunci Relasi Silsilah & Siap Diproses di Konsol 03 (Packaging);
 
 |Konsol 03: Pengepakan & Dispatch (Timbangan 03)|
-if (Target Kemasan?) then (Retail Pouch 1 kg)
-  :Timbang Presisi Pouch 1 kg di Timbangan 03 (±5g);
-  :Cetak Label Produksi (QR GS1 Digital Link + EAN-13);
-  :Tempel Label pada Pouch 1 kg;
-else (Kemasan Ekspor / Bulk)
-  :Timbang Kemasan Kardus/Karung (10 kg / 50 kg);
-  :Cetak Label Ekspor (Barcode GS1 ITF-14 & QR Ekspor);
-  :Tempel Label pada Kemasan Ekspor;
-endif
+:Select box size (1 / 5 / 10 kg);
+:Resolve washed/unwashed product from source Sorting batch;
+:Validate catalog GTIN, scale capacity, stock, and weight tolerance;
+note right
+  ProductList.xlsx supplies six products.
+  Only washed 10 kg GTIN 8994477090010 is currently valid.
+  Other GTINs require official correction before packaging.
+end note
+:Save package with immutable product snapshot;
+:Print Operational Code128 + GS1 EAN-13 (no QR);
+:Attach label to box;
 
 |Sistem (Otomasi Buffer & Silsilah)|
 :Otomatis Tambah Saldo Stok Gudang Barang Jadi per Grade;
@@ -103,7 +110,7 @@ end note
 
 |Konsol 03: Pengepakan & Dispatch (Timbangan 03)|
 :Permintaan Order / Manifest Muat Truk Pengiriman;
-:Scan Verifikasi Setiap Barcode Kemasan Muatan Truk (ITF-14 / QR);
+:Scan Operational Code128 for each package on the loading manifest;
 :Konfirmasi Muat Barang ke Bak Truk;
 
 |Sistem (Otomasi Buffer & Silsilah)|
@@ -124,10 +131,10 @@ Sistem tata kelola pengemasan kentang SmartGeulis menyederhanakan alur operasion
 
 ### 1. Konsol 01: Penerimaan & Waring Intake — *Area Intake (Timbangan 01)*
 - **Perangkat Keras**: Timbangan Lantai RS485 kapasitas 150 kg, barcode scanner, dan printer thermal IW-J300H 80 mm Ethernet untuk Reception.
-- **Fungsi**: Operator memindai ID Petani (`FRM-...`), menimbang bruto hasil panen kentang, dan memasukkan panen ke karung waring. Operator memeriksa bobot stabil dan menekan persetujuan (*Approval*).
+- **Fungsi**: Operator memindai ID petani sekali, lalu menimbang setiap waring. Bobot stabil otomatis mengisi field; input manual tetap tersedia. **Next Waring** menambahkan bobot ke draft dan menyiapkan waring berikutnya. **Finish** menambahkan bobot terakhir yang valid, menyimpan seluruh sesi, dan mencetak.
 - **Otomasi Sistem**:
-  1. Menerbitkan kode waring unik (`WRG-...`) dan otomatis memasukkan waring ke dalam antrean Gudang Penyangga FIFO (*Buffer Waiting Queue*).
-  2. Mencetak **Struk Bukti Timbang Petani** (tanda terima fisik resmi untuk dibawa pulang petani) dan **Label QR Waring** untuk ditempelkan pada karung waring.
+  1. Menyimpan sesi secara atomik dan idempoten saat **Finish**, menerbitkan kode `WRG-...` unik per waring, dan memasukkan waring ke antrean FIFO. Draft belum dihitung pada dashboard petani.
+  2. Mencetak satu receipt rekap bruto/tara/neto seluruh sesi dan satu label QR per waring berisi identitas petani serta berat bruto. Kertas dipotong setelah receipt dan setiap label. Tara tetap 1,2 kg per waring.
 - **Keunggulan**: Memangkas waktu tunggu petani di gerbang penerimaan (*zero truck queue*) dan mengunci identitas waring sejak hulu tanpa perlu pencatatan manual.
 
 ### 2. Konsol 02: Sortir, Sizing, Cuci & Grading Mutu — *Area Sortir & Grading (Timbangan 02)*
@@ -144,9 +151,9 @@ Sistem tata kelola pengemasan kentang SmartGeulis menyederhanakan alur operasion
 ### 3. Konsol 03: Pengepakan, Gudang Jadi & Dispatch — *Area Pengepakan & Pengiriman (Timbangan 03)*
 - **Perangkat Keras**: Timbangan Meja Presisi RS485 kapasitas 30 kg, printer thermal IW-J300H 80 mm Ethernet untuk Packaging, dan wireless barcode scanner pengiriman.
 - **Fungsi Terpadu**:
-  1. *Pengepakan Retail Pouch 1 kg*: Ditimbang presisi dengan toleransi ketat $\pm$5 g pada target 1.000 g, lalu dicetak **Label Produksi: QR GS1 Digital Link + Barcode EAN-13**.
-  2. *Pengepakan Ekspor / Bulk*: Ditimbang pada target 10 kg; opsi 50 kg tersedia jika kapasitas timbangan Packaging minimal 50 kg. Kemasan diberi **Label Ekspor: Barcode GS1 ITF-14 & QR Ekspor**.
-  3. *Penanganan Sisa Palet & Pelepasan (*Close & Release*)*: Jika sisa stok palet lebih kecil dari target kemasan saat ini ($\ge 1\text{ kg}$), operator disarankan menurunkan ukuran kemasan (mis. $50\text{ kg} \rightarrow 10\text{ kg} / 1\text{ kg}$). Sisa $\le 0{,}05\text{ kg}$ dilepas otomatis sebagai toleransi penimbangan, sedangkan sisa di bawah $1\text{ kg}$ (atau sisa yang tidak dikemas) diselesaikan melalui **Close & Release Pallet** dengan pencatatan disposisi audit (`SHRINKAGE_LOSS`, `LOOSE_RESERVE`, `CULL_REJECT`, `SAMPLE_USE`) agar palet fisik langsung kembali berstatus `AVAILABLE` untuk digunakan ulang di Konsol 02.
+  1. **Box Packaging**: 1, 5, and 10 kg boxes. Tolerance: ±5 g for 1 kg; ±50 g for 5/10 kg. Washed/unwashed follows the source Sorting batch.
+  2. **Packaging Labels**: Exactly two symbols: Operational Code128 (unique package code) and GS1 EAN-13 (catalog GTIN). No QR. Invalid GTINs block saving and printing before inventory changes. Reprints use the saved product snapshot; historical packages without one cannot print a GS1 label.
+  3. *Penanganan Sisa Palet & Pelepasan (*Close & Release*)*: Jika sisa stok palet lebih kecil dari target kemasan saat ini ($\ge 1\text{ kg}$), operator disarankan menurunkan ukuran kemasan (mis. $10\text{ kg} \rightarrow 5\text{ kg} / 1\text{ kg}$). Sisa $\le 0{,}05\text{ kg}$ dilepas otomatis sebagai toleransi penimbangan, sedangkan sisa di bawah $1\text{ kg}$ (atau sisa yang tidak dikemas) diselesaikan melalui **Close & Release Pallet** dengan pencatatan disposisi audit (`SHRINKAGE_LOSS`, `LOOSE_RESERVE`, `CULL_REJECT`, `SAMPLE_USE`) agar palet fisik langsung kembali berstatus `AVAILABLE` untuk digunakan ulang di Konsol 02.
   4. *Otomasi Saldo Gudang Jadi*: Kemasan yang selesai diberi label otomatis menambah saldo inventori barang jadi per grade (*Finished Goods Ledger*).
   5. *Verifikasi Muat Truk (*Dispatch Scan*)*: Operator memilih grade dan jumlah unit untuk manifest, lalu memindai setiap kode kemasan yang dialokasikan. Keberangkatan dapat dikonfirmasi setelah seluruh unit terverifikasi; stok gudang berkurang saat armada diberangkatkan.
 - **Keunggulan**: Mengintegrasikan proses pengemasan presisi dengan pencatatan inventori barang jadi dan kepatuhan manifest logistik ekspor tanpa disparitas data.
@@ -162,9 +169,8 @@ Sistem tata kelola pengemasan kentang SmartGeulis menyederhanakan alur operasion
 | Waring Intake | QR Code / Barcode | Internal | Identitas waring intake di area penerimaan & buffer (`WRG-YYYYMMDD-SEQ`) |
 | Palet Sortir | QR Code | Internal | Wadah agregasi hasil sortir manual (`PLT-YYYYMMDD-SEQ`) |
 | Palet Grade Fisik | QR Code Tertempel | Internal | QR permanen pada palet grade (`PLT-GRD-A-...`), operator scan & tautkan (tanpa cetak) |
-| Pouch Retail 1 kg | QR GS1 Digital Link | GS1 Internasional | Traceability publik via HTTPS smartphone & decode scanner internal |
-| Pouch Retail 1 kg | EAN-13 | GS1 Ritel | Kode identifikasi produk ritel/supermarket |
-| Kemasan Ekspor 10/50 kg | ITF-14 | GS1 Logistik | Identifikasi kemasan pengiriman logistik ekspor |
+| Box 1/5/10 kg | Code128 | Internal | Unique package code for operational scanning |
+| Box 1/5/10 kg | EAN-13 | GS1 | Product GTIN from ProductList.xlsx; validated check digit |
 
 ---
 
@@ -219,7 +225,7 @@ rectangle "**[ FIELD LEVEL ]**\nPerangkat Lapangan, Sensor, & Aktuator IoT" as F
 
   rectangle "Area Pengepakan (Packaging)" as area_pack #FFCDD2 {
     component [Timbangan Pouch RS485\n(Target 1 kg / Bulk)] as scale_pouch
-    component [Printer Label Produksi & Ekspor\n(QR GS1 Digital Link / ITF-14)] as print_pack
+    component [Printer Label Produksi & Ekspor\n(Operational Code128 / GS1 EAN-13)] as print_pack
   }
 
   rectangle "Warehouse — Zona Barang Jadi" as area_wh_fg #FFCDD2 {
@@ -370,9 +376,9 @@ Sistem menyederhanakan hak akses menjadi **3 peran pengguna terautentikasi** dit
 | Role | Kategori | Hak Akses & Cakupan Antarmuka |
 |------|----------|-------------------------------|
 | **ADMIN** | Akun Internal | Akses penuh (*Full Access*) untuk konfigurasi master data (komoditas, grade, packaging), manajemen pengguna & petani, audit trail sistem, pengaturan harga, serta analitik yield pabrik. |
-| **OPERATOR** | Akun Internal | **Akun Operasional Tunggal (*Unified Operator Account*)**.<br>Satu akun operator memiliki akses ke seluruh modul lapangan melalui **Menu Pemilih Stasiun Kerja (*Workstation Selector*)**:<br>1. *Penerimaan (Intake)*: Scan petani, timbang bruto waring, approve berat, cetak struk nota & label waring.<br>2. *Gudang Penyangga (Waiting Buffer)*: Kontrol antrean waring mentah (FIFO).<br>3. *Sortir Manual & Pairing*: Pembersihan kotoran fisik kasar, masukkan ke palet ber-QR, dan scan pairing waring $\leftrightarrow$ palet.<br>4. *Mesin Sortir & Cuci*: Monitoring alat sortir mekanis dan status pencucian.<br>5. *Grading & Timbang Susut*: Timbang net per grade (A/B/C/Reject), visualisasi kalkulasi penyusutan real-time.<br>6. *Pengepakan*: Timbang pouch 1 kg / kardus ekspor, cetak label GS1 Digital Link & ITF-14.<br>7. *Gudang Barang Jadi & Dispatch*: Manajemen stok produk jadi dan scan verifikasi muatan truk. |
+| **OPERATOR** | Akun Internal | **Akun Operasional Tunggal (*Unified Operator Account*)**.<br>Satu akun operator memiliki akses ke seluruh modul lapangan melalui **Menu Pemilih Stasiun Kerja (*Workstation Selector*)**:<br>1. *Penerimaan (Intake)*: Scan petani, timbang bruto waring, approve berat, cetak struk nota & label waring.<br>2. *Gudang Penyangga (Waiting Buffer)*: Kontrol antrean waring mentah (FIFO).<br>3. *Sortir Manual & Pairing*: Pembersihan kotoran fisik kasar, masukkan ke palet ber-QR, dan scan pairing waring $\leftrightarrow$ palet.<br>4. *Mesin Sortir & Cuci*: Monitoring alat sortir mekanis dan status pencucian.<br>5. *Grading & Timbang Susut*: Timbang net per grade (A/B/C/Reject), visualisasi kalkulasi penyusutan real-time.<br>6. *Pengepakan*: Weigh 1/5/10 kg boxes and print Operational Code128 + GS1 EAN-13 without QR.<br>7. *Gudang Barang Jadi & Dispatch*: Manajemen stok produk jadi dan scan verifikasi muatan truk. |
 | **FARMER** (Petani) | Akun Eksternal | Portal mandiri petani untuk melihat riwayat setoran waring, status timbangan intake, nota digital, serta transparansi laporan grading dan persentase penyusutan. |
-| **KONSUMEN / BUYER** | Publik (Tanpa Login) | Memindai QR Code GS1 Digital Link pada kemasan produk untuk membuka halaman penelusuran (*traceability*) publik melalui peramban web smartphone. |
+| **KONSUMEN / BUYER** | Publik (Tanpa Login) | Packaging labels contain no public QR. The product GTIN identifies the catalog item; the unique operational code identifies each package. |
 
 ---
 
@@ -495,8 +501,8 @@ entity "Pouch" as pouch {
   --
   *palletId : UUID <<FK>>
   *gradeId : UUID <<FK>>
-  *qrCode : VARCHAR <<UNIQUE>> <<GS1 Digital Link URI>>
-  *ean13 : VARCHAR <<UNIQUE>>
+  *operationalCode : VARCHAR <<UNIQUE>> <<Code128>>
+  *ean13 : VARCHAR <<Product GTIN; shared by product>>
   *weightKg : FLOAT <<DEFAULT: 1.0>>
   *commodityId : UUID <<FK>>
   createdAt : TIMESTAMP
@@ -550,7 +556,8 @@ entity "PackagingUnit" as pkg_unit {
   *id : UUID <<PK>>
   --
   *sizeId : UUID <<FK>>
-  *barcode : VARCHAR <<UNIQUE>> <<ITF-14 / GS1-128>>
+  *barcode : VARCHAR <<UNIQUE>> <<Operational Code128>>
+  productSnapshot : JSON <<GTIN, product, box size, wash status>>
   batchNo : VARCHAR
   totalWeight : FLOAT
   *commodityId : UUID <<FK>>
@@ -649,14 +656,14 @@ Semua entitas fisik lapangan menggunakan standar identifier berikut:
 4. **Grade Label (`GRD-{PALLET_CODE}-{GRADE}`)**:
    - Contoh: `GRD-PLT-20261025-0001-A`
    - Penanda fisik wadah hasil grading per mutu.
-5. **Pouch QR GS1 Digital Link (`https://{domain}/01/{GTIN-13}/10/{LOT}/21/{SERIAL}`)**:
-   - Contoh: `https://trace.smartgeulis.id/01/899001000001/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001`
-   - AI 01: GTIN-13 (EAN-13 produk ritel)
-   - AI 10: Batch/Lot (Pallet Code + Grade)
-   - AI 21: Serial Pouch Unik
-   - Dapat dipindai scanner industri (decode GS1 AI key) dan smartphone publik (membuka halaman web traceability).
-6. **Packaging Barcode Ekspor (`ITF-14`)**:
-   - Standar 14 digit GS1 untuk kemasan logistik ekspor (kardus 10 kg / karung 50 kg).
+5. **Operational Packaging Barcode (Code128)**:
+   - Example: `EXP-20261115-0001`. Unique per box and used for dispatch verification.
+6. **GS1 Product Barcode (EAN-13)**:
+   - Product GTIN is copied verbatim from `docs/ProductList.xlsx` and validated before saving.
+   - Six products: washed/unwashed boxes in 1, 5, and 10 kg sizes. Only `001` (`8994477090010`, washed 10 kg) currently passes the check digit.
+   - Correct invalid official GTINs through a catalog migration; never invent or silently repair identifiers.
+   - `package_units.productSnapshot` preserves product number, GTIN, brand, product name, box size, and wash status. Reprints do not derive identity from reused pallets or edited catalog rows.
+   - Packaging uses no QR. Reception, pallet, and farmer identification remain unchanged.
 
 ---
 
@@ -665,13 +672,13 @@ Semua entitas fisik lapangan menggunakan standar identifier berikut:
 ### A. Sasaran MVP
 - **Jangka Waktu**: 4--6 minggu menuju go-live operasional packhouse.
 - **Komoditas**: Kentang tunggal (Grade A, B, C, Reject).
-- **Tujuan Utama**: Digitalisasi penuh penerimaan waring, eliminasi sengketa susut melalui penimbangan transparan, validasi alur sortir & pairing palet, serta penerbitan label kemasan GS1 Digital Link dan ITF-14.
+- **Tujuan Utama**: Digitalisasi penuh penerimaan waring, eliminasi sengketa susut melalui penimbangan transparan, validasi alur sortir & pairing palet, serta penerbitan label kemasan Operational Code128 dan GS1 EAN-13.
 
 ### B. Matriks Ruang Lingkup (In-Scope vs. Out-of-Scope)
 
 | Kategori | Rincian Fitur & Komponen |
 |----------|--------------------------|
-| **In-Scope (Fitur Inti MVP)** | 1. **Penerimaan Waring**: Scan ID petani (`FRM`), timbang bruto RS485, approve berat, cetak struk nota tanda terima thermal, dan cetak label QR waring (`WRG`).<br>2. **Gudang Penyangga (Waiting Buffer)**: Kontrol antrean waring FIFO di zona penyangga gudang.<br>3. **Sortir Manual & Pairing**: Pembersihan fisik kasar & scan pairing QR Waring $\leftrightarrow$ QR Palet (`PLT`) untuk menjaga silsilah asal petani.<br>4. **Mesin Sortir & Cuci**: Pencatatan parameter operasional sortir mekanis dan opsi pencucian/pengeringan kondisional.<br>5. **Grading & Timbang Susut**: Timbangan IoT RS485 per grade dan kalkulasi penyusutan otomatis ($\text{Susut} = \text{Bruto Waring} - \sum \text{Net Grade}$).<br>6. **Pengepakan Retail & Ekspor**: Timbangan presisi pouch 1 kg dengan cetak label QR GS1 Digital Link + EAN-13, serta kemasan ekspor 10/50 kg dengan barcode ITF-14.<br>7. **Gudang Barang Jadi & Dispatch**: Kontrol stok per grade dan scan verifikasi manifest pengiriman truk.<br>8. **RBAC 3-Role Terpadu**: Akun `ADMIN`, akun `OPERATOR` dengan menu modular pemilih stasiun kerja (*workstation selector*), akun `FARMER`, dan akses publik `KONSUMEN`.<br>9. **Infrastruktur Local-First**: Server Ubuntu lokal (Go REST API, PostgreSQL, dan Modbus TCP over Ethernet) dengan ketahanan jaringan saat internet padam. |
+| **In-Scope (Fitur Inti MVP)** | 1. **Penerimaan Waring**: Scan ID petani (`FRM`), timbang bruto RS485, approve berat, cetak struk nota tanda terima thermal, dan cetak label QR waring (`WRG`).<br>2. **Gudang Penyangga (Waiting Buffer)**: Kontrol antrean waring FIFO di zona penyangga gudang.<br>3. **Sortir Manual & Pairing**: Pembersihan fisik kasar & scan pairing QR Waring $\leftrightarrow$ QR Palet (`PLT`) untuk menjaga silsilah asal petani.<br>4. **Mesin Sortir & Cuci**: Pencatatan parameter operasional sortir mekanis dan opsi pencucian/pengeringan kondisional.<br>5. **Grading & Timbang Susut**: Timbangan IoT RS485 per grade dan kalkulasi penyusutan otomatis ($\text{Susut} = \text{Bruto Waring} - \sum \text{Net Grade}$).<br>6. **Pengepakan Retail & Ekspor**: Box 1/5/10 kg, immutable product snapshots, and two barcodes (Operational Code128 + GS1 EAN-13), without QR.<br>7. **Gudang Barang Jadi & Dispatch**: Kontrol stok per grade dan scan verifikasi manifest pengiriman truk.<br>8. **RBAC 3-Role Terpadu**: Akun `ADMIN`, akun `OPERATOR` dengan menu modular pemilih stasiun kerja (*workstation selector*), akun `FARMER`, dan akses publik `KONSUMEN`.<br>9. **Infrastruktur Local-First**: Server Ubuntu lokal (Go REST API, PostgreSQL, dan Modbus TCP over Ethernet) dengan ketahanan jaringan saat internet padam. |
 | **Out-of-Scope (Fase Lanjutan)** | 1. Komoditas multi-varietas (Tomat, Cabai) — skema DB ready, implementasi MVP fokus pada Kentang.<br>2. Pembayaran digital / e-wallet petani langsung dari aplikasi.<br>3. Computer Vision / AI automatic optical grading.<br>4. Aplikasi mobile native toko aplikasi (Play Store / App Store) — antarmuka berjalan responsif via peramban web/PWA.<br>5. Konveyor PLC otomatisasi robotik. |
 
 ### C. Milestone 6 Fase Implementasi
@@ -681,6 +688,6 @@ Semua entitas fisik lapangan menggunakan standar identifier berikut:
 3. **Fase 2 (Minggu 2--3)**: Layanan Waring Intake, driver Modbus RS485 timbangan penerimaan, dua printer thermal IW-J300H 80 mm melalui Ethernet untuk Reception dan Packaging, cetak struk nota thermal & label waring `WRG`, kontrol FIFO antrean buffer.
 4. **Fase 3 (Minggu 3--4)**: Antarmuka scan pairing Waring $\leftrightarrow$ Palet `PLT`, form parameter mesin sortir & cuci kondisional, validasi upstream traceability.
 5. **Fase 4 (Minggu 4)**: Driver timbangan IoT Area Grading, modul GradingRecord & Shrinkage Engine, dashboard visualisasi rendemen susut real-time.
-6. **Fase 5 (Minggu 4--5)**: Timbangan meja pouch 1 kg, generator QR GS1 Digital Link & barcode ekspor ITF-14, resolver publik `/traceability`.
+6. **Fase 5 (Minggu 4--5)**: Box Packaging 1/5/10 kg, Operational Code128 and GS1 EAN-13 labels, validated product catalog.
 7. **Fase 6 (Minggu 5--6)**: Gudang barang jadi, modul dispatch muatan truk, Socket.io real-time events, pengujian lapangan UAT.
 
