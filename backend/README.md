@@ -29,6 +29,10 @@ backend/
 
 Successful responses use `{ "success": true, "data": ... }`. Errors use `{ "success": false, "error": { "code": "...", "message": "..." } }`. All API messages are in English.
 
+`GET /api/v1/farmers/{idOrCode}/summary` returns the farmer's cumulative Reception net weight, including PENDING, APPROVED, and SORTED records. Sorting and Packaging do not reduce this total. Cancelled intake records are deleted and therefore excluded. The response includes `farmerId` (farmer code), `farmerName`, `totalDeposited` (kg), and `commodities` (`commodityId`, `commodityName`, `commodityCode`, `unit`, `totalKg`). A farmer without intake receives zero and an empty array; an unknown farmer receives `404 FARMER_NOT_FOUND`. The dashboard refreshes every five seconds while visible and on focus.
+
+Run `go test ./...` for backend tests. Set `DATABASE_URL` to a PostgreSQL test instance to include the farmer summary integration tests; their fixtures use session-local temporary tables.
+
 ## Docker Compose
 
 Compose starts `db-migrate` as a one-shot service before the backend. It applies pending migrations once and exits successfully; the backend starts only after that completion. Existing databases are detected and baselined safely.

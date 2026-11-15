@@ -79,6 +79,19 @@ export interface ApiResponse<T> {
   }
 }
 
+export interface FarmerSummary {
+  farmerId: string
+  farmerName: string
+  totalDeposited: number
+  commodities: {
+    commodityId: string
+    commodityName: string
+    commodityCode: string
+    unit: string
+    totalKg: number
+  }[]
+}
+
 export type CloseoutDisposition =
   | 'SHRINKAGE_LOSS'
   | 'CULL_REJECT'
@@ -186,8 +199,11 @@ export const api = {
       const res = await request<ApiResponse<any>>(`/farmers/${encodeURIComponent(idOrCode)}`)
       return res.data
     },
-    summary: async (idOrCode: string) => {
-      const res = await request<ApiResponse<any>>(`/farmers/${encodeURIComponent(idOrCode)}/summary`)
+    summary: async (idOrCode: string, signal?: AbortSignal) => {
+      const res = await request<ApiResponse<FarmerSummary>>(`/farmers/${encodeURIComponent(idOrCode)}/summary`, {
+        signal,
+        cache: 'no-store',
+      })
       return res.data
     },
   },

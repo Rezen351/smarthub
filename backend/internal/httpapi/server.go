@@ -925,6 +925,10 @@ func (s *server) farmers(w http.ResponseWriter, r *http.Request, p []string) {
 		fail(w, 405, "METHOD_NOT_ALLOWED", "Method not allowed")
 		return
 	}
+	if len(p) == 2 && p[1] == "summary" {
+		s.farmerSummary(w, r, p[0])
+		return
+	}
 	if len(p) == 0 {
 		rows, err := s.db.Query(r.Context(), `SELECT id,code,name,phone,village,address,"createdAt" FROM farmers ORDER BY code`)
 		if err != nil {
