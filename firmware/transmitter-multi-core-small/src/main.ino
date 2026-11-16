@@ -177,12 +177,14 @@ static void handleDisplaySerialCommand(char* line) {
 
   if (strcmp(command, "zero") == 0) {
     gShared.requestCommand(CMD_ZERO);
+    gLiveDisplayRefreshPending = true;
     Serial.println(F("OK: zero requested (ADC zero offset captured, tare cleared, offset persisted)"));
     return;
   }
 
   if (strcmp(command, "tare") == 0) {
     gShared.requestCommand(CMD_TARE);
+    gLiveDisplayRefreshPending = true;
     Serial.println(F("OK: tare requested"));
     return;
   }
@@ -471,7 +473,7 @@ static void networkTask(void* pvParameters) {
     gModbus.loop();
 
     if (gTestMode == HardwareTestMode::Normal && !gNetInfoPageActive &&
-        (gLiveDisplayRefreshPending || (millis() - lastDisplay) >= 500)) {
+        (gLiveDisplayRefreshPending || (millis() - lastDisplay) >= DISPLAY_REFRESH_MS)) {
       lastDisplay = millis();
       ScaleSnapshot s = gShared.getSnapshot();
       Gn6932Display::DisplayIndicators ind;

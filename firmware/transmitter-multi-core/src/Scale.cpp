@@ -52,9 +52,7 @@ void ScaleSensor::resetFilter() {
   _filterInitialized = false;
   _stableSince = 0;
   _stableSampleCount = 0;
-  _isLocked = false;
-  _lockedWeightG = 0.0f;
-  _motionUnlockMs = 0;
+  _lastQuantizedG = 0.0f;
   _aztOffsetG = 0.0f;
   _lastAztMs = 0;
   for (uint8_t i = 0; i < SCALE_MEDIAN_WINDOW; i++) {
@@ -118,6 +116,32 @@ float ScaleSensor::filterNoise() const {
   return maximum - minimum;
 }
 
+float ScaleSensor::quantizeWithHysteresis(float netG) {
+  if (fabsf(netG) < SCALE_ZERO_SNAP_G) {
+    _lastQuantizedG = 0.0f;
+    return 0.0f;
+  }
+
+  float candidate = roundf(netG / SCALE_DIVISION_G) * SCALE_DIVISION_G;
+  if (candidate != _lastQuantizedG) {
+    float midpoint = (_lastQuantizedG + candidate) * 0.5f;
+    if (candidate > _lastQuantizedG) {
+      if (netG >= midpoint + SCALE_HYSTERESIS_G) {
+        _lastQuantizedG = candidate;
+      }
+    } else {
+      if (netG <= midpoint - SCALE_HYSTERESIS_G) {
+        _lastQuantizedG = candidate;
+      }
+    }
+  }
+
+  if (fabsf(_lastQuantizedG) < (SCALE_DIVISION_G * 0.5f)) {
+    _lastQuantizedG = 0.0f;
+  }
+  return _lastQuantizedG;
+}
+
 void ScaleSensor::loop() {
   uint32_t now = millis();
   if ((now - _lastSample) < SCALE_SAMPLE_MS) return;
@@ -129,26 +153,26 @@ void ScaleSensor::loop() {
   while (_s->takeCommand(cmd, arg, arg2)) {
     switch (cmd) {
       case CMD_TARE: {
-        if (hxPoll(_hx, 500)) {
-          _tareCounts = (float)_hx.get_value();      // counts above the zero point
-          ScaleSnapshot snap = _s->getSnapshot();
-          snap.tareActive = true;
-          snap.medianWeightG = 0.0f; snap.stableWeightG = 0.0f; snap.noiseG = 0.0f;
-          snap.stable = false; snap.stableSampleCount = 0;
-          resetFilter();
-          _s->setSnapshot(snap);
-          LOG_INFO("scale", "tare applied tareCounts=%.1f counts (calibration kept)", _tareCounts);
+        if (_tareCapturePending) {
+          LOG_WARN("scale", "tare request ignored: capture already in progress");
+        } else {
+          _tareCapturePending = true;
+          _tareSampleCount = 0;
+          _tareSampleSum = 0;
+          LOG_INFO("scale", "tare capture started samples=%u", (unsigned)HX711_READS);
         }
         break;
       }
       case CMD_ZERO: {
         if (hxPoll(_hx, 500)) {
-          _hx.tare(HX711_READS);                    // new zero point = current raw average
+          _hx.tare(HX711_READS);                    // fast zero point = current raw average
           _zeroCounts = (float)_hx.get_offset();
           _tareCounts = 0.0f;                       // a fresh zero replaces any tare
           ScaleSnapshot snap = _s->getSnapshot();
           snap.offsetCounts = _zeroCounts;
+          snap.interceptCounts = 0.0f;              // new zero aligns intercept to 0
           snap.tareActive = false;
+          snap.atZero = true;
           snap.weightG = 0.0f;
           snap.medianWeightG = 0.0f;
           snap.stableWeightG = 0.0f;
@@ -156,11 +180,10 @@ void ScaleSensor::loop() {
           snap.stable = true;
           snap.stableSampleCount = 1;
           resetFilter();
-          _lockedWeightG = 0.0f;
-          _isLocked = true;
           _s->setSnapshot(snap);
           AppSettings a; _st->load(a);
-          a.calOffset = _zeroCounts;                // persist zero point, keep calibration values
+          a.calOffset = _zeroCounts;                // persist zero point, keep slope
+          a.calIntercept = 0.0f;
           _st->saveCalibration(a);
           LOG_INFO("scale", "zero point captured offsetCounts=%.1f (ADC zeroed, tare cleared)", _zeroCounts);
         }
@@ -245,6 +268,31 @@ void ScaleSensor::loop() {
   if (!hxPoll(_hx, 40)) return;              // HX711 not responding yet
 
   float raw = (float)_hx.get_value();        // offset-subtracted counts
+
+  if (_tareCapturePending) {
+    _tareSampleSum += (int64_t)raw;
+    _tareSampleCount++;
+    if (_tareSampleCount >= HX711_READS) {
+      _tareCounts = (float)_tareSampleSum / (float)_tareSampleCount;
+      _tareCapturePending = false;
+      _tareSampleCount = 0;
+      _tareSampleSum = 0;
+
+      ScaleSnapshot tareSnap = _s->getSnapshot();
+      tareSnap.tareActive = true;
+      tareSnap.atZero = true;
+      tareSnap.weightG = 0.0f;
+      tareSnap.medianWeightG = 0.0f;
+      tareSnap.stableWeightG = 0.0f;
+      tareSnap.noiseG = 0.0f;
+      tareSnap.stable = true;
+      tareSnap.stableSampleCount = 1;
+      resetFilter();
+      _s->setSnapshot(tareSnap);
+      LOG_INFO("scale", "tare applied tareCounts=%.1f counts (calibration kept)", _tareCounts);
+    }
+  }
+
   float netRaw = raw - _tareCounts;          // container tare excluded from weight
 
   ScaleSnapshot snap = _s->getSnapshot();
@@ -257,9 +305,25 @@ void ScaleSensor::loop() {
     float filtered = filterWeight(snap.medianWeightG);
     snap.noiseG = filterNoise();
 
-    // ---- Automatic Zero Tracking (AZT) ----
+    // ---- Motion Detection & Stability Evaluation ----
+    bool withinRange = snap.noiseG <= SCALE_STABILITY_RANGE_G &&
+                       fabsf(snap.medianWeightG - filtered) <= SCALE_STABILITY_RANGE_G;
+    if (withinRange) {
+      if (_stableSince == 0) _stableSince = now;
+      if ((now - _stableSince) >= SCALE_STABILITY_HOLD_MS) {
+        snap.stable = true;
+        if (_stableSampleCount < 65535U) _stableSampleCount++;
+      }
+    } else {
+      _stableSince = 0;
+      _stableSampleCount = 0;
+      snap.stable = false;
+    }
+    snap.stableSampleCount = _stableSampleCount;
+
+    // ---- Automatic Zero Tracking (AZT, stable-only) ----
 #if SCALE_AZT_ENABLED
-    if (fabsf(filtered) <= SCALE_AZT_BAND_G) {
+    if (snap.stable && fabsf(filtered) <= SCALE_AZT_BAND_G) {
       if (_lastAztMs == 0) _lastAztMs = now;
       uint32_t dtMs = now - _lastAztMs;
       _lastAztMs = now;
@@ -281,64 +345,8 @@ void ScaleSensor::loop() {
 
     float netG = filtered - _aztOffsetG;
 
-    // ---- Motion Detection & Stability Evaluation ----
-    bool withinRange = snap.noiseG <= SCALE_STABILITY_RANGE_G &&
-                       fabsf(snap.medianWeightG - filtered) <= SCALE_STABILITY_RANGE_G;
-    if (withinRange) {
-      if (_stableSince == 0) _stableSince = now;
-      if ((now - _stableSince) >= SCALE_STABILITY_HOLD_MS) {
-        snap.stable = true;
-        if (_stableSampleCount < 65535U) _stableSampleCount++;
-      }
-    } else {
-      _stableSince = 0;
-      _stableSampleCount = 0;
-      snap.stable = false;
-    }
-    snap.stableSampleCount = _stableSampleCount;
-
-    // ---- Deadband Lock & Anti-Drift Clamp ----
-    if (_isLocked) {
-      float deltaFromLock = fabsf(netG - _lockedWeightG);
-      if (deltaFromLock > SCALE_BREAKOUT_THRESHOLD_G) {
-        // Fast intentional weight change: breakout immediately
-        _isLocked = false;
-        _motionUnlockMs = 0;
-      } else if (deltaFromLock > SCALE_DEADBAND_G) {
-        // Exceeds deadband window: verify if sustained motion or transient noise
-        if (_motionUnlockMs == 0) {
-          _motionUnlockMs = now;
-        } else if ((now - _motionUnlockMs) >= 200) {
-          _isLocked = false;
-          _motionUnlockMs = 0;
-        }
-      } else {
-        // Still inside deadband window: maintain rock-solid freeze
-        _motionUnlockMs = 0;
-      }
-    }
-
-    if (!_isLocked && snap.stable) {
-      // Scale has settled: lock onto the quantized division
-      float quantized = roundf(netG / SCALE_DIVISION_G) * SCALE_DIVISION_G;
-      if (fabsf(quantized) < (SCALE_DIVISION_G * 0.75f)) {
-        quantized = 0.0f;
-      }
-      _lockedWeightG = quantized;
-      _isLocked = true;
-      _motionUnlockMs = 0;
-    }
-
-    // Assign final stable weight
-    if (_isLocked) {
-      snap.stableWeightG = _lockedWeightG;
-    } else {
-      float q = roundf(netG / SCALE_DIVISION_G) * SCALE_DIVISION_G;
-      if (fabsf(q) < (SCALE_DIVISION_G * 0.75f)) {
-        q = 0.0f;
-      }
-      snap.stableWeightG = q;
-    }
+    // ---- Hysteresis Quantization & Center-of-Zero Snap ----
+    snap.stableWeightG = quantizeWithHysteresis(netG);
 
     snap.atZero = fabsf(snap.stableWeightG) <= SCALE_ZERO_LAMP_BAND_G;
     snap.tareActive = (_tareCounts != 0.0f);

@@ -10,11 +10,11 @@ class SmallScalePrecisionContractTest(unittest.TestCase):
         config = (ROOT / "src/config.h").read_text(encoding="utf-8")
 
         self.assertIn("#define SCALE_DIVISION_G            2.0f", config)
-        self.assertIn("#define SCALE_DEADBAND_G            3.0f", config)
-        self.assertIn("#define SCALE_BREAKOUT_THRESHOLD_G  15.0f", config)
+        self.assertIn("#define SCALE_HYSTERESIS_G          0.5f", config)
+        self.assertIn("#define SCALE_ZERO_SNAP_G           1.2f", config)
         self.assertIn("#define SCALE_STABILITY_RANGE_G 4.0f", config)
-        self.assertIn("#define SCALE_ZERO_LAMP_BAND_G 2.0f", config)
-        self.assertIn("#define SCALE_AZT_BAND_G            4.0f", config)
+        self.assertIn("#define SCALE_ZERO_LAMP_BAND_G 1.2f", config)
+        self.assertIn("#define SCALE_AZT_BAND_G            1.0f", config)
         self.assertIn("#define SCALE_AZT_RATE_G_PER_S      0.5f", config)
 
     def test_gn6932_display_renders_three_decimal_places(self):

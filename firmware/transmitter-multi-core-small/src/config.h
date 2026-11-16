@@ -12,24 +12,25 @@
 //   HX711 PD_SCK (clock)         -> GPIO pin below (GPIO 14)
 //   HX711 VCC / GND              -> 3.3V / GND (or 5V, see module)
 #define HX711_FAST_PROCESSOR true   // ESP32 can toggle IO < 0.4us -> must be true
-#define HX711_READS          10     // samples averaged per reading
-#define SCALE_SAMPLE_MS      30     // sensor task period
-#define SCALE_MEDIAN_WINDOW  5      // reject isolated HX711 spikes
-#define SCALE_FILTER_WINDOW  10     // recent filtered samples used for stability
-#define SCALE_SLOW_ALPHA      0.05f // smoothing while the load is stable
-#define SCALE_FAST_ALPHA      0.65f // response while the load is changing
+#define HX711_READS          3      // fast samples averaged for ZERO/TARE
+#define SCALE_SAMPLE_MS      15     // sensor task period (supports 80 SPS & 10 SPS)
+#define SCALE_MEDIAN_WINDOW  3      // reject isolated HX711 spikes with minimal lag
+#define SCALE_FILTER_WINDOW  6      // recent filtered samples used for stability
+#define SCALE_SLOW_ALPHA      0.25f // responsive smoothing while settling
+#define SCALE_FAST_ALPHA      0.75f // instant response while the load is changing
 #define SCALE_CHANGE_THRESHOLD_G 20.0f
 #define SCALE_STABILITY_RANGE_G 4.0f
-#define SCALE_STABILITY_HOLD_MS 800
-#define SCALE_ZERO_LAMP_BAND_G 2.0f   // |weight| within this band lights the ZERO lamp
+#define SCALE_STABILITY_HOLD_MS 350
+#define SCALE_ZERO_LAMP_BAND_G 1.2f   // |weight| within this band lights the ZERO lamp
 
 // ------------------------- Scale Filter & Anti-Drift -----------------
 #define SCALE_DIVISION_G            2.0f    // Quantized display interval (d = 2g = 0.002 kg)
-#define SCALE_DEADBAND_G            3.0f    // Freeze window (locks reading when delta <= 3g)
-#define SCALE_BREAKOUT_THRESHOLD_G  15.0f   // Instant breakout threshold for intentional weight changes
+#define SCALE_HYSTERESIS_G          0.5f    // Step hysteresis (0.25 * d) to prevent boundary flicker
+#define SCALE_ZERO_SNAP_G           1.2f    // Center-of-zero snap band (0.6 * d)
 #define SCALE_AZT_ENABLED           1       // Automatic Zero Tracking (absorbs slow zero drift)
-#define SCALE_AZT_BAND_G            4.0f    // Max drift from 0g that AZT will track
+#define SCALE_AZT_BAND_G            1.0f    // Max drift from 0g that AZT will track (<= 0.5 * d)
 #define SCALE_AZT_RATE_G_PER_S      0.5f    // Maximum drift rate tracked per second (0.5g/s)
+#define DISPLAY_REFRESH_MS          100     // 10 Hz 7-segment display refresh rate
 
 // ------------------------- Soft AP (captive portal) ------------------
 #define AP_SSID_PREFIX      "ENYX-WT-"

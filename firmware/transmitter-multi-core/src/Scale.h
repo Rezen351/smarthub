@@ -35,11 +35,12 @@ public:
   uint16_t       _stableSampleCount = 0;
   float          _zeroCounts = 0.0f;   // persisted zero point (HX711 offset)
   float          _tareCounts = 0.0f;   // container tare (RAM only, not persisted)
+  bool           _tareCapturePending = false;
+  uint8_t        _tareSampleCount = 0;
+  int64_t        _tareSampleSum = 0;
 
-  // Anti-drift deadband lock and Automatic Zero Tracking (AZT)
-  float          _lockedWeightG = 0.0f;
-  bool           _isLocked = false;
-  uint32_t       _motionUnlockMs = 0;
+  // Hysteresis quantization and Automatic Zero Tracking (AZT)
+  float          _lastQuantizedG = 0.0f;
   float          _aztOffsetG = 0.0f;
   uint32_t       _lastAztMs = 0;
 
@@ -48,6 +49,7 @@ public:
   float medianWeight(float value);
   float filterWeight(float median);
   float filterNoise() const;
+  float quantizeWithHysteresis(float netG);
 };
 
 #endif // SCALE_H
