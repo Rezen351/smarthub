@@ -195,6 +195,7 @@ export function getGeneralCommodityName(item?: { code?: string; name?: string })
 
 export interface PackagingProduct {
   id: string
+  productCode: string
   commodityCode: string
   commodityName: string
   mode: 'RETAIL_POUCH' | 'BULK_EXPORT'
@@ -208,35 +209,10 @@ export interface PackagingProduct {
 }
 
 export const DEFAULT_PACKAGING_PRODUCTS: PackagingProduct[] = [
-  // Kentang
-  {
-    id: 'pkg-potato-pouch-1kg',
-    commodityCode: '001',
-    commodityName: 'Kentang',
-    mode: 'RETAIL_POUCH',
-    targetKg: 1.0,
-    variant: 'STANDARD',
-    productName: 'Eptilu Fresh Potatoes 1 kg',
-    packageType: 'Retail Pouch',
-    brand: 'Eptilu',
-    gtin: '8994477090034',
-    isActive: true,
-  },
-  {
-    id: 'pkg-potato-carton-5kg',
-    commodityCode: '001',
-    commodityName: 'Kentang',
-    mode: 'BULK_EXPORT',
-    targetKg: 5.0,
-    variant: 'WASHED',
-    productName: 'Eptilu Washed Potatoes 5 kg',
-    packageType: 'Carton Box',
-    brand: 'Eptilu',
-    gtin: '8994477090058',
-    isActive: true,
-  },
+  // Kentang (Family 0xx)
   {
     id: 'pkg-potato-carton-10kg-washed',
+    productCode: '001',
     commodityCode: '001',
     commodityName: 'Kentang',
     mode: 'BULK_EXPORT',
@@ -250,6 +226,7 @@ export const DEFAULT_PACKAGING_PRODUCTS: PackagingProduct[] = [
   },
   {
     id: 'pkg-potato-carton-10kg-dry',
+    productCode: '002',
     commodityCode: '001',
     commodityName: 'Kentang',
     mode: 'BULK_EXPORT',
@@ -262,7 +239,22 @@ export const DEFAULT_PACKAGING_PRODUCTS: PackagingProduct[] = [
     isActive: true,
   },
   {
+    id: 'pkg-potato-pouch-1kg',
+    productCode: '003',
+    commodityCode: '001',
+    commodityName: 'Kentang',
+    mode: 'RETAIL_POUCH',
+    targetKg: 1.0,
+    variant: 'STANDARD',
+    productName: 'Eptilu Fresh Potatoes 1 kg',
+    packageType: 'Retail Pouch',
+    brand: 'Eptilu',
+    gtin: '8994477090034',
+    isActive: true,
+  },
+  {
     id: 'pkg-potato-carton-50kg',
+    productCode: '004',
     commodityCode: '001',
     commodityName: 'Kentang',
     mode: 'BULK_EXPORT',
@@ -274,9 +266,38 @@ export const DEFAULT_PACKAGING_PRODUCTS: PackagingProduct[] = [
     gtin: '8994477090041',
     isActive: true,
   },
-  // Tomat
+  {
+    id: 'pkg-potato-carton-5kg',
+    productCode: '005',
+    commodityCode: '001',
+    commodityName: 'Kentang',
+    mode: 'BULK_EXPORT',
+    targetKg: 5.0,
+    variant: 'WASHED',
+    productName: 'Eptilu Washed Potatoes 5 kg',
+    packageType: 'Carton Box',
+    brand: 'Eptilu',
+    gtin: '8994477090058',
+    isActive: true,
+  },
+  // Tomat (Family 1xx)
+  {
+    id: 'pkg-tomato-carton-10kg',
+    productCode: '101',
+    commodityCode: '101',
+    commodityName: 'Tomat',
+    mode: 'BULK_EXPORT',
+    targetKg: 10.0,
+    variant: 'STANDARD',
+    productName: 'Eptilu Fresh Red Tomatoes TW 10 kg',
+    packageType: 'Carton Box',
+    brand: 'Eptilu',
+    gtin: '8994477091017',
+    isActive: true,
+  },
   {
     id: 'pkg-tomato-pouch-1kg',
+    productCode: '102',
     commodityCode: '101',
     commodityName: 'Tomat',
     mode: 'RETAIL_POUCH',
@@ -290,6 +311,7 @@ export const DEFAULT_PACKAGING_PRODUCTS: PackagingProduct[] = [
   },
   {
     id: 'pkg-tomato-carton-5kg',
+    productCode: '103',
     commodityCode: '101',
     commodityName: 'Tomat',
     mode: 'BULK_EXPORT',
@@ -301,22 +323,24 @@ export const DEFAULT_PACKAGING_PRODUCTS: PackagingProduct[] = [
     gtin: '8994477091031',
     isActive: true,
   },
+  // Cabe Merah Keriting (Family 2xx)
   {
-    id: 'pkg-tomato-carton-10kg',
-    commodityCode: '101',
-    commodityName: 'Tomat',
+    id: 'pkg-curly-carton-10kg',
+    productCode: '201',
+    commodityCode: '201',
+    commodityName: 'Cabe Merah Keriting',
     mode: 'BULK_EXPORT',
     targetKg: 10.0,
     variant: 'STANDARD',
-    productName: 'Eptilu Fresh Red Tomatoes TW 10 kg',
+    productName: 'Eptilu Fresh Curly Red Chili Peppers 10 kg',
     packageType: 'Carton Box',
     brand: 'Eptilu',
-    gtin: '8994477091017',
+    gtin: '8994477092014',
     isActive: true,
   },
-  // Cabe Merah Keriting
   {
     id: 'pkg-curly-pouch-1kg',
+    productCode: '203',
     commodityCode: '201',
     commodityName: 'Cabe Merah Keriting',
     mode: 'RETAIL_POUCH',
@@ -330,6 +354,7 @@ export const DEFAULT_PACKAGING_PRODUCTS: PackagingProduct[] = [
   },
   {
     id: 'pkg-curly-carton-5kg',
+    productCode: '205',
     commodityCode: '201',
     commodityName: 'Cabe Merah Keriting',
     mode: 'BULK_EXPORT',
@@ -341,22 +366,24 @@ export const DEFAULT_PACKAGING_PRODUCTS: PackagingProduct[] = [
     gtin: '8994477092052',
     isActive: true,
   },
+  // Cabe Rawit Merah (Family 2xx)
   {
-    id: 'pkg-curly-carton-10kg',
-    commodityCode: '201',
-    commodityName: 'Cabe Merah Keriting',
+    id: 'pkg-birdseye-carton-10kg',
+    productCode: '202',
+    commodityCode: '202',
+    commodityName: 'Cabe Rawit Merah',
     mode: 'BULK_EXPORT',
     targetKg: 10.0,
     variant: 'STANDARD',
-    productName: 'Eptilu Fresh Curly Red Chili Peppers 10 kg',
+    productName: "Eptilu Fresh Red Bird's Eye Chili Peppers 10 kg",
     packageType: 'Carton Box',
     brand: 'Eptilu',
-    gtin: '8994477092014',
+    gtin: '8994477092021',
     isActive: true,
   },
-  // Cabe Rawit Merah
   {
     id: 'pkg-birdseye-pouch-1kg',
+    productCode: '204',
     commodityCode: '202',
     commodityName: 'Cabe Rawit Merah',
     mode: 'RETAIL_POUCH',
@@ -370,6 +397,7 @@ export const DEFAULT_PACKAGING_PRODUCTS: PackagingProduct[] = [
   },
   {
     id: 'pkg-birdseye-carton-5kg',
+    productCode: '206',
     commodityCode: '202',
     commodityName: 'Cabe Rawit Merah',
     mode: 'BULK_EXPORT',
@@ -379,19 +407,6 @@ export const DEFAULT_PACKAGING_PRODUCTS: PackagingProduct[] = [
     packageType: 'Carton Box',
     brand: 'Eptilu',
     gtin: '8994477092069',
-    isActive: true,
-  },
-  {
-    id: 'pkg-birdseye-carton-10kg',
-    commodityCode: '202',
-    commodityName: 'Cabe Rawit Merah',
-    mode: 'BULK_EXPORT',
-    targetKg: 10.0,
-    variant: 'STANDARD',
-    productName: "Eptilu Fresh Red Bird's Eye Chili Peppers 10 kg",
-    packageType: 'Carton Box',
-    brand: 'Eptilu',
-    gtin: '8994477092021',
     isActive: true,
   },
 ]

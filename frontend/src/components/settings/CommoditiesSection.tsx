@@ -35,6 +35,17 @@ function validateGtin13Client(raw: string): { valid: boolean; message?: string }
   return { valid: true }
 }
 
+function computeGtin13FromCode(code3: string): string {
+  const clean = code3.trim().replace(/\D/g, '').padStart(3, '0').slice(-3)
+  const base = `899447709${clean}`
+  let sum = 0
+  for (let i = 0; i < 12; i++) {
+    sum += Number(base[i]) * (i % 2 === 0 ? 1 : 3)
+  }
+  const check = (10 - (sum % 10)) % 10
+  return `${base}${check}`
+}
+
 export default function CommoditiesSection() {
   const toast = useToast()
   const { user } = useAuth()
@@ -43,13 +54,14 @@ export default function CommoditiesSection() {
   const [activeTab, setActiveTab] = useState<'packaging' | 'raw'>('packaging')
 
   /* ─────────────────────────────────────────────────────────────
-   * 1. Packaging & GS1 Catalog State
+   * 1. Packaging & GS1 Catalog State (Product Codes & GTINs)
    * ───────────────────────────────────────────────────────────── */
   const [catalog, setCatalog] = useState<PackagingProduct[]>(() => getSavedPackagingCatalog())
   const [editingPkgId, setEditingPkgId] = useState<string | null>(null)
   const [pkgFilterCommodity, setPkgFilterCommodity] = useState<string>('ALL')
   const [pkgSearch, setPkgSearch] = useState<string>('')
   const [pkgForm, setPkgForm] = useState<{
+    productCode: string
     productName: string
     targetKg: number
     packageType: string
@@ -57,6 +69,7 @@ export default function CommoditiesSection() {
     gtin: string
     isActive: boolean
   }>({
+    productCode: '001',
     productName: '',
     targetKg: 10,
     packageType: 'Carton Box',
@@ -66,7 +79,7 @@ export default function CommoditiesSection() {
   })
 
   /* ─────────────────────────────────────────────────────────────
-   * 2. Raw Commodities (Reception Intake) State
+   * 2. Raw Commodities (Reception Intake) State (Family Groups Only)
    * ───────────────────────────────────────────────────────────── */
   const [rawItems, setRawItems] = useState<Commodity[]>([])
   const [rawLoading, setRawLoading] = useState(true)
@@ -106,12 +119,24 @@ export default function CommoditiesSection() {
   const handleEditPkg = (product: PackagingProduct) => {
     setEditingPkgId(product.id)
     setPkgForm({
+      productCode: product.productCode || product.gtin.slice(9, 12) || '001',
       productName: product.productName,
       targetKg: product.targetKg,
       packageType: product.packageType,
       brand: product.brand,
       gtin: product.gtin,
       isActive: product.isActive,
+    })
+  }
+
+  const handleProductCodeChange = (newCode: string) => {
+    const clean = newCode.replace(/\D/g, '').slice(0, 3)
+    setPkgForm((f) => {
+      const next = { ...f, productCode: clean }
+      if (clean.length === 3) {
+        next.gtin = computeGtin13FromCode(clean)
+      }
+      return next
     })
   }
 
@@ -136,6 +161,7 @@ export default function CommoditiesSection() {
       if (p.id === editingPkgId) {
         return {
           ...p,
+          productCode: pkgForm.productCode.trim() || p.productCode,
           productName: pkgForm.productName.trim(),
           targetKg: Number(pkgForm.targetKg) || p.targetKg,
           packageType: pkgForm.packageType.trim() || p.packageType,
@@ -186,7 +212,7 @@ export default function CommoditiesSection() {
         unit: rawForm.unit.trim() || 'kg',
         isActive: rawForm.isActive,
       })
-      toast.success(`Raw commodity ${rawForm.code} updated.`)
+      toast.success(`Raw commodity updated.`)
       setEditingRawId(null)
       await loadRaw()
     } catch (err) {
@@ -200,7 +226,7 @@ export default function CommoditiesSection() {
     if (!isAdmin) return
     try {
       await api.commodities.update(row.id, { isActive: !row.isActive })
-      toast.success(`${row.code} ${row.isActive ? 'deactivated' : 'activated'}.`)
+      toast.success(`${getCommodityFamilyCode(row.code)} ${row.isActive ? 'deactivated' : 'activated'}.`)
       await loadRaw()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update status.')
@@ -216,17 +242,28 @@ export default function CommoditiesSection() {
       if (pkgSearch.trim()) {
         const q = pkgSearch.toLowerCase()
         const matchTitle = item.productName.toLowerCase().includes(q)
+        const matchCode = (item.productCode || '').includes(q)
         const matchGtin = item.gtin.includes(q)
         const matchBrand = item.brand.toLowerCase().includes(q)
         const matchType = item.packageType.toLowerCase().includes(q)
-        return matchTitle || matchGtin || matchBrand || matchType
+        return matchTitle || matchCode || matchGtin || matchBrand || matchType
       }
       return true
     })
   }, [catalog, pkgFilterCommodity, pkgSearch])
 
-  /* ── Packaging Columns ── */
+  /* ── Packaging Columns (Includes Product Code) ── */
   const packagingColumns: Column<PackagingProduct>[] = [
+    {
+      key: 'productCode',
+      label: 'Code',
+      priority: true,
+      render: (row) => (
+        <span className="font-mono font-bold text-foreground bg-muted px-2 py-0.5 rounded">
+          {row.productCode || row.gtin.slice(9, 12) || '—'}
+        </span>
+      ),
+    },
     {
       key: 'targetKg',
       label: 'Target',
@@ -294,23 +331,17 @@ export default function CommoditiesSection() {
       : []),
   ]
 
-  /* ── Raw Commodities Columns ── */
+  /* ── Raw Commodities Columns (Family & Name Only, NO specific product code) ── */
   const rawColumns: Column<Commodity>[] = [
     {
       key: 'family',
-      label: 'Family',
+      label: 'Family Group',
       priority: true,
       render: (row) => (
-        <span className="font-mono font-bold text-primary px-2 py-0.5 bg-primary/10 rounded">
+        <span className="font-mono font-bold text-primary px-2.5 py-1 bg-primary/10 rounded text-xs">
           {getCommodityFamilyCode(row.code)}
         </span>
       ),
-    },
-    {
-      key: 'code',
-      label: 'Code',
-      priority: true,
-      render: (row) => <span className="font-mono font-bold text-foreground">{row.code}</span>,
     },
     {
       key: 'name',
@@ -376,7 +407,7 @@ export default function CommoditiesSection() {
             }`}
           >
             <Icon name="package" size={16} />
-            Packaging & GS1 Catalog
+            Packaging & GS1 Catalog (Product Codes)
           </button>
           <button
             type="button"
@@ -388,7 +419,7 @@ export default function CommoditiesSection() {
             }`}
           >
             <Icon name="leaf" size={16} />
-            Raw Intake Commodities (Reception)
+            Raw Intake Commodities (Family Groups)
           </button>
         </div>
 
@@ -401,6 +432,7 @@ export default function CommoditiesSection() {
 
       {/* ─────────────────────────────────────────────────────────────
        * SUB-TAB 1: PACKAGING & GS1 CATALOG (Station 03 Packaging)
+       * Product codes (001, 002, 003, etc.) and GTINs live here!
        * ───────────────────────────────────────────────────────────── */}
       {activeTab === 'packaging' && (
         <div className="space-y-6">
@@ -410,11 +442,11 @@ export default function CommoditiesSection() {
               <Icon name="info" size={18} />
             </div>
             <div className="text-sm space-y-1">
-              <div className="font-semibold text-foreground">Station 03 Packaging & GS1 Specifications</div>
+              <div className="font-semibold text-foreground">Packaging & GS1 Trade Item Codes</div>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                Specifications configured here (e.g. <strong>Kentang 10 kg</strong>, <strong>Kentang 5 kg</strong>, <strong>Retail 1 kg</strong>)
-                apply exclusively to Station 03 Packaging, GS1-128 barcodes, and export labels.
-                Modifying these packaging products will <strong>NEVER alter Station 01 Reception</strong>.
+                Specific 3-digit product codes (e.g. <strong>001</strong> for Kentang 10kg Washed, <strong>005</strong> for Kentang 5kg, <strong>003</strong> for Retail 1kg)
+                and GTIN-13 barcodes belong exclusively to packaging products.
+                Modifying packaging specifications here will <strong>NEVER alter Station 01 Reception</strong>.
               </p>
             </div>
           </div>
@@ -423,10 +455,24 @@ export default function CommoditiesSection() {
           {editingPkgId && (
             <Card
               title="Edit Packaging Specification"
-              subtitle="Updates the product title, target weight, and GS1 GTIN-13 for Station 03 Packaging."
+              subtitle="Configure product title, 3-digit item code, and GS1 GTIN-13 for Station 03 Packaging."
             >
               <form onSubmit={handleSavePkg} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <Field
+                      label="Product Code"
+                      required
+                      hint="3-digit item code (digits 10-12 of GTIN)"
+                    >
+                      <Input
+                        value={pkgForm.productCode}
+                        onChange={(e) => handleProductCodeChange(e.target.value)}
+                        placeholder="e.g. 001"
+                        className="font-mono font-bold"
+                      />
+                    </Field>
+                  </div>
                   <div className="md:col-span-2">
                     <Field label="Packaging Product Title" required hint="e.g. Eptilu Washed Potatoes 10 kg">
                       <Input
@@ -505,17 +551,17 @@ export default function CommoditiesSection() {
           {/* Catalog Table */}
           <Card
             title="Packaging & GS1 Trade Item Catalog"
-            subtitle="Available packaging formats and GTIN-13 barcodes assigned at Station 03."
+            subtitle="Available packaging formats, 3-digit product codes, and GTIN-13 barcodes assigned at Station 03."
           >
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
               {/* Commodity Filter Chips */}
               <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
                 {[
                   { id: 'ALL', label: 'All Commodities' },
-                  { id: '001', label: 'Kentang' },
-                  { id: '101', label: 'Tomat' },
-                  { id: '201', label: 'Cabe Keriting' },
-                  { id: '202', label: 'Cabe Rawit' },
+                  { id: '001', label: 'Kentang (0xx)' },
+                  { id: '101', label: 'Tomat (1xx)' },
+                  { id: '201', label: 'Cabe Keriting (2xx)' },
+                  { id: '202', label: 'Cabe Rawit (2xx)' },
                 ].map((chip) => (
                   <button
                     key={chip.id}
@@ -537,7 +583,7 @@ export default function CommoditiesSection() {
                 <Input
                   value={pkgSearch}
                   onChange={(e) => setPkgSearch(e.target.value)}
-                  placeholder="Filter product title or GTIN..."
+                  placeholder="Filter code, title, or GTIN..."
                   className="text-xs py-1.5"
                 />
               </div>
@@ -555,6 +601,7 @@ export default function CommoditiesSection() {
 
       {/* ─────────────────────────────────────────────────────────────
        * SUB-TAB 2: RAW INTAKE COMMODITIES (Station 01 Reception)
+       * Only family codes (0xx, 1xx, 2xx) and crop names live here!
        * ───────────────────────────────────────────────────────────── */}
       {activeTab === 'raw' && (
         <div className="space-y-6">
@@ -567,8 +614,8 @@ export default function CommoditiesSection() {
               <div className="font-semibold text-foreground">Station 01 Reception Raw Intake Master</div>
               <p className="text-muted-foreground text-xs leading-relaxed">
                 Raw commodities represent incoming agricultural harvest delivered by farmers.
-                Intake at Station 01 is strictly general (<strong>Kentang</strong>, <strong>Tomat</strong>, <strong>Cabe Merah Keriting</strong>, <strong>Cabe Rawit Merah</strong>).
-                Reception tickets and farmer receipts <strong>do NOT carry packaging sizes or GTIN barcodes</strong>.
+                Intake at Station 01 uses strictly <strong>Family Classification (0xx, 1xx, 2xx)</strong> and general crop names (<strong>Kentang</strong>, <strong>Tomat</strong>, <strong>Cabe Merah Keriting</strong>, <strong>Cabe Rawit Merah</strong>).
+                Reception tickets and farmer receipts <strong>do NOT carry product SKU codes (001, 005) or packaging weights</strong>.
               </p>
             </div>
           </div>
@@ -576,19 +623,24 @@ export default function CommoditiesSection() {
           {/* Edit Raw Commodity Modal / Card */}
           {editingRawId && (
             <Card
-              title={`Edit Raw Commodity (${rawForm.code})`}
+              title="Edit Raw Harvest Commodity"
               subtitle="Modify general raw harvest commodity information for Station 01 Reception."
             >
               <form onSubmit={handleSaveRaw} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Field label="Commodity Code" required>
-                    <Input value={rawForm.code} disabled className="font-mono bg-muted/40 cursor-not-allowed" />
+                  <Field label="Family Classification">
+                    <div className="flex items-center gap-2 py-2">
+                      <span className="font-mono font-bold text-primary px-3 py-1 bg-primary/10 rounded text-sm">
+                        {getCommodityFamilyCode(rawForm.code)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">General intake crop family</span>
+                    </div>
                   </Field>
                   <div className="md:col-span-2">
                     <Field
                       label="Raw Commodity Name"
                       required
-                      hint="Strictly general intake name (e.g. 'Kentang'). Do NOT enter packaging sizes like '10kg'."
+                      hint="General intake crop name (e.g. 'Kentang')."
                     >
                       <Input
                         value={rawForm.name}
@@ -633,7 +685,7 @@ export default function CommoditiesSection() {
           {/* Raw Catalog Table */}
           <Card
             title="General Raw Commodities"
-            subtitle="Crops accepted at Station 01 Reception. Family codes (0xx, 1xx, 2xx) are automatically assigned."
+            subtitle="Crops accepted at Station 01 Reception categorized strictly by Family Groups (0xx, 1xx, 2xx)."
           >
             <DataTable
               data={rawItems}
