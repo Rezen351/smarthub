@@ -27,7 +27,6 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
   // Register Modal State
   const [registerOpen, setRegisterOpen] = useState(false)
   const [formCode, setFormCode] = useState('')
-  const [formTareKg, setFormTareKg] = useState('15.0')
   const [formNotes, setFormNotes] = useState('Standard wood pallet')
   const [printImmediately, setPrintImmediately] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -136,7 +135,6 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
 
   const handleOpenRegister = () => {
     setFormCode(nextSuggestedCode)
-    setFormTareKg('15.0')
     setFormNotes('Standard wood pallet')
     setPrintImmediately(false)
     setRegisterOpen(true)
@@ -150,13 +148,12 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
       return
     }
 
-    const tare = parseFloat(formTareKg) || 15.0
     setSubmitting(true)
 
     try {
       await api.pallets.create({
         code: trimmedCode,
-        tareKg: tare,
+        tareKg: 0,
         notes: formNotes.trim(),
       })
 
@@ -361,16 +358,6 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
           </Badge>
         )
       },
-    },
-    {
-      key: 'tareKg',
-      label: 'Bobot Tara',
-      align: 'right',
-      render: (row) => (
-        <span className="font-mono text-xs font-semibold text-muted-foreground">
-          {formatWeight(row.tareKg ?? 15.0)} kg
-        </span>
-      ),
     },
     {
       key: 'grade',
@@ -635,19 +622,6 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                   placeholder="e.g. PLT-011"
                   required
                   className="font-mono text-base font-bold uppercase tracking-wider"
-                />
-              </Field>
-
-              <Field label="Tare Weight (kg)" hint="Weight of the empty wooden/plastic pallet">
-                <Input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={formTareKg}
-                  onChange={(e) => setFormTareKg(e.target.value)}
-                  placeholder="15.0"
-                  required
-                  className="font-mono"
                 />
               </Field>
 

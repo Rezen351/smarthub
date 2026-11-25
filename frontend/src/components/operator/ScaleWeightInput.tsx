@@ -79,7 +79,6 @@ export default function ScaleWeightInput({
   capacityKg = 150,
   maxAllowedWeightKg,
   allowZero = false,
-  hideTare = false,
 }: ScaleWeightInputProps) {
   const [mode, setMode] = useState<Mode>(readMode)
   const [connection, setConnection] = useState<Connection>('reconnecting')
@@ -88,7 +87,6 @@ export default function ScaleWeightInput({
   const [isStable, setIsStable] = useState(true)
   const [lastReadingAt, setLastReadingAt] = useState(() => new Date())
   const [captured, setCaptured] = useState(false)
-  const [tarePending, setTarePending] = useState(false)
   const toast = useToast()
 
   /* Persist the chosen mode per station (session-level preference). */
@@ -205,29 +203,6 @@ export default function ScaleWeightInput({
     return Number((targetKg - numericValue).toFixed(3))
   }, [numericValue, targetKg])
 
-  /* Hardware Tare via Modbus TCP */
-  const handleTare = useCallback(async () => {
-    setTarePending(true)
-    try {
-      await api.scales.tare(stationId)
-      toast.success('Scale cleared and ready.')
-    } catch (err: any) {
-      toast.error('Could not clear the scale: ' + (err.message || 'Scale unavailable'))
-    } finally {
-      setTarePending(false)
-    }
-  }, [stationId, toast])
-
-  /* Hardware Zero via Modbus TCP */
-  const handleZero = useCallback(async () => {
-    try {
-      await api.scales.zero(stationId)
-      toast.success('Scale set to zero.')
-    } catch (err: any) {
-      toast.error('Could not set the scale to zero: ' + (err.message || 'Scale unavailable'))
-    }
-  }, [stationId, toast])
-
   return (
     <div className="stack-md">
       <div className="radio-row" role="group" aria-label="Weight input mode">
@@ -341,22 +316,6 @@ export default function ScaleWeightInput({
                 }
               >
                 Capture Weight
-              </Button>
-              {!hideTare && <Button
-                variant="outline"
-                icon="scale"
-                disabled={tarePending || connection !== 'connected'}
-                onClick={handleTare}
-              >
-                Tare (Offset)
-              </Button>}
-              <Button
-                variant="ghost"
-                icon="refresh"
-                disabled={connection !== 'connected'}
-                onClick={handleZero}
-              >
-                Zero
               </Button>
             </div>
           </div>

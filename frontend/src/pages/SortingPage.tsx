@@ -939,7 +939,6 @@ export default function SortingPage() {
                           }`}
                         >
                           <span>{p.code}</span>
-                          <span className="text-[10px] opacity-75 font-sans">({p.tareKg || 15}kg)</span>
                         </button>
                       )
                     })
