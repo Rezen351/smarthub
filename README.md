@@ -146,7 +146,7 @@ Menambah commodity baru di masa depan (Tomat, Cabai, dll.) hanya memerlukan data
 | Label | Type | Standard | Used For |
 |-------|------|----------|----------|
 | Pouch 1 kg | QR Code | Internal | Farmer, location, date, grade, weight |
-| Pouch 1 kg | EAN-13 | GS1 Retail | Retail/export product ID (`899` + commodity) |
+| Pouch 1 kg | EAN-13 | GS1 Retail | Retail/export product ID (`899447709` + 3-digit commodity code + check digit; see [docs/COMMODITIES_GTIN.md](docs/COMMODITIES_GTIN.md)) |
 | Carton 10/50 kg | ITF-14 | GS1 Logistics | Shipping unit, batch, net/gross weight |
 | Farmer ID | QR Code | Internal | Instant farmer verification |
 

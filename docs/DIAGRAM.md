@@ -668,10 +668,11 @@ Semua entitas fisik lapangan menggunakan standar identifier berikut:
 6. **Packaging Barcode Ekspor (`ITF-14`)**:
    - Standar 14 digit GS1 untuk kemasan logistik ekspor (kardus 10 kg / karung 50 kg).
 7. **Master Komoditas & GTIN-13** (lihat detail lengkap di [COMMODITIES_GTIN.md](COMMODITIES_GTIN.md)):
-   - Format GTIN-13: `899447709` (GS1 Indonesia `899` + Prefix Eptilu `447709`) + `3 digit Kode Komoditas` + `1 digit Check Digit`.
-   - `001` — **Eptilu Premium Potato** (`Eptilu Washed Potatoes 10 kg`, Carton Box, Kilogram): `8994477090010`
-   - `101` — **Eptilu Premium Tomatoes** (`Eptilu Fresh Tomatoes 10 Kg`, Carton Box, Kilogram): `8994477091017`
-   - `201` — **Eptilu Premium Chili Peppers** (`Eptilu Fresh Chili Peppers 10 Kg`, Carton Box, Kilogram): `8994477092014`
+   - Format GTIN-13: `899447709` (GS1 Indonesia `899` + Prefix Eptilu `447709`) + `3 digit Product Number` + `1 digit Check Digit`.
+   - `001` — **Eptilu Washed Potatoes 10 kg** (Carton Box, Kilogram): `8994477090010`
+   - `101` — **Eptilu Fresh Red Tomatoes TW 10 kg** (Carton Box, Kilogram): `8994477091017`
+   - `201` — **Eptilu Fresh Curly Red Chili Peppers 10 kg** (Carton Box, Kilogram): `8994477092014`
+   - `202` — **Eptilu Fresh Red Bird's Eye Chili Peppers 10 kg** (Carton Box, Kilogram): `8994477092021`
 
 ---
 
