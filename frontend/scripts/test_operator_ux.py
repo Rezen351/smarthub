@@ -130,18 +130,18 @@ with tempfile.TemporaryFile() as driver_log:
         js('window.dispatchEvent(new Event("online"))')
         wait('return document.body.textContent.includes("SERVER ONLINE")')
         click('Review Weight')
-        wait('return document.body.innerText.includes("Approve & Print")')
-        click('Approve & Print')
-        wait('return document.body.innerText.includes("Retry Save & Print")')
+        wait('return document.body.innerText.includes("Finish & Print")')
+        click('Finish & Print')
+        wait('return document.body.innerText.includes("Retry Save & Next Bag")')
         assert state['prints'] == [], 'Failed save must never print'
         state['save_fails'] = False
-        click('Retry Save & Print')
+        click('Finish & Print')
         wait('return document.body.innerText.includes("Print failed. Intake is saved.")')
         assert state['creates'] == 2, state
         assert all(j['code'] == 'WRG-SERVER-1' for j in state['prints'][0]['jobs'])
         state['print_fails'] = False
         click('Retry Print')
-        wait('return document.body.innerText.includes("Receipt and label sent to printer")')
+        wait('return document.body.innerText.includes("Receipt and labels sent to printer")')
         assert state['creates'] == 2, 'Print retry must not save another intake'
         for width in (360, 768, 1440):
             request(base + '/window/rect', {'width': width, 'height': 900})

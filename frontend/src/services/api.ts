@@ -199,6 +199,7 @@ export const api = {
       return res.data
     },
     create: async (data: {
+      requestId?: string
       farmerCode: string
       grossWeightKg: number
       tareWeightKg?: number

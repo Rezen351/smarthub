@@ -8,6 +8,7 @@ export interface LabelPreviewProps {
   farmerId?: string
   grade?: 'A' | 'B' | 'C'
   weightKg?: number
+  items?: { code: string; weightKg: number }[]
   commodity?: string
   date?: string
   time?: string
@@ -33,6 +34,7 @@ export default function LabelPreview({
   farmerId = '',
   grade,
   weightKg,
+  items,
   commodity = 'Potatoes',
   date = new Date().toISOString().slice(0, 10),
   time = 'Live',
@@ -109,6 +111,15 @@ export default function LabelPreview({
       )}
 
       {/* 3. Weight & Code (Centered) */}
+      {type === 'receipt' && items && (
+        <div className="text-xs text-left space-y-1 border-t border-dashed border-gray-400 pt-2">
+          <strong>Bags: {items.length}</strong>
+          {items.map((item, index) => (
+            <div key={item.code} className="break-all">{index + 1}. {item.code}: {item.weightKg.toFixed(3)} kg</div>
+          ))}
+          <strong className="block">Total Weight</strong>
+        </div>
+      )}
       <div
         className={`text-center ${hasMetadata ? 'border-t border-dashed border-gray-400' : ''} ${
           screenFit ? 'pt-1.5 space-y-1' : 'pt-2.5 space-y-1.5'

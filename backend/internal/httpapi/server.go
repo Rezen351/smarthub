@@ -18,6 +18,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -58,16 +59,21 @@ type printerSettings struct {
 	Protocol     string `json:"protocol"`
 }
 type printJob struct {
-	Type       string  `json:"type"`
-	Code       string  `json:"code"`
-	FarmerName string  `json:"farmerName"`
-	FarmerID   string  `json:"farmerId"`
-	Grade      string  `json:"grade"`
-	WeightKg   float64 `json:"weightKg"`
-	Date       string  `json:"date"`
-	Time       string  `json:"time"`
-	Commodity  string  `json:"commodity"`
-	Station    string  `json:"stationName"`
+	Type       string        `json:"type"`
+	Code       string        `json:"code"`
+	FarmerName string        `json:"farmerName"`
+	FarmerID   string        `json:"farmerId"`
+	Grade      string        `json:"grade"`
+	WeightKg   float64       `json:"weightKg"`
+	Date       string        `json:"date"`
+	Time       string        `json:"time"`
+	Commodity  string        `json:"commodity"`
+	Station    string        `json:"stationName"`
+	Items      []receiptItem `json:"items,omitempty"`
+}
+type receiptItem struct {
+	Code     string  `json:"code"`
+	WeightKg float64 `json:"weightKg"`
 }
 type response struct {
 	Success bool      `json:"success"`
@@ -997,14 +1003,18 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 		var v struct {
 			FarmerCode string  `json:"farmerCode"`
 			Gross      float64 `json:"grossWeightKg"`
-			Tare       float64 `json:"tareWeightKg"`
+			RequestID  string  `json:"requestId"`
 		}
-		if !decode(r, &v) || v.FarmerCode == "" || v.Gross <= 0 {
+		if !decode(r, &v) || strings.TrimSpace(v.FarmerCode) == "" || !validReceptionWeight(v.Gross) {
 			fail(w, 400, "VALIDATION_ERROR", "Valid farmerCode and grossWeightKg are required")
 			return
 		}
-		if v.Tare == 0 {
-			v.Tare = 1.2
+		if v.RequestID != "" {
+			var requestID pgtype.UUID
+			if err := requestID.Scan(v.RequestID); err != nil || !requestID.Valid {
+				fail(w, 400, "VALIDATION_ERROR", "requestId must be a valid UUID")
+				return
+			}
 		}
 		var fid, code, name string
 		err := s.db.QueryRow(r.Context(), `SELECT id,code,name FROM farmers WHERE UPPER(code)=UPPER($1)`, v.FarmerCode).Scan(&fid, &code, &name)
@@ -1028,15 +1038,24 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 			}
 		}
 		var id string
-		now := time.Now()
-		war := fmt.Sprintf("WRG-%s-%04d", now.Format("20060102"), now.Unix()%10000)
-		err = s.db.QueryRow(r.Context(), `INSERT INTO warings(id,code,"farmerId","commodityId","grossWeightKg","tareWeightKg","netWeightKg",status,"createdAt") VALUES(gen_random_uuid(),$1,$2,$3,$4,$5,GREATEST(0::double precision,$4::double precision-$5::double precision),'PENDING',NOW()) RETURNING id::text`, war, fid, cid, v.Gross, v.Tare).Scan(&id)
+		var war string
+		err = s.db.QueryRow(r.Context(), `
+			WITH intake AS (SELECT COALESCE(NULLIF($4,'')::uuid, gen_random_uuid()) AS id)
+			INSERT INTO warings(id,code,"farmerId","commodityId","grossWeightKg","tareWeightKg","netWeightKg",status,"createdAt")
+			SELECT id,'WRG-' || to_char(NOW(),'YYYYMMDD') || '-' || replace(id::text,'-',''),$1,$2,$3,0,$3,'PENDING',NOW() FROM intake WHERE true
+			ON CONFLICT (id) DO UPDATE SET id=warings.id
+			WHERE warings."farmerId"=EXCLUDED."farmerId" AND warings."grossWeightKg"=EXCLUDED."grossWeightKg" AND warings."tareWeightKg"=0
+			RETURNING id::text,code`, fid, cid, v.Gross, v.RequestID).Scan(&id, &war)
+		if err == pgx.ErrNoRows {
+			fail(w, 409, "INTAKE_CONFLICT", "This requestId already belongs to a different intake")
+			return
+		}
 		if err != nil {
 			slog.Error("failed to insert waring", "error", err)
 			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to record intake weighing")
 			return
 		}
-		writeStatus(w, 201, map[string]any{"success": true, "data": map[string]any{"id": id, "code": war, "farmerCode": code, "farmerName": name, "grossWeightKg": v.Gross, "tareWeightKg": v.Tare, "netWeightKg": v.Gross - v.Tare, "status": "PENDING"}})
+		writeStatus(w, 201, map[string]any{"success": true, "data": map[string]any{"id": id, "code": war, "farmerCode": code, "farmerName": name, "grossWeightKg": v.Gross, "tareWeightKg": 0, "netWeightKg": v.Gross, "status": "PENDING"}})
 		return
 	}
 	fail(w, 404, "NOT_FOUND", "Route not found")
@@ -1564,6 +1583,13 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 		"export":  "EXPORT LABEL",
 	}
 	for _, job := range jobs {
+		if len(job.Items) > 0 {
+			var err error
+			job.WeightKg, err = receptionReceiptTotal(job.Type, job.Items)
+			if err != nil {
+				return nil, err
+			}
+		}
 		label, ok := labels[job.Type]
 		if !ok || job.Code == "" {
 			return nil, fmt.Errorf("print job type and code are required")
@@ -1615,6 +1641,15 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 		out = append(out, 0x1b, 0x61, 0x01)
 		if hasMeta {
 			out = appendText(out, "--------------------------------\n")
+		}
+		if len(job.Items) > 0 {
+			out = append(out, 0x1b, 0x61, 0x00)
+			out = appendText(out, fmt.Sprintf("Bags: %d\n", len(job.Items)))
+			for index, item := range job.Items {
+				out = appendText(out, fmt.Sprintf("%d. %s\n   %.3f kg\n", index+1, item.Code, item.WeightKg))
+			}
+			out = append(out, 0x1b, 0x61, 0x01)
+			out = appendText(out, "Total Weight\n")
 		}
 
 		if job.WeightKg > 0 && job.Type != "pallet" {

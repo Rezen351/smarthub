@@ -5,7 +5,7 @@
  *   Sequential 3-step workflow:
  *     1. Step 1: Farmer Identification (Scan barcode)
  *     2. Step 2: Harvest Weighing (Live gross scale reading via Modbus TCP RS485 indicator)
- *     3. Step 3: Approve & Bag into Waring (WRG-... generation, thermal receipt & waring QR label)
+ *     3. Step 3: Save & Next Bag, or Finish & Print one receipt and all Waring labels.
  *
  * Weight transmitter network settings are managed in Settings.
  */
@@ -19,8 +19,7 @@ import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import LabelPreview from '../components/operator/LabelPreview'
-import { printThermal } from '../lib/thermalPrint'
-import { saveReceptionIntake } from '../lib/receptionIntake'
+import { saveReceptionIntake, buildReceptionPrintJobs, printReceptionSession } from '../lib/receptionIntake'
 import { useSessionContext } from '../hooks/useSessionContext'
 import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
@@ -47,6 +46,22 @@ const FARMERS: any[] = []
 
 const today = () => new Date().toISOString().slice(0, 10)
 
+type ReceptionSession = { records: WeighingRecord[]; nextPrintJob: number; closed: boolean; draft?: WeighingRecord }
+const emptySession = (): ReceptionSession => ({ records: [], nextPrintJob: 0, closed: false })
+function readReceptionSession(key: string): ReceptionSession {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(key) || 'null')
+    if (saved && Array.isArray(saved.records) && typeof saved.closed === 'boolean' &&
+      Number.isInteger(saved.nextPrintJob) && saved.nextPrintJob >= 0 && saved.nextPrintJob <= saved.records.length + 1) {
+      if (saved.records.length) buildReceptionPrintJobs(saved.records)
+      return saved
+    }
+  } catch {
+    // Saved intake records remain available in the ledger.
+  }
+  return emptySession()
+}
+
 const statusTone: Record<WeighingStatus, 'success' | 'warning'> = {
   BUFFER_WAITING: 'success',
   PENDING: 'warning',
@@ -55,17 +70,34 @@ const statusTone: Record<WeighingStatus, 'success' | 'warning'> = {
 const STEPS = [
   { id: 1, label: 'Farmer ID' },
   { id: 2, label: 'Weigh Harvest' },
-  { id: 3, label: 'Approve & Label' },
+  { id: 3, label: 'Review & Print' },
 ] as const
 
 export default function WeighingPage() {
   const toast = useToast()
   const { farmer, active, startScan } = useSessionContext()
   const { syncWithBackend } = usePackhouseStore()
+  const { user } = useAuth()
+  const storageKey = `smartgeulis.reception-session.${user?.id || 'operator'}`
+  const [receptionSession, setReceptionSession] = useState(() => readReceptionSession(storageKey))
+  const sessionRef = useRef(receptionSession)
+  const printingRef = useRef(false)
+  const updateReceptionSession = (next: ReceptionSession) => {
+    sessionRef.current = next
+    setReceptionSession(next)
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(next))
+    } catch {
+      toast.warning('Session recovery is unavailable. Keep this page open until printing finishes.')
+    }
+  }
+  const sessionTotalKg = receptionSession.records.reduce((sum, record) => sum + Math.round(record.weightKg * 1000), 0) / 1000
+  const sessionPrinted = receptionSession.closed && receptionSession.records.length > 0 &&
+    receptionSession.nextPrintJob === receptionSession.records.length + 1
 
   /* ── Mode State ── */
   const [focusMode, setFocusMode] = useState(false)
-  const [activeStep, setActiveStep] = useState<1 | 2 | 3>(1)
+  const [activeStep, setActiveStep] = useState<1 | 2 | 3>(() => receptionSession.records.length || receptionSession.draft ? 3 : 1)
 
   /* ── Step 1: Scan & Farmer Identification ── */
   const [scanFarmerId, setScanFarmerId] = useState('')
@@ -89,17 +121,18 @@ export default function WeighingPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
 
   /* ── Step 3: Approval & Print State ── */
-  const [confirmApprove, setConfirmApprove] = useState<WeighingRecord | null>(null)
+  const [confirmApprove, setConfirmApprove] = useState<WeighingRecord | null>(() => receptionSession.draft || null)
   const [printModalRecord, setPrintModalRecord] = useState<WeighingRecord | null>(null)
-  const [approvedSuccessRecord, setApprovedSuccessRecord] = useState<WeighingRecord | null>(null)
+  const [approvedSuccessRecord, setApprovedSuccessRecord] = useState<WeighingRecord | null>(() => receptionSession.draft ? null : receptionSession.records[receptionSession.records.length - 1] || null)
   const [isPrinting, setIsPrinting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const savingRef = useRef(false)
   const [saveError, setSaveError] = useState('')
-  const [printStatus, setPrintStatus] = useState('Not sent to printer')
+  const [printStatus, setPrintStatus] = useState(() => sessionPrinted
+    ? 'Receipt and labels sent to printer'
+    : receptionSession.closed ? `${receptionSession.nextPrintJob} tickets sent. Continue printing below.` : 'Not sent to printer')
 
   /* ── User & Admin Cancellation ── */
-  const { user } = useAuth()
   const [cancelModalRecord, setCancelModalRecord] = useState<WeighingRecord | null>(null)
 
   /* ── Records Ledger ── */
@@ -120,7 +153,7 @@ export default function WeighingPage() {
               weightKg: Number(w.grossWeightKg),
               depositDate: formatSafeDate(w.createdAt || w.approvedAt),
               time: formatSafeTime(w.createdAt || w.approvedAt),
-              status: w.status === 'PENDING' ? 'PENDING' : 'BUFFER_WAITING',
+              status: 'BUFFER_WAITING',
               waringCode: w.code,
             }))
           )
@@ -250,6 +283,7 @@ export default function WeighingPage() {
 
   /* ── Step 1: Handle Farmer Identification ── */
   const selectFarmer = (targetFarmer: { id: string; code?: string; name: string; village: string }) => {
+    if (sessionRef.current.records.length || sessionRef.current.draft) return
     setScanError('')
     startScan({ id: targetFarmer.id, name: targetFarmer.name })
     setScanFarmerId(targetFarmer.code || targetFarmer.id)
@@ -329,14 +363,16 @@ export default function WeighingPage() {
     if (e) e.preventDefault()
     setFormError('')
 
-    if (!active || !farmer) {
+    const sessionFarmer = sessionRef.current.records[0] || sessionRef.current.draft
+    if (sessionRef.current.closed || sessionRef.current.records.length >= 500) return
+    if ((!active || !farmer) && !sessionFarmer) {
       setFormError('Farmer context is required. Please go back to Step 1.')
       setActiveStep(1)
       return
     }
 
     const numericWeight = Number(weightKg)
-    if (!(numericWeight > 0)) {
+    if (!Number.isFinite(numericWeight) || numericWeight < 0.001) {
       setFormError('Weight must be greater than 0 kg.')
       return
     }
@@ -345,11 +381,12 @@ export default function WeighingPage() {
       return
     }
 
-    const activeFarmerObj = farmersList.find((f) => f.id === farmer.id)
+    const farmerId = sessionFarmer?.farmerId || farmer!.id
+    const activeFarmerObj = farmersList.find((f) => f.id === farmerId)
     const payload: WeighingRecord = {
-      id: editingId ?? String(Date.now()),
-      farmerId: farmer.id,
-      farmerName: farmer.name || '',
+      id: editingId ?? crypto.randomUUID(),
+      farmerId,
+      farmerName: sessionFarmer?.farmerName || farmer!.name || '',
       farmerVillage: activeFarmerObj?.village || '',
       weightKg: Number(numericWeight.toFixed(3)),
       depositDate: today(),
@@ -365,18 +402,22 @@ export default function WeighingPage() {
     }
 
     setConfirmApprove(payload)
+    updateReceptionSession({ ...sessionRef.current, draft: payload })
     setActiveStep(3)
   }
 
   /* ── Step 3: Handle Approval & Print ── */
   const handleApproveCommit = async (): Promise<WeighingRecord | null> => {
-    if (!confirmApprove || savingRef.current) return null
+    if (!confirmApprove || savingRef.current || printingRef.current || sessionRef.current.closed) return null
     savingRef.current = true
     setIsSaving(true)
     setSaveError('')
     try {
       const updatedRecord = await saveReceptionIntake(confirmApprove, api.weighing.create)
       const assignedCode = updatedRecord.waringCode!
+      if (!sessionRef.current.records.some((record) => record.id === updatedRecord.id)) {
+        updateReceptionSession({ ...sessionRef.current, draft: undefined, records: [...sessionRef.current.records, updatedRecord] })
+      }
 
       setRecords((current) =>
         current.map((item) => (item.id === confirmApprove.id ? updatedRecord : item)),
@@ -403,6 +444,8 @@ export default function WeighingPage() {
 
   /* Reset for next farmer weighing */
   const handleNextWeighing = () => {
+    if ((!sessionPrinted && receptionSession.records.length > 0) || isPrinting) return
+    updateReceptionSession(emptySession())
     setSaveError('')
     setPrintStatus('Not sent to printer')
     setWeightKg('')
@@ -415,6 +458,17 @@ export default function WeighingPage() {
     setPrintModalRecord(null)
     setActiveStep(1)
     toast.info('Ready for the next farmer.')
+  }
+
+  const handleNextBag = async () => {
+    if (sessionRef.current.closed || isSaving || isPrinting) return
+    if (!approvedSuccessRecord && !(await handleApproveCommit())) return
+    setWeightKg('')
+    setFormError('')
+    setConfirmApprove(null)
+    setApprovedSuccessRecord(null)
+    setPrintModalRecord(null)
+    setActiveStep(2)
   }
 
   /* Correction: return to Step 2 with the recorded weight */
@@ -434,96 +488,33 @@ export default function WeighingPage() {
     return override ?? approvedSuccessRecord ?? confirmApprove ?? printModalRecord
   }
 
-  const triggerPrintReceipt = (recordOverride?: WeighingRecord | null) => {
+  const triggerPrintBoth = async (recordOverride?: WeighingRecord | null, reprint = false) => {
     const rec = getPrintRecord(recordOverride)
-    if (!rec?.waringCode) return
-    setPrintStatus('Sending receipt to printer…')
+    if (!rec?.waringCode || printingRef.current || savingRef.current) return
+    const current = sessionRef.current
+    const isSession = current.records.some((record) => record.id === rec.id)
+    const batch = isSession ? current.records : [rec]
+    printingRef.current = true
     setIsPrinting(true)
-    printThermal(
-      {
-        type: 'receipt',
-        code: rec.waringCode,
-        farmerName: rec.farmerName,
-        farmerId: rec.farmerId,
-        weightKg: rec.weightKg,
-        date: rec.depositDate || today(),
-        time: rec.time,
-      },
-      'reception',
-      (error) => {
-        setIsPrinting(false)
-        setPrintStatus(error ? 'Receipt print failed. Retry below.' : 'Receipt sent to printer')
-        if (error) toast.error(`Receipt print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
-        else toast.success(`Receipt printed for ${rec.farmerName}`)
-      }
-    )
-  }
-
-  const triggerPrintWaringLabel = (recordOverride?: WeighingRecord | null) => {
-    const rec = getPrintRecord(recordOverride)
-    if (!rec?.waringCode) return
-    setPrintStatus('Sending Waring label to printer…')
-    setIsPrinting(true)
-    printThermal(
-      {
-        type: 'waring',
-        code: rec.waringCode,
-        farmerName: rec.farmerName,
-        farmerId: rec.farmerId,
-        weightKg: rec.weightKg,
-        date: rec.depositDate || today(),
-        time: rec.time,
-      },
-      'reception',
-      (error) => {
-        setIsPrinting(false)
-        setPrintStatus(error ? 'Waring label print failed. Retry below.' : 'Waring label sent to printer')
-        if (error) toast.error(`Waring label print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
-        else toast.success(`Waring QR label printed: ${rec.waringCode || ''}`)
-      }
-    )
-  }
-
-  const triggerPrintBoth = async (recordOverride?: WeighingRecord | null) => {
-    const rec = getPrintRecord(recordOverride)
-    if (!rec?.waringCode) return
-
-    setPrintStatus('Sending receipt and label to printer…')
-    setIsPrinting(true)
+    setPrintStatus('Sending receipt and labels to printer...')
+    let nextPrintJob = isSession && !reprint ? current.nextPrintJob : 0
+    if (isSession) updateReceptionSession({ ...current, closed: true, nextPrintJob })
     try {
-      // 1. Send receipt print job first (cuts paper after receipt)
-      await api.printers.print('reception', [
-        {
-          type: 'receipt',
-          code: rec.waringCode,
-          farmerName: rec.farmerName,
-          farmerId: rec.farmerId,
-          weightKg: rec.weightKg,
-          date: rec.depositDate || today(),
-          time: rec.time,
+      await printReceptionSession(buildReceptionPrintJobs(batch), nextPrintJob,
+        (jobs) => api.printers.print('reception', jobs),
+        (next) => {
+          nextPrintJob = next
+          if (isSession) updateReceptionSession({ ...sessionRef.current, nextPrintJob: next })
         },
-      ])
-      // Pause briefly so printer finishes paper cut before receiving next ticket
-      await new Promise((r) => setTimeout(r, 600))
-      // 2. Send waring label print job second (printed on fresh cut ticket)
-      await api.printers.print('reception', [
-        {
-          type: 'waring',
-          code: rec.waringCode,
-          farmerName: rec.farmerName,
-          farmerId: rec.farmerId,
-          weightKg: rec.weightKg,
-          date: rec.depositDate || today(),
-          time: rec.time,
-        },
-      ])
-      setIsPrinting(false)
-      setPrintStatus('Receipt and label sent to printer')
-      toast.success(`Receipt & Waring label ${rec.waringCode || ''} printed`)
+        () => new Promise((resolve) => window.setTimeout(resolve, 600)))
+      setPrintStatus('Receipt and labels sent to printer')
+      toast.success(`Receipt and ${batch.length} Waring labels sent to printer.`)
     } catch (error) {
+      setPrintStatus(`Print failed. Intake is saved. ${nextPrintJob}/${batch.length + 1} tickets sent. Retry below.`)
+      toast.error(error instanceof Error ? error.message : 'Check the Reception printer.')
+    } finally {
+      printingRef.current = false
       setIsPrinting(false)
-      setPrintStatus('Print failed. Intake is saved. Retry below.')
-      toast.error(`Receipt and Waring label print failed: ${error instanceof Error ? error.message : 'Check the Reception printer.'}`)
     }
   }
 
@@ -531,7 +522,7 @@ export default function WeighingPage() {
   const columns: Column<WeighingRecord>[] = [
     {
       key: 'farmerName',
-      label: 'Petani',
+      label: 'Farmer',
       priority: true,
       render: (row) => (
         <div>
@@ -542,7 +533,7 @@ export default function WeighingPage() {
     },
     {
       key: 'weightKg',
-      label: 'Bobot (kg)',
+      label: 'Weight (kg)',
       priority: true,
       align: 'right',
       render: (row) => (
@@ -553,7 +544,7 @@ export default function WeighingPage() {
     },
     {
       key: 'depositDate',
-      label: 'Waktu Setor',
+      label: 'Deposit Time',
       priority: true,
       render: (row) => (
         <div>
@@ -568,24 +559,24 @@ export default function WeighingPage() {
       priority: true,
       render: (row) => (
         <Badge tone={statusTone[row.status]} dot>
-          {row.status === 'BUFFER_WAITING' ? 'GUDANG PENYANGGA' : row.status === 'PENDING' ? 'MENUNGGU' : row.status}
+          {row.status === 'BUFFER_WAITING' ? 'BUFFER_WAITING' : row.status === 'PENDING' ? 'PENDING' : row.status}
         </Badge>
       ),
     },
     {
       key: 'waringCode',
-      label: 'Kode Waring',
+      label: 'Waring Code',
       priority: true,
       render: (row) =>
         row.waringCode ? (
-          <span className="font-mono font-medium tabular-nums text-foreground">{row.waringCode}</span>
+          <span className="font-mono font-medium tabular-nums text-foreground break-all">{row.waringCode}</span>
         ) : (
-          <span className="text-xs text-muted-foreground italic">Diberikan saat disetujui</span>
+          <span className="text-xs text-muted-foreground italic">Assigned after saving</span>
         ),
     },
     {
       key: 'actions',
-      label: 'Aksi',
+      label: 'Actions',
       align: 'right',
       render: (row) => (
         <div className="flex items-center gap-1.5 justify-end">
@@ -602,10 +593,10 @@ export default function WeighingPage() {
                   document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
                 }}
               >
-                Setujui
+                Approve
               </Button>
               <Button size="sm" variant="outline" icon="refresh" onClick={() => handleKoreksi(row)}>
-                Koreksi
+                Correct Weight
               </Button>
             </>
           ) : (
@@ -613,6 +604,7 @@ export default function WeighingPage() {
               size="sm"
               variant="outline"
               icon="print"
+              disabled={isSaving || isPrinting || receptionSession.records.length > 0 || !!receptionSession.draft}
               onClick={() => {
                 setConfirmApprove(row)
                 setPrintModalRecord(row)
@@ -621,7 +613,7 @@ export default function WeighingPage() {
                 document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
               }}
             >
-              Cetak Ulang
+              Reprint
             </Button>
           )}
           {user?.role === 'ADMIN' && (
@@ -630,9 +622,10 @@ export default function WeighingPage() {
               variant="outline"
               icon="trash"
               className="text-destructive hover:bg-destructive/10 border-destructive/30"
+              disabled={isSaving || isPrinting || receptionSession.records.some((record) => record.id === row.id)}
               onClick={() => setCancelModalRecord(row)}
             >
-              Batalkan
+              Cancel
             </Button>
           )}
         </div>
@@ -642,6 +635,10 @@ export default function WeighingPage() {
 
   const pendingCount = records.filter((item) => item.status === 'PENDING').length
   const approvedToday = records.filter((item) => item.status === 'BUFFER_WAITING').length
+  const previewRecords = confirmApprove && !confirmApprove.waringCode
+    ? [...receptionSession.records, confirmApprove]
+    : receptionSession.records.length ? receptionSession.records : approvedSuccessRecord ? [approvedSuccessRecord] : []
+  const previewTotalKg = previewRecords.reduce((sum, record) => sum + Math.round(record.weightKg * 1000), 0) / 1000
 
   /* ─────────────────────────────────────────────────────────────
      STEPPER PROGRESS BAR COMPONENT
@@ -659,6 +656,7 @@ export default function WeighingPage() {
               type="button"
               disabled={isSaving || isPrinting}
               onClick={() => {
+                if (receptionSession.closed || receptionSession.records.length || receptionSession.draft) return
                 if (step.id < activeStep || approvedSuccessRecord) {
                   setActiveStep(step.id as 1 | 2 | 3)
                 }
@@ -697,16 +695,26 @@ export default function WeighingPage() {
      ═══════════════════════════════════════════════════════════════════ */
   const renderFocusContent = () => (
     <div className="station-workflow space-y-6">
+      {receptionSession.records.length > 0 && <div className="border border-border bg-muted/30 p-3 space-y-2">
+        <div className="flex justify-between gap-2 font-semibold text-sm">
+          <span>{receptionSession.records.length} bags saved</span><span>{formatWeight(sessionTotalKg)} kg total</span>
+        </div>
+        <div className="max-h-40 overflow-y-auto text-xs space-y-1" aria-label="Saved bags">
+          {receptionSession.records.map((record, index) => <div key={record.id} className="flex justify-between gap-3 font-mono">
+            <span className="break-all">{index + 1}. {record.waringCode}</span><span className="shrink-0">{formatWeight(record.weightKg)} kg</span>
+          </div>)}
+        </div>
+      </div>}
       {/* ── STEP 1: Farmer Identification ── */}
       {activeStep === 1 && (
         <div className="station-step bg-card border border-border rounded-none p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 1 of 3">
-                Langkah 1 dari 3
+                Step 1 of 3
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Scan Farmer Card">
-                Pindai Kartu Petani
+                Scan Farmer Card
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
@@ -776,17 +784,17 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 2 of 3">
-                Langkah 2 dari 3
+                Step 2 of 3
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Weigh Harvest">
-                Timbang Panen
+                Weigh Harvest
               </h2>
             </div>
             <div className="flex items-center gap-2">
               <Badge tone="success" dot>
-                Farmer: {farmer?.name}
+                Farmer: {receptionSession.records[0]?.farmerName || receptionSession.draft?.farmerName || farmer?.name}
               </Badge>
-              <Button size="sm" variant="ghost" icon="edit" onClick={() => setActiveStep(1)}>
+              <Button size="sm" variant="ghost" icon="edit" disabled={receptionSession.records.length > 0 || !!receptionSession.draft} onClick={() => setActiveStep(1)}>
                 Change Farmer
               </Button>
             </div>
@@ -804,6 +812,7 @@ export default function WeighingPage() {
                   setFormError('')
                 }}
                 capacityKg={scaleCapacityKg ?? 0}
+                hideTare
               />
               {formError && (
                 <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-none flex items-center gap-2 font-medium">
@@ -821,7 +830,7 @@ export default function WeighingPage() {
                 <div className="space-y-2 text-sm pt-1">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Farmer:</span>
-                    <span className="font-semibold text-foreground">{farmer?.name}</span>
+                    <span className="font-semibold text-foreground">{receptionSession.records[0]?.farmerName || receptionSession.draft?.farmerName || farmer?.name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Commodity:</span>
@@ -846,9 +855,17 @@ export default function WeighingPage() {
           </div>
 
           <div className="flex items-center justify-between border-t border-border pt-4">
-            <Button variant="outline" onClick={() => setActiveStep(1)}>
+            <Button variant="outline" disabled={receptionSession.records.length > 0 || !!receptionSession.draft} onClick={() => setActiveStep(1)}>
               Back to Farmer
             </Button>
+            {receptionSession.records.length > 0 && <Button variant="outline" icon="print"
+              disabled={!!weightKg}
+              onClick={() => {
+                const last = receptionSession.records[receptionSession.records.length - 1]
+                setConfirmApprove(last)
+                setApprovedSuccessRecord(last)
+                setActiveStep(3)
+              }}>Review & Print</Button>}
             <Button
               variant="primary"
               icon="check"
@@ -868,10 +885,10 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-2 flex-wrap gap-2 no-print">
             <div>
               <span className="text-[10px] uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 3 of 3">
-                Langkah 3 dari 3
+                Step 3 of 3
               </span>
               <h2 className="text-xl font-bold tracking-tight text-foreground" data-title="Approve & Print">
-                Setujui & Cetak
+                Review & Print
               </h2>
             </div>
             {approvedSuccessRecord ? (
@@ -890,16 +907,16 @@ export default function WeighingPage() {
             <div>
               <span className="text-xs text-muted-foreground block font-medium">Farmer</span>
               <span className="font-semibold text-base text-foreground block">
-                {confirmApprove?.farmerName ?? farmer?.name}
+                {confirmApprove?.farmerName ?? approvedSuccessRecord?.farmerName ?? farmer?.name}
               </span>
               <span className="font-mono text-xs text-muted-foreground block">
-                {confirmApprove?.farmerId ?? farmer?.id}
+                {confirmApprove?.farmerId ?? approvedSuccessRecord?.farmerId ?? farmer?.id}
               </span>
             </div>
             <div>
               <span className="text-xs text-muted-foreground block font-medium">Captured Weight</span>
               <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 block tracking-tight">
-                {formatWeight(confirmApprove?.weightKg ?? weightKg)}
+                {formatWeight(confirmApprove?.weightKg ?? approvedSuccessRecord?.weightKg ?? weightKg)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
               </span>
             </div>
@@ -910,7 +927,7 @@ export default function WeighingPage() {
             </div>
             <div>
               <span className="text-xs text-muted-foreground block font-medium">Assigned Waring ID</span>
-              <span className="font-mono font-bold text-base text-primary block">
+              <span className="font-mono font-bold text-base text-primary block break-all">
                 {approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? 'Assigned after saving'}
               </span>
               <span className="text-xs text-muted-foreground block">QR Waring Label</span>
@@ -923,10 +940,11 @@ export default function WeighingPage() {
               {/* Receipt Preview */}
               <LabelPreview
                 type="receipt"
-                code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? ''}
-                farmerName={confirmApprove?.farmerName ?? farmer?.name}
-                farmerId={confirmApprove?.farmerId ?? farmer?.id}
-                weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
+                code={receptionSession.records[0]?.waringCode ?? approvedSuccessRecord?.waringCode ?? ''}
+                farmerName={previewRecords[0]?.farmerName ?? farmer?.name}
+                farmerId={previewRecords[0]?.farmerId ?? farmer?.id}
+                weightKg={previewTotalKg}
+                items={previewRecords.map((record, index) => ({ code: record.waringCode || `Bag ${index + 1} (unsaved)`, weightKg: record.weightKg }))}
                 time={confirmApprove?.time ?? 'Live'}
                 date={today()}
                 screenFit
@@ -936,73 +954,38 @@ export default function WeighingPage() {
               <LabelPreview
                 type="waring"
                 code={approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? ''}
-                farmerName={confirmApprove?.farmerName ?? farmer?.name}
-                farmerId={confirmApprove?.farmerId ?? farmer?.id}
-                weightKg={confirmApprove?.weightKg ?? Number(weightKg)}
+                farmerName={confirmApprove?.farmerName ?? approvedSuccessRecord?.farmerName ?? farmer?.name}
+                farmerId={confirmApprove?.farmerId ?? approvedSuccessRecord?.farmerId ?? farmer?.id}
+                weightKg={confirmApprove?.weightKg ?? approvedSuccessRecord?.weightKg ?? Number(weightKg)}
                 date={today()}
                 screenFit
               />
             </div>
           </div>
 
-          {/* Action Bar */}
-          {saveError && (
-            <p role="alert" className="alert alert-danger">
-              {saveError} Your weight is retained. Retry saving below.
-            </p>
-          )}
+          {saveError && <p role="alert" className="alert alert-danger">
+            {saveError} Your weight is retained. Retry saving below.
+          </p>}
           <p role="status" className={printStatus.includes('failed') ? 'alert alert-warning' : 'text-sm text-muted-foreground'}>
-            {isSaving ? 'Saving intake…' : approvedSuccessRecord ? `Saved · ${printStatus}` : 'Review the captured weight before saving.'}
+            {isSaving ? 'Saving intake...' : printStatus}
           </p>
           <div className="flex items-center justify-between border-t border-border pt-3 flex-wrap gap-2 no-print">
-            {!approvedSuccessRecord ? (
-              <>
-                <Button
-                  variant="outline"
-                  icon="refresh"
-                  disabled={isSaving}
-                  onClick={() => confirmApprove && handleKoreksi(confirmApprove)}
-                >
-                  Correct Weight
-                </Button>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="primary"
-                    icon="check"
-                    touch
-                    loading={isPrinting || isSaving}
-                    onClick={async () => {
-                      const saved = await handleApproveCommit()
-                      if (saved) triggerPrintBoth(saved)
-                    }}
-                  >
-                    {isSaving ? 'Saving…' : saveError ? 'Retry Save & Print' : 'Approve & Print'}
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintBoth()}>
-                    {printStatus.includes('failed') ? 'Retry Print' : 'Print Again'}
-                  </Button>
-                  <details>
-                    <summary className="cursor-pointer text-sm p-3">More Print Options</summary>
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintReceipt()}>
-                        Re-print Receipt
-                      </Button>
-                      <Button variant="outline" icon="print" loading={isPrinting} onClick={() => triggerPrintWaringLabel()}>
-                        Re-print Waring Label
-                      </Button>
-                    </div>
-                  </details>
-                </div>
-                <Button variant="primary" icon="check" touch disabled={isPrinting} onClick={handleNextWeighing}>
-                  Next Weighing
-                </Button>
-              </>
-            )}
+            {!approvedSuccessRecord && <Button variant="outline" icon="refresh" disabled={isSaving || isPrinting}
+              onClick={() => confirmApprove && handleKoreksi(confirmApprove)}>Correct Weight</Button>}
+            {!receptionSession.closed && receptionSession.records.length < 500 && <Button variant="outline" icon="check"
+              loading={isSaving} disabled={isPrinting} onClick={() => void handleNextBag()}>
+              {saveError ? 'Retry Save & Next Bag' : 'Save & Next Bag'}
+            </Button>}
+            <Button variant="primary" icon="print" touch loading={isPrinting || isSaving}
+              onClick={async () => {
+                const saved = approvedSuccessRecord || await handleApproveCommit()
+                if (saved) void triggerPrintBoth(saved, sessionPrinted)
+              }}>
+              {sessionPrinted ? 'Print Again' : printStatus.includes('failed') || receptionSession.closed ? 'Retry Print' : 'Finish & Print'}
+            </Button>
+            {(sessionPrinted || (approvedSuccessRecord && !receptionSession.records.length)) && <Button variant="primary" icon="check" touch disabled={isPrinting} onClick={handleNextWeighing}>
+              {sessionPrinted ? 'Next Farmer' : 'Back to Weighing'}
+            </Button>}
           </div>
         </div>
       )}
@@ -1067,24 +1050,24 @@ export default function WeighingPage() {
         {/* Quick Stats Grid */}
         <div className="station-quick-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Menunggu persetujuan</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pending Approval</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{pendingCount}</p>
-            <p className="text-xs text-muted-foreground">Perlu verifikasi</p>
+            <p className="text-xs text-muted-foreground">Requires verification</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Disetujui hari ini</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Saved Records</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{approvedToday}</p>
             <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              Waring siap dipilah
+              Ready for Sorting
             </p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Timbangan</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale</p>
             <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
             <p className="text-xs text-muted-foreground font-mono">{scaleEndpoint}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Printer Struk</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Reception Printer</p>
             <p className={`text-2xl font-bold tracking-tight ${printerOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{printerOnline ? 'Online' : 'Offline'}</p>
             <p className="text-xs text-muted-foreground font-mono">{printerEndpoint}</p>
           </div>
@@ -1093,9 +1076,9 @@ export default function WeighingPage() {
         {/* Sequential Stepper in Standard View */}
         <div id="weighing-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
-            <span className="font-semibold text-base text-foreground">Alur Penerimaan</span>
+            <span className="font-semibold text-base text-foreground">Reception Workflow</span>
             <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-              Mode Fokus
+              Focus Mode
             </Button>
           </div>
 
@@ -1111,17 +1094,17 @@ export default function WeighingPage() {
         {/* ── Today's Harvest Weighing Records Ledger ── */}
         <div id="weighing-records" className="space-y-3 no-print">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight text-foreground">Buku Besar Penerimaan Hari Ini</h2>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Reception Records</h2>
             <span className="text-xs text-muted-foreground font-mono">
-              {pendingCount} menunggu · {approvedToday} disetujui
+              {pendingCount} pending · {approvedToday} saved
             </span>
           </div>
           <DataTable
             columns={columns}
             data={records}
             rowKey={(row) => row.id}
-            emptyTitle="Belum ada rekaman panen hari ini."
-            emptyDescription="Pilih petani dan lakukan penimbangan panen pertama."
+            emptyTitle="No Reception records."
+            emptyDescription="Verify a farmer and weigh the first bag."
           />
         </div>
       </div>

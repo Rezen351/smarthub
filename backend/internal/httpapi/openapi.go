@@ -440,12 +440,13 @@ const openapiJSON = `{
         "tags": ["Station 01: Weighing & Reception"],
         "summary": "List Reception Warings",
         "responses": {
-          "200": { "description": "List of received sacks with tare and net weights" }
+          "200": { "description": "Received bags; new Reception records have zero tare and equal gross and net weights" }
         }
       },
       "post": {
         "tags": ["Station 01: Weighing & Reception"],
-        "summary": "Record Sacks Intake (Capture Weight)",
+        "summary": "Save one bag without printing or deducting tare",
+        "description": "Scale readings are accepted directly. Gross and net weights are equal; tare is always zero. Reuse requestId when retrying the same bag. Printing is a separate action after all bags are saved.",
         "requestBody": {
           "required": true,
           "content": {
@@ -455,15 +456,16 @@ const openapiJSON = `{
                 "required": ["farmerCode", "grossWeightKg"],
                 "properties": {
                   "farmerCode": { "type": "string", "example": "FMR-001" },
-                  "grossWeightKg": { "type": "number", "example": 52.4 },
-                  "tareWeightKg": { "type": "number", "example": 1.2 }
+                  "grossWeightKg": { "type": "number", "minimum": 0.001, "example": 52.4 },
+                  "requestId": { "type": "string", "format": "uuid", "description": "Stable identity for one bag; reuse only for retries of that bag" }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Intake waring record created" }
+          "201": { "description": "Intake waring saved with zero tare" },
+          "409": { "description": "requestId already belongs to a different intake" }
         }
       }
     },
@@ -596,7 +598,6 @@ const openapiJSON = `{
   }
 }
 `
-
 
 func (s *server) openapiSpec(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")

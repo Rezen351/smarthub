@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 )
 
@@ -56,5 +57,29 @@ func TestEncodePrintJobsMatchesPreviewLayout(t *testing.T) {
 			t.Fatalf("label field %q is missing or out of requested order", field)
 		}
 		last += position + len(field)
+	}
+}
+
+func TestReceptionPrintTenBagsWithOneReceipt(t *testing.T) {
+	items := make([]receiptItem, 10)
+	jobs := []printJob{{Type: "receipt", Code: "WRG-0", FarmerName: "Ada", WeightKg: 1}}
+	for index := range items {
+		code := fmt.Sprintf("WRG-%d", index)
+		items[index] = receiptItem{Code: code, WeightKg: 25}
+		jobs = append(jobs, printJob{Type: "waring", Code: code, WeightKg: 25})
+	}
+	jobs[0].Items = items
+	payload, err := encodePrintJobs(jobs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Count(payload, []byte("RECEIVING RECEIPT\n")) != 1 || bytes.Count(payload, []byte("WARING LABEL\n")) != 10 {
+		t.Fatal("expected one receipt and ten Waring labels")
+	}
+	if !bytes.Contains(payload, []byte("Bags: 10\n")) || !bytes.Contains(payload, []byte("Total Weight\n250.000 kg\n")) {
+		t.Fatal("receipt must contain bag count and the calculated total")
+	}
+	if bytes.Count(payload, []byte{0x1d, 0x56, 0x42, 0x03}) != 11 {
+		t.Fatal("each ticket must be cut")
 	}
 }
