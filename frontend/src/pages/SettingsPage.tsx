@@ -8,6 +8,7 @@ import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import { api } from '../services/api'
 import PalletsPage from './PalletsPage'
+import CommoditiesSection from '../components/settings/CommoditiesSection'
 
 export interface ScaleConfig {
   ip: string
@@ -102,13 +103,16 @@ const STORAGE_KEY = 'smarthub_settings'
 
 export default function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeSection = searchParams.get('section') === 'pallets' ? 'pallets' : 'devices'
-  const sections: Array<{ id: 'devices' | 'pallets'; label: string; icon: IconName }> = [
+  const rawSection = searchParams.get('section')
+  const activeSection: 'devices' | 'pallets' | 'commodities' =
+    rawSection === 'pallets' ? 'pallets' : rawSection === 'commodities' ? 'commodities' : 'devices'
+  const sections: Array<{ id: 'devices' | 'pallets' | 'commodities'; label: string; icon: IconName }> = [
     { id: 'devices', label: 'Devices', icon: 'settings' },
     { id: 'pallets', label: 'Pallet Registry', icon: 'pallet' },
+    { id: 'commodities', label: 'Commodities & GTIN', icon: 'leaf' },
   ]
 
-  const selectSection = (section: 'devices' | 'pallets') => {
+  const selectSection = (section: 'devices' | 'pallets' | 'commodities') => {
     setSearchParams({ section }, { replace: true })
   }
 
@@ -116,11 +120,11 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Settings"
-        subtitle="Manage connected devices and reusable pallets."
+        subtitle="Manage connected devices, reusable pallets, and commodity GTIN master data."
       />
 
       <div
-        className="inline-flex w-full border border-border bg-muted/40 p-1 sm:w-auto"
+        className="inline-flex w-full border border-border bg-muted/40 p-1 sm:w-auto flex-wrap"
         role="tablist"
         aria-label="Settings sections"
       >
@@ -153,7 +157,13 @@ export default function SettingsPage() {
         role="tabpanel"
         aria-labelledby={`settings-tab-${activeSection}`}
       >
-        {activeSection === 'devices' ? <DeviceSettings /> : <PalletsPage embedded />}
+        {activeSection === 'devices' ? (
+          <DeviceSettings />
+        ) : activeSection === 'pallets' ? (
+          <PalletsPage embedded />
+        ) : (
+          <CommoditiesSection />
+        )}
       </section>
     </div>
   )

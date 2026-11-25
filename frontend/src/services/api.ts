@@ -98,6 +98,19 @@ export interface PalletCloseout {
   createdAt: string
 }
 
+export interface Commodity {
+  id: string
+  code: string
+  name: string
+  description: string
+  unit: string
+  gtin: string
+  brand: string
+  packageType: string
+  isActive: boolean
+  createdAt?: string
+}
+
 export interface Pallet {
   id: string
   code: string
@@ -110,6 +123,10 @@ export interface Pallet {
   farmerName?: string | null
   farmerVillage?: string | null
   waringCode?: string | null
+  commodityId?: string | null
+  commodityCode?: string | null
+  commodityName?: string | null
+  commodityGtin?: string | null
   createdAt?: string
   updatedAt?: string
 }
@@ -172,6 +189,57 @@ export const api = {
     logout: () => {
       localStorage.removeItem('auth_token')
       localStorage.removeItem('user')
+    },
+  },
+
+  // Commodities Master Data & GS1 GTIN-13
+  commodities: {
+    list: async (includeInactive = false) => {
+      const query = includeInactive ? '?includeInactive=true' : ''
+      const res = await request<ApiResponse<Commodity[]>>(`/commodities${query}`)
+      return res.data
+    },
+    create: async (data: {
+      code: string
+      name: string
+      gtin: string
+      description?: string
+      unit?: string
+      brand?: string
+      packageType?: string
+      isActive?: boolean
+    }) => {
+      const res = await request<ApiResponse<Commodity>>('/commodities', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+      return res.data
+    },
+    update: async (
+      idOrCode: string,
+      data: Partial<{
+        code: string
+        name: string
+        gtin: string
+        description: string
+        unit: string
+        brand: string
+        packageType: string
+        isActive: boolean
+      }>
+    ) => {
+      const res = await request<ApiResponse<Commodity>>(`/commodities/${encodeURIComponent(idOrCode)}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      })
+      return res.data
+    },
+    delete: async (idOrCode: string) => {
+      const res = await request<ApiResponse<{ id: string; code: string; deleted?: boolean; deactivated?: boolean; message?: string }>>(
+        `/commodities/${encodeURIComponent(idOrCode)}`,
+        { method: 'DELETE' }
+      )
+      return res.data
     },
   },
 
@@ -348,7 +416,7 @@ export const api = {
       const res = await request<ApiResponse<any[]>>('/deliveries')
       return res.data
     },
-    create: async (data: { truckPlate: string; driverName: string; destination: string; grade: 'A' | 'B' | 'C'; units: number }) => {
+    create: async (data: { truckPlate: string; driverName: string; destination: string; grade: 'A' | 'B' | 'C'; commodityCode?: string; units: number }) => {
       const res = await request<ApiResponse<any>>('/deliveries', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -451,43 +519,61 @@ export const api = {
 
   // Reports, Analytics & Recaps
   reports: {
-    dailyRecap: async (date?: string) => {
-      const query = date ? `?date=${encodeURIComponent(date)}` : ''
+    dailyRecap: async (date?: string, commodityCode?: string) => {
+      const sp = new URLSearchParams()
+      if (date) sp.set('date', date)
+      if (commodityCode) sp.set('commodityCode', commodityCode)
+      const query = sp.toString() ? `?${sp.toString()}` : ''
       const res = await request<ApiResponse<any>>(`/reports/recap/daily${query}`)
       return res.data
     },
-    monthlyRecap: async (month?: string) => {
-      const query = month ? `?month=${encodeURIComponent(month)}` : ''
+    monthlyRecap: async (month?: string, commodityCode?: string) => {
+      const sp = new URLSearchParams()
+      if (month) sp.set('month', month)
+      if (commodityCode) sp.set('commodityCode', commodityCode)
+      const query = sp.toString() ? `?${sp.toString()}` : ''
       const res = await request<ApiResponse<any>>(`/reports/recap/monthly${query}`)
       return res.data
     },
-    farmerRankings: async (limit = 10, period = 'all') => {
+    farmerRankings: async (limit = 10, period = 'all', commodityCode?: string) => {
+      const sp = new URLSearchParams({ limit: String(limit), period })
+      if (commodityCode) sp.set('commodityCode', commodityCode)
       const res = await request<ApiResponse<{ period: string; grandTotalGross: number; rankings: any[] }>>(
-        `/reports/rankings/farmers?limit=${limit}&period=${period}`
+        `/reports/rankings/farmers?${sp.toString()}`
       )
       return res.data
     },
-    downloadDailyCsvUrl: (date?: string) => {
+    downloadDailyCsvUrl: (date?: string, commodityCode?: string) => {
+      const sp = new URLSearchParams({ date: date || new Date().toISOString().slice(0, 10), format: 'csv' })
+      if (commodityCode) sp.set('commodityCode', commodityCode)
+      return `/api/v1/reports/recap/daily?${sp.toString()}`
+    },
+    downloadMonthlyCsvUrl: (month?: string, commodityCode?: string) => {
+      const sp = new URLSearchParams({ month: month || new Date().toISOString().slice(0, 7), format: 'csv' })
+      if (commodityCode) sp.set('commodityCode', commodityCode)
+      return `/api/v1/reports/recap/monthly?${sp.toString()}`
+    },
+    downloadRankingsCsvUrl: (limit = 10, period = 'all', commodityCode?: string) => {
+      const sp = new URLSearchParams({ limit: String(limit), period, format: 'csv' })
+      if (commodityCode) sp.set('commodityCode', commodityCode)
+      return `/api/v1/reports/rankings/farmers?${sp.toString()}`
+    },
+    downloadDailyCsv: async (date?: string, commodityCode?: string) => {
       const d = date || new Date().toISOString().slice(0, 10)
-      return `/api/v1/reports/recap/daily?date=${encodeURIComponent(d)}&format=csv`
+      const sp = new URLSearchParams({ date: d, format: 'csv' })
+      if (commodityCode) sp.set('commodityCode', commodityCode)
+      return downloadFile(`/api/v1/reports/recap/daily?${sp.toString()}`, `smartgeulis_daily_recap_${d}.csv`)
     },
-    downloadMonthlyCsvUrl: (month?: string) => {
+    downloadMonthlyCsv: async (month?: string, commodityCode?: string) => {
       const m = month || new Date().toISOString().slice(0, 7)
-      return `/api/v1/reports/recap/monthly?month=${encodeURIComponent(m)}&format=csv`
+      const sp = new URLSearchParams({ month: m, format: 'csv' })
+      if (commodityCode) sp.set('commodityCode', commodityCode)
+      return downloadFile(`/api/v1/reports/recap/monthly?${sp.toString()}`, `smartgeulis_monthly_recap_${m}.csv`)
     },
-    downloadRankingsCsvUrl: (limit = 10, period = 'all') => {
-      return `/api/v1/reports/rankings/farmers?limit=${limit}&period=${period}&format=csv`
-    },
-    downloadDailyCsv: async (date?: string) => {
-      const d = date || new Date().toISOString().slice(0, 10)
-      return downloadFile(`/api/v1/reports/recap/daily?date=${encodeURIComponent(d)}&format=csv`, `smartgeulis_daily_recap_${d}.csv`)
-    },
-    downloadMonthlyCsv: async (month?: string) => {
-      const m = month || new Date().toISOString().slice(0, 7)
-      return downloadFile(`/api/v1/reports/recap/monthly?month=${encodeURIComponent(m)}&format=csv`, `smartgeulis_monthly_recap_${m}.csv`)
-    },
-    downloadRankingsCsv: async (limit = 50, period = 'all') => {
-      return downloadFile(`/api/v1/reports/rankings/farmers?limit=${limit}&period=${period}&format=csv`, `smartgeulis_farmer_rankings_${period}.csv`)
+    downloadRankingsCsv: async (limit = 50, period = 'all', commodityCode?: string) => {
+      const sp = new URLSearchParams({ limit: String(limit), period, format: 'csv' })
+      if (commodityCode) sp.set('commodityCode', commodityCode)
+      return downloadFile(`/api/v1/reports/rankings/farmers?${sp.toString()}`, `smartgeulis_farmer_rankings_${period}.csv`)
     },
   },
 

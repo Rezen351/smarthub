@@ -19,10 +19,24 @@ export default function WarehousePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialZone = (searchParams.get('zone') as WarehouseZone) || 'buffer'
   const [activeZone, setActiveZone] = useState<WarehouseZone>(initialZone)
+  const [commodityFilter, setCommodityFilter] = useState<string>('')
   const { waitingWarings, finishedStock } = usePackhouseStore()
 
-  const bufferItems = waitingWarings
-  const finishedItems = finishedStock
+  const bufferItems = commodityFilter
+    ? waitingWarings.filter((i) => (i.commodityCode || '001') === commodityFilter)
+    : waitingWarings
+  const finishedItems = commodityFilter
+    ? finishedStock.filter((i) => (i.commodityCode || '001') === commodityFilter)
+    : finishedStock
+
+  const commodityOptions = Array.from(
+    new Map(
+      [...waitingWarings, ...finishedStock].map((item) => [
+        item.commodityCode || '001',
+        item.commodityName || 'Eptilu Washed Potatoes 10 kg',
+      ])
+    ).entries()
+  )
 
   useEffect(() => {
     const qZone = searchParams.get('zone')
@@ -58,6 +72,16 @@ export default function WarehousePage() {
       key: 'farmerName',
       label: 'Farmer',
       render: (row) => <span className="font-semibold text-foreground text-sm">{row.farmerName}</span>,
+    },
+    {
+      key: 'commodityName',
+      label: 'Commodity',
+      render: (row) => (
+        <span className="text-xs text-foreground">
+          <span className="font-mono font-bold mr-1">{row.commodityCode || '001'}</span>
+          {row.commodityName || 'Eptilu Washed Potatoes 10 kg'}
+        </span>
+      ),
     },
     {
       key: 'grossWeightKg',
@@ -124,6 +148,16 @@ export default function WarehousePage() {
       render: (row) => <span className="font-mono font-bold text-foreground">{row.code}</span>,
     },
     {
+      key: 'commodityName',
+      label: 'Commodity',
+      render: (row) => (
+        <span className="text-xs text-foreground">
+          <span className="font-mono font-bold mr-1">{row.commodityCode || '001'}</span>
+          {row.commodityName || 'Eptilu Washed Potatoes 10 kg'}
+        </span>
+      ),
+    },
+    {
       key: 'packageType',
       label: 'Package Standard',
       render: (row) => <span className="text-sm font-semibold text-foreground">{row.packageType}</span>,
@@ -172,7 +206,22 @@ export default function WarehousePage() {
         title="Warehouse Inventory"
         subtitle="Harvest buffer and finished goods storage."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {commodityOptions.length > 0 && (
+              <select
+                aria-label="Filter by commodity"
+                className="form-input text-xs py-1.5"
+                value={commodityFilter}
+                onChange={(e) => setCommodityFilter(e.target.value)}
+              >
+                <option value="">All Commodities</option>
+                {commodityOptions.map(([code, name]) => (
+                  <option key={code} value={code}>
+                    {code} — {name}
+                  </option>
+                ))}
+              </select>
+            )}
             <Badge tone="accent">2 Zones Active</Badge>
           </div>
         }

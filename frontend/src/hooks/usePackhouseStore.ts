@@ -8,6 +8,10 @@ export interface BufferWaringItem {
   farmerId?: string
   farmerName: string
   farmerVillage?: string
+  commodityId?: string
+  commodityCode?: string
+  commodityName?: string
+  commodityGtin?: string
   grossWeightKg: number
   intakeTime: string
   date: string
@@ -20,6 +24,10 @@ export interface GradedBatchRecord {
   waringCode: string
   farmerName: string
   farmerVillage?: string
+  commodityId?: string
+  commodityCode?: string
+  commodityName?: string
+  commodityGtin?: string
   grossIntakeKg: number
   washingRecord: 'WASHED' | 'UNWASHED'
   gradeAKg: number
@@ -39,6 +47,11 @@ export interface FinishedStockItem {
   id: string
   code: string
   sourcePalletCode?: string
+  commodityId?: string
+  commodityCode?: string
+  commodityName?: string
+  commodityGtin?: string
+  barcode?: string
   packageType: '1 kg Pouch' | '10 kg Export Carton' | '50 kg Export Carton'
   mode: 'RETAIL_POUCH' | 'BULK_EXPORT'
   grade: 'A' | 'B' | 'C'
@@ -57,6 +70,8 @@ export interface DeliveryRecord {
   driver: string
   units: number
   grade?: string
+  commodityCode?: string
+  commodityName?: string
   status: 'LOADING' | 'READY' | 'DEPARTED' | 'DELIVERED'
   time: string
   date: string
@@ -130,6 +145,10 @@ export function usePackhouseStore() {
           farmerId: w.farmerCode || w.farmer?.code || w.farmerId,
           farmerName: w.farmerName || w.farmer?.name || 'Farmer',
           farmerVillage: w.farmerVillage || w.farmer?.village || '',
+          commodityId: w.commodityId,
+          commodityCode: w.commodityCode || '001',
+          commodityName: w.commodityName || 'Eptilu Washed Potatoes 10 kg',
+          commodityGtin: w.commodityGtin || '8994477090010',
           grossWeightKg: Number(w.grossWeightKg),
           intakeTime: formatSafeTime(w.createdAt || w.approvedAt),
           date: formatSafeDate(w.createdAt || w.approvedAt),
@@ -156,6 +175,10 @@ export function usePackhouseStore() {
             waringCode: b.waringCode || b.waring?.code || '',
             farmerName: b.farmerName || b.waring?.farmer?.name || 'Farmer',
             farmerVillage: b.farmerVillage || b.waring?.farmer?.village || '',
+            commodityId: b.commodityId,
+            commodityCode: b.commodityCode || '001',
+            commodityName: b.commodityName || 'Eptilu Washed Potatoes 10 kg',
+            commodityGtin: b.commodityGtin || '8994477090010',
             grossIntakeKg: Number(b.grossWeightKg),
             washingRecord: b.washDecision || b.washingRecord || 'WASHED',
             gradeAKg: gA,
@@ -177,6 +200,12 @@ export function usePackhouseStore() {
         nextStore.finishedStock = packagingRes.value.map((p: any) => ({
           id: p.id,
           code: p.code || p.unitCode,
+          sourcePalletCode: p.sourcePalletCode,
+          commodityId: p.commodityId,
+          commodityCode: p.commodityCode || '001',
+          commodityName: p.commodityName || 'Eptilu Washed Potatoes 10 kg',
+          commodityGtin: p.commodityGtin || '8994477090010',
+          barcode: p.barcode,
           packageType: (p.format?.includes('Carton') || p.format === 'EXPORT_CARTON' ? '10 kg Export Carton' : '1 kg Pouch') as any,
           mode: p.format?.includes('Carton') || p.format === 'EXPORT_CARTON' ? 'BULK_EXPORT' : 'RETAIL_POUCH',
           grade: (p.grade || 'A') as any,
@@ -197,6 +226,8 @@ export function usePackhouseStore() {
           driver: d.driverName,
           units: Number(d.units || 0),
           grade: 'A',
+          commodityCode: d.commodityCode || '',
+          commodityName: d.commodityName || '',
           status: d.status,
           time: formatSafeTime(d.createdAt || d.departedAt),
           date: formatSafeDate(d.createdAt || d.departedAt),

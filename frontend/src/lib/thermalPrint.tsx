@@ -7,6 +7,10 @@ export interface ThermalPrintJob {
   code: string
   farmerName?: string
   farmerId?: string
+  commodity?: string
+  gtin?: string
+  barcode?: string
+  qrValue?: string
   grade?: 'A' | 'B' | 'C'
   weightKg?: number
   date?: string

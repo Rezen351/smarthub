@@ -2,6 +2,8 @@ export interface IntakeDraft {
   id: string
   farmerId: string
   farmerName: string
+  commodityCode?: string
+  commodityName?: string
   weightKg: number
   status: 'PENDING' | 'BUFFER_WAITING'
   waringCode?: string
@@ -10,6 +12,7 @@ export interface IntakeDraft {
 interface IntakeRequest {
   requestId: string
   farmerCode: string
+  commodityCode?: string
   grossWeightKg: number
   tareWeightKg: number
   netWeightKg: number
@@ -18,7 +21,7 @@ interface IntakeRequest {
 
 export async function saveReceptionIntake<T extends IntakeDraft>(
   draft: T,
-  create: (request: IntakeRequest) => Promise<{ id: string; code: string }>,
+  create: (request: IntakeRequest) => Promise<{ id: string; code: string; commodityCode?: string; commodityName?: string }>,
 ): Promise<T> {
   if (draft.waringCode) return draft
   if (!Number.isFinite(draft.weightKg) || draft.weightKg <= 0) {
@@ -27,13 +30,21 @@ export async function saveReceptionIntake<T extends IntakeDraft>(
   const saved = await create({
     requestId: draft.id,
     farmerCode: draft.farmerId,
+    ...(draft.commodityCode ? { commodityCode: draft.commodityCode } : {}),
     grossWeightKg: draft.weightKg,
     tareWeightKg: 0,
     netWeightKg: draft.weightKg,
     notes: 'Station 01 Reception weighing',
   })
   if (!saved?.id || !saved?.code) throw new Error('The server did not confirm the saved record.')
-  return { ...draft, id: saved.id, waringCode: saved.code, status: 'BUFFER_WAITING' }
+  return {
+    ...draft,
+    id: saved.id,
+    waringCode: saved.code,
+    commodityCode: saved.commodityCode || draft.commodityCode,
+    commodityName: saved.commodityName || draft.commodityName,
+    status: 'BUFFER_WAITING',
+  }
 }
 
 export interface ReceptionPrintJob {
@@ -41,6 +52,7 @@ export interface ReceptionPrintJob {
   code: string
   farmerName: string
   farmerId: string
+  commodity?: string
   weightKg: number
   date?: string
   time?: string
@@ -55,8 +67,9 @@ export function buildReceptionPrintJobs(
   const codes = new Set<string>()
   for (const record of records) {
     if (!record.waringCode || codes.has(record.waringCode) || record.farmerId !== first.farmerId ||
+      (first.commodityCode && record.commodityCode && record.commodityCode !== first.commodityCode) ||
       !Number.isFinite(record.weightKg) || record.weightKg <= 0) {
-      throw new Error('Print only saved bags from the same farmer.')
+      throw new Error('Print only saved bags from the same farmer and commodity.')
     }
     codes.add(record.waringCode)
   }
@@ -67,6 +80,7 @@ export function buildReceptionPrintJobs(
   }))
   return [{
     ...labels[0], type: 'receipt',
+    ...(first.commodityName ? { commodity: first.commodityName } : {}),
     weightKg: Math.round(records.reduce((sum, record) => sum + Math.round(record.weightKg * 1000), 0)) / 1000,
     items: labels.map(({ code, weightKg }) => ({ code, weightKg })),
   }, ...labels]

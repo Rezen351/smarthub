@@ -47,6 +47,7 @@ func (s *server) dailyRecap(w http.ResponseWriter, r *http.Request) {
 	if targetDate == "" {
 		targetDate = time.Now().Format("2006-01-02")
 	}
+	commodityCode := strings.TrimSpace(r.URL.Query().Get("commodityCode"))
 
 	ctx := r.Context()
 
@@ -56,8 +57,10 @@ func (s *server) dailyRecap(w http.ResponseWriter, r *http.Request) {
 	_ = s.db.QueryRow(ctx, `
 		SELECT COUNT(w.id), COALESCE(SUM(w."grossWeightKg"), 0), COALESCE(SUM(w."tareWeightKg"), 0), COALESCE(SUM(w."netWeightKg"), 0), COUNT(DISTINCT w."farmerId")
 		FROM warings w
+		JOIN commodities c ON c.id = w."commodityId"
 		WHERE DATE(w."createdAt") = $1::date
-	`, targetDate).Scan(&totalWarings, &grossKg, &tareKg, &netKg, &uniqueFarmers)
+		  AND ($2 = '' OR UPPER(c.code) = UPPER($2))
+	`, targetDate, commodityCode).Scan(&totalWarings, &grossKg, &tareKg, &netKg, &uniqueFarmers)
 
 	// 2. Sorting batches aggregate
 	var sortingBatches int
@@ -65,8 +68,11 @@ func (s *server) dailyRecap(w http.ResponseWriter, r *http.Request) {
 	_ = s.db.QueryRow(ctx, `
 		SELECT COUNT(sb.id), COALESCE(SUM(sb."gradeA_Kg"), 0), COALESCE(SUM(sb."gradeB_Kg"), 0), COALESCE(SUM(sb."gradeC_Kg"), 0), COALESCE(SUM(sb."shrinkageKg"), 0)
 		FROM sorting_batches sb
+		JOIN warings w ON w.id = sb."waringId"
+		JOIN commodities c ON c.id = w."commodityId"
 		WHERE DATE(sb."sortedAt") = $1::date
-	`, targetDate).Scan(&sortingBatches, &gradeAKg, &gradeBKg, &gradeCKg, &shrinkageKg)
+		  AND ($2 = '' OR UPPER(c.code) = UPPER($2))
+	`, targetDate, commodityCode).Scan(&sortingBatches, &gradeAKg, &gradeBKg, &gradeCKg, &shrinkageKg)
 
 	// 3. Packaging aggregate
 	var packagedUnits int
@@ -74,8 +80,10 @@ func (s *server) dailyRecap(w http.ResponseWriter, r *http.Request) {
 	_ = s.db.QueryRow(ctx, `
 		SELECT COUNT(pu.id), COALESCE(SUM(pu."weightKg"), 0)
 		FROM package_units pu
+		LEFT JOIN commodities c ON c.id = pu."commodityId"
 		WHERE DATE(pu."createdAt") = $1::date
-	`, targetDate).Scan(&packagedUnits, &packagedWeightKg)
+		  AND ($2 = '' OR UPPER(COALESCE(c.code, '001')) = UPPER($2))
+	`, targetDate, commodityCode).Scan(&packagedUnits, &packagedWeightKg)
 
 	// 3b. Pallet closeouts aggregate
 	var palletCloseouts int
@@ -83,18 +91,50 @@ func (s *server) dailyRecap(w http.ResponseWriter, r *http.Request) {
 	_ = s.db.QueryRow(ctx, `
 		SELECT COUNT(pc.id), COALESCE(SUM(pc."leftoverKg"), 0)
 		FROM pallet_closeouts pc
+		LEFT JOIN commodities c ON c.id = pc."commodityId"
 		WHERE DATE(pc."createdAt") = $1::date
-	`, targetDate).Scan(&palletCloseouts, &palletCloseoutKg)
+		  AND ($2 = '' OR UPPER(COALESCE(c.code, '001')) = UPPER($2))
+	`, targetDate, commodityCode).Scan(&palletCloseouts, &palletCloseoutKg)
+
+	// 3c. Commodity breakdown for the day
+	type commodityBreakdownItem struct {
+		CommodityCode string  `json:"commodityCode"`
+		CommodityName string  `json:"commodityName"`
+		GTIN          string  `json:"gtin"`
+		Warings       int     `json:"warings"`
+		GrossWeightKg float64 `json:"grossWeightKg"`
+		NetWeightKg   float64 `json:"netWeightKg"`
+	}
+	commodityBreakdown := []commodityBreakdownItem{}
+	if cRows, cErr := s.db.Query(ctx, `
+		SELECT c.code, c.name, COALESCE(c.gtin, ''), COUNT(w.id), COALESCE(SUM(w."grossWeightKg"), 0), COALESCE(SUM(w."netWeightKg"), 0)
+		FROM warings w
+		JOIN commodities c ON c.id = w."commodityId"
+		WHERE DATE(w."createdAt") = $1::date
+		  AND ($2 = '' OR UPPER(c.code) = UPPER($2))
+		GROUP BY c.code, c.name, c.gtin
+		ORDER BY SUM(w."grossWeightKg") DESC
+	`, targetDate, commodityCode); cErr == nil {
+		defer cRows.Close()
+		for cRows.Next() {
+			var item commodityBreakdownItem
+			if cRows.Scan(&item.CommodityCode, &item.CommodityName, &item.GTIN, &item.Warings, &item.GrossWeightKg, &item.NetWeightKg) == nil {
+				commodityBreakdown = append(commodityBreakdown, item)
+			}
+		}
+	}
 
 	// 4. Per-farmer breakdown for the day
 	rows, err := s.db.Query(ctx, `
 		SELECT f.code, f.name, COALESCE(f.village, ''), COUNT(w.id), COALESCE(SUM(w."grossWeightKg"), 0), COALESCE(SUM(w."tareWeightKg"), 0), COALESCE(SUM(w."netWeightKg"), 0)
 		FROM warings w
 		JOIN farmers f ON f.id = w."farmerId"
+		JOIN commodities c ON c.id = w."commodityId"
 		WHERE DATE(w."createdAt") = $1::date
+		  AND ($2 = '' OR UPPER(c.code) = UPPER($2))
 		GROUP BY f.code, f.name, f.village
 		ORDER BY SUM(w."grossWeightKg") DESC
-	`, targetDate)
+	`, targetDate, commodityCode)
 
 	type dailyFarmerRow struct {
 		FarmerCode  string  `json:"farmerCode"`
@@ -175,9 +215,11 @@ func (s *server) dailyRecap(w http.ResponseWriter, r *http.Request) {
 			"shrinkageKg":      shrinkageKg,
 			"packagedUnits":    packagedUnits,
 			"packagedWeightKg": packagedWeightKg,
-			"palletCloseouts":  palletCloseouts,
-			"palletCloseoutKg": palletCloseoutKg,
-			"farmerBreakdown":  farmerRows,
+			"palletCloseouts":    palletCloseouts,
+			"palletCloseoutKg":   palletCloseoutKg,
+			"commodityCode":      commodityCode,
+			"commodityBreakdown": commodityBreakdown,
+			"farmerBreakdown":    farmerRows,
 		},
 	})
 }
@@ -192,6 +234,7 @@ func (s *server) monthlyRecap(w http.ResponseWriter, r *http.Request) {
 	if targetMonth == "" {
 		targetMonth = time.Now().Format("2006-01")
 	}
+	commodityCode := strings.TrimSpace(r.URL.Query().Get("commodityCode"))
 
 	ctx := r.Context()
 
@@ -201,32 +244,41 @@ func (s *server) monthlyRecap(w http.ResponseWriter, r *http.Request) {
 	_ = s.db.QueryRow(ctx, `
 		SELECT COUNT(w.id), COALESCE(SUM(w."grossWeightKg"), 0), COALESCE(SUM(w."tareWeightKg"), 0), COALESCE(SUM(w."netWeightKg"), 0), COUNT(DISTINCT w."farmerId")
 		FROM warings w
+		JOIN commodities c ON c.id = w."commodityId"
 		WHERE TO_CHAR(w."createdAt", 'YYYY-MM') = $1
-	`, targetMonth).Scan(&totalWarings, &grossKg, &tareKg, &netKg, &activeFarmers)
+		  AND ($2 = '' OR UPPER(c.code) = UPPER($2))
+	`, targetMonth, commodityCode).Scan(&totalWarings, &grossKg, &tareKg, &netKg, &activeFarmers)
 
 	var sortingBatches int
 	var gradeAKg, gradeBKg, gradeCKg, shrinkageKg float64
 	_ = s.db.QueryRow(ctx, `
 		SELECT COUNT(sb.id), COALESCE(SUM(sb."gradeA_Kg"), 0), COALESCE(SUM(sb."gradeB_Kg"), 0), COALESCE(SUM(sb."gradeC_Kg"), 0), COALESCE(SUM(sb."shrinkageKg"), 0)
 		FROM sorting_batches sb
+		JOIN warings w ON w.id = sb."waringId"
+		JOIN commodities c ON c.id = w."commodityId"
 		WHERE TO_CHAR(sb."sortedAt", 'YYYY-MM') = $1
-	`, targetMonth).Scan(&sortingBatches, &gradeAKg, &gradeBKg, &gradeCKg, &shrinkageKg)
+		  AND ($2 = '' OR UPPER(c.code) = UPPER($2))
+	`, targetMonth, commodityCode).Scan(&sortingBatches, &gradeAKg, &gradeBKg, &gradeCKg, &shrinkageKg)
 
 	var packagedUnits int
 	var packagedWeightKg float64
 	_ = s.db.QueryRow(ctx, `
 		SELECT COUNT(pu.id), COALESCE(SUM(pu."weightKg"), 0)
 		FROM package_units pu
+		LEFT JOIN commodities c ON c.id = pu."commodityId"
 		WHERE TO_CHAR(pu."createdAt", 'YYYY-MM') = $1
-	`, targetMonth).Scan(&packagedUnits, &packagedWeightKg)
+		  AND ($2 = '' OR UPPER(COALESCE(c.code, '001')) = UPPER($2))
+	`, targetMonth, commodityCode).Scan(&packagedUnits, &packagedWeightKg)
 
 	var palletCloseouts int
 	var palletCloseoutKg float64
 	_ = s.db.QueryRow(ctx, `
 		SELECT COUNT(pc.id), COALESCE(SUM(pc."leftoverKg"), 0)
 		FROM pallet_closeouts pc
+		LEFT JOIN commodities c ON c.id = pc."commodityId"
 		WHERE TO_CHAR(pc."createdAt", 'YYYY-MM') = $1
-	`, targetMonth).Scan(&palletCloseouts, &palletCloseoutKg)
+		  AND ($2 = '' OR UPPER(COALESCE(c.code, '001')) = UPPER($2))
+	`, targetMonth, commodityCode).Scan(&palletCloseouts, &palletCloseoutKg)
 
 	// 2. Daily breakdown within the month
 	type dailyBreakdownItem struct {
@@ -245,10 +297,12 @@ func (s *server) monthlyRecap(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(SUM(w."netWeightKg"), 0) AS net_kg,
 		       COUNT(DISTINCT w."farmerId") AS farmers
 		FROM warings w
+		JOIN commodities c ON c.id = w."commodityId"
 		WHERE TO_CHAR(w."createdAt", 'YYYY-MM') = $1
+		  AND ($2 = '' OR UPPER(c.code) = UPPER($2))
 		GROUP BY day
 		ORDER BY day ASC
-	`, targetMonth)
+	`, targetMonth, commodityCode)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -273,11 +327,13 @@ func (s *server) monthlyRecap(w http.ResponseWriter, r *http.Request) {
 		SELECT f.code, f.name, COALESCE(f.village, ''), COUNT(w.id), COALESCE(SUM(w."grossWeightKg"), 0), COALESCE(SUM(w."netWeightKg"), 0)
 		FROM warings w
 		JOIN farmers f ON f.id = w."farmerId"
+		JOIN commodities c ON c.id = w."commodityId"
 		WHERE TO_CHAR(w."createdAt", 'YYYY-MM') = $1
+		  AND ($2 = '' OR UPPER(c.code) = UPPER($2))
 		GROUP BY f.code, f.name, f.village
 		ORDER BY SUM(w."grossWeightKg") DESC
 		LIMIT 5
-	`, targetMonth)
+	`, targetMonth, commodityCode)
 	if tfErr == nil {
 		defer tfRows.Close()
 		for tfRows.Next() {
@@ -379,20 +435,22 @@ func (s *server) farmerRankings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	period := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("period")))
+	commodityCode := strings.TrimSpace(r.URL.Query().Get("commodityCode"))
 
 	ctx := r.Context()
 
 	// Compute overall total gross weight for percentage calculation
 	var grandTotalGross float64
-	dateFilter := ""
-	var args []any
+	whereParts := []string{}
 	if period == "today" {
-		dateFilter = `WHERE DATE(w."createdAt") = CURRENT_DATE`
+		whereParts = append(whereParts, `DATE(w."createdAt") = CURRENT_DATE`)
 	} else if period == "month" {
-		dateFilter = `WHERE TO_CHAR(w."createdAt", 'YYYY-MM') = TO_CHAR(CURRENT_DATE, 'YYYY-MM')`
+		whereParts = append(whereParts, `TO_CHAR(w."createdAt", 'YYYY-MM') = TO_CHAR(CURRENT_DATE, 'YYYY-MM')`)
 	}
+	whereParts = append(whereParts, `($1 = '' OR UPPER(c.code) = UPPER($1))`)
+	whereSQL := "WHERE " + strings.Join(whereParts, " AND ")
 
-	_ = s.db.QueryRow(ctx, fmt.Sprintf(`SELECT COALESCE(SUM(w."grossWeightKg"), 0) FROM warings w %s`, dateFilter)).Scan(&grandTotalGross)
+	_ = s.db.QueryRow(ctx, fmt.Sprintf(`SELECT COALESCE(SUM(w."grossWeightKg"), 0) FROM warings w JOIN commodities c ON c.id = w."commodityId" %s`, whereSQL), commodityCode).Scan(&grandTotalGross)
 
 	query := fmt.Sprintf(`
 		SELECT f.id, f.code, f.name, COALESCE(f.village, ''), COALESCE(f.district, ''),
@@ -402,15 +460,14 @@ func (s *server) farmerRankings(w http.ResponseWriter, r *http.Request) {
 		       MAX(w."createdAt") as last_intake_at
 		FROM farmers f
 		JOIN warings w ON w."farmerId" = f.id
+		JOIN commodities c ON c.id = w."commodityId"
 		%s
 		GROUP BY f.id, f.code, f.name, f.village, f.district
 		ORDER BY total_gross_kg DESC
-		LIMIT $1
-	`, dateFilter)
+		LIMIT $2
+	`, whereSQL)
 
-	args = append(args, limit)
-
-	rows, err := s.db.Query(ctx, query, args...)
+	rows, err := s.db.Query(ctx, query, commodityCode, limit)
 	if err != nil {
 		fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to retrieve farmer rankings")
 		return

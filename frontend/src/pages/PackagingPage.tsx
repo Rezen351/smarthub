@@ -29,6 +29,11 @@ interface PackageRecord {
   id: string
   code: string
   sourcePallet?: string
+  commodityCode?: string
+  commodityName?: string
+  commodityGtin?: string
+  barcode?: string
+  digitalLinkUrl?: string
   mode: PackagingMode
   grade: 'A' | 'B' | 'C'
   weightKg: number
@@ -52,6 +57,9 @@ interface AvailablePallet {
   farmerName: string
   farmerVillage?: string
   waringCode: string
+  commodityCode?: string
+  commodityName?: string
+  commodityGtin?: string
 }
 
 export default function PackagingPage() {
@@ -66,6 +74,9 @@ export default function PackagingPage() {
   const [sourcePalletCode, setSourcePalletCode] = useState('')
   const [sourceFarmer, setSourceFarmer] = useState('')
   const [sourceWaring, setSourceWaring] = useState('')
+  const [sourceCommodityCode, setSourceCommodityCode] = useState('001')
+  const [sourceCommodityName, setSourceCommodityName] = useState('Eptilu Washed Potatoes 10 kg')
+  const [sourceCommodityGtin, setSourceCommodityGtin] = useState('8994477090010')
   const [sourcePalletRemainingKg, setSourcePalletRemainingKg] = useState<number | null>(null)
   const [palletSearch, setPalletSearch] = useState('')
   const [palletScanError, setPalletScanError] = useState<string | null>(null)
@@ -169,6 +180,9 @@ export default function PackagingPage() {
           farmerName: p.farmerName || 'Farmer',
           farmerVillage: p.farmerVillage,
           waringCode: p.waringCode || '',
+          commodityCode: p.commodityCode || '001',
+          commodityName: p.commodityName || 'Eptilu Washed Potatoes 10 kg',
+          commodityGtin: p.commodityGtin || '8994477090010',
         }))
         .filter((p) => p.code && p.remainingKg > 0)
       setPalletsFromApi(mapped)
@@ -221,10 +235,13 @@ export default function PackagingPage() {
     setSelectedGrade(p.grade)
     setSourceFarmer(p.farmerName)
     setSourceWaring(p.waringCode)
+    setSourceCommodityCode(p.commodityCode || '001')
+    setSourceCommodityName(p.commodityName || 'Eptilu Washed Potatoes 10 kg')
+    setSourceCommodityGtin(p.commodityGtin || '8994477090010')
     setSourcePalletRemainingKg(p.remainingKg)
     setPalletScanError(null)
     setSavedSuccessRecord(null)
-    toast.success(`Pallet ${p.code} selected (Grade ${p.grade})`)
+    toast.success(`Pallet ${p.code} selected (${p.commodityName || '001'} · Grade ${p.grade})`)
   }
 
   const handlePalletScanSubmit = async (e?: React.FormEvent, scannedCode?: string) => {
@@ -256,6 +273,9 @@ export default function PackagingPage() {
           farmerName: pallet.farmerName || 'Farmer',
           farmerVillage: pallet.farmerVillage || undefined,
           waringCode: pallet.waringCode || '',
+          commodityCode: pallet.commodityCode || '001',
+          commodityName: pallet.commodityName || 'Eptilu Washed Potatoes 10 kg',
+          commodityGtin: pallet.commodityGtin || '8994477090010',
         })
         setPalletSearch('')
         setPalletScanError(null)
@@ -346,6 +366,11 @@ export default function PackagingPage() {
               id: p.id || p.code || String(Math.random()),
               code: p.code || p.unitCode || '—',
               sourcePallet: p.sourcePalletCode || p.sourcePallet || undefined,
+              commodityCode: p.commodityCode || '001',
+              commodityName: p.commodityName || 'Eptilu Washed Potatoes 10 kg',
+              commodityGtin: p.commodityGtin || '8994477090010',
+              barcode: p.barcode,
+              digitalLinkUrl: p.digitalLinkUrl,
               mode,
               grade: (p.grade === 'B' || p.grade === 'C' ? p.grade : 'A') as 'A' | 'B' | 'C',
               weightKg: w,
@@ -528,6 +553,11 @@ export default function PackagingPage() {
         id: String(Date.now()),
         code: newCode,
         sourcePallet: sourcePalletCode,
+        commodityCode: saved.commodityCode || sourceCommodityCode,
+        commodityName: saved.commodityName || sourceCommodityName,
+        commodityGtin: saved.commodityGtin || sourceCommodityGtin,
+        barcode: saved.barcode,
+        digitalLinkUrl: saved.digitalLinkUrl,
         mode: packagingMode,
         grade: selectedGrade,
         weightKg: weightValue,
@@ -550,6 +580,10 @@ export default function PackagingPage() {
           code: newCode,
           farmerName: sourceFarmer,
           farmerId: sourcePalletCode,
+          commodity: newRecord.commodityName,
+          gtin: newRecord.commodityGtin,
+          barcode: newRecord.barcode,
+          qrValue: newRecord.digitalLinkUrl,
           grade: selectedGrade,
           weightKg: weightValue,
           date: printDate,
@@ -1179,6 +1213,10 @@ export default function PackagingPage() {
                 code={savedSuccessRecord?.code ?? nextCodePreview}
                 farmerName={sourceFarmer}
                 farmerId={sourcePalletCode}
+                commodity={savedSuccessRecord?.commodityName ?? sourceCommodityName}
+                gtin={savedSuccessRecord?.commodityGtin ?? sourceCommodityGtin}
+                barcodeValue={savedSuccessRecord?.barcode}
+                qrValue={savedSuccessRecord?.digitalLinkUrl}
                 grade={selectedGrade}
                 weightKg={weightValue}
                 stationName="Station 03 · Packaging"
@@ -1192,6 +1230,10 @@ export default function PackagingPage() {
                 code={savedSuccessRecord?.code ?? nextCodePreview}
                 farmerName={sourceFarmer}
                 farmerId={sourcePalletCode}
+                commodity={savedSuccessRecord?.commodityName ?? sourceCommodityName}
+                gtin={savedSuccessRecord?.commodityGtin ?? sourceCommodityGtin}
+                barcodeValue={savedSuccessRecord?.barcode}
+                qrValue={savedSuccessRecord?.digitalLinkUrl}
                 grade={selectedGrade}
                 weightKg={weightValue}
                 date={savedSuccessRecord?.date ?? formatSafeDate(new Date())}

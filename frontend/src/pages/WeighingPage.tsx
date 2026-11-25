@@ -24,7 +24,7 @@ import { useSessionContext } from '../hooks/useSessionContext'
 import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
 import { useAuth } from '../hooks/useAuth'
-import { api } from '../services/api'
+import { api, type Commodity } from '../services/api'
 import CameraScannerModal from '../components/shared/CameraScannerModal'
 import CancelTransactionModal from '../components/admin/CancelTransactionModal'
 
@@ -35,6 +35,8 @@ type WeighingRecord = {
   farmerId: string
   farmerName: string
   farmerVillage?: string
+  commodityCode?: string
+  commodityName?: string
   weightKg: number
   depositDate: string
   time: string
@@ -99,11 +101,47 @@ export default function WeighingPage() {
   const [focusMode, setFocusMode] = useState(false)
   const [activeStep, setActiveStep] = useState<1 | 2 | 3>(() => receptionSession.records.length || receptionSession.draft ? 3 : 1)
 
-  /* ── Step 1: Scan & Farmer Identification ── */
+  /* ── Step 1: Scan & Farmer Identification + Commodity Context ── */
   const [scanFarmerId, setScanFarmerId] = useState('')
   const [manualSearch, setManualSearch] = useState('')
   const [scanError, setScanError] = useState('')
   const scanInputRef = useRef<HTMLInputElement>(null)
+  const [commoditiesList, setCommoditiesList] = useState<Commodity[]>([])
+  const [selectedCommodityCode, setSelectedCommodityCode] = useState<string>(
+    () => receptionSession.records[0]?.commodityCode || receptionSession.draft?.commodityCode || '001',
+  )
+
+  useEffect(() => {
+    let activeFlag = true
+    api.commodities
+      .list()
+      .then((list) => {
+        if (!activeFlag || !Array.isArray(list)) return
+        setCommoditiesList(list)
+        if (list.length > 0 && !list.some((c) => c.code === selectedCommodityCode)) {
+          setSelectedCommodityCode(list[0].code)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      activeFlag = false
+    }
+  }, [])
+
+  const activeCommodity =
+    commoditiesList.find((c) => c.code === selectedCommodityCode) ||
+    ({
+      id: 'cmd-potato-001',
+      code: selectedCommodityCode || '001',
+      name: receptionSession.records[0]?.commodityName || receptionSession.draft?.commodityName || 'Eptilu Washed Potatoes 10 kg',
+      gtin: '8994477090010',
+      description: '',
+      unit: 'kg',
+      brand: 'Eptilu',
+      packageType: 'Carton Box',
+      isActive: true,
+    } as Commodity)
+  const commodityLocked = receptionSession.records.length > 0 || Boolean(receptionSession.draft)
 
   /* ── Camera Scanner State ── */
   const [cameraModalOpen, setCameraModalOpen] = useState(false)
@@ -383,11 +421,15 @@ export default function WeighingPage() {
 
     const farmerId = sessionFarmer?.farmerId || farmer!.id
     const activeFarmerObj = farmersList.find((f) => f.id === farmerId)
+    const sessionCommodityCode = sessionFarmer?.commodityCode || activeCommodity.code
+    const sessionCommodityName = sessionFarmer?.commodityName || activeCommodity.name
     const payload: WeighingRecord = {
       id: editingId ?? crypto.randomUUID(),
       farmerId,
       farmerName: sessionFarmer?.farmerName || farmer!.name || '',
       farmerVillage: activeFarmerObj?.village || '',
+      commodityCode: sessionCommodityCode,
+      commodityName: sessionCommodityName,
       weightKg: Number(numericWeight.toFixed(3)),
       depositDate: today(),
       time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
@@ -722,6 +764,42 @@ export default function WeighingPage() {
             </Badge>
           </div>
 
+          {/* Commodity Selector (1 Farmer + 1 Commodity per Reception session) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Commodity (1 per session)
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                GTIN-13: {activeCommodity.gtin || '8994477090010'}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              {(commoditiesList.length > 0 ? commoditiesList : [activeCommodity]).map((item) => {
+                const isSelected = item.code === activeCommodity.code
+                return (
+                  <button
+                    key={item.code}
+                    type="button"
+                    disabled={commodityLocked}
+                    onClick={() => setSelectedCommodityCode(item.code)}
+                    className={`p-3 border text-left transition-colors rounded-none ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 text-foreground'
+                        : 'border-border bg-card text-muted-foreground hover:border-foreground/40'
+                    } ${commodityLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-xs font-bold">{item.code}</span>
+                      <span className="font-mono text-[10px] opacity-80">{item.gtin}</span>
+                    </div>
+                    <div className="text-xs font-semibold mt-1 line-clamp-2 text-foreground">{item.name}</div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <div className="station-scan-box p-8 border-2 border-dashed border-border rounded-none bg-card text-center space-y-4">
             <div className="inline-flex p-3 bg-muted border border-border text-muted-foreground mx-auto">
               <Icon name="scan" size={28} />
@@ -832,9 +910,11 @@ export default function WeighingPage() {
                     <span className="text-muted-foreground">Farmer:</span>
                     <span className="font-semibold text-foreground">{receptionSession.records[0]?.farmerName || receptionSession.draft?.farmerName || farmer?.name}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Commodity:</span>
-                    <span className="font-semibold text-foreground">Potatoes</span>
+                    <span className="font-semibold text-foreground text-right">
+                      {receptionSession.records[0]?.commodityName || receptionSession.draft?.commodityName || activeCommodity.name}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Deposit Date:</span>
@@ -943,6 +1023,7 @@ export default function WeighingPage() {
                 code={receptionSession.records[0]?.waringCode ?? approvedSuccessRecord?.waringCode ?? ''}
                 farmerName={previewRecords[0]?.farmerName ?? farmer?.name}
                 farmerId={previewRecords[0]?.farmerId ?? farmer?.id}
+                commodity={previewRecords[0]?.commodityName ?? activeCommodity.name}
                 weightKg={previewTotalKg}
                 items={previewRecords.map((record, index) => ({ code: record.waringCode || `Bag ${index + 1} (unsaved)`, weightKg: record.weightKg }))}
                 time={confirmApprove?.time ?? 'Live'}

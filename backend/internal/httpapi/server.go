@@ -68,6 +68,9 @@ type printJob struct {
 	Date       string        `json:"date"`
 	Time       string        `json:"time"`
 	Commodity  string        `json:"commodity"`
+	GTIN       string        `json:"gtin,omitempty"`
+	Barcode    string        `json:"barcode,omitempty"`
+	QRValue    string        `json:"qrValue,omitempty"`
 	Station    string        `json:"stationName"`
 	Items      []receiptItem `json:"items,omitempty"`
 }
@@ -203,6 +206,8 @@ func (s *server) handle(w http.ResponseWriter, r *http.Request) {
 			s.auth(w, r, parts[1:])
 		case "farmers":
 			s.farmers(w, r, parts[1:])
+		case "commodities":
+			s.commoditiesHandler(w, r, parts[1:])
 		case "weighing":
 			s.weighing(w, r, parts[1:])
 		case "scales":
@@ -967,7 +972,14 @@ func (s *server) farmers(w http.ResponseWriter, r *http.Request, p []string) {
 }
 func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 	if r.Method == "GET" && len(p) == 0 {
-		rows, err := s.db.Query(r.Context(), `SELECT w.id,w.code,f.code,f.name,w."grossWeightKg",w."tareWeightKg",w."netWeightKg",w.status,w."createdAt" FROM warings w JOIN farmers f ON f.id=w."farmerId" ORDER BY w."createdAt" DESC`)
+		rows, err := s.db.Query(r.Context(), `
+			SELECT w.id, w.code, f.code, f.name, w."grossWeightKg", w."tareWeightKg", w."netWeightKg", w.status, w."createdAt",
+			       c.id, c.code, c.name, COALESCE(c.gtin, '')
+			FROM warings w
+			JOIN farmers f ON f.id=w."farmerId"
+			JOIN commodities c ON c.id=w."commodityId"
+			ORDER BY w."createdAt" DESC
+		`)
 		if err != nil {
 			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to list warings")
 			return
@@ -975,11 +987,26 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 		defer rows.Close()
 		out := []any{}
 		for rows.Next() {
-			var id, code, fc, fn, status string
+			var id, code, fc, fn, status, cID, cCode, cName, cGTIN string
 			var gross, tare, net float64
 			var at time.Time
-			if rows.Scan(&id, &code, &fc, &fn, &gross, &tare, &net, &status, &at) == nil {
-				out = append(out, map[string]any{"id": id, "code": code, "farmerCode": fc, "farmerId": fc, "farmerName": fn, "grossWeightKg": gross, "tareWeightKg": tare, "netWeightKg": net, "status": status, "createdAt": at})
+			if rows.Scan(&id, &code, &fc, &fn, &gross, &tare, &net, &status, &at, &cID, &cCode, &cName, &cGTIN) == nil {
+				out = append(out, map[string]any{
+					"id":            id,
+					"code":          code,
+					"farmerCode":    fc,
+					"farmerId":      fc,
+					"farmerName":    fn,
+					"grossWeightKg": gross,
+					"tareWeightKg":  tare,
+					"netWeightKg":   net,
+					"status":        status,
+					"createdAt":     at,
+					"commodityId":   cID,
+					"commodityCode": cCode,
+					"commodityName": cName,
+					"commodityGtin": cGTIN,
+				})
 			}
 		}
 		write(w, map[string]any{"success": true, "data": out})
@@ -1001,9 +1028,10 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 	}
 	if r.Method == "POST" && len(p) == 0 {
 		var v struct {
-			FarmerCode string  `json:"farmerCode"`
-			Gross      float64 `json:"grossWeightKg"`
-			RequestID  string  `json:"requestId"`
+			FarmerCode    string  `json:"farmerCode"`
+			CommodityCode string  `json:"commodityCode"`
+			Gross         float64 `json:"grossWeightKg"`
+			RequestID     string  `json:"requestId"`
 		}
 		if !decode(r, &v) || strings.TrimSpace(v.FarmerCode) == "" || !validReceptionWeight(v.Gross) {
 			fail(w, 400, "VALIDATION_ERROR", "Valid farmerCode and grossWeightKg are required")
@@ -1022,19 +1050,34 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 			fail(w, 404, "FARMER_NOT_FOUND", "Specified farmer could not be found")
 			return
 		}
-		var cid string
-		if s.db.QueryRow(r.Context(), `SELECT id FROM commodities WHERE code='001'`).Scan(&cid) != nil {
-			_ = s.db.QueryRow(r.Context(), `
-				INSERT INTO commodities (id, code, name, description, unit)
-				VALUES ('cmd-potato-001', '001', 'Kentang Granola', 'Granola potato suitable for table consumption and processing.', 'kg')
-				ON CONFLICT (code) DO NOTHING
-				RETURNING id
-			`).Scan(&cid)
-			if cid == "" {
-				if s.db.QueryRow(r.Context(), `SELECT id FROM commodities WHERE code='001'`).Scan(&cid) != nil {
-					fail(w, 500, "COMMODITY_NOT_FOUND", "Default potato commodity is not configured")
-					return
+		targetCommodityCode := strings.TrimSpace(v.CommodityCode)
+		if targetCommodityCode == "" {
+			targetCommodityCode = defaultCommodityCode
+		}
+		var cid, cCode, cName, cGTIN string
+		err = s.db.QueryRow(r.Context(), `
+			SELECT id, code, name, COALESCE(gtin, '')
+			FROM commodities
+			WHERE (UPPER(code)=UPPER($1) OR id=$1) AND "isActive"=true
+			LIMIT 1
+		`, targetCommodityCode).Scan(&cid, &cCode, &cName, &cGTIN)
+		if err != nil {
+			if targetCommodityCode == defaultCommodityCode {
+				_ = s.db.QueryRow(r.Context(), `
+					INSERT INTO commodities (id, code, name, description, unit, gtin)
+					VALUES ('cmd-potato-001', '001', 'Eptilu Washed Potatoes 10 kg', 'Eptilu Washed Potatoes 10 kg (Carton Box)', 'kg', '8994477090010')
+					ON CONFLICT (code) DO NOTHING
+					RETURNING id, code, name, COALESCE(gtin, '')
+				`).Scan(&cid, &cCode, &cName, &cGTIN)
+				if cid == "" {
+					if s.db.QueryRow(r.Context(), `SELECT id, code, name, COALESCE(gtin, '') FROM commodities WHERE code='001'`).Scan(&cid, &cCode, &cName, &cGTIN) != nil {
+						fail(w, 500, "COMMODITY_NOT_FOUND", "Default potato commodity is not configured")
+						return
+					}
 				}
+			} else {
+				fail(w, 404, "COMMODITY_NOT_FOUND", fmt.Sprintf("Active commodity '%s' was not found", targetCommodityCode))
+				return
 			}
 		}
 		var id string
@@ -1044,7 +1087,7 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 			INSERT INTO warings(id,code,"farmerId","commodityId","grossWeightKg","tareWeightKg","netWeightKg",status,"createdAt")
 			SELECT id,'WRG-' || to_char(NOW(),'YYYYMMDD') || '-' || replace(id::text,'-',''),$1,$2,$3,0,$3,'PENDING',NOW() FROM intake WHERE true
 			ON CONFLICT (id) DO UPDATE SET id=warings.id
-			WHERE warings."farmerId"=EXCLUDED."farmerId" AND warings."grossWeightKg"=EXCLUDED."grossWeightKg" AND warings."tareWeightKg"=0
+			WHERE warings."farmerId"=EXCLUDED."farmerId" AND warings."commodityId"=EXCLUDED."commodityId" AND warings."grossWeightKg"=EXCLUDED."grossWeightKg" AND warings."tareWeightKg"=0
 			RETURNING id::text,code`, fid, cid, v.Gross, v.RequestID).Scan(&id, &war)
 		if err == pgx.ErrNoRows {
 			fail(w, 409, "INTAKE_CONFLICT", "This requestId already belongs to a different intake")
@@ -1055,7 +1098,23 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to record intake weighing")
 			return
 		}
-		writeStatus(w, 201, map[string]any{"success": true, "data": map[string]any{"id": id, "code": war, "farmerCode": code, "farmerName": name, "grossWeightKg": v.Gross, "tareWeightKg": 0, "netWeightKg": v.Gross, "status": "PENDING"}})
+		writeStatus(w, 201, map[string]any{
+			"success": true,
+			"data": map[string]any{
+				"id":            id,
+				"code":          war,
+				"farmerCode":    code,
+				"farmerName":    name,
+				"commodityId":   cid,
+				"commodityCode": cCode,
+				"commodityName": cName,
+				"commodityGtin": cGTIN,
+				"grossWeightKg": v.Gross,
+				"tareWeightKg":  0,
+				"netWeightKg":   v.Gross,
+				"status":        "PENDING",
+			},
+		})
 		return
 	}
 	fail(w, 404, "NOT_FOUND", "Route not found")
@@ -1631,7 +1690,15 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 				hasMeta = true
 			}
 		} else if job.Type == "pouch" || job.Type == "export" {
-			// Pouch & Export: Grade directly, farmer and station removed
+			// Packaging Label (pouch/export): Commodity, GTIN-13, and Grade
+			if job.Commodity != "" {
+				out = appendText(out, "Commodity: "+job.Commodity+"\n")
+				hasMeta = true
+			}
+			if job.GTIN != "" {
+				out = appendText(out, "GTIN: "+job.GTIN+"\n")
+				hasMeta = true
+			}
 			if job.Grade != "" {
 				out = appendText(out, "Grade: "+job.Grade+"\n")
 				hasMeta = true
@@ -1663,9 +1730,17 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 			out = appendQR(out, job.Code)
 		} else if job.Type != "receipt" {
 			// Pallet, Pouch, and Export use both Code128 barcode and QR Code
-			out = appendCode128(out, job.Code)
+			barcodePayload := job.Code
+			if job.Barcode != "" {
+				barcodePayload = job.Barcode
+			}
+			qrPayload := job.Code
+			if job.QRValue != "" {
+				qrPayload = job.QRValue
+			}
+			out = appendCode128(out, barcodePayload)
 			out = appendText(out, "\n")
-			out = appendQR(out, job.Code)
+			out = appendQR(out, qrPayload)
 		}
 
 		dateStr := job.Date
@@ -1723,9 +1798,11 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 	if r.Method == "GET" && len(p) == 0 {
 		rows, err := s.db.Query(r.Context(), `
 			SELECT p.id, p.code, p.grade, p.status, p."weightKg", p."remainingKg", p."tareKg", p.notes,
-			       f.name, p."createdAt", p."updatedAt"
+			       f.name, p."createdAt", p."updatedAt",
+			       p."commodityId", c.code, c.name, c.gtin
 			FROM pallets p
 			LEFT JOIN farmers f ON f.id = p."farmerId"
+			LEFT JOIN commodities c ON c.id = p."commodityId"
 			ORDER BY p.code ASC
 		`)
 		if err != nil {
@@ -1736,22 +1813,26 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 		out := []any{}
 		for rows.Next() {
 			var id, code, status, notes string
-			var grade, farmerName *string
+			var grade, farmerName, cID, cCode, cName, cGTIN *string
 			var weight, remaining, tare float64
 			var createdAt, updatedAt time.Time
-			if err := rows.Scan(&id, &code, &grade, &status, &weight, &remaining, &tare, &notes, &farmerName, &createdAt, &updatedAt); err == nil {
+			if err := rows.Scan(&id, &code, &grade, &status, &weight, &remaining, &tare, &notes, &farmerName, &createdAt, &updatedAt, &cID, &cCode, &cName, &cGTIN); err == nil {
 				out = append(out, map[string]any{
-					"id":          id,
-					"code":        code,
-					"grade":       grade,
-					"status":      status,
-					"weightKg":    weight,
-					"remainingKg": remaining,
-					"tareKg":      tare,
-					"notes":       notes,
-					"farmerName":  farmerName,
-					"createdAt":   createdAt,
-					"updatedAt":   updatedAt,
+					"id":            id,
+					"code":          code,
+					"grade":         grade,
+					"status":        status,
+					"weightKg":      weight,
+					"remainingKg":   remaining,
+					"tareKg":        tare,
+					"notes":         notes,
+					"farmerName":    farmerName,
+					"commodityId":   cID,
+					"commodityCode": cCode,
+					"commodityName": cName,
+					"commodityGtin": cGTIN,
+					"createdAt":     createdAt,
+					"updatedAt":     updatedAt,
 				})
 			}
 		}
@@ -2046,15 +2127,15 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 		defer tx.Rollback(r.Context())
 
 		var palletID, palletCode, status string
-		var grade, farmerID, sortingBatchID *string
+		var grade, farmerID, sortingBatchID, commodityID *string
 		var remainingKg float64
 		err = tx.QueryRow(r.Context(), `
-			SELECT id, code, grade, status, "remainingKg", "farmerId", "sortingBatchId"
+			SELECT id, code, grade, status, "remainingKg", "farmerId", "sortingBatchId", "commodityId"
 			FROM pallets
 			WHERE id=$1 OR UPPER(code)=UPPER($1)
 			LIMIT 1
 			FOR UPDATE
-		`, q).Scan(&palletID, &palletCode, &grade, &status, &remainingKg, &farmerID, &sortingBatchID)
+		`, q).Scan(&palletID, &palletCode, &grade, &status, &remainingKg, &farmerID, &sortingBatchID, &commodityID)
 		if err == pgx.ErrNoRows {
 			fail(w, 404, "PALLET_NOT_FOUND", fmt.Sprintf("Pallet '%s' not found", q))
 			return
@@ -2071,10 +2152,10 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 		var closeoutID string
 		notes := strings.TrimSpace(input.Notes)
 		err = tx.QueryRow(r.Context(), `
-			INSERT INTO pallet_closeouts (id, "palletId", "palletCode", "sortingBatchId", "farmerId", "operatorId", grade, "leftoverKg", disposition, notes, "createdAt")
-			VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+			INSERT INTO pallet_closeouts (id, "palletId", "palletCode", "sortingBatchId", "farmerId", "operatorId", "commodityId", grade, "leftoverKg", disposition, notes, "createdAt")
+			VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
 			RETURNING id
-		`, palletID, palletCode, sortingBatchID, farmerID, nullIfEmpty(userID), grade, remainingKg, disposition, notes).Scan(&closeoutID)
+		`, palletID, palletCode, sortingBatchID, farmerID, nullIfEmpty(userID), commodityID, grade, remainingKg, disposition, notes).Scan(&closeoutID)
 		if err != nil {
 			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to log pallet closeout: "+err.Error())
 			return
@@ -2082,7 +2163,7 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 
 		_, err = tx.Exec(r.Context(), `
 			UPDATE pallets
-			SET "remainingKg"=0, "weightKg"=0, status='AVAILABLE', grade=NULL, "farmerId"=NULL, "sortingBatchId"=NULL, "updatedAt"=NOW()
+			SET "remainingKg"=0, "weightKg"=0, status='AVAILABLE', grade=NULL, "farmerId"=NULL, "sortingBatchId"=NULL, "commodityId"=NULL, "updatedAt"=NOW()
 			WHERE id=$1
 		`, palletID)
 		if err != nil {
@@ -2164,9 +2245,11 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 	// GET /api/v1/sorting/queue
 	if r.Method == "GET" && p[0] == "queue" {
 		rows, err := s.db.Query(r.Context(), `
-			SELECT w.id, w.code, f.code, f.name, f.village, w."grossWeightKg", w."tareWeightKg", w."netWeightKg", w.status, w."createdAt"
+			SELECT w.id, w.code, f.code, f.name, f.village, w."grossWeightKg", w."tareWeightKg", w."netWeightKg", w.status, w."createdAt",
+			       c.id, c.code, c.name, COALESCE(c.gtin, '')
 			FROM warings w
 			JOIN farmers f ON f.id=w."farmerId"
+			JOIN commodities c ON c.id=w."commodityId"
 			WHERE w.status IN ('PENDING', 'APPROVED')
 			ORDER BY w."createdAt" DESC
 		`)
@@ -2177,12 +2260,12 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 		defer rows.Close()
 		out := []any{}
 		for rows.Next() {
-			var id, code, fc, fn string
+			var id, code, fc, fn, cID, cCode, cName, cGTIN string
 			var village *string
 			var gross, tare, net float64
 			var status string
 			var at time.Time
-			if err := rows.Scan(&id, &code, &fc, &fn, &village, &gross, &tare, &net, &status, &at); err == nil {
+			if err := rows.Scan(&id, &code, &fc, &fn, &village, &gross, &tare, &net, &status, &at, &cID, &cCode, &cName, &cGTIN); err == nil {
 				out = append(out, map[string]any{
 					"id":            id,
 					"code":          code,
@@ -2195,6 +2278,10 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 					"netWeightKg":   net,
 					"status":        status,
 					"createdAt":     at,
+					"commodityId":   cID,
+					"commodityCode": cCode,
+					"commodityName": cName,
+					"commodityGtin": cGTIN,
 				})
 			}
 		}
@@ -2207,10 +2294,12 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 		rows, err := s.db.Query(r.Context(), `
 			SELECT sb.id, w.code, f.name, f.village, w."grossWeightKg", sb."washDecision",
 			       sb."gradeA_Kg", sb."gradeB_Kg", sb."gradeC_Kg", sb."shrinkageKg", sb."shrinkagePct",
-			       sb."gradeA_PalletCode", sb."gradeB_PalletCode", sb."gradeC_PalletCode", sb."sortedAt"
+			       sb."gradeA_PalletCode", sb."gradeB_PalletCode", sb."gradeC_PalletCode", sb."sortedAt",
+			       c.id, c.code, c.name, COALESCE(c.gtin, '')
 			FROM sorting_batches sb
 			JOIN warings w ON w.id = sb."waringId"
 			JOIN farmers f ON f.id = w."farmerId"
+			JOIN commodities c ON c.id = w."commodityId"
 			ORDER BY sb."sortedAt" DESC
 		`)
 		if err != nil {
@@ -2220,13 +2309,13 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 		defer rows.Close()
 		out := []any{}
 		for rows.Next() {
-			var id, wCode, fName string
+			var id, wCode, fName, cID, cCode, cName, cGTIN string
 			var fVillage *string
 			var gross, gA, gB, gC, shrinkage, shrinkagePct float64
 			var wash string
 			var pA, pB, pC *string
 			var sortedAt time.Time
-			if err := rows.Scan(&id, &wCode, &fName, &fVillage, &gross, &wash, &gA, &gB, &gC, &shrinkage, &shrinkagePct, &pA, &pB, &pC, &sortedAt); err == nil {
+			if err := rows.Scan(&id, &wCode, &fName, &fVillage, &gross, &wash, &gA, &gB, &gC, &shrinkage, &shrinkagePct, &pA, &pB, &pC, &sortedAt, &cID, &cCode, &cName, &cGTIN); err == nil {
 				pallets := []string{}
 				if pA != nil && strings.TrimSpace(*pA) != "" {
 					pallets = append(pallets, strings.TrimSpace(*pA))
@@ -2257,6 +2346,10 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 					"waringCode":        wCode,
 					"farmerName":        fName,
 					"farmerVillage":     fVillage,
+					"commodityId":       cID,
+					"commodityCode":     cCode,
+					"commodityName":     cName,
+					"commodityGtin":     cGTIN,
 					"grossWeightKg":     gross,
 					"washDecision":      wash,
 					"gradeA_Kg":         gA,
@@ -2292,11 +2385,11 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 			return
 		}
 
-		var waringID, farmerID string
+		var waringID, farmerID, commodityID string
 		var grossWeight, netWeight float64
 		err := s.db.QueryRow(r.Context(), `
-			SELECT id, "farmerId", "grossWeightKg", "netWeightKg" FROM warings WHERE UPPER(code)=UPPER($1)
-		`, strings.TrimSpace(input.WaringCode)).Scan(&waringID, &farmerID, &grossWeight, &netWeight)
+			SELECT id, "farmerId", "commodityId", "grossWeightKg", "netWeightKg" FROM warings WHERE UPPER(code)=UPPER($1)
+		`, strings.TrimSpace(input.WaringCode)).Scan(&waringID, &farmerID, &commodityID, &grossWeight, &netWeight)
 		if err != nil {
 			fail(w, 404, "WARING_NOT_FOUND", "Specified intake waring was not found")
 			return
@@ -2414,8 +2507,8 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 			grd := strings.ToUpper(strings.TrimSpace(g.GradeCode))
 			pID := "plt-" + strings.ToLower(strings.TrimPrefix(pCode, "PLT-"))
 			_, err = tx.Exec(r.Context(), `
-				INSERT INTO pallets (id, code, grade, "weightKg", "remainingKg", status, "farmerId", "sortingBatchId", "tareKg", notes, "createdAt", "updatedAt")
-				VALUES ($1, $2, $3, $4, $4, 'IN_USE', $5, $6, 15.0, 'Sorted Grade ' || $3, NOW(), NOW())
+				INSERT INTO pallets (id, code, grade, "weightKg", "remainingKg", status, "farmerId", "sortingBatchId", "commodityId", "tareKg", notes, "createdAt", "updatedAt")
+				VALUES ($1, $2, $3, $4, $4, 'IN_USE', $5, $6, $7, 15.0, 'Sorted Grade ' || $3, NOW(), NOW())
 				ON CONFLICT (code) DO UPDATE
 				SET grade=EXCLUDED.grade,
 				    "weightKg"=EXCLUDED."weightKg",
@@ -2423,8 +2516,9 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 				    status='IN_USE',
 				    "farmerId"=EXCLUDED."farmerId",
 				    "sortingBatchId"=EXCLUDED."sortingBatchId",
+				    "commodityId"=EXCLUDED."commodityId",
 				    "updatedAt"=NOW()
-			`, pID, pCode, grd, g.WeightKg, farmerID, batchID)
+			`, pID, pCode, grd, g.WeightKg, farmerID, batchID, commodityID)
 			if err != nil {
 				fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to update pallet: "+err.Error())
 				return
@@ -2463,9 +2557,11 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 	if r.Method == "GET" && p[0] == "records" {
 		rows, err := s.db.Query(r.Context(), `
 			SELECT pu.id, pu.code, pu.format, pu.grade, pu."weightKg", pu.barcode, pu.status, pu."createdAt",
-			       COALESCE(p.code, '') AS pallet_code
+			       COALESCE(p.code, '') AS pallet_code,
+			       COALESCE(c.id, ''), COALESCE(c.code, '001'), COALESCE(c.name, 'Eptilu Washed Potatoes 10 kg'), COALESCE(c.gtin, '8994477090010')
 			FROM package_units pu
 			LEFT JOIN pallets p ON p.id = pu."sourcePalletId"
+			LEFT JOIN commodities c ON c.id = pu."commodityId"
 			WHERE pu.status = 'STORED'
 			ORDER BY pu."createdAt" DESC
 		`)
@@ -2476,10 +2572,10 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 		defer rows.Close()
 		records := []any{}
 		for rows.Next() {
-			var id, code, format, grade, barcode, status, palletCode string
+			var id, code, format, grade, barcode, status, palletCode, cID, cCode, cName, cGTIN string
 			var weight float64
 			var createdAt time.Time
-			if err := rows.Scan(&id, &code, &format, &grade, &weight, &barcode, &status, &createdAt, &palletCode); err == nil {
+			if err := rows.Scan(&id, &code, &format, &grade, &weight, &barcode, &status, &createdAt, &palletCode, &cID, &cCode, &cName, &cGTIN); err == nil {
 				records = append(records, map[string]any{
 					"id":               id,
 					"code":             code,
@@ -2490,6 +2586,11 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 					"status":           status,
 					"createdAt":        createdAt,
 					"sourcePalletCode": palletCode,
+					"commodityId":      cID,
+					"commodityCode":    cCode,
+					"commodityName":    cName,
+					"commodityGtin":    cGTIN,
+					"digitalLinkUrl":   formatGS1DigitalLink(cGTIN, palletCode+"-"+grade, code),
 				})
 			}
 		}
@@ -2519,14 +2620,14 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 		}
 		defer tx.Rollback(r.Context())
 		var palletID, grade, status string
-		var farmerID, sortingBatchID *string
+		var farmerID, sortingBatchID, palletCommodityID *string
 		var remainingKg float64
 		err = tx.QueryRow(r.Context(), `
-			SELECT id, COALESCE(grade, 'A'), status, "remainingKg", "farmerId", "sortingBatchId"
+			SELECT id, COALESCE(grade, 'A'), status, "remainingKg", "farmerId", "sortingBatchId", "commodityId"
 			FROM pallets
 			WHERE UPPER(code)=UPPER($1)
 			FOR UPDATE
-		`, pCode).Scan(&palletID, &grade, &status, &remainingKg, &farmerID, &sortingBatchID)
+		`, pCode).Scan(&palletID, &grade, &status, &remainingKg, &farmerID, &sortingBatchID, &palletCommodityID)
 		if err == pgx.ErrNoRows {
 			fail(w, 404, "PALLET_NOT_FOUND", fmt.Sprintf("Pallet '%s' not found", pCode))
 			return
@@ -2546,6 +2647,30 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 			return
 		}
 
+		// Resolve commodity from pallet -> sorting_batch/waring -> default 001
+		var cID, cCode, cName, cGTIN string
+		if palletCommodityID != nil && strings.TrimSpace(*palletCommodityID) != "" {
+			_ = tx.QueryRow(r.Context(), `SELECT id, code, name, COALESCE(gtin, '') FROM commodities WHERE id=$1`, *palletCommodityID).Scan(&cID, &cCode, &cName, &cGTIN)
+		}
+		if cID == "" && sortingBatchID != nil && strings.TrimSpace(*sortingBatchID) != "" {
+			_ = tx.QueryRow(r.Context(), `
+				SELECT c.id, c.code, c.name, COALESCE(c.gtin, '')
+				FROM sorting_batches sb
+				JOIN warings w ON w.id = sb."waringId"
+				JOIN commodities c ON c.id = w."commodityId"
+				WHERE sb.id = $1
+			`, *sortingBatchID).Scan(&cID, &cCode, &cName, &cGTIN)
+		}
+		if cID == "" {
+			_ = tx.QueryRow(r.Context(), `SELECT id, code, name, COALESCE(gtin, '') FROM commodities WHERE code=$1 LIMIT 1`, defaultCommodityCode).Scan(&cID, &cCode, &cName, &cGTIN)
+		}
+		if cCode == "" {
+			cCode = defaultCommodityCode
+		}
+		if cGTIN == "" {
+			cGTIN = defaultCommodityGTIN
+		}
+
 		format := "RETAIL_POUCH"
 		if strings.Contains(strings.ToUpper(input.PackageTypeCode), "CARTON") || strings.Contains(strings.ToUpper(input.PackageTypeCode), "EXPORT") {
 			format = "EXPORT_CARTON"
@@ -2562,13 +2687,14 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 			prefix = "EXP"
 		}
 		packageCode := fmt.Sprintf("%s-%s-%04d", prefix, dateStr, sequence)
-		barcode := fmt.Sprintf("01%013d21%s", 9312345000000+sequence, packageCode)
+		barcode := formatGS1PackageBarcode(cGTIN, packageCode)
+		digitalLinkURL := formatGS1DigitalLink(cGTIN, pCode+"-"+grade, packageCode)
 
 		unitID := "pkg-" + strings.ToLower(packageCode)
 		_, err = tx.Exec(r.Context(), `
-			INSERT INTO package_units (id, code, format, grade, "weightKg", barcode, "sourcePalletId", "sortingBatchId", status, "createdAt")
-			VALUES ($1, $2, $3::"PackageFormat", $4, $5, $6, $7, $8, 'STORED'::"PackageStatus", NOW())
-		`, unitID, packageCode, format, grade, input.TotalNetWeightKg, barcode, palletID, sortingBatchID)
+			INSERT INTO package_units (id, code, format, grade, "weightKg", barcode, "sourcePalletId", "sortingBatchId", "commodityId", status, "createdAt")
+			VALUES ($1, $2, $3::"PackageFormat", $4, $5, $6, $7, $8, $9, 'STORED'::"PackageStatus", NOW())
+		`, unitID, packageCode, format, grade, input.TotalNetWeightKg, barcode, palletID, sortingBatchID, nullIfEmpty(cID))
 		if err != nil {
 			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to record package unit: "+err.Error())
 			return
@@ -2582,15 +2708,15 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 			if newRemaining > 0.001 {
 				operatorID, _, _ := s.authenticatedClaims(r)
 				_, _ = tx.Exec(r.Context(), `
-					INSERT INTO pallet_closeouts (id, "palletId", "palletCode", "sortingBatchId", "farmerId", "operatorId", grade, "leftoverKg", disposition, notes, "createdAt")
-					VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, 'SHRINKAGE_LOSS', 'Auto-released residual weight within 0.05 kg tolerance', NOW())
-				`, palletID, pCode, sortingBatchID, farmerID, nullIfEmpty(operatorID), grade, newRemaining)
+					INSERT INTO pallet_closeouts (id, "palletId", "palletCode", "sortingBatchId", "farmerId", "operatorId", "commodityId", grade, "leftoverKg", disposition, notes, "createdAt")
+					VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, 'SHRINKAGE_LOSS', 'Auto-released residual weight within 0.05 kg tolerance', NOW())
+				`, palletID, pCode, sortingBatchID, farmerID, nullIfEmpty(operatorID), nullIfEmpty(cID), grade, newRemaining)
 			}
 			newRemaining = 0
 			newStatus = "AVAILABLE"
 			_, err = tx.Exec(r.Context(), `
 				UPDATE pallets
-				SET "remainingKg"=0, "weightKg"=0, status='AVAILABLE', grade=NULL, "farmerId"=NULL, "sortingBatchId"=NULL, "updatedAt"=NOW()
+				SET "remainingKg"=0, "weightKg"=0, status='AVAILABLE', grade=NULL, "farmerId"=NULL, "sortingBatchId"=NULL, "commodityId"=NULL, "updatedAt"=NOW()
 				WHERE id=$1
 			`, palletID)
 		} else {
@@ -2616,6 +2742,12 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 			"data": map[string]any{
 				"packageCode":     packageCode,
 				"palletCode":      pCode,
+				"commodityId":     cID,
+				"commodityCode":   cCode,
+				"commodityName":   cName,
+				"commodityGtin":   cGTIN,
+				"barcode":         barcode,
+				"digitalLinkUrl":  digitalLinkURL,
 				"remainingKg":     newRemaining,
 				"palletStatus":    newStatus,
 				"palletReleased":  newStatus == "AVAILABLE",

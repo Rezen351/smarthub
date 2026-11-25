@@ -8,7 +8,7 @@ import { Field, Input } from '../components/shared/Form'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
-import { api } from '../services/api'
+import { api, type Commodity } from '../services/api'
 
 interface Delivery {
   id: string
@@ -16,6 +16,8 @@ interface Delivery {
   truckPlate: string
   destination: string
   driverName: string
+  commodityCode?: string
+  commodityName?: string
   status: 'LOADING' | 'READY' | 'DEPARTED'
   units: number
   verifiedUnits: number
@@ -27,8 +29,9 @@ export default function DeliveriesPage() {
   const toast = useToast()
   const { syncWithBackend } = usePackhouseStore()
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
+  const [commodities, setCommodities] = useState<Commodity[]>([])
   const [selectedId, setSelectedId] = useState('')
-  const [form, setForm] = useState({ truckPlate: '', destination: '', driverName: '', grade: 'A' as 'A' | 'B' | 'C', units: '' })
+  const [form, setForm] = useState({ truckPlate: '', destination: '', driverName: '', commodityCode: '001', grade: 'A' as 'A' | 'B' | 'C', units: '' })
   const [scanCode, setScanCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [confirmDepart, setConfirmDepart] = useState<Delivery | null>(null)
@@ -42,7 +45,14 @@ export default function DeliveriesPage() {
     }
   }, [toast])
 
-  useEffect(() => { void refresh() }, [refresh])
+  useEffect(() => {
+    void refresh()
+    api.commodities.list().then((list) => {
+      if (Array.isArray(list) && list.length > 0) {
+        setCommodities(list)
+      }
+    }).catch(() => {})
+  }, [refresh])
 
   const create = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -52,7 +62,7 @@ export default function DeliveriesPage() {
     try {
       const saved = await api.deliveries.create({ ...form, units })
       setSelectedId(saved.id)
-      setForm({ truckPlate: '', destination: '', driverName: '', grade: 'A', units: '' })
+      setForm((prev) => ({ truckPlate: '', destination: '', driverName: '', commodityCode: prev.commodityCode, grade: 'A', units: '' }))
       await refresh()
       toast.success(`Delivery ${saved.code} created. Scan each assigned package.`)
     } catch (err) {
@@ -91,6 +101,16 @@ export default function DeliveriesPage() {
   const selected = deliveries.find((delivery) => delivery.id === selectedId)
   const columns: Column<Delivery>[] = [
     { key: 'code', label: 'Pengiriman', priority: true, render: (row) => <span className="font-mono">{row.code}</span> },
+    {
+      key: 'commodityName',
+      label: 'Komoditas',
+      render: (row) => row.commodityCode ? (
+        <span className="text-xs font-medium text-foreground">
+          <span className="font-mono font-bold mr-1">{row.commodityCode}</span>
+          {row.commodityName}
+        </span>
+      ) : '—',
+    },
     { key: 'truckPlate', label: 'Truk', priority: true },
     { key: 'destination', label: 'Tujuan', priority: true },
     { key: 'units', label: 'Kemasan', render: (row) => `${row.verifiedUnits}/${row.units} terverifikasi` },
@@ -106,6 +126,20 @@ export default function DeliveriesPage() {
           <Field label="Plat nomor truk" htmlFor="delivery-plate" required><Input id="delivery-plate" value={form.truckPlate} onChange={(e) => setForm({ ...form, truckPlate: e.target.value })} required /></Field>
           <Field label="Tujuan" htmlFor="delivery-destination" required><Input id="delivery-destination" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} required /></Field>
           <Field label="Nama pengemudi" htmlFor="delivery-driver"><Input id="delivery-driver" value={form.driverName} onChange={(e) => setForm({ ...form, driverName: e.target.value })} /></Field>
+          <Field label="Komoditas" htmlFor="delivery-commodity" required>
+            <select
+              id="delivery-commodity"
+              className="form-input"
+              value={form.commodityCode}
+              onChange={(e) => setForm({ ...form, commodityCode: e.target.value })}
+            >
+              {(commodities.length > 0 ? commodities : [{ code: '001', name: 'Eptilu Washed Potatoes 10 kg' }]).map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} — {c.name}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field label="Grade" htmlFor="delivery-grade" required><select id="delivery-grade" className="form-input" value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value as 'A' | 'B' | 'C' })}><option value="A">Grade A</option><option value="B">Grade B</option><option value="C">Grade C</option></select></Field>
           <Field label="Jumlah unit kemasan" htmlFor="delivery-units" required><Input id="delivery-units" type="number" min="1" step="1" value={form.units} onChange={(e) => setForm({ ...form, units: e.target.value })} required /></Field>
           <Button type="submit" variant="primary" disabled={busy}>Buat Pengiriman</Button>

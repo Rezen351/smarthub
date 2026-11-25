@@ -29,8 +29,11 @@ func (s *server) listDeliveries(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.db.Query(r.Context(), `
 		SELECT d.id, d.code, d."truckPlate", d.destination, d."driverName", d.status, d."createdAt",
 		       COUNT(pu.id)::int, COUNT(pu."verifiedAt")::int,
-		       COALESCE(array_agg(pu.code ORDER BY pu."createdAt", pu.id) FILTER (WHERE pu.id IS NOT NULL), ARRAY[]::TEXT[])
-		FROM deliveries d LEFT JOIN package_units pu ON pu."deliveryId" = d.id
+		       COALESCE(array_agg(pu.code ORDER BY pu."createdAt", pu.id) FILTER (WHERE pu.id IS NOT NULL), ARRAY[]::TEXT[]),
+		       COALESCE(MIN(c.code), ''), COALESCE(MIN(c.name), '')
+		FROM deliveries d
+		LEFT JOIN package_units pu ON pu."deliveryId" = d.id
+		LEFT JOIN commodities c ON c.id = pu."commodityId"
 		GROUP BY d.id ORDER BY d."createdAt" DESC`)
 	if err != nil {
 		slog.Error("list deliveries failed", "error", err)
@@ -40,16 +43,20 @@ func (s *server) listDeliveries(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 	out := make([]any, 0)
 	for rows.Next() {
-		var id, code, plate, destination, driver, status string
+		var id, code, plate, destination, driver, status, cCode, cName string
 		var createdAt time.Time
 		var units, verified int
 		var packageCodes []string
-		if err := rows.Scan(&id, &code, &plate, &destination, &driver, &status, &createdAt, &units, &verified, &packageCodes); err != nil {
+		if err := rows.Scan(&id, &code, &plate, &destination, &driver, &status, &createdAt, &units, &verified, &packageCodes, &cCode, &cName); err != nil {
 			slog.Error("scan delivery failed", "error", err)
 			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to list deliveries")
 			return
 		}
-		out = append(out, map[string]any{"id": id, "code": code, "truckPlate": plate, "destination": destination, "driverName": driver, "status": status, "units": units, "verifiedUnits": verified, "packageCodes": packageCodes, "createdAt": createdAt})
+		out = append(out, map[string]any{
+			"id": id, "code": code, "truckPlate": plate, "destination": destination, "driverName": driver,
+			"status": status, "units": units, "verifiedUnits": verified, "packageCodes": packageCodes,
+			"commodityCode": cCode, "commodityName": cName, "createdAt": createdAt,
+		})
 	}
 	if err := rows.Err(); err != nil {
 		slog.Error("iterate deliveries failed", "error", err)
@@ -61,11 +68,12 @@ func (s *server) listDeliveries(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) createDelivery(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		TruckPlate  string `json:"truckPlate"`
-		Destination string `json:"destination"`
-		DriverName  string `json:"driverName"`
-		Grade       string `json:"grade"`
-		Units       int    `json:"units"`
+		TruckPlate    string `json:"truckPlate"`
+		Destination   string `json:"destination"`
+		DriverName    string `json:"driverName"`
+		Grade         string `json:"grade"`
+		CommodityCode string `json:"commodityCode"`
+		Units         int    `json:"units"`
 	}
 	if !decode(r, &input) || strings.TrimSpace(input.TruckPlate) == "" || strings.TrimSpace(input.Destination) == "" || input.Units < 1 || input.Units > 10000 || (input.Grade != "A" && input.Grade != "B" && input.Grade != "C") {
 		fail(w, 400, "VALIDATION_ERROR", "Truck plate, destination, grade, and a valid unit count are required")
@@ -77,7 +85,21 @@ func (s *server) createDelivery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback(r.Context())
-	rows, err := tx.Query(r.Context(), `SELECT id FROM package_units WHERE status='STORED' AND "deliveryId" IS NULL AND grade=$1 ORDER BY "createdAt", id LIMIT $2 FOR UPDATE`, input.Grade, input.Units)
+
+	var rows pgx.Rows
+	cCode := strings.TrimSpace(input.CommodityCode)
+	if cCode != "" {
+		rows, err = tx.Query(r.Context(), `
+			SELECT pu.id
+			FROM package_units pu
+			JOIN commodities c ON c.id = pu."commodityId"
+			WHERE pu.status='STORED' AND pu."deliveryId" IS NULL AND pu.grade=$1 AND (UPPER(c.code)=UPPER($2) OR c.id=$2)
+			ORDER BY pu."createdAt", pu.id
+			LIMIT $3 FOR UPDATE OF pu
+		`, input.Grade, cCode, input.Units)
+	} else {
+		rows, err = tx.Query(r.Context(), `SELECT id FROM package_units WHERE status='STORED' AND "deliveryId" IS NULL AND grade=$1 ORDER BY "createdAt", id LIMIT $2 FOR UPDATE`, input.Grade, input.Units)
+	}
 	if err != nil {
 		slog.Error("select delivery units failed", "error", err)
 		fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to select packaged units")

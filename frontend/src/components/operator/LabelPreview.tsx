@@ -10,6 +10,9 @@ export interface LabelPreviewProps {
   weightKg?: number
   items?: { code: string; weightKg: number }[]
   commodity?: string
+  gtin?: string
+  barcodeValue?: string
+  qrValue?: string
   date?: string
   time?: string
   stationName?: string
@@ -36,6 +39,9 @@ export default function LabelPreview({
   weightKg,
   items,
   commodity = 'Potatoes',
+  gtin,
+  barcodeValue,
+  qrValue,
   date = new Date().toISOString().slice(0, 10),
   time = 'Live',
   stationName,
@@ -53,14 +59,16 @@ export default function LabelPreview({
   const statusText = type === 'receipt' ? 'BUFFER_WAITING' : 'PRINTED'
   const displayTime = [date, time].filter(Boolean).join(' ')
 
-  // Determine metadata display by type
+  // Determine metadata display by type:
+  // Receipt & Packaging (pouch/export) show Commodity; Waring stays compact without Commodity.
   const showFarmer = (type === 'receipt' || type === 'waring') && Boolean(farmerName)
   const showFarmerId = (type === 'receipt' || type === 'waring') && Boolean(farmerId)
-  const showCommodity = type === 'receipt' && Boolean(commodity)
+  const showCommodity = (type === 'receipt' || type === 'pouch' || type === 'export') && Boolean(commodity)
+  const showGtin = (type === 'pouch' || type === 'export') && Boolean(gtin)
   const showStation = type === 'receipt' && Boolean(stationName)
   const showGrade = (type === 'pouch' || type === 'export' || type === 'grade') && Boolean(grade)
 
-  const hasMetadata = showFarmer || showFarmerId || showCommodity || showStation || showGrade
+  const hasMetadata = showFarmer || showFarmerId || showCommodity || showGtin || showStation || showGrade
 
   return (
     <div
@@ -101,6 +109,12 @@ export default function LabelPreview({
               <strong>{commodity}</strong>
             </div>
           )}
+          {showGtin && (
+            <div>
+              <span>GTIN-13: </span>
+              <strong>{gtin}</strong>
+            </div>
+          )}
           {showStation && (
             <div>
               <span>Station: </span>
@@ -137,7 +151,7 @@ export default function LabelPreview({
           <div className={`border-t border-dashed border-gray-400 ${screenFit ? 'pt-1.5 space-y-1' : 'pt-3 space-y-2'}`}>
             {showsBarcode && (
               <OfflineBarcode
-                value={code || 'PENDING'}
+                value={barcodeValue || code || 'PENDING'}
                 height={screenFit ? 18 : compact ? 24 : 32}
                 width={screenFit ? 150 : compact ? 180 : 240}
               />
@@ -145,7 +159,7 @@ export default function LabelPreview({
             {showsQr && (
               <div className="flex justify-center items-center py-0.5">
                 <OfflineQrCode
-                  value={code || 'PENDING'}
+                  value={qrValue || code || 'PENDING'}
                   size={screenFit ? 88 : compact ? 96 : 112}
                   className="shrink-0"
                 />
