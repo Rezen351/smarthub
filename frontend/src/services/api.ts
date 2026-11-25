@@ -177,20 +177,26 @@ export function getCommodityFamilyCode(code?: string): string {
  * Strips packaging weights (10 kg, 5 kg) or export prefixes to decouple Reception from Packaging.
  */
 export function getGeneralCommodityName(item?: { code?: string; name?: string }): string {
+  const rawName = (item?.name || '').trim()
   const code = (item?.code || '').trim()
-  if (code === '001' || code === '0' || code.startsWith('0')) return 'Kentang'
-  if (code === '101' || code === '1' || code.startsWith('1')) return 'Tomat'
+
+  if (rawName) {
+    const cleaned = rawName
+      .replace(/\s*\d+(\.\d+)?\s*kg\b/gi, '')
+      .replace(/\b(Washed|Fresh|Dry|Bulk|Export|Pouch|Carton|TW|Super|Box)\b/gi, '')
+      .trim()
+    if (cleaned) return cleaned
+  }
+
+  if (code === '001') return 'Kentang'
+  if (code === '101') return 'Tomat'
   if (code === '201') return 'Cabe Merah Keriting'
   if (code === '202') return 'Cabe Rawit Merah'
+  if (code.startsWith('0')) return 'Kentang'
+  if (code.startsWith('1')) return 'Tomat'
   if (code.startsWith('2')) return 'Cabe'
 
-  const rawName = (item?.name || '').trim()
-  if (!rawName) return 'Kentang'
-  const cleaned = rawName
-    .replace(/\s*\d+\s*kg\b/gi, '')
-    .replace(/\b(Washed|Fresh|Dry|Bulk|Export|Pouch|Carton|TW|Super|Box)\b/gi, '')
-    .trim()
-  return cleaned || rawName
+  return rawName || 'Commodity'
 }
 
 export interface PackagingProduct {
@@ -707,7 +713,7 @@ export const api = {
       code: string
       name: string
       exportName?: string
-      gtin: string
+      gtin?: string
       description?: string
       unit?: string
       brand?: string
