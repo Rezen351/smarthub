@@ -10,6 +10,7 @@ import { formatWeight } from '../lib/utils'
 import { usePackhouseStore, type BufferWaringItem, type FinishedStockItem } from '../hooks/usePackhouseStore'
 import { useAuth } from '../hooks/useAuth'
 import CancelTransactionModal from '../components/admin/CancelTransactionModal'
+import { DEFAULT_COMMODITIES } from '../services/api'
 
 type WarehouseZone = 'buffer' | 'finished'
 
@@ -30,12 +31,13 @@ export default function WarehousePage() {
     : finishedStock
 
   const commodityOptions = Array.from(
-    new Map(
-      [...waitingWarings, ...finishedStock].map((item) => [
+    new Map([
+      ...DEFAULT_COMMODITIES.map((c) => [c.code, c.name] as [string, string]),
+      ...[...waitingWarings, ...finishedStock].map((item) => [
         item.commodityCode || '001',
-        item.commodityName || 'Eptilu Washed Potatoes 10 kg',
-      ])
-    ).entries()
+        item.commodityName || 'Kentang',
+      ] as [string, string]),
+    ]).entries()
   )
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export default function WarehousePage() {
       render: (row) => (
         <span className="text-xs text-foreground">
           <span className="font-mono font-bold mr-1">{row.commodityCode || '001'}</span>
-          {row.commodityName || 'Eptilu Washed Potatoes 10 kg'}
+          {row.commodityName || 'Kentang'}
         </span>
       ),
     },
@@ -153,7 +155,7 @@ export default function WarehousePage() {
       render: (row) => (
         <span className="text-xs text-foreground">
           <span className="font-mono font-bold mr-1">{row.commodityCode || '001'}</span>
-          {row.commodityName || 'Eptilu Washed Potatoes 10 kg'}
+          {row.commodityName || 'Kentang'}
         </span>
       ),
     },
@@ -233,11 +235,10 @@ export default function WarehousePage() {
         <button
           type="button"
           onClick={() => handleSwitchZone('buffer')}
-          className={`p-5 border text-left rounded-none transition-all cursor-pointer flex items-start justify-between ${
-            activeZone === 'buffer'
+          className={`p-5 border text-left rounded-none transition-all cursor-pointer flex items-start justify-between ${activeZone === 'buffer'
               ? 'border-emerald-600 bg-emerald-50/60 shadow-sm'
               : 'border-border bg-card hover:bg-muted/30'
-          }`}
+            }`}
         >
           <div>
             <div className="flex items-center gap-2">
@@ -259,11 +260,10 @@ export default function WarehousePage() {
             </div>
           </div>
           <div
-            className={`w-9 h-9 border flex items-center justify-center shrink-0 ${
-              activeZone === 'buffer'
+            className={`w-9 h-9 border flex items-center justify-center shrink-0 ${activeZone === 'buffer'
                 ? 'border-emerald-600 bg-emerald-600 text-white'
                 : 'border-border bg-muted text-muted-foreground'
-            }`}
+              }`}
           >
             <Icon name="box" size={18} />
           </div>
@@ -273,11 +273,10 @@ export default function WarehousePage() {
         <button
           type="button"
           onClick={() => handleSwitchZone('finished')}
-          className={`p-5 border text-left rounded-none transition-all cursor-pointer flex items-start justify-between ${
-            activeZone === 'finished'
+          className={`p-5 border text-left rounded-none transition-all cursor-pointer flex items-start justify-between ${activeZone === 'finished'
               ? 'border-blue-600 bg-blue-50/60 shadow-sm'
               : 'border-border bg-card hover:bg-muted/30'
-          }`}
+            }`}
         >
           <div>
             <div className="flex items-center gap-2">
@@ -299,11 +298,10 @@ export default function WarehousePage() {
             </div>
           </div>
           <div
-            className={`w-9 h-9 border flex items-center justify-center shrink-0 ${
-              activeZone === 'finished'
+            className={`w-9 h-9 border flex items-center justify-center shrink-0 ${activeZone === 'finished'
                 ? 'border-blue-600 bg-blue-600 text-white'
                 : 'border-border bg-muted text-muted-foreground'
-            }`}
+              }`}
           >
             <Icon name="stack" size={18} />
           </div>

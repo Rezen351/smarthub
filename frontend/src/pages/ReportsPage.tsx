@@ -8,7 +8,7 @@ import StatCard from '../components/shared/StatCard'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import { useToast } from '../components/feedback/Toast'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
-import { api, type Commodity } from '../services/api'
+import { api, type Commodity, DEFAULT_COMMODITIES } from '../services/api'
 import { formatWeight } from '../lib/utils'
 
 interface Stat {
@@ -42,7 +42,7 @@ export default function ReportsPage() {
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const [rankingPeriod, setRankingPeriod] = useState<'all' | 'month' | 'today'>('all')
   const [commodityFilter, setCommodityFilter] = useState<string>('')
-  const [commodities, setCommodities] = useState<Commodity[]>([])
+  const [commodities, setCommodities] = useState<Commodity[]>(DEFAULT_COMMODITIES)
 
   useEffect(() => {
     api.commodities.list().then((list) => {

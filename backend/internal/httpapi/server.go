@@ -1064,8 +1064,8 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 		if err != nil {
 			if targetCommodityCode == defaultCommodityCode {
 				_ = s.db.QueryRow(r.Context(), `
-					INSERT INTO commodities (id, code, name, description, unit, gtin)
-					VALUES ('cmd-potato-001', '001', 'Eptilu Washed Potatoes 10 kg', 'Eptilu Washed Potatoes 10 kg (Carton Box)', 'kg', '8994477090010')
+					INSERT INTO commodities (id, code, name, "exportName", description, unit, gtin)
+					VALUES ('cmd-potato-001', '001', 'Kentang', 'Eptilu Washed Potatoes 10 kg', 'Kentang panen segar', 'kg', '8994477090010')
 					ON CONFLICT (code) DO NOTHING
 					RETURNING id, code, name, COALESCE(gtin, '')
 				`).Scan(&cid, &cCode, &cName, &cGTIN)
@@ -1799,7 +1799,7 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 		rows, err := s.db.Query(r.Context(), `
 			SELECT p.id, p.code, p.grade, p.status, p."weightKg", p."remainingKg", p."tareKg", p.notes,
 			       f.name, p."createdAt", p."updatedAt",
-			       p."commodityId", c.code, c.name, c.gtin
+			       p."commodityId", c.code, c.name, COALESCE(c."exportName", c.name), c.gtin
 			FROM pallets p
 			LEFT JOIN farmers f ON f.id = p."farmerId"
 			LEFT JOIN commodities c ON c.id = p."commodityId"
@@ -1813,26 +1813,27 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 		out := []any{}
 		for rows.Next() {
 			var id, code, status, notes string
-			var grade, farmerName, cID, cCode, cName, cGTIN *string
+			var grade, farmerName, cID, cCode, cName, cExportName, cGTIN *string
 			var weight, remaining, tare float64
 			var createdAt, updatedAt time.Time
-			if err := rows.Scan(&id, &code, &grade, &status, &weight, &remaining, &tare, &notes, &farmerName, &createdAt, &updatedAt, &cID, &cCode, &cName, &cGTIN); err == nil {
+			if err := rows.Scan(&id, &code, &grade, &status, &weight, &remaining, &tare, &notes, &farmerName, &createdAt, &updatedAt, &cID, &cCode, &cName, &cExportName, &cGTIN); err == nil {
 				out = append(out, map[string]any{
-					"id":            id,
-					"code":          code,
-					"grade":         grade,
-					"status":        status,
-					"weightKg":      weight,
-					"remainingKg":   remaining,
-					"tareKg":        tare,
-					"notes":         notes,
-					"farmerName":    farmerName,
-					"commodityId":   cID,
-					"commodityCode": cCode,
-					"commodityName": cName,
-					"commodityGtin": cGTIN,
-					"createdAt":     createdAt,
-					"updatedAt":     updatedAt,
+					"id":                  id,
+					"code":                code,
+					"grade":               grade,
+					"status":              status,
+					"weightKg":            weight,
+					"remainingKg":         remaining,
+					"tareKg":              tare,
+					"notes":               notes,
+					"farmerName":          farmerName,
+					"commodityId":         cID,
+					"commodityCode":       cCode,
+					"commodityName":       cName,
+					"commodityExportName": cExportName,
+					"commodityGtin":       cGTIN,
+					"createdAt":           createdAt,
+					"updatedAt":           updatedAt,
 				})
 			}
 		}
@@ -1937,19 +1938,21 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 	if r.Method == "GET" && len(p) == 1 {
 		q := strings.TrimSpace(p[0])
 		var id, code, status, notes string
-		var grade, farmerName, farmerVillage, waringCode *string
+		var grade, farmerName, farmerVillage, waringCode, cID, cCode, cName, cExportName, cGTIN *string
 		var weight, remaining, tare float64
 		var createdAt, updatedAt time.Time
 		err := s.db.QueryRow(r.Context(), `
 			SELECT p.id, p.code, p.grade, p.status, p."weightKg", p."remainingKg", p."tareKg", p.notes,
-			       f.name, f.village, w.code, p."createdAt", p."updatedAt"
+			       f.name, f.village, w.code, p."createdAt", p."updatedAt",
+			       p."commodityId", c.code, c.name, COALESCE(c."exportName", c.name), c.gtin
 			FROM pallets p
 			LEFT JOIN farmers f ON f.id = p."farmerId"
 			LEFT JOIN sorting_batches sb ON sb.id = p."sortingBatchId"
 			LEFT JOIN warings w ON w.id = sb."waringId"
+			LEFT JOIN commodities c ON c.id = p."commodityId"
 			WHERE p.id=$1 OR UPPER(p.code)=UPPER($1)
 			LIMIT 1
-		`, q).Scan(&id, &code, &grade, &status, &weight, &remaining, &tare, &notes, &farmerName, &farmerVillage, &waringCode, &createdAt, &updatedAt)
+		`, q).Scan(&id, &code, &grade, &status, &weight, &remaining, &tare, &notes, &farmerName, &farmerVillage, &waringCode, &createdAt, &updatedAt, &cID, &cCode, &cName, &cExportName, &cGTIN)
 		if err == pgx.ErrNoRows {
 			fail(w, 404, "PALLET_NOT_FOUND", fmt.Sprintf("Pallet '%s' not found", q))
 			return
@@ -1961,19 +1964,24 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 		write(w, map[string]any{
 			"success": true,
 			"data": map[string]any{
-				"id":            id,
-				"code":          code,
-				"grade":         grade,
-				"status":        status,
-				"weightKg":      weight,
-				"remainingKg":   remaining,
-				"tareKg":        tare,
-				"notes":         notes,
-				"farmerName":    farmerName,
-				"farmerVillage": farmerVillage,
-				"waringCode":    waringCode,
-				"createdAt":     createdAt,
-				"updatedAt":     updatedAt,
+				"id":                  id,
+				"code":                code,
+				"grade":               grade,
+				"status":              status,
+				"weightKg":            weight,
+				"remainingKg":         remaining,
+				"tareKg":              tare,
+				"notes":               notes,
+				"farmerName":          farmerName,
+				"farmerVillage":       farmerVillage,
+				"waringCode":          waringCode,
+				"commodityId":         cID,
+				"commodityCode":       cCode,
+				"commodityName":       cName,
+				"commodityExportName": cExportName,
+				"commodityGtin":       cGTIN,
+				"createdAt":           createdAt,
+				"updatedAt":           updatedAt,
 			},
 		})
 		return
@@ -2558,7 +2566,7 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 		rows, err := s.db.Query(r.Context(), `
 			SELECT pu.id, pu.code, pu.format, pu.grade, pu."weightKg", pu.barcode, pu.status, pu."createdAt",
 			       COALESCE(p.code, '') AS pallet_code,
-			       COALESCE(c.id, ''), COALESCE(c.code, '001'), COALESCE(c.name, 'Eptilu Washed Potatoes 10 kg'), COALESCE(c.gtin, '8994477090010')
+			       COALESCE(c.id, ''), COALESCE(c.code, '001'), COALESCE(c.name, 'Kentang'), COALESCE(c."exportName", c.name), COALESCE(c.gtin, '8994477090010')
 			FROM package_units pu
 			LEFT JOIN pallets p ON p.id = pu."sourcePalletId"
 			LEFT JOIN commodities c ON c.id = pu."commodityId"
@@ -2572,25 +2580,26 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 		defer rows.Close()
 		records := []any{}
 		for rows.Next() {
-			var id, code, format, grade, barcode, status, palletCode, cID, cCode, cName, cGTIN string
+			var id, code, format, grade, barcode, status, palletCode, cID, cCode, cName, cExportName, cGTIN string
 			var weight float64
 			var createdAt time.Time
-			if err := rows.Scan(&id, &code, &format, &grade, &weight, &barcode, &status, &createdAt, &palletCode, &cID, &cCode, &cName, &cGTIN); err == nil {
+			if err := rows.Scan(&id, &code, &format, &grade, &weight, &barcode, &status, &createdAt, &palletCode, &cID, &cCode, &cName, &cExportName, &cGTIN); err == nil {
 				records = append(records, map[string]any{
-					"id":               id,
-					"code":             code,
-					"format":           format,
-					"grade":            grade,
-					"weightKg":         weight,
-					"barcode":          barcode,
-					"status":           status,
-					"createdAt":        createdAt,
-					"sourcePalletCode": palletCode,
-					"commodityId":      cID,
-					"commodityCode":    cCode,
-					"commodityName":    cName,
-					"commodityGtin":    cGTIN,
-					"digitalLinkUrl":   formatGS1DigitalLink(cGTIN, palletCode+"-"+grade, code),
+					"id":                  id,
+					"code":                code,
+					"format":              format,
+					"grade":               grade,
+					"weightKg":            weight,
+					"barcode":             barcode,
+					"status":              status,
+					"createdAt":           createdAt,
+					"sourcePalletCode":    palletCode,
+					"commodityId":         cID,
+					"commodityCode":       cCode,
+					"commodityName":       cName,
+					"commodityExportName": cExportName,
+					"commodityGtin":       cGTIN,
+					"digitalLinkUrl":      formatGS1DigitalLink(cGTIN, palletCode+"-"+grade, code),
 				})
 			}
 		}
@@ -2606,6 +2615,9 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 			Quantity         int     `json:"quantity"`
 			TotalNetWeightKg float64 `json:"totalNetWeightKg"`
 			StorageLocation  string  `json:"storageLocation"`
+			GTIN             string  `json:"gtin"`
+			ProductName      string  `json:"productName"`
+			Variant          string  `json:"variant"`
 		}
 		if !decode(r, &input) || strings.TrimSpace(input.PalletCode) == "" || input.TotalNetWeightKg <= 0 {
 			fail(w, 400, "VALIDATION_ERROR", "A valid pallet code and positive net weight are required")
@@ -2648,27 +2660,34 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 		}
 
 		// Resolve commodity from pallet -> sorting_batch/waring -> default 001
-		var cID, cCode, cName, cGTIN string
+		var cID, cCode, cName, cExportName, cGTIN string
 		if palletCommodityID != nil && strings.TrimSpace(*palletCommodityID) != "" {
-			_ = tx.QueryRow(r.Context(), `SELECT id, code, name, COALESCE(gtin, '') FROM commodities WHERE id=$1`, *palletCommodityID).Scan(&cID, &cCode, &cName, &cGTIN)
+			_ = tx.QueryRow(r.Context(), `SELECT id, code, name, COALESCE("exportName", name), COALESCE(gtin, '') FROM commodities WHERE id=$1`, *palletCommodityID).Scan(&cID, &cCode, &cName, &cExportName, &cGTIN)
 		}
 		if cID == "" && sortingBatchID != nil && strings.TrimSpace(*sortingBatchID) != "" {
 			_ = tx.QueryRow(r.Context(), `
-				SELECT c.id, c.code, c.name, COALESCE(c.gtin, '')
+				SELECT c.id, c.code, c.name, COALESCE(c."exportName", c.name), COALESCE(c.gtin, '')
 				FROM sorting_batches sb
 				JOIN warings w ON w.id = sb."waringId"
 				JOIN commodities c ON c.id = w."commodityId"
 				WHERE sb.id = $1
-			`, *sortingBatchID).Scan(&cID, &cCode, &cName, &cGTIN)
+			`, *sortingBatchID).Scan(&cID, &cCode, &cName, &cExportName, &cGTIN)
 		}
 		if cID == "" {
-			_ = tx.QueryRow(r.Context(), `SELECT id, code, name, COALESCE(gtin, '') FROM commodities WHERE code=$1 LIMIT 1`, defaultCommodityCode).Scan(&cID, &cCode, &cName, &cGTIN)
+			_ = tx.QueryRow(r.Context(), `SELECT id, code, name, COALESCE("exportName", name), COALESCE(gtin, '') FROM commodities WHERE code=$1 LIMIT 1`, defaultCommodityCode).Scan(&cID, &cCode, &cName, &cExportName, &cGTIN)
 		}
 		if cCode == "" {
 			cCode = defaultCommodityCode
 		}
-		if cGTIN == "" {
+		if strings.TrimSpace(input.GTIN) != "" {
+			cGTIN = strings.TrimSpace(input.GTIN)
+		} else if cGTIN == "" {
 			cGTIN = defaultCommodityGTIN
+		}
+		if strings.TrimSpace(input.ProductName) != "" {
+			cExportName = strings.TrimSpace(input.ProductName)
+		} else if cExportName == "" {
+			cExportName = cName
 		}
 
 		format := "RETAIL_POUCH"
@@ -2740,13 +2759,14 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 		writeStatus(w, 201, map[string]any{
 			"success": true,
 			"data": map[string]any{
-				"packageCode":     packageCode,
-				"palletCode":      pCode,
-				"commodityId":     cID,
-				"commodityCode":   cCode,
-				"commodityName":   cName,
-				"commodityGtin":   cGTIN,
-				"barcode":         barcode,
+				"packageCode":         packageCode,
+				"palletCode":          pCode,
+				"commodityId":         cID,
+				"commodityCode":       cCode,
+				"commodityName":       cName,
+				"commodityExportName": cExportName,
+				"commodityGtin":       cGTIN,
+				"barcode":             barcode,
 				"digitalLinkUrl":  digitalLinkURL,
 				"remainingKg":     newRemaining,
 				"palletStatus":    newStatus,

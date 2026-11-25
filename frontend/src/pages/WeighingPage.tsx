@@ -24,7 +24,7 @@ import { useSessionContext } from '../hooks/useSessionContext'
 import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
 import { useAuth } from '../hooks/useAuth'
-import { api, type Commodity } from '../services/api'
+import { api, type Commodity, DEFAULT_COMMODITIES, getCommodityFamilyCode, getGeneralCommodityName } from '../services/api'
 import CameraScannerModal from '../components/shared/CameraScannerModal'
 import CancelTransactionModal from '../components/admin/CancelTransactionModal'
 
@@ -106,7 +106,7 @@ export default function WeighingPage() {
   const [manualSearch, setManualSearch] = useState('')
   const [scanError, setScanError] = useState('')
   const scanInputRef = useRef<HTMLInputElement>(null)
-  const [commoditiesList, setCommoditiesList] = useState<Commodity[]>([])
+  const [commoditiesList, setCommoditiesList] = useState<Commodity[]>(DEFAULT_COMMODITIES)
   const [selectedCommodityCode, setSelectedCommodityCode] = useState<string>(
     () => receptionSession.records[0]?.commodityCode || receptionSession.draft?.commodityCode || '001',
   )
@@ -116,31 +116,26 @@ export default function WeighingPage() {
     api.commodities
       .list()
       .then((list) => {
-        if (!activeFlag || !Array.isArray(list)) return
+        if (!activeFlag || !Array.isArray(list) || list.length === 0) return
         setCommoditiesList(list)
-        if (list.length > 0 && !list.some((c) => c.code === selectedCommodityCode)) {
+        if (!list.some((c) => c.code === selectedCommodityCode)) {
           setSelectedCommodityCode(list[0].code)
         }
       })
-      .catch(() => {})
+      .catch(() => { })
     return () => {
       activeFlag = false
     }
-  }, [])
+  }, [selectedCommodityCode])
 
-  const activeCommodity =
+  const rawActiveCommodity =
     commoditiesList.find((c) => c.code === selectedCommodityCode) ||
-    ({
-      id: 'cmd-potato-001',
-      code: selectedCommodityCode || '001',
-      name: receptionSession.records[0]?.commodityName || receptionSession.draft?.commodityName || 'Eptilu Washed Potatoes 10 kg',
-      gtin: '8994477090010',
-      description: '',
-      unit: 'kg',
-      brand: 'Eptilu',
-      packageType: 'Carton Box',
-      isActive: true,
-    } as Commodity)
+    DEFAULT_COMMODITIES.find((c) => c.code === selectedCommodityCode) ||
+    DEFAULT_COMMODITIES[0]
+  const activeCommodity = {
+    ...rawActiveCommodity,
+    name: getGeneralCommodityName(rawActiveCommodity),
+  }
   const commodityLocked = receptionSession.records.length > 0 || Boolean(receptionSession.draft)
 
   /* ── Camera Scanner State ── */
@@ -197,7 +192,7 @@ export default function WeighingPage() {
           )
         }
       })
-      .catch(() => {})
+      .catch(() => { })
   }, [])
 
   useEffect(() => {
@@ -274,7 +269,7 @@ export default function WeighingPage() {
           )
         }
       })
-      .catch(() => {})
+      .catch(() => { })
 
     refreshRecords()
   }, [refreshRecords])
@@ -295,7 +290,7 @@ export default function WeighingPage() {
       if (e.key === 'Escape' && focusMode) {
         setFocusMode(false)
         if (document.fullscreenElement) {
-          document.exitFullscreen?.().catch(() => {})
+          document.exitFullscreen?.().catch(() => { })
         }
       }
     }
@@ -308,14 +303,14 @@ export default function WeighingPage() {
   const enterFocusMode = () => {
     setFocusMode(true)
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().catch(() => {})
+      document.documentElement.requestFullscreen?.().catch(() => { })
     }
   }
 
   const exitFocusMode = () => {
     setFocusMode(false)
     if (document.fullscreenElement) {
-      document.exitFullscreen?.().catch(() => {})
+      document.exitFullscreen?.().catch(() => { })
     }
   }
 
@@ -422,7 +417,9 @@ export default function WeighingPage() {
     const farmerId = sessionFarmer?.farmerId || farmer!.id
     const activeFarmerObj = farmersList.find((f) => f.id === farmerId)
     const sessionCommodityCode = sessionFarmer?.commodityCode || activeCommodity.code
-    const sessionCommodityName = sessionFarmer?.commodityName || activeCommodity.name
+    const sessionCommodityName = sessionFarmer?.commodityName
+      ? getGeneralCommodityName({ code: sessionCommodityCode, name: sessionFarmer.commodityName })
+      : activeCommodity.name
     const payload: WeighingRecord = {
       id: editingId ?? crypto.randomUUID(),
       farmerId,
@@ -703,22 +700,20 @@ export default function WeighingPage() {
                   setActiveStep(step.id as 1 | 2 | 3)
                 }
               }}
-              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                isCurrent
+              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ${isCurrent
                   ? 'text-primary'
                   : isDone
-                  ? 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-900'
-                  : 'text-muted-foreground'
-              }`}
+                    ? 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-900'
+                    : 'text-muted-foreground'
+                }`}
             >
               <span
-                className={`w-5 h-5 flex items-center justify-center text-[11px] font-mono font-bold ${
-                  isCurrent
+                className={`w-5 h-5 flex items-center justify-center text-[11px] font-mono font-bold ${isCurrent
                     ? 'bg-primary text-primary-foreground'
                     : isDone
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-muted border border-border text-muted-foreground'
-                }`}
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-muted border border-border text-muted-foreground'
+                  }`}
               >
                 {isDone ? '✓' : step.id}
               </span>
@@ -770,12 +765,9 @@ export default function WeighingPage() {
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Commodity (1 per session)
               </span>
-              <span className="font-mono text-xs text-muted-foreground">
-                GTIN-13: {activeCommodity.gtin || '8994477090010'}
-              </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-              {(commoditiesList.length > 0 ? commoditiesList : [activeCommodity]).map((item) => {
+              {(commoditiesList.length > 0 ? commoditiesList : DEFAULT_COMMODITIES).map((item) => {
                 const isSelected = item.code === activeCommodity.code
                 return (
                   <button
@@ -783,17 +775,13 @@ export default function WeighingPage() {
                     type="button"
                     disabled={commodityLocked}
                     onClick={() => setSelectedCommodityCode(item.code)}
-                    className={`p-3 border text-left transition-colors rounded-none ${
-                      isSelected
+                    className={`p-3 border text-left transition-colors rounded-none ${isSelected
                         ? 'border-primary bg-primary/10 text-foreground'
                         : 'border-border bg-card text-muted-foreground hover:border-foreground/40'
-                    } ${commodityLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      } ${commodityLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs font-bold">{item.code}</span>
-                      <span className="font-mono text-[10px] opacity-80">{item.gtin}</span>
-                    </div>
-                    <div className="text-xs font-semibold mt-1 line-clamp-2 text-foreground">{item.name}</div>
+                    <div className="font-mono text-xs font-bold text-muted-foreground">{getCommodityFamilyCode(item.code)}</div>
+                    <div className="text-sm font-semibold mt-1 text-foreground">{getGeneralCommodityName(item)}</div>
                   </button>
                 )
               })}
@@ -913,7 +901,10 @@ export default function WeighingPage() {
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Commodity:</span>
                     <span className="font-semibold text-foreground text-right">
-                      {receptionSession.records[0]?.commodityName || receptionSession.draft?.commodityName || activeCommodity.name}
+                      {getGeneralCommodityName({
+                        code: receptionSession.records[0]?.commodityCode || receptionSession.draft?.commodityCode || activeCommodity.code,
+                        name: receptionSession.records[0]?.commodityName || receptionSession.draft?.commodityName || activeCommodity.name,
+                      })}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -1023,7 +1014,10 @@ export default function WeighingPage() {
                 code={receptionSession.records[0]?.waringCode ?? approvedSuccessRecord?.waringCode ?? ''}
                 farmerName={previewRecords[0]?.farmerName ?? farmer?.name}
                 farmerId={previewRecords[0]?.farmerId ?? farmer?.id}
-                commodity={previewRecords[0]?.commodityName ?? activeCommodity.name}
+                commodity={getGeneralCommodityName({
+                  code: previewRecords[0]?.commodityCode || activeCommodity.code,
+                  name: previewRecords[0]?.commodityName || activeCommodity.name,
+                })}
                 weightKg={previewTotalKg}
                 items={previewRecords.map((record, index) => ({ code: record.waringCode || `Bag ${index + 1} (unsaved)`, weightKg: record.weightKg }))}
                 time={confirmApprove?.time ?? 'Live'}

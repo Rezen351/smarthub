@@ -21,7 +21,7 @@ import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
 import CameraScannerModal from '../components/shared/CameraScannerModal'
 import PalletCloseoutModal from '../components/shared/PalletCloseoutModal'
-import { api } from '../services/api'
+import { api, resolvePackagingSpec } from '../services/api'
 
 type PackagingMode = 'RETAIL_POUCH' | 'BULK_EXPORT'
 
@@ -76,7 +76,6 @@ export default function PackagingPage() {
   const [sourceWaring, setSourceWaring] = useState('')
   const [sourceCommodityCode, setSourceCommodityCode] = useState('001')
   const [sourceCommodityName, setSourceCommodityName] = useState('Eptilu Washed Potatoes 10 kg')
-  const [sourceCommodityGtin, setSourceCommodityGtin] = useState('8994477090010')
   const [sourcePalletRemainingKg, setSourcePalletRemainingKg] = useState<number | null>(null)
   const [palletSearch, setPalletSearch] = useState('')
   const [palletScanError, setPalletScanError] = useState<string | null>(null)
@@ -88,7 +87,16 @@ export default function PackagingPage() {
 
   const [packagingMode, setPackagingMode] = useState<PackagingMode>('RETAIL_POUCH')
   const [selectedGrade, setSelectedGrade] = useState<'A' | 'B' | 'C'>('A')
-  const [exportTargetKg, setExportTargetKg] = useState<10 | 50>(10)
+  const [potatoCondition, setPotatoCondition] = useState<'WASHED' | 'DRY'>('WASHED')
+  const [exportTargetKg, setExportTargetKg] = useState<5 | 10 | 50>(10)
+
+  const activePackagingSpec = resolvePackagingSpec({
+    commodityCode: sourceCommodityCode,
+    variant: potatoCondition,
+    grade: selectedGrade,
+    mode: packagingMode,
+    exportTargetKg,
+  })
   const [scaleCapacityKg, setScaleCapacityKg] = useState<number | null>(null)
   const [scaleOnline, setScaleOnline] = useState(false)
   const [scaleEndpoint, setScaleEndpoint] = useState('Not configured')
@@ -236,8 +244,7 @@ export default function PackagingPage() {
     setSourceFarmer(p.farmerName)
     setSourceWaring(p.waringCode)
     setSourceCommodityCode(p.commodityCode || '001')
-    setSourceCommodityName(p.commodityName || 'Eptilu Washed Potatoes 10 kg')
-    setSourceCommodityGtin(p.commodityGtin || '8994477090010')
+    setSourceCommodityName(p.commodityName || 'Kentang')
     setSourcePalletRemainingKg(p.remainingKg)
     setPalletScanError(null)
     setSavedSuccessRecord(null)
@@ -308,7 +315,7 @@ export default function PackagingPage() {
   )
 
 
-  const targetKg = packagingMode === 'RETAIL_POUCH' ? 1.0 : exportTargetKg
+  const targetKg = activePackagingSpec.targetKg
   const toleranceKg = packagingMode === 'RETAIL_POUCH' ? 0.005 : 0.05
   const weightValue = Number(currentWeight) || 0
   const isWithinTolerance = Math.abs(weightValue - targetKg) <= toleranceKg
@@ -329,6 +336,10 @@ export default function PackagingPage() {
         code: row.code,
         farmerName: sourceFarmer,
         farmerId: row.sourcePallet,
+        commodity: row.commodityName || activePackagingSpec.productName,
+        gtin: row.commodityGtin || activePackagingSpec.gtin,
+        barcode: row.barcode,
+        qrValue: row.digitalLinkUrl,
         grade: row.grade,
         weightKg: row.weightKg,
         date: printDate,
@@ -397,6 +408,7 @@ export default function PackagingPage() {
   const isBelowCurrentSpec = Boolean(sourcePalletCode && remainingPalletKg > 0.05 && remainingPalletKg < minTargetKg)
   const isBelowMinSku = Boolean(sourcePalletCode && remainingPalletKg > 0.05 && remainingPalletKg < 0.995)
   const canSwitchTo10Kg = packagingMode === 'BULK_EXPORT' && exportTargetKg === 50 && remainingPalletKg >= 9.95
+  const canSwitchTo5Kg = packagingMode === 'BULK_EXPORT' && exportTargetKg > 5 && remainingPalletKg >= 4.95
   const canSwitchTo1Kg = (packagingMode === 'BULK_EXPORT' || targetKg > 1) && remainingPalletKg >= 0.995 && remainingPalletKg < minTargetKg
 
   const renderRemainderGuidance = () => {
@@ -432,6 +444,21 @@ export default function PackagingPage() {
               }}
             >
               Use 10 kg Carton
+            </Button>
+          )}
+          {canSwitchTo5Kg && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setPackagingMode('BULK_EXPORT')
+                setExportTargetKg(5)
+                setSavedSuccessRecord(null)
+                setCurrentWeight('')
+                setActiveStep(2)
+              }}
+            >
+              Use 5 kg Carton
             </Button>
           )}
           {canSwitchTo1Kg && (
@@ -543,6 +570,9 @@ export default function PackagingPage() {
         quantity: 1,
         totalNetWeightKg: weightValue,
         storageLocation: packagingMode === 'RETAIL_POUCH' ? 'Rack A-01' : 'Pallet Bay 03',
+        gtin: activePackagingSpec.gtin,
+        productName: activePackagingSpec.productName,
+        variant: potatoCondition,
       })
       if (!saved?.packageCode) throw new Error('The server did not confirm the package code.')
       const newCode = saved.packageCode
@@ -554,8 +584,8 @@ export default function PackagingPage() {
         code: newCode,
         sourcePallet: sourcePalletCode,
         commodityCode: saved.commodityCode || sourceCommodityCode,
-        commodityName: saved.commodityName || sourceCommodityName,
-        commodityGtin: saved.commodityGtin || sourceCommodityGtin,
+        commodityName: saved.commodityExportName || activePackagingSpec.productName || sourceCommodityName,
+        commodityGtin: saved.commodityGtin || activePackagingSpec.gtin,
         barcode: saved.barcode,
         digitalLinkUrl: saved.digitalLinkUrl,
         mode: packagingMode,
@@ -694,9 +724,9 @@ export default function PackagingPage() {
             icon="print"
             disabled={reprintingId === row.id}
             onClick={() => handleReprintPackage(row)}
-            title={`Cetak ulang label ${row.code}`}
+            title={`Reprint label for ${row.code}`}
           >
-            {reprintingId === row.id ? 'Mencetak…' : 'Cetak Ulang'}
+            {reprintingId === row.id ? 'Printing…' : 'Reprint Label'}
           </Button>
           <Button
             variant="ghost"
@@ -951,6 +981,16 @@ export default function PackagingPage() {
               <div className="flex gap-2">
                 <Button
                   size="sm"
+                  variant={exportTargetKg === 5 ? 'primary' : 'outline'}
+                  onClick={() => {
+                    setExportTargetKg(5)
+                    setCurrentWeight('')
+                  }}
+                >
+                  5 kg Carton
+                </Button>
+                <Button
+                  size="sm"
                   variant={exportTargetKg === 10 ? 'primary' : 'outline'}
                   onClick={() => {
                     setExportTargetKg(10)
@@ -974,6 +1014,59 @@ export default function PackagingPage() {
               {scaleCapacityKg !== null && scaleCapacityKg < 50 && <p className="text-xs text-muted-foreground">50 kg requires a scale with at least 50 kg capacity.</p>}
             </div>
           )}
+
+          {/* Potato Condition (Washed vs Dry) - applicable if commodity is Potato */}
+          {sourceCommodityCode === '001' && (
+            <div className="p-4 bg-card border border-border space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-foreground block">
+                Potato Condition (Kondisi Kentang):
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Button
+                  size="sm"
+                  variant={potatoCondition === 'WASHED' ? 'primary' : 'outline'}
+                  onClick={() => setPotatoCondition('WASHED')}
+                >
+                  Kentang Basah / Cuci (Washed)
+                </Button>
+                <Button
+                  size="sm"
+                  variant={potatoCondition === 'DRY' ? 'primary' : 'outline'}
+                  onClick={() => setPotatoCondition('DRY')}
+                >
+                  Kentang Kering (Dry)
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Dynamic GS1 Packaging Specification Card */}
+          <div className="p-4 bg-muted/40 border border-border space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                GS1 Packaging Specification
+              </span>
+              <Badge tone="accent">GS1 Trade Item</Badge>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-muted-foreground block">Product Title:</span>
+                <span className="font-semibold text-foreground">{activePackagingSpec.productName}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block">GS1 GTIN-13:</span>
+                <span className="font-mono font-bold text-foreground">{activePackagingSpec.gtin}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block">Packaging Format & Target:</span>
+                <span className="font-semibold text-foreground">{activePackagingSpec.packageType} · {targetKg} kg (±{packagingMode === 'RETAIL_POUCH' ? '5 g' : '50 g'})</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block">Brand:</span>
+                <span className="font-semibold text-foreground">{activePackagingSpec.brand}</span>
+              </div>
+            </div>
+          </div>
 
           {/* Action Footer */}
           <div className="flex items-center justify-between pt-4 border-t border-border">
@@ -1071,6 +1164,8 @@ export default function PackagingPage() {
                     code={nextCodePreview}
                     farmerName={sourceFarmer}
                     farmerId={sourcePalletCode}
+                    commodity={activePackagingSpec.productName}
+                    gtin={activePackagingSpec.gtin}
                     grade={selectedGrade}
                     weightKg={weightValue}
                     stationName="Station 03 · Packaging"
@@ -1085,6 +1180,8 @@ export default function PackagingPage() {
                     code={nextCodePreview}
                     farmerName={sourceFarmer}
                     farmerId={sourcePalletCode}
+                    commodity={activePackagingSpec.productName}
+                    gtin={activePackagingSpec.gtin}
                     grade={selectedGrade}
                     weightKg={weightValue}
                     date={formatSafeDate(new Date())}
@@ -1213,8 +1310,8 @@ export default function PackagingPage() {
                 code={savedSuccessRecord?.code ?? nextCodePreview}
                 farmerName={sourceFarmer}
                 farmerId={sourcePalletCode}
-                commodity={savedSuccessRecord?.commodityName ?? sourceCommodityName}
-                gtin={savedSuccessRecord?.commodityGtin ?? sourceCommodityGtin}
+                commodity={savedSuccessRecord?.commodityName ?? activePackagingSpec.productName}
+                gtin={savedSuccessRecord?.commodityGtin ?? activePackagingSpec.gtin}
                 barcodeValue={savedSuccessRecord?.barcode}
                 qrValue={savedSuccessRecord?.digitalLinkUrl}
                 grade={selectedGrade}
@@ -1230,8 +1327,8 @@ export default function PackagingPage() {
                 code={savedSuccessRecord?.code ?? nextCodePreview}
                 farmerName={sourceFarmer}
                 farmerId={sourcePalletCode}
-                commodity={savedSuccessRecord?.commodityName ?? sourceCommodityName}
-                gtin={savedSuccessRecord?.commodityGtin ?? sourceCommodityGtin}
+                commodity={savedSuccessRecord?.commodityName ?? activePackagingSpec.productName}
+                gtin={savedSuccessRecord?.commodityGtin ?? activePackagingSpec.gtin}
                 barcodeValue={savedSuccessRecord?.barcode}
                 qrValue={savedSuccessRecord?.digitalLinkUrl}
                 grade={selectedGrade}
@@ -1320,6 +1417,10 @@ export default function PackagingPage() {
                             code: savedSuccessRecord.code,
                             farmerName: sourceFarmer,
                             farmerId: savedSuccessRecord.sourcePallet,
+                            commodity: savedSuccessRecord.commodityName || activePackagingSpec.productName,
+                            gtin: savedSuccessRecord.commodityGtin || activePackagingSpec.gtin,
+                            barcode: savedSuccessRecord.barcode,
+                            qrValue: savedSuccessRecord.digitalLinkUrl,
                             grade: savedSuccessRecord.grade,
                             weightKg: savedSuccessRecord.weightKg,
                             date: savedSuccessRecord.date || formatSafeDate(now),
@@ -1541,6 +1642,10 @@ export default function PackagingPage() {
                 weightKg={previewPackage.weightKg}
                 farmerName={sourceFarmer}
                 farmerId={previewPackage.sourcePallet}
+                commodity={previewPackage.commodityName || activePackagingSpec.productName}
+                gtin={previewPackage.commodityGtin || activePackagingSpec.gtin}
+                barcodeValue={previewPackage.barcode}
+                qrValue={previewPackage.digitalLinkUrl}
                 stationName="Station 03 · Packaging"
                 date={previewPackage.date || formatSafeDate(new Date())}
                 time={previewPackage.time || formatSafeTime(new Date())}

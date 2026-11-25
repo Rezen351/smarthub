@@ -79,7 +79,7 @@ func (s *server) commoditiesHandler(w http.ResponseWriter, r *http.Request, p []
 		}
 
 		rows, err := s.db.Query(r.Context(), fmt.Sprintf(`
-			SELECT c.id, c.code, c.name, COALESCE(c.description, ''), c.unit,
+			SELECT c.id, c.code, c.name, COALESCE(c."exportName", c.name), COALESCE(c.description, ''), c.unit,
 			       COALESCE(c.gtin, ''), COALESCE(c.brand, 'Eptilu'), COALESCE(c."packageType", 'Carton Box'),
 			       c."isActive", c."createdAt"
 			FROM commodities c
@@ -97,6 +97,7 @@ func (s *server) commoditiesHandler(w http.ResponseWriter, r *http.Request, p []
 			ID          string    `json:"id"`
 			Code        string    `json:"code"`
 			Name        string    `json:"name"`
+			ExportName  string    `json:"exportName"`
 			Description string    `json:"description"`
 			Unit        string    `json:"unit"`
 			GTIN        string    `json:"gtin"`
@@ -110,7 +111,7 @@ func (s *server) commoditiesHandler(w http.ResponseWriter, r *http.Request, p []
 		for rows.Next() {
 			var item commodityItem
 			if err := rows.Scan(
-				&item.ID, &item.Code, &item.Name, &item.Description, &item.Unit,
+				&item.ID, &item.Code, &item.Name, &item.ExportName, &item.Description, &item.Unit,
 				&item.GTIN, &item.Brand, &item.PackageType, &item.IsActive, &item.CreatedAt,
 			); err == nil {
 				out = append(out, item)
@@ -136,6 +137,7 @@ func (s *server) commoditiesHandler(w http.ResponseWriter, r *http.Request, p []
 		var input struct {
 			Code        string `json:"code"`
 			Name        string `json:"name"`
+			ExportName  string `json:"exportName"`
 			Description string `json:"description"`
 			Unit        string `json:"unit"`
 			GTIN        string `json:"gtin"`
@@ -149,6 +151,10 @@ func (s *server) commoditiesHandler(w http.ResponseWriter, r *http.Request, p []
 		}
 		code := strings.TrimSpace(input.Code)
 		name := strings.TrimSpace(input.Name)
+		exportName := strings.TrimSpace(input.ExportName)
+		if exportName == "" {
+			exportName = name
+		}
 		gtin := strings.TrimSpace(input.GTIN)
 		unit := strings.TrimSpace(input.Unit)
 		if unit == "" {
@@ -166,13 +172,15 @@ func (s *server) commoditiesHandler(w http.ResponseWriter, r *http.Request, p []
 		if input.IsActive != nil {
 			isActive = *input.IsActive
 		}
-		if code == "" || name == "" || gtin == "" {
-			fail(w, 400, "VALIDATION_ERROR", "Product code, name, and GTIN-13 are required")
+		if code == "" || name == "" {
+			fail(w, 400, "VALIDATION_ERROR", "Commodity code and name are required")
 			return
 		}
-		if err := validateGTIN13(gtin); err != nil {
-			fail(w, 400, "INVALID_GTIN", err.Error())
-			return
+		if gtin != "" {
+			if err := validateGTIN13(gtin); err != nil {
+				fail(w, 400, "INVALID_GTIN", err.Error())
+				return
+			}
 		}
 
 		tx, err := s.db.Begin(r.Context())
@@ -185,10 +193,10 @@ func (s *server) commoditiesHandler(w http.ResponseWriter, r *http.Request, p []
 		id := "cmd-" + strings.ToLower(strings.ReplaceAll(code, " ", "-"))
 		var createdAt time.Time
 		err = tx.QueryRow(r.Context(), `
-			INSERT INTO commodities (id, code, name, description, unit, gtin, brand, "packageType", "isActive", "createdAt")
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+			INSERT INTO commodities (id, code, name, "exportName", description, unit, gtin, brand, "packageType", "isActive", "createdAt")
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
 			RETURNING "createdAt"
-		`, id, code, name, strings.TrimSpace(input.Description), unit, gtin, brand, pkgType, isActive).Scan(&createdAt)
+		`, id, code, name, exportName, strings.TrimSpace(input.Description), unit, nullIfEmpty(gtin), brand, pkgType, isActive).Scan(&createdAt)
 		if err != nil {
 			if strings.Contains(err.Error(), "unique") || strings.Contains(err.Error(), "duplicate") {
 				fail(w, 409, "COMMODITY_ALREADY_EXISTS", "A commodity with this code, name, or GTIN-13 already exists")
@@ -224,6 +232,7 @@ func (s *server) commoditiesHandler(w http.ResponseWriter, r *http.Request, p []
 				"id":          id,
 				"code":        code,
 				"name":        name,
+				"exportName":  exportName,
 				"description": strings.TrimSpace(input.Description),
 				"unit":        unit,
 				"gtin":        gtin,
@@ -242,6 +251,7 @@ func (s *server) commoditiesHandler(w http.ResponseWriter, r *http.Request, p []
 		var input struct {
 			Code        *string `json:"code"`
 			Name        *string `json:"name"`
+			ExportName  *string `json:"exportName"`
 			Description *string `json:"description"`
 			Unit        *string `json:"unit"`
 			GTIN        *string `json:"gtin"`
@@ -254,15 +264,15 @@ func (s *server) commoditiesHandler(w http.ResponseWriter, r *http.Request, p []
 			return
 		}
 
-		var id, code, name, description, unit, gtin, brand, pkgType string
+		var id, code, name, exportName, description, unit, gtin, brand, pkgType string
 		var isActive bool
 		var createdAt time.Time
 		err := s.db.QueryRow(r.Context(), `
-			SELECT id, code, name, COALESCE(description, ''), unit, COALESCE(gtin, ''), COALESCE(brand, 'Eptilu'), COALESCE("packageType", 'Carton Box'), "isActive", "createdAt"
+			SELECT id, code, name, COALESCE("exportName", name), COALESCE(description, ''), unit, COALESCE(gtin, ''), COALESCE(brand, 'Eptilu'), COALESCE("packageType", 'Carton Box'), "isActive", "createdAt"
 			FROM commodities
 			WHERE id = $1 OR code = $1
 			LIMIT 1
-		`, target).Scan(&id, &code, &name, &description, &unit, &gtin, &brand, &pkgType, &isActive, &createdAt)
+		`, target).Scan(&id, &code, &name, &exportName, &description, &unit, &gtin, &brand, &pkgType, &isActive, &createdAt)
 		if err == pgx.ErrNoRows {
 			fail(w, 404, "COMMODITY_NOT_FOUND", "Specified commodity could not be found")
 			return
@@ -278,17 +288,25 @@ func (s *server) commoditiesHandler(w http.ResponseWriter, r *http.Request, p []
 		if input.Name != nil && strings.TrimSpace(*input.Name) != "" {
 			name = strings.TrimSpace(*input.Name)
 		}
+		if input.ExportName != nil {
+			exportName = strings.TrimSpace(*input.ExportName)
+			if exportName == "" {
+				exportName = name
+			}
+		}
 		if input.Description != nil {
 			description = strings.TrimSpace(*input.Description)
 		}
 		if input.Unit != nil && strings.TrimSpace(*input.Unit) != "" {
 			unit = strings.TrimSpace(*input.Unit)
 		}
-		if input.GTIN != nil && strings.TrimSpace(*input.GTIN) != "" {
+		if input.GTIN != nil {
 			nextGTIN := strings.TrimSpace(*input.GTIN)
-			if err := validateGTIN13(nextGTIN); err != nil {
-				fail(w, 400, "INVALID_GTIN", err.Error())
-				return
+			if nextGTIN != "" {
+				if err := validateGTIN13(nextGTIN); err != nil {
+					fail(w, 400, "INVALID_GTIN", err.Error())
+					return
+				}
 			}
 			gtin = nextGTIN
 		}
@@ -304,9 +322,9 @@ func (s *server) commoditiesHandler(w http.ResponseWriter, r *http.Request, p []
 
 		_, err = s.db.Exec(r.Context(), `
 			UPDATE commodities
-			SET code=$1, name=$2, description=$3, unit=$4, gtin=$5, brand=$6, "packageType"=$7, "isActive"=$8
-			WHERE id=$9
-		`, code, name, description, unit, gtin, brand, pkgType, isActive, id)
+			SET code=$1, name=$2, "exportName"=$3, description=$4, unit=$5, gtin=$6, brand=$7, "packageType"=$8, "isActive"=$9
+			WHERE id=$10
+		`, code, name, exportName, description, unit, nullIfEmpty(gtin), brand, pkgType, isActive, id)
 		if err != nil {
 			if strings.Contains(err.Error(), "unique") || strings.Contains(err.Error(), "duplicate") {
 				fail(w, 409, "COMMODITY_ALREADY_EXISTS", "A commodity with this code, name, or GTIN-13 already exists")
@@ -322,6 +340,7 @@ func (s *server) commoditiesHandler(w http.ResponseWriter, r *http.Request, p []
 				"id":          id,
 				"code":        code,
 				"name":        name,
+				"exportName":  exportName,
 				"description": description,
 				"unit":        unit,
 				"gtin":        gtin,

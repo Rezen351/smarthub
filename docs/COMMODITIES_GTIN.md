@@ -31,12 +31,12 @@ Untuk 12 digit pertama ($d_1 \dots d_{12}$ dari kiri):
 
 ## 2. Daftar Komoditas Terdaftar
 
-| No | Product Number | GTIN-13 | Package | Product Brand | Product Name | Weight Unit |
-|---:|----------------|---------|---------|---------------|--------------|-------------|
-| 1 | `202` | `8994477092021` | Carton Box | Eptilu | Eptilu Fresh Red Bird's Eye Chili Peppers 10 kg | Kilogram (`kg`) |
-| 2 | `201` | `8994477092014` | Carton Box | Eptilu | Eptilu Fresh Curly Red Chili Peppers 10 kg | Kilogram (`kg`) |
-| 3 | `101` | `8994477091017` | Carton Box | Eptilu | Eptilu Fresh Red Tomatoes TW 10 kg | Kilogram (`kg`) |
-| 4 | `001` | `8994477090010` | Carton Box | Eptilu | Eptilu Washed Potatoes 10 kg | Kilogram (`kg`) |
+| No | Product Number | General Name (Penerimaan) | Export SKU / Package Name | GTIN-13 | Package | Product Brand | Weight Unit |
+|---:|----------------|---------------------------|---------------------------|---------|---------|---------------|-------------|
+| 1 | `001` | Kentang | Eptilu Washed Potatoes 10 kg | `8994477090010` | Carton Box | Eptilu | Kilogram (`kg`) |
+| 2 | `101` | Tomat | Eptilu Fresh Red Tomatoes TW 10 kg | `8994477091017` | Carton Box | Eptilu | Kilogram (`kg`) |
+| 3 | `201` | Cabe Merah Keriting | Eptilu Fresh Curly Red Chili Peppers 10 kg | `8994477092014` | Carton Box | Eptilu | Kilogram (`kg`) |
+| 4 | `202` | Cabe Rawit Merah | Eptilu Fresh Red Bird's Eye Chili Peppers 10 kg | `8994477092021` | Carton Box | Eptilu | Kilogram (`kg`) |
 
 ---
 
@@ -48,6 +48,23 @@ Untuk 12 digit pertama ($d_1 \dots d_{12}$ dari kiri):
 | `201` | Eptilu Fresh Curly Red Chili Peppers 10 kg | Food/Beverage/Tobacco | Vegetables (Non Leaf) - Unprepared/Unprocessed (Fresh) | Peppers | Chilli Peppers |
 | `101` | Eptilu Fresh Red Tomatoes TW 10 kg | Food/Beverage/Tobacco | Vegetables (Non Leaf) - Unprepared/Unprocessed (Fresh) | Tomatoes | Tomatoes - Round |
 | `001` | Eptilu Washed Potatoes 10 kg | Food/Beverage/Tobacco | Vegetables (Non Leaf) - Unprepared/Unprocessed (Fresh) | Vegetables - Unprepared/Unprocessed (Fresh) Variety Packs | Vegetables - Unprepared/Unprocessed (Fresh) Variety Packs |
+
+---
+
+## 4. Alur Pemisahan Penerimaan Komoditas Umum vs. Spesifikasi Ekspor di Pengemasan
+
+1. **Tahap Penerimaan (Station 01 — Reception)**:
+   - Petani menyetorkan hasil panen komoditas mentah.
+   - Pilihan komoditas pada layar timbang dan struk penerimaan murni menggunakan nama umum: **Kentang**, **Tomat**, **Cabe Merah Keriting**, dan **Cabe Rawit Merah**.
+   - Tidak memuat atribut ekspor (tanpa kode GTIN-13, barcode GS1-128, atau penamaan box ekspor).
+
+2. **Tahap Pengemasan (Station 03 — Packaging) & Ekspor**:
+   - Ketika pallet hasil grading dipilih di stasiun pengemasan, sistem secara otomatis mengaitkan spesifikasi ekspor dan GS1 GTIN-13 yang sesuai:
+     - Kentang $\rightarrow$ Eptilu Washed Potatoes 10 kg (GTIN-13: `8994477090010`)
+     - Tomat $\rightarrow$ Eptilu Fresh Red Tomatoes TW 10 kg (GTIN-13: `8994477091017`)
+     - Cabe Merah Keriting $\rightarrow$ Eptilu Fresh Curly Red Chili Peppers 10 kg (GTIN-13: `8994477092014`)
+     - Cabe Rawit Merah $\rightarrow$ Eptilu Fresh Red Bird's Eye Chili Peppers 10 kg (GTIN-13: `8994477092021`)
+   - Barcode GS1-128 (`010{GTIN}21{SERIAL}`) dan QR GS1 Digital Link dicetak pada kemasan pouch atau karton ekspor.
 
 ---
 

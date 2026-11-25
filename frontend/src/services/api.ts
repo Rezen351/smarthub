@@ -102,13 +102,501 @@ export interface Commodity {
   id: string
   code: string
   name: string
+  exportName?: string
   description: string
   unit: string
-  gtin: string
-  brand: string
-  packageType: string
+  gtin?: string
+  brand?: string
+  packageType?: string
   isActive: boolean
   createdAt?: string
+}
+
+export const DEFAULT_COMMODITIES: Commodity[] = [
+  {
+    id: 'cmd-potato-001',
+    code: '001',
+    name: 'Kentang',
+    description: 'Kentang panen segar dari petani',
+    unit: 'kg',
+    brand: 'Eptilu',
+    packageType: 'Waring Bag',
+    isActive: true,
+  },
+  {
+    id: 'cmd-tomato-101',
+    code: '101',
+    name: 'Tomat',
+    description: 'Tomat panen segar dari petani',
+    unit: 'kg',
+    brand: 'Eptilu',
+    packageType: 'Waring Bag',
+    isActive: true,
+  },
+  {
+    id: 'cmd-chili-201',
+    code: '201',
+    name: 'Cabe Merah Keriting',
+    description: 'Cabe merah keriting panen segar dari petani',
+    unit: 'kg',
+    brand: 'Eptilu',
+    packageType: 'Waring Bag',
+    isActive: true,
+  },
+  {
+    id: 'cmd-chili-202',
+    code: '202',
+    name: 'Cabe Rawit Merah',
+    description: 'Cabe rawit merah panen segar dari petani',
+    unit: 'kg',
+    brand: 'Eptilu',
+    packageType: 'Waring Bag',
+    isActive: true,
+  },
+]
+
+export interface PackagingSpec {
+  gtin: string
+  productName: string
+  packageType: string
+  brand: string
+  targetKg: number
+}
+
+export function getCommodityFamilyCode(code?: string): string {
+  const clean = (code || '').trim()
+  if (clean.startsWith('0')) return '0xx'
+  if (clean.startsWith('1')) return '1xx'
+  if (clean.startsWith('2')) return '2xx'
+  if (clean.length > 0) return `${clean[0]}xx`
+  return '0xx'
+}
+
+/**
+ * Ensures Station 01 Reception strictly displays and uses clean, general raw commodity names.
+ * Strips packaging weights (10 kg, 5 kg) or export prefixes to decouple Reception from Packaging.
+ */
+export function getGeneralCommodityName(item?: { code?: string; name?: string }): string {
+  const code = (item?.code || '').trim()
+  if (code === '001' || code === '0' || code.startsWith('0')) return 'Kentang'
+  if (code === '101' || code === '1' || code.startsWith('1')) return 'Tomat'
+  if (code === '201') return 'Cabe Merah Keriting'
+  if (code === '202') return 'Cabe Rawit Merah'
+  if (code.startsWith('2')) return 'Cabe'
+
+  const rawName = (item?.name || '').trim()
+  if (!rawName) return 'Kentang'
+  const cleaned = rawName
+    .replace(/\s*\d+\s*kg\b/gi, '')
+    .replace(/\b(Washed|Fresh|Dry|Bulk|Export|Pouch|Carton|TW|Super|Box)\b/gi, '')
+    .trim()
+  return cleaned || rawName
+}
+
+export interface PackagingProduct {
+  id: string
+  commodityCode: string
+  commodityName: string
+  mode: 'RETAIL_POUCH' | 'BULK_EXPORT'
+  targetKg: number
+  variant?: 'WASHED' | 'DRY' | 'STANDARD'
+  productName: string
+  packageType: string
+  brand: string
+  gtin: string
+  isActive: boolean
+}
+
+export const DEFAULT_PACKAGING_PRODUCTS: PackagingProduct[] = [
+  // Kentang
+  {
+    id: 'pkg-potato-pouch-1kg',
+    commodityCode: '001',
+    commodityName: 'Kentang',
+    mode: 'RETAIL_POUCH',
+    targetKg: 1.0,
+    variant: 'STANDARD',
+    productName: 'Eptilu Fresh Potatoes 1 kg',
+    packageType: 'Retail Pouch',
+    brand: 'Eptilu',
+    gtin: '8994477090034',
+    isActive: true,
+  },
+  {
+    id: 'pkg-potato-carton-5kg',
+    commodityCode: '001',
+    commodityName: 'Kentang',
+    mode: 'BULK_EXPORT',
+    targetKg: 5.0,
+    variant: 'WASHED',
+    productName: 'Eptilu Washed Potatoes 5 kg',
+    packageType: 'Carton Box',
+    brand: 'Eptilu',
+    gtin: '8994477090058',
+    isActive: true,
+  },
+  {
+    id: 'pkg-potato-carton-10kg-washed',
+    commodityCode: '001',
+    commodityName: 'Kentang',
+    mode: 'BULK_EXPORT',
+    targetKg: 10.0,
+    variant: 'WASHED',
+    productName: 'Eptilu Washed Potatoes 10 kg',
+    packageType: 'Carton Box',
+    brand: 'Eptilu',
+    gtin: '8994477090010',
+    isActive: true,
+  },
+  {
+    id: 'pkg-potato-carton-10kg-dry',
+    commodityCode: '001',
+    commodityName: 'Kentang',
+    mode: 'BULK_EXPORT',
+    targetKg: 10.0,
+    variant: 'DRY',
+    productName: 'Eptilu Fresh Potatoes 10 kg',
+    packageType: 'Carton Box',
+    brand: 'Eptilu',
+    gtin: '8994477090027',
+    isActive: true,
+  },
+  {
+    id: 'pkg-potato-carton-50kg',
+    commodityCode: '001',
+    commodityName: 'Kentang',
+    mode: 'BULK_EXPORT',
+    targetKg: 50.0,
+    variant: 'STANDARD',
+    productName: 'Eptilu Bulk Potatoes 50 kg',
+    packageType: 'Master Carton',
+    brand: 'Eptilu',
+    gtin: '8994477090041',
+    isActive: true,
+  },
+  // Tomat
+  {
+    id: 'pkg-tomato-pouch-1kg',
+    commodityCode: '101',
+    commodityName: 'Tomat',
+    mode: 'RETAIL_POUCH',
+    targetKg: 1.0,
+    variant: 'STANDARD',
+    productName: 'Eptilu Fresh Tomatoes 1 kg',
+    packageType: 'Retail Pouch',
+    brand: 'Eptilu',
+    gtin: '8994477091024',
+    isActive: true,
+  },
+  {
+    id: 'pkg-tomato-carton-5kg',
+    commodityCode: '101',
+    commodityName: 'Tomat',
+    mode: 'BULK_EXPORT',
+    targetKg: 5.0,
+    variant: 'STANDARD',
+    productName: 'Eptilu Fresh Red Tomatoes TW 5 kg',
+    packageType: 'Carton Box',
+    brand: 'Eptilu',
+    gtin: '8994477091031',
+    isActive: true,
+  },
+  {
+    id: 'pkg-tomato-carton-10kg',
+    commodityCode: '101',
+    commodityName: 'Tomat',
+    mode: 'BULK_EXPORT',
+    targetKg: 10.0,
+    variant: 'STANDARD',
+    productName: 'Eptilu Fresh Red Tomatoes TW 10 kg',
+    packageType: 'Carton Box',
+    brand: 'Eptilu',
+    gtin: '8994477091017',
+    isActive: true,
+  },
+  // Cabe Merah Keriting
+  {
+    id: 'pkg-curly-pouch-1kg',
+    commodityCode: '201',
+    commodityName: 'Cabe Merah Keriting',
+    mode: 'RETAIL_POUCH',
+    targetKg: 1.0,
+    variant: 'STANDARD',
+    productName: 'Eptilu Fresh Curly Red Chili 1 kg',
+    packageType: 'Retail Pouch',
+    brand: 'Eptilu',
+    gtin: '8994477092038',
+    isActive: true,
+  },
+  {
+    id: 'pkg-curly-carton-5kg',
+    commodityCode: '201',
+    commodityName: 'Cabe Merah Keriting',
+    mode: 'BULK_EXPORT',
+    targetKg: 5.0,
+    variant: 'STANDARD',
+    productName: 'Eptilu Fresh Curly Red Chili Peppers 5 kg',
+    packageType: 'Carton Box',
+    brand: 'Eptilu',
+    gtin: '8994477092052',
+    isActive: true,
+  },
+  {
+    id: 'pkg-curly-carton-10kg',
+    commodityCode: '201',
+    commodityName: 'Cabe Merah Keriting',
+    mode: 'BULK_EXPORT',
+    targetKg: 10.0,
+    variant: 'STANDARD',
+    productName: 'Eptilu Fresh Curly Red Chili Peppers 10 kg',
+    packageType: 'Carton Box',
+    brand: 'Eptilu',
+    gtin: '8994477092014',
+    isActive: true,
+  },
+  // Cabe Rawit Merah
+  {
+    id: 'pkg-birdseye-pouch-1kg',
+    commodityCode: '202',
+    commodityName: 'Cabe Rawit Merah',
+    mode: 'RETAIL_POUCH',
+    targetKg: 1.0,
+    variant: 'STANDARD',
+    productName: "Eptilu Fresh Red Bird's Eye Chili 1 kg",
+    packageType: 'Retail Pouch',
+    brand: 'Eptilu',
+    gtin: '8994477092045',
+    isActive: true,
+  },
+  {
+    id: 'pkg-birdseye-carton-5kg',
+    commodityCode: '202',
+    commodityName: 'Cabe Rawit Merah',
+    mode: 'BULK_EXPORT',
+    targetKg: 5.0,
+    variant: 'STANDARD',
+    productName: "Eptilu Fresh Red Bird's Eye Chili Peppers 5 kg",
+    packageType: 'Carton Box',
+    brand: 'Eptilu',
+    gtin: '8994477092069',
+    isActive: true,
+  },
+  {
+    id: 'pkg-birdseye-carton-10kg',
+    commodityCode: '202',
+    commodityName: 'Cabe Rawit Merah',
+    mode: 'BULK_EXPORT',
+    targetKg: 10.0,
+    variant: 'STANDARD',
+    productName: "Eptilu Fresh Red Bird's Eye Chili Peppers 10 kg",
+    packageType: 'Carton Box',
+    brand: 'Eptilu',
+    gtin: '8994477092021',
+    isActive: true,
+  },
+]
+
+export const PACKAGING_CATALOG_STORAGE_KEY = 'smarthub_packaging_catalog'
+
+export function getSavedPackagingCatalog(): PackagingProduct[] {
+  try {
+    const raw = localStorage.getItem(PACKAGING_CATALOG_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    }
+  } catch {
+    // fallback
+  }
+  return DEFAULT_PACKAGING_PRODUCTS
+}
+
+export function savePackagingCatalog(products: PackagingProduct[]): void {
+  localStorage.setItem(PACKAGING_CATALOG_STORAGE_KEY, JSON.stringify(products))
+}
+
+/**
+ * Resolves GS1 packaging specifications based on raw commodity, processing condition (washed/dry),
+ * grade/size, and packaging format (1 kg pouch vs 5 kg / 10 kg / 50 kg carton).
+ */
+export function resolvePackagingSpec(params: {
+  commodityCode: string
+  variant?: 'WASHED' | 'DRY'
+  grade?: string
+  mode: 'RETAIL_POUCH' | 'BULK_EXPORT'
+  exportTargetKg?: 5 | 10 | 50
+}): PackagingSpec {
+  const code = params.commodityCode || '001'
+  const isPouch = params.mode === 'RETAIL_POUCH'
+  const target = isPouch ? 1.0 : (params.exportTargetKg || 10)
+  const isDry = params.variant === 'DRY'
+  const gradeLabel = params.grade ? ` (Grade ${params.grade})` : ''
+
+  // 1. Check saved custom catalog first
+  const catalog = getSavedPackagingCatalog()
+  const custom = catalog.find((p) => {
+    if (!p.isActive) return false
+    if (p.commodityCode !== code) return false
+    if (p.mode !== params.mode) return false
+    if (Math.abs(p.targetKg - target) > 0.1) return false
+    if (code === '001' && !isPouch && p.variant && p.variant !== 'STANDARD') {
+      return isDry ? p.variant === 'DRY' : p.variant === 'WASHED'
+    }
+    return true
+  })
+
+  if (custom) {
+    return {
+      gtin: custom.gtin,
+      productName: `${custom.productName}${gradeLabel}`,
+      packageType: custom.packageType,
+      brand: custom.brand,
+      targetKg: custom.targetKg,
+    }
+  }
+
+  // 2. Default hardcoded fallback
+  if (code === '001') {
+    // Kentang
+    if (isPouch) {
+      return {
+        gtin: '8994477090034',
+        productName: `Eptilu Fresh Potatoes 1 kg${gradeLabel}`,
+        packageType: 'Retail Pouch',
+        brand: 'Eptilu',
+        targetKg: 1.0,
+      }
+    }
+    if (target === 5) {
+      return {
+        gtin: '8994477090058',
+        productName: `Eptilu ${isDry ? 'Fresh' : 'Washed'} Potatoes 5 kg${gradeLabel}`,
+        packageType: 'Carton Box',
+        brand: 'Eptilu',
+        targetKg: 5.0,
+      }
+    }
+    if (target === 10) {
+      if (isDry) {
+        return {
+          gtin: '8994477090027',
+          productName: `Eptilu Fresh Potatoes 10 kg${gradeLabel}`,
+          packageType: 'Carton Box',
+          brand: 'Eptilu',
+          targetKg: 10.0,
+        }
+      }
+      return {
+        gtin: '8994477090010',
+        productName: `Eptilu Washed Potatoes 10 kg${gradeLabel}`,
+        packageType: 'Carton Box',
+        brand: 'Eptilu',
+        targetKg: 10.0,
+      }
+    }
+    return {
+      gtin: '8994477090041',
+      productName: `Eptilu Bulk Potatoes 50 kg${gradeLabel}`,
+      packageType: 'Master Carton',
+      brand: 'Eptilu',
+      targetKg: 50.0,
+    }
+  }
+
+  if (code === '101') {
+    // Tomat
+    if (isPouch) {
+      return {
+        gtin: '8994477091024',
+        productName: `Eptilu Fresh Tomatoes 1 kg${gradeLabel}`,
+        packageType: 'Retail Pouch',
+        brand: 'Eptilu',
+        targetKg: 1.0,
+      }
+    }
+    if (target === 5) {
+      return {
+        gtin: '8994477091031',
+        productName: `Eptilu Fresh Red Tomatoes TW 5 kg${gradeLabel}`,
+        packageType: 'Carton Box',
+        brand: 'Eptilu',
+        targetKg: 5.0,
+      }
+    }
+    return {
+      gtin: '8994477091017',
+      productName: `Eptilu Fresh Red Tomatoes TW 10 kg${gradeLabel}`,
+      packageType: 'Carton Box',
+      brand: 'Eptilu',
+      targetKg: 10.0,
+    }
+  }
+
+  if (code === '201') {
+    // Cabe Merah Keriting
+    if (isPouch) {
+      return {
+        gtin: '8994477092038',
+        productName: `Eptilu Fresh Curly Red Chili 1 kg${gradeLabel}`,
+        packageType: 'Retail Pouch',
+        brand: 'Eptilu',
+        targetKg: 1.0,
+      }
+    }
+    if (target === 5) {
+      return {
+        gtin: '8994477092052',
+        productName: `Eptilu Fresh Curly Red Chili Peppers 5 kg${gradeLabel}`,
+        packageType: 'Carton Box',
+        brand: 'Eptilu',
+        targetKg: 5.0,
+      }
+    }
+    return {
+      gtin: '8994477092014',
+      productName: `Eptilu Fresh Curly Red Chili Peppers 10 kg${gradeLabel}`,
+      packageType: 'Carton Box',
+      brand: 'Eptilu',
+      targetKg: 10.0,
+    }
+  }
+
+  if (code === '202') {
+    // Cabe Rawit Merah
+    if (isPouch) {
+      return {
+        gtin: '8994477092045',
+        productName: `Eptilu Fresh Red Bird's Eye Chili 1 kg${gradeLabel}`,
+        packageType: 'Retail Pouch',
+        brand: 'Eptilu',
+        targetKg: 1.0,
+      }
+    }
+    if (target === 5) {
+      return {
+        gtin: '8994477092069',
+        productName: `Eptilu Fresh Red Bird's Eye Chili Peppers 5 kg${gradeLabel}`,
+        packageType: 'Carton Box',
+        brand: 'Eptilu',
+        targetKg: 5.0,
+      }
+    }
+    return {
+      gtin: '8994477092021',
+      productName: `Eptilu Fresh Red Bird's Eye Chili Peppers 10 kg${gradeLabel}`,
+      packageType: 'Carton Box',
+      brand: 'Eptilu',
+      targetKg: 10.0,
+    }
+  }
+
+  return {
+    gtin: '8994477090010',
+    productName: `Eptilu Packaged Product${gradeLabel}`,
+    packageType: isPouch ? 'Retail Pouch' : 'Carton Box',
+    brand: 'Eptilu',
+    targetKg: target,
+  }
 }
 
 export interface Pallet {
@@ -126,6 +614,7 @@ export interface Pallet {
   commodityId?: string | null
   commodityCode?: string | null
   commodityName?: string | null
+  commodityExportName?: string | null
   commodityGtin?: string | null
   createdAt?: string
   updatedAt?: string
@@ -202,6 +691,7 @@ export const api = {
     create: async (data: {
       code: string
       name: string
+      exportName?: string
       gtin: string
       description?: string
       unit?: string
@@ -220,6 +710,7 @@ export const api = {
       data: Partial<{
         code: string
         name: string
+        exportName: string
         gtin: string
         description: string
         unit: string
@@ -389,6 +880,9 @@ export const api = {
       quantity: number
       totalNetWeightKg: number
       storageLocation?: string
+      gtin?: string
+      productName?: string
+      variant?: string
     }) => {
       const res = await request<ApiResponse<any>>('/packaging/pack', {
         method: 'POST',

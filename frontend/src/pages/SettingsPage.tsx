@@ -109,7 +109,7 @@ export default function SettingsPage() {
   const sections: Array<{ id: 'devices' | 'pallets' | 'commodities'; label: string; icon: IconName }> = [
     { id: 'devices', label: 'Devices', icon: 'settings' },
     { id: 'pallets', label: 'Pallet Registry', icon: 'pallet' },
-    { id: 'commodities', label: 'Commodities & GTIN', icon: 'leaf' },
+    { id: 'commodities', label: 'Commodities & Packaging', icon: 'leaf' },
   ]
 
   const selectSection = (section: 'devices' | 'pallets' | 'commodities') => {

@@ -8,7 +8,7 @@ import { Field, Input } from '../components/shared/Form'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
-import { api, type Commodity } from '../services/api'
+import { api, type Commodity, DEFAULT_COMMODITIES } from '../services/api'
 
 interface Delivery {
   id: string
@@ -29,7 +29,7 @@ export default function DeliveriesPage() {
   const toast = useToast()
   const { syncWithBackend } = usePackhouseStore()
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
-  const [commodities, setCommodities] = useState<Commodity[]>([])
+  const [commodities, setCommodities] = useState<Commodity[]>(DEFAULT_COMMODITIES)
   const [selectedId, setSelectedId] = useState('')
   const [form, setForm] = useState({ truckPlate: '', destination: '', driverName: '', commodityCode: '001', grade: 'A' as 'A' | 'B' | 'C', units: '' })
   const [scanCode, setScanCode] = useState('')
@@ -133,9 +133,9 @@ export default function DeliveriesPage() {
               value={form.commodityCode}
               onChange={(e) => setForm({ ...form, commodityCode: e.target.value })}
             >
-              {(commodities.length > 0 ? commodities : [{ code: '001', name: 'Eptilu Washed Potatoes 10 kg' }]).map((c) => (
+              {(commodities.length > 0 ? commodities : DEFAULT_COMMODITIES).map((c) => (
                 <option key={c.code} value={c.code}>
-                  {c.code} — {c.name}
+                  {c.code} — {c.exportName || c.name}
                 </option>
               ))}
             </select>
