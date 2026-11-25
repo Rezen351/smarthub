@@ -510,6 +510,72 @@ export default function WeighingPage() {
     setActiveStep(2)
   }
 
+  /* Add & save current bag directly on Step 2 for fast multi-bag weighing */
+  const handleAddBagOnStep2 = async () => {
+    if (savingRef.current || printingRef.current || sessionRef.current.closed) return
+    const numericWeight = Number(weightKg)
+    if (!Number.isFinite(numericWeight) || numericWeight < 0.001) {
+      setFormError('Weighing cannot be zero. Place a bag on the scale first.')
+      return
+    }
+    if (scaleCapacityKg !== null && numericWeight > scaleCapacityKg) {
+      setFormError(`Weight exceeds scale capacity of ${scaleCapacityKg} kg.`)
+      return
+    }
+    const sessionFarmer = sessionRef.current.records[0] || sessionRef.current.draft
+    const farmerId = sessionFarmer?.farmerId || farmer?.id || ''
+    if (!farmerId) {
+      setFormError('Select a valid farmer before saving.')
+      return
+    }
+    const activeFarmerObj = farmersList.find((f) => f.id === farmerId)
+    const sessionCommodityCode = sessionFarmer?.commodityCode || activeCommodity.code
+    const sessionCommodityName = sessionFarmer?.commodityName
+      ? getGeneralCommodityName({ code: sessionCommodityCode, name: sessionFarmer.commodityName })
+      : activeCommodity.name
+
+    const payload: WeighingRecord = {
+      id: editingId ?? crypto.randomUUID(),
+      farmerId,
+      farmerName: sessionFarmer?.farmerName || farmer!.name || '',
+      farmerVillage: activeFarmerObj?.village || '',
+      commodityCode: sessionCommodityCode,
+      commodityName: sessionCommodityName,
+      weightKg: Number(numericWeight.toFixed(3)),
+      depositDate: today(),
+      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      status: 'PENDING',
+    }
+
+    savingRef.current = true
+    setIsSaving(true)
+    setFormError('')
+    setSaveError('')
+    try {
+      const updatedRecord = await saveReceptionIntake(payload, api.weighing.create)
+      const assignedCode = updatedRecord.waringCode!
+      if (!sessionRef.current.records.some((record) => record.id === updatedRecord.id)) {
+        updateReceptionSession({
+          ...sessionRef.current,
+          draft: undefined,
+          records: [...sessionRef.current.records, updatedRecord],
+        })
+      }
+      setRecords((current) => [updatedRecord, ...current.filter((item) => item.id !== updatedRecord.id)])
+      setEditingId(null)
+      setWeightKg('')
+      void syncWithBackend()
+      toast.success(`Bag ${sessionRef.current.records.length} added & saved: ${assignedCode}`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not save bag.'
+      setFormError(message)
+      toast.error(message)
+    } finally {
+      savingRef.current = false
+      setIsSaving(false)
+    }
+  }
+
   /* Correction: return to Step 2 with the recorded weight */
   const handleKoreksi = (record: WeighingRecord) => {
     setSaveError('')
@@ -922,30 +988,71 @@ export default function WeighingPage() {
                 </div>
               </div>
 
+              {receptionSession.records.length > 0 && (
+                <div className="p-3 bg-card border border-border rounded-none space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold gap-2 flex-wrap">
+                    <span className="text-muted-foreground uppercase tracking-wider">Session Bags</span>
+                    <Badge tone="success">
+                      {receptionSession.records.length} bag{receptionSession.records.length > 1 ? 's' : ''} · {formatWeight(receptionSession.records.reduce((s, r) => s + r.weightKg, 0))} kg
+                    </Badge>
+                  </div>
+                  <div className="max-h-36 overflow-y-auto divide-y divide-border text-xs font-mono">
+                    {receptionSession.records.map((r, idx) => (
+                      <div key={r.id} className="py-1 flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">#{idx + 1} {r.waringCode}</span>
+                        <span className="font-bold text-foreground">{formatWeight(r.weightKg)} kg</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-border pt-4">
-            <Button variant="outline" disabled={receptionSession.records.length > 0 || !!receptionSession.draft} onClick={() => setActiveStep(1)}>
+          <div className="flex items-center justify-between border-t border-border pt-4 flex-wrap gap-2">
+            <Button variant="outline" disabled={receptionSession.records.length > 0 || !!receptionSession.draft || isSaving} onClick={() => setActiveStep(1)}>
               Back to Farmer
             </Button>
-            {receptionSession.records.length > 0 && <Button variant="outline" icon="print"
-              disabled={!!weightKg}
-              onClick={() => {
-                const last = receptionSession.records[receptionSession.records.length - 1]
-                setConfirmApprove(last)
-                setApprovedSuccessRecord(last)
-                setActiveStep(3)
-              }}>Review & Print</Button>}
-            <Button
-              variant="primary"
-              icon="check"
-              touch
-              disabled={!(Number(weightKg) > 0)}
-              onClick={handleProceedToApproval}
-            >
-              Review Weight
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              {!receptionSession.closed && receptionSession.records.length < 500 && (
+                <Button
+                  variant="outline"
+                  icon="plus"
+                  loading={isSaving}
+                  disabled={!(Number(weightKg) > 0) || isSaving}
+                  onClick={() => void handleAddBagOnStep2()}
+                >
+                  Add Bag
+                </Button>
+              )}
+              {receptionSession.records.length > 0 && !(Number(weightKg) > 0) ? (
+                <Button
+                  variant="primary"
+                  icon="print"
+                  touch
+                  disabled={isSaving}
+                  onClick={() => {
+                    const last = receptionSession.records[receptionSession.records.length - 1]
+                    setConfirmApprove(last)
+                    setApprovedSuccessRecord(last)
+                    setActiveStep(3)
+                  }}
+                >
+                  Finish & Print
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  icon="check"
+                  touch
+                  disabled={!(Number(weightKg) > 0) || isSaving}
+                  onClick={handleProceedToApproval}
+                >
+                  Review Weight
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}
