@@ -470,3 +470,9 @@
 | 2026-11-12 | Seed 13 additional farmers from supplementary Excel and regenerate all ID cards | ✅ | Parsed `docs/to Alif_Database Petani_Eptilu_Tambahan.xlsx` (14 rows), detected and skipped duplicate `Sutrisna` (NIK `3205180204880002` matching `FMR-003`), normalized village typo (`Sindanggmekar` → `Sindangmekar`), created and applied migration `0015_seed_additional_farmers_from_sheet.sql` (`FMR-023` through `FMR-035`), and regenerated all 35 farmer ID cards (PNG, PDF, 35-page PDF deck, 5-page A4 print sheet PDF, HTML gallery, and `README.md`) in `docs/farmer/`. |
 | 2026-11-12 | Fix missing SmartGeulis logo on ID cards after filename rename | ✅ | Updated `LOGO_PATH` in `scripts/generate_farmer_idcards.py` from `logo_smartgeulis.png` to `frontend/public/Smart Geulis.png` and regenerated all 35 PNG/PDF ID cards and `docs/farmer/logo.png`. Hardened `IdCard.tsx` (`IdCard`, `exportIdCardToPng`, and `printIdCard`) with URL-encoded `/Smart%20Geulis.png` and absolute `window.location.origin` for print popups. Verified rendered card image and rebuilt `frontend`. |
 
+
+| 2026-11-25 | Presentation commodity overview | ✅ | Added gross intake totals by commodity, responsive scrolling and removed the fixed 1 kg package label. Frontend production build passed; Vite reported a large bundle warning. Icon audit found a custom shared SVG icon set alongside installed lucide-react; migration remains outstanding. |
+
+| 2026-11-25 | Migrate shared frontend icons to Lucide | ✅ | Replaced custom shared SVG icon paths and the select chevron with lucide-react. Frontend production build passed; Vite reported a large bundle warning. |
+
+| 2026-11-25 | Rebuild frontend Docker image | ✅ | Rebuilt and recreated frontend container after presentation and icon changes; HTTP endpoint returned 200. |

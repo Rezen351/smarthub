@@ -9,6 +9,7 @@ import { Input as UIInput } from '@/components/ui/input'
 import { Textarea as UITextarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import { ChevronDown } from 'lucide-react'
 
 /* ── Field wrapper: label + control + hint/error ── */
 
@@ -75,10 +76,10 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 
 export function Select({ invalid, mono, className = '', children, ...rest }: SelectProps) {
   return (
+    <div className="relative">
     <select
       className={cn(
-        'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm appearance-none',
-        "bg-[url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")] bg-no-repeat bg-[right_12px_center] pr-9",
+        'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm appearance-none pr-9',
         invalid && 'border-destructive focus-visible:ring-destructive',
         mono && 'font-mono text-sm tracking-tight',
         className,
@@ -88,6 +89,8 @@ export function Select({ invalid, mono, className = '', children, ...rest }: Sel
     >
       {children}
     </select>
+    <ChevronDown size={16} aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+    </div>
   )
 }
 

@@ -34,7 +34,6 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
   const grades = [
     {
       code: 'Grade A',
-      label: 'Super / Retail',
       kg: gradeAKg,
       pct: pctA,
       barColor: 'bg-emerald-500',
@@ -44,7 +43,6 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
     },
     {
       code: 'Grade B',
-      label: 'Medium / HoReCa',
       kg: gradeBKg,
       pct: pctB,
       barColor: 'bg-sky-500',
@@ -54,7 +52,6 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
     },
     {
       code: 'Grade C',
-      label: 'Small / Industrial',
       kg: gradeCKg,
       pct: pctC,
       barColor: 'bg-amber-500',
@@ -142,9 +139,6 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
               >
                 {g.code}
               </span>
-              <span className={`text-xs truncate hidden xl:inline ${isDark ? 'text-white/70' : 'text-muted-foreground'}`}>
-                {g.label}
-              </span>
             </div>
             <div className="text-right shrink-0">
               <span className={`font-mono text-sm font-bold tabular-nums mr-1.5 ${isDark ? 'text-white' : 'text-foreground'}`}>
@@ -167,10 +161,7 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
                   : 'border-rose-300 bg-rose-50 text-rose-700'
               }`}
             >
-              Shrinkage &amp; Reject
-            </span>
-            <span className={`text-xs truncate hidden xl:inline ${isDark ? 'text-white/50' : 'text-muted-foreground'}`}>
-              Soil / Spoilage
+              Shrinkage
             </span>
           </div>
           <div className="text-right shrink-0">
