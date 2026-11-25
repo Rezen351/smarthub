@@ -45,6 +45,12 @@ backend/uploads/*
 scratch/
 scripts/output/
 
+# SSL Certificates & Keys
+*.pem
+*.key
+*.crt
+frontend/ssl/
+
 # Python test caches
 **/__pycache__/
 *.pyc

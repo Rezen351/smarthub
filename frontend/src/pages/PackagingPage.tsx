@@ -21,7 +21,7 @@ import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
 import CameraScannerModal from '../components/shared/CameraScannerModal'
 import PalletCloseoutModal from '../components/shared/PalletCloseoutModal'
-import { api } from '../services/api'
+import { api, resolvePackagingSpec } from '../services/api'
 
 type PackagingMode = 'RETAIL_POUCH' | 'BULK_EXPORT'
 
@@ -29,6 +29,11 @@ interface PackageRecord {
   id: string
   code: string
   sourcePallet?: string
+  commodityCode?: string
+  commodityName?: string
+  commodityGtin?: string
+  barcode?: string
+  digitalLinkUrl?: string
   mode: PackagingMode
   grade: 'A' | 'B' | 'C'
   weightKg: number
@@ -39,9 +44,9 @@ interface PackageRecord {
 }
 
 const STEPS = [
-  { id: 1, label: 'Package Spec' },
-  { id: 2, label: 'Weigh & Check' },
-  { id: 3, label: 'Label & Store' },
+  { id: 1, label: 'Spesifikasi Kemasan' },
+  { id: 2, label: 'Timbang & Cek' },
+  { id: 3, label: 'Label & Simpan' },
 ] as const
 
 interface AvailablePallet {
@@ -52,6 +57,9 @@ interface AvailablePallet {
   farmerName: string
   farmerVillage?: string
   waringCode: string
+  commodityCode?: string
+  commodityName?: string
+  commodityGtin?: string
 }
 
 export default function PackagingPage() {
@@ -66,6 +74,8 @@ export default function PackagingPage() {
   const [sourcePalletCode, setSourcePalletCode] = useState('')
   const [sourceFarmer, setSourceFarmer] = useState('')
   const [sourceWaring, setSourceWaring] = useState('')
+  const [sourceCommodityCode, setSourceCommodityCode] = useState('001')
+  const [sourceCommodityName, setSourceCommodityName] = useState('Eptilu Washed Potatoes 10 kg')
   const [sourcePalletRemainingKg, setSourcePalletRemainingKg] = useState<number | null>(null)
   const [palletSearch, setPalletSearch] = useState('')
   const [palletScanError, setPalletScanError] = useState<string | null>(null)
@@ -77,7 +87,16 @@ export default function PackagingPage() {
 
   const [packagingMode, setPackagingMode] = useState<PackagingMode>('RETAIL_POUCH')
   const [selectedGrade, setSelectedGrade] = useState<'A' | 'B' | 'C'>('A')
-  const [exportTargetKg, setExportTargetKg] = useState<10 | 50>(10)
+  const [potatoCondition, setPotatoCondition] = useState<'WASHED' | 'DRY'>('WASHED')
+  const [exportTargetKg, setExportTargetKg] = useState<5 | 10 | 50>(10)
+
+  const activePackagingSpec = resolvePackagingSpec({
+    commodityCode: sourceCommodityCode,
+    variant: potatoCondition,
+    grade: selectedGrade,
+    mode: packagingMode,
+    exportTargetKg,
+  })
   const [scaleCapacityKg, setScaleCapacityKg] = useState<number | null>(null)
   const [scaleOnline, setScaleOnline] = useState(false)
   const [scaleEndpoint, setScaleEndpoint] = useState('Not configured')
@@ -169,6 +188,9 @@ export default function PackagingPage() {
           farmerName: p.farmerName || 'Farmer',
           farmerVillage: p.farmerVillage,
           waringCode: p.waringCode || '',
+          commodityCode: p.commodityCode || '001',
+          commodityName: p.commodityName || 'Eptilu Washed Potatoes 10 kg',
+          commodityGtin: p.commodityGtin || '8994477090010',
         }))
         .filter((p) => p.code && p.remainingKg > 0)
       setPalletsFromApi(mapped)
@@ -221,10 +243,12 @@ export default function PackagingPage() {
     setSelectedGrade(p.grade)
     setSourceFarmer(p.farmerName)
     setSourceWaring(p.waringCode)
+    setSourceCommodityCode(p.commodityCode || '001')
+    setSourceCommodityName(p.commodityName || 'Kentang')
     setSourcePalletRemainingKg(p.remainingKg)
     setPalletScanError(null)
     setSavedSuccessRecord(null)
-    toast.success(`Pallet ${p.code} selected (Grade ${p.grade})`)
+    toast.success(`Pallet ${p.code} selected (${p.commodityName || '001'} · Grade ${p.grade})`)
   }
 
   const handlePalletScanSubmit = async (e?: React.FormEvent, scannedCode?: string) => {
@@ -256,6 +280,9 @@ export default function PackagingPage() {
           farmerName: pallet.farmerName || 'Farmer',
           farmerVillage: pallet.farmerVillage || undefined,
           waringCode: pallet.waringCode || '',
+          commodityCode: pallet.commodityCode || '001',
+          commodityName: pallet.commodityName || 'Eptilu Washed Potatoes 10 kg',
+          commodityGtin: pallet.commodityGtin || '8994477090010',
         })
         setPalletSearch('')
         setPalletScanError(null)
@@ -288,7 +315,7 @@ export default function PackagingPage() {
   )
 
 
-  const targetKg = packagingMode === 'RETAIL_POUCH' ? 1.0 : exportTargetKg
+  const targetKg = activePackagingSpec.targetKg
   const toleranceKg = packagingMode === 'RETAIL_POUCH' ? 0.005 : 0.05
   const weightValue = Number(currentWeight) || 0
   const isWithinTolerance = Math.abs(weightValue - targetKg) <= toleranceKg
@@ -309,6 +336,10 @@ export default function PackagingPage() {
         code: row.code,
         farmerName: sourceFarmer,
         farmerId: row.sourcePallet,
+        commodity: row.commodityName || activePackagingSpec.productName,
+        gtin: row.commodityGtin || activePackagingSpec.gtin,
+        barcode: row.barcode,
+        qrValue: row.digitalLinkUrl,
         grade: row.grade,
         weightKg: row.weightKg,
         date: printDate,
@@ -346,6 +377,11 @@ export default function PackagingPage() {
               id: p.id || p.code || String(Math.random()),
               code: p.code || p.unitCode || '—',
               sourcePallet: p.sourcePalletCode || p.sourcePallet || undefined,
+              commodityCode: p.commodityCode || '001',
+              commodityName: p.commodityName || 'Eptilu Washed Potatoes 10 kg',
+              commodityGtin: p.commodityGtin || '8994477090010',
+              barcode: p.barcode,
+              digitalLinkUrl: p.digitalLinkUrl,
               mode,
               grade: (p.grade === 'B' || p.grade === 'C' ? p.grade : 'A') as 'A' | 'B' | 'C',
               weightKg: w,
@@ -372,6 +408,7 @@ export default function PackagingPage() {
   const isBelowCurrentSpec = Boolean(sourcePalletCode && remainingPalletKg > 0.05 && remainingPalletKg < minTargetKg)
   const isBelowMinSku = Boolean(sourcePalletCode && remainingPalletKg > 0.05 && remainingPalletKg < 0.995)
   const canSwitchTo10Kg = packagingMode === 'BULK_EXPORT' && exportTargetKg === 50 && remainingPalletKg >= 9.95
+  const canSwitchTo5Kg = packagingMode === 'BULK_EXPORT' && exportTargetKg > 5 && remainingPalletKg >= 4.95
   const canSwitchTo1Kg = (packagingMode === 'BULK_EXPORT' || targetKg > 1) && remainingPalletKg >= 0.995 && remainingPalletKg < minTargetKg
 
   const renderRemainderGuidance = () => {
@@ -407,6 +444,21 @@ export default function PackagingPage() {
               }}
             >
               Use 10 kg Carton
+            </Button>
+          )}
+          {canSwitchTo5Kg && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setPackagingMode('BULK_EXPORT')
+                setExportTargetKg(5)
+                setSavedSuccessRecord(null)
+                setCurrentWeight('')
+                setActiveStep(2)
+              }}
+            >
+              Use 5 kg Carton
             </Button>
           )}
           {canSwitchTo1Kg && (
@@ -518,6 +570,9 @@ export default function PackagingPage() {
         quantity: 1,
         totalNetWeightKg: weightValue,
         storageLocation: packagingMode === 'RETAIL_POUCH' ? 'Rack A-01' : 'Pallet Bay 03',
+        gtin: activePackagingSpec.gtin,
+        productName: activePackagingSpec.productName,
+        variant: potatoCondition,
       })
       if (!saved?.packageCode) throw new Error('The server did not confirm the package code.')
       const newCode = saved.packageCode
@@ -528,6 +583,11 @@ export default function PackagingPage() {
         id: String(Date.now()),
         code: newCode,
         sourcePallet: sourcePalletCode,
+        commodityCode: saved.commodityCode || sourceCommodityCode,
+        commodityName: saved.commodityExportName || activePackagingSpec.productName || sourceCommodityName,
+        commodityGtin: saved.commodityGtin || activePackagingSpec.gtin,
+        barcode: saved.barcode,
+        digitalLinkUrl: saved.digitalLinkUrl,
         mode: packagingMode,
         grade: selectedGrade,
         weightKg: weightValue,
@@ -550,6 +610,10 @@ export default function PackagingPage() {
           code: newCode,
           farmerName: sourceFarmer,
           farmerId: sourcePalletCode,
+          commodity: newRecord.commodityName,
+          gtin: newRecord.commodityGtin,
+          barcode: newRecord.barcode,
+          qrValue: newRecord.digitalLinkUrl,
           grade: selectedGrade,
           weightKg: weightValue,
           date: printDate,
@@ -597,23 +661,23 @@ export default function PackagingPage() {
   const columns: Column<PackageRecord>[] = [
     {
       key: 'code',
-      label: 'Unit Code',
+      label: 'Kode Unit',
       priority: true,
       render: (row) => (
         <div className="flex flex-col">
           <span className="font-mono font-bold text-foreground">{row.code}</span>
           {row.sourcePallet && (
-            <span className="text-[11px] font-mono text-muted-foreground">Pallet: {row.sourcePallet}</span>
+            <span className="text-[11px] font-mono text-muted-foreground">Palet: {row.sourcePallet}</span>
           )}
         </div>
       ),
     },
     {
       key: 'mode',
-      label: 'Type',
+      label: 'Jenis',
       render: (row) => (
         <Badge tone={row.mode === 'RETAIL_POUCH' ? 'success' : 'accent'}>
-          {row.mode === 'RETAIL_POUCH' ? '1 kg Pouch' : `${row.targetKg} kg Carton`}
+          {row.mode === 'RETAIL_POUCH' ? 'Pouch 1 kg' : `Karton ${row.targetKg} kg`}
         </Badge>
       ),
     },
@@ -624,7 +688,7 @@ export default function PackagingPage() {
     },
     {
       key: 'weightKg',
-      label: 'Weight',
+      label: 'Bobot (kg)',
       align: 'right',
       priority: true,
       render: (row) => (
@@ -635,7 +699,7 @@ export default function PackagingPage() {
     },
     {
       key: 'time',
-      label: 'Time',
+      label: 'Waktu',
       render: (row) => <span className="font-mono text-xs text-muted-foreground">{row.time}</span>,
     },
     {
@@ -643,13 +707,13 @@ export default function PackagingPage() {
       label: 'Status',
       render: () => (
         <Badge tone="success" dot>
-          Warehouse Ready
+          Siap Gudang
         </Badge>
       ),
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: 'Aksi',
       align: 'right',
       priority: true,
       render: (row) => (
@@ -662,16 +726,16 @@ export default function PackagingPage() {
             onClick={() => handleReprintPackage(row)}
             title={`Reprint label for ${row.code}`}
           >
-            {reprintingId === row.id ? 'Printing…' : 'Reprint'}
+            {reprintingId === row.id ? 'Printing…' : 'Reprint Label'}
           </Button>
           <Button
             variant="ghost"
             size="sm"
             icon="eye"
             onClick={() => setPreviewPackage(row)}
-            title="Preview label"
+            title="Pratinjau label"
           >
-            Preview
+            Pratinjau
           </Button>
         </div>
       ),
@@ -736,11 +800,11 @@ export default function PackagingPage() {
         <div className="station-step bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
-              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 1 of 3
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 1 of 3">
+                Langkah 1 dari 3
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Scan Pallet & Select Package
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Scan Pallet & Select Package">
+                Pindai Palet & Pilih Kemasan
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
@@ -917,6 +981,16 @@ export default function PackagingPage() {
               <div className="flex gap-2">
                 <Button
                   size="sm"
+                  variant={exportTargetKg === 5 ? 'primary' : 'outline'}
+                  onClick={() => {
+                    setExportTargetKg(5)
+                    setCurrentWeight('')
+                  }}
+                >
+                  5 kg Carton
+                </Button>
+                <Button
+                  size="sm"
                   variant={exportTargetKg === 10 ? 'primary' : 'outline'}
                   onClick={() => {
                     setExportTargetKg(10)
@@ -940,6 +1014,59 @@ export default function PackagingPage() {
               {scaleCapacityKg !== null && scaleCapacityKg < 50 && <p className="text-xs text-muted-foreground">50 kg requires a scale with at least 50 kg capacity.</p>}
             </div>
           )}
+
+          {/* Potato Condition (Washed vs Dry) - applicable if commodity is Potato */}
+          {sourceCommodityCode === '001' && (
+            <div className="p-4 bg-card border border-border space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-foreground block">
+                Potato Condition (Kondisi Kentang):
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Button
+                  size="sm"
+                  variant={potatoCondition === 'WASHED' ? 'primary' : 'outline'}
+                  onClick={() => setPotatoCondition('WASHED')}
+                >
+                  Kentang Basah / Cuci (Washed)
+                </Button>
+                <Button
+                  size="sm"
+                  variant={potatoCondition === 'DRY' ? 'primary' : 'outline'}
+                  onClick={() => setPotatoCondition('DRY')}
+                >
+                  Kentang Kering (Dry)
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Dynamic GS1 Packaging Specification Card */}
+          <div className="p-4 bg-muted/40 border border-border space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                GS1 Packaging Specification
+              </span>
+              <Badge tone="accent">GS1 Trade Item</Badge>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-muted-foreground block">Product Title:</span>
+                <span className="font-semibold text-foreground">{activePackagingSpec.productName}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block">GS1 GTIN-13:</span>
+                <span className="font-mono font-bold text-foreground">{activePackagingSpec.gtin}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block">Packaging Format & Target:</span>
+                <span className="font-semibold text-foreground">{activePackagingSpec.packageType} · {targetKg} kg (±{packagingMode === 'RETAIL_POUCH' ? '5 g' : '50 g'})</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block">Brand:</span>
+                <span className="font-semibold text-foreground">{activePackagingSpec.brand}</span>
+              </div>
+            </div>
+          </div>
 
           {/* Action Footer */}
           <div className="flex items-center justify-between pt-4 border-t border-border">
@@ -973,11 +1100,11 @@ export default function PackagingPage() {
         <div className="station-step bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
-              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 2 of 3
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 2 of 3">
+                Langkah 2 dari 3
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Weigh Package
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Weigh Package">
+                Timbang Kemasan
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -1037,6 +1164,8 @@ export default function PackagingPage() {
                     code={nextCodePreview}
                     farmerName={sourceFarmer}
                     farmerId={sourcePalletCode}
+                    commodity={activePackagingSpec.productName}
+                    gtin={activePackagingSpec.gtin}
                     grade={selectedGrade}
                     weightKg={weightValue}
                     stationName="Station 03 · Packaging"
@@ -1051,6 +1180,8 @@ export default function PackagingPage() {
                     code={nextCodePreview}
                     farmerName={sourceFarmer}
                     farmerId={sourcePalletCode}
+                    commodity={activePackagingSpec.productName}
+                    gtin={activePackagingSpec.gtin}
                     grade={selectedGrade}
                     weightKg={weightValue}
                     date={formatSafeDate(new Date())}
@@ -1119,11 +1250,11 @@ export default function PackagingPage() {
         <div className="station-step bg-card border border-border p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <div>
-              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground">
-                Step 3 of 3
+              <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 3 of 3">
+                Langkah 3 dari 3
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5">
-                Print Label & Store
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Print Label & Store">
+                Cetak Label & Simpan
               </h2>
             </div>
             {savedSuccessRecord ? (
@@ -1179,6 +1310,10 @@ export default function PackagingPage() {
                 code={savedSuccessRecord?.code ?? nextCodePreview}
                 farmerName={sourceFarmer}
                 farmerId={sourcePalletCode}
+                commodity={savedSuccessRecord?.commodityName ?? activePackagingSpec.productName}
+                gtin={savedSuccessRecord?.commodityGtin ?? activePackagingSpec.gtin}
+                barcodeValue={savedSuccessRecord?.barcode}
+                qrValue={savedSuccessRecord?.digitalLinkUrl}
                 grade={selectedGrade}
                 weightKg={weightValue}
                 stationName="Station 03 · Packaging"
@@ -1192,6 +1327,10 @@ export default function PackagingPage() {
                 code={savedSuccessRecord?.code ?? nextCodePreview}
                 farmerName={sourceFarmer}
                 farmerId={sourcePalletCode}
+                commodity={savedSuccessRecord?.commodityName ?? activePackagingSpec.productName}
+                gtin={savedSuccessRecord?.commodityGtin ?? activePackagingSpec.gtin}
+                barcodeValue={savedSuccessRecord?.barcode}
+                qrValue={savedSuccessRecord?.digitalLinkUrl}
                 grade={selectedGrade}
                 weightKg={weightValue}
                 date={savedSuccessRecord?.date ?? formatSafeDate(new Date())}
@@ -1278,6 +1417,10 @@ export default function PackagingPage() {
                             code: savedSuccessRecord.code,
                             farmerName: sourceFarmer,
                             farmerId: savedSuccessRecord.sourcePallet,
+                            commodity: savedSuccessRecord.commodityName || activePackagingSpec.productName,
+                            gtin: savedSuccessRecord.commodityGtin || activePackagingSpec.gtin,
+                            barcode: savedSuccessRecord.barcode,
+                            qrValue: savedSuccessRecord.digitalLinkUrl,
                             grade: savedSuccessRecord.grade,
                             weightKg: savedSuccessRecord.weightKg,
                             date: savedSuccessRecord.date || formatSafeDate(now),
@@ -1376,8 +1519,8 @@ export default function PackagingPage() {
       <div className="station-page space-y-6">
         <div className="no-print">
           <PageHeader
-            title="Station 03: Packaging"
-            subtitle="Retail pouches, export cartons, and warehouse storage."
+            title="Stasiun 3: Pengemasan"
+            subtitle="Kemasan retail pouch, karton ekspor, dan penyimpanan gudang."
             actions={
               <Button
                 variant="outline"
@@ -1385,7 +1528,7 @@ export default function PackagingPage() {
                 icon="history"
                 onClick={() => document.getElementById('packaging-ledger')?.scrollIntoView({ behavior: 'smooth' })}
               >
-                Records ({packages.length})
+                Riwayat ({packages.length})
               </Button>
             }
           />
@@ -1394,19 +1537,19 @@ export default function PackagingPage() {
         {/* Quick Stats Grid (4 Cards) */}
         <div className="station-quick-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Retail Pouches</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pouch Retail</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{pouchCount}</p>
-            <p className="text-xs text-muted-foreground">1 kg units</p>
+            <p className="text-xs text-muted-foreground">Unit 1 kg</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Export Cartons</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Karton Ekspor</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{exportCount}</p>
             <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              Master crates
+              Peti Ekspor
             </p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Timbangan</p>
             <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
             <p className="text-xs text-muted-foreground font-mono">{scaleEndpoint}</p>
           </div>
@@ -1420,7 +1563,7 @@ export default function PackagingPage() {
         {/* Sequential Stepper in Standard View */}
         <div id="packaging-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
-            <span className="font-semibold text-base text-foreground">Packaging Stepper</span>
+            <span className="font-semibold text-base text-foreground">Alur Kerja Pengemasan</span>
             <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
               Focus Mode
             </Button>
@@ -1438,9 +1581,9 @@ export default function PackagingPage() {
         {/* Packaged Output Ledger Table */}
         <div id="packaging-ledger" className="space-y-3 no-print">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight text-foreground">Today's Packaging Records</h2>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Riwayat Pengemasan Hari Ini</h2>
             <span className="text-xs text-muted-foreground font-mono">
-              {packages.length} units recorded
+              {packages.length} unit tercatat
             </span>
           </div>
 
@@ -1499,6 +1642,10 @@ export default function PackagingPage() {
                 weightKg={previewPackage.weightKg}
                 farmerName={sourceFarmer}
                 farmerId={previewPackage.sourcePallet}
+                commodity={previewPackage.commodityName || activePackagingSpec.productName}
+                gtin={previewPackage.commodityGtin || activePackagingSpec.gtin}
+                barcodeValue={previewPackage.barcode}
+                qrValue={previewPackage.digitalLinkUrl}
                 stationName="Station 03 · Packaging"
                 date={previewPackage.date || formatSafeDate(new Date())}
                 time={previewPackage.time || formatSafeTime(new Date())}

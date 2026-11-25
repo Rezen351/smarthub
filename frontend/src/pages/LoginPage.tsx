@@ -79,13 +79,13 @@ export default function LoginPage() {
               className="inline-flex items-center gap-1.5 font-heading text-xs uppercase tracking-wider text-[#666666] hover:text-[#171717] transition-colors"
             >
               <Icon name="arrow-left" size={13} />
-              <span>Back to Home</span>
+              <span>Kembali ke Beranda</span>
             </Link>
             <Link
               to="/traceability"
               className="hidden md:inline-flex items-center gap-1.5 font-heading text-xs uppercase tracking-wider text-[#ea580c] hover:text-[#c2410c] font-semibold transition-colors"
             >
-              <span>Public Trace</span>
+              <span>Lacak Publik</span>
             </Link>
           </div>
         </div>
@@ -102,14 +102,14 @@ export default function LoginPage() {
                 {/* Station Authentication Tag */}
                 <div className="flex items-start gap-2.5 font-mono-custom text-[10px] sm:text-xs text-[#ea580c] tracking-[0.08em] sm:tracking-[0.25em] uppercase mb-2">
                   <span className="w-6 h-[2px] bg-[#ea580c] shrink-0 mt-2"></span>
-                  <span className="min-w-0">STATION AUTHENTICATION · PACKHOUSE NETWORK</span>
+                  <span className="min-w-0">AUTENTIKASI STASIUN · JARINGAN PABRIK</span>
                 </div>
 
                 <h1 className="font-display text-4xl sm:text-5xl tracking-tight text-[#171717] leading-none mb-2">
-                  OPERATOR SIGN IN
+                  MASUK SISTEM
                 </h1>
                 <p className="text-xs sm:text-sm text-[#666666] font-body mb-6 leading-relaxed">
-                  Enter your credentials to access your terminal.
+                  Masukkan kredensial untuk mengakses terminal Anda.
                 </p>
 
                 {/* Error Message */}
@@ -130,7 +130,7 @@ export default function LoginPage() {
                       htmlFor="email"
                       className="block font-mono-custom text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666666] mb-1.5"
                     >
-                      Operator Email Address
+                      Email Operator
                     </label>
                     <div className="relative">
                       <input
@@ -155,7 +155,7 @@ export default function LoginPage() {
                       htmlFor="password"
                       className="block font-mono-custom text-[11px] font-semibold uppercase tracking-[0.2em] text-[#666666] mb-1.5"
                     >
-                      Station Password
+                      Kata Sandi
                     </label>
                     <div className="relative">
                       <input
@@ -172,7 +172,7 @@ export default function LoginPage() {
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#171717] transition-colors focus:outline-none"
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
                       >
                         <Icon name="eye" size={16} />
                       </button>
@@ -184,7 +184,7 @@ export default function LoginPage() {
                     disabled={loading}
                     className="pulse-btn w-full bg-[#000000] text-white py-3.5 font-heading text-sm uppercase tracking-[0.2em] hover:bg-[#ea580c] transition-all flex items-center justify-center gap-2 rounded-none font-semibold cursor-pointer disabled:opacity-50 mt-6"
                   >
-                    <span>{loading ? 'AUTHENTICATING…' : 'SIGN IN TO STATION'}</span>
+                    <span>{loading ? 'MEMVERIFIKASI…' : 'MASUK KE TERMINAL'}</span>
                     <Icon name="arrow-right" size={16} />
                   </button>
                 </form>

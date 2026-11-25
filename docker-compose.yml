@@ -12,7 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-enyx}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-enyx} -d ${POSTGRES_DB:-enyx_smart_hub}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -82,7 +82,11 @@ services:
     container_name: enyx-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-5173}:80"
+      - "${FRONTEND_PORT:-5173}:443"
+      - "${FRONTEND_HTTP_PORT:-5172}:80"
+      - "${FRONTEND_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./frontend/ssl:/etc/nginx/ssl:ro
     depends_on:
       - backend
     networks:

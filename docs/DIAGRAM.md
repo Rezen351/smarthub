@@ -123,6 +123,16 @@ stop
 Sistem tata kelola pengemasan kentang SmartGeulis menyederhanakan alur operasional ke dalam **3 Konsol Stasiun Fisik** yang masing-masing terhubung langsung (*1:1 hardware mapping*) dengan unit timbangan digital:
 
 ### 1. Konsol 01: Penerimaan & Waring Intake — *Area Intake (Timbangan 01)*
+
+#### Reception session update (2026-11-25)
+
+- Verify the farmer once, then capture and review each bag. **Save & Next Bag** saves the bag without printing and returns to weighing for the same farmer.
+- Accept the scale reading directly: `grossWeightKg = netWeightKg`, `tareWeightKg = 0`. The scale is zeroed before weighing; Reception applies no additional tare deduction.
+- Each saved bag receives its own server-issued Waring code and becomes available to Sorting. A stable UUID request identity prevents duplicate bags when retrying the same save.
+- **Finish & Print** saves the final bag if necessary, closes the session, and prints one receipt listing every bag and the total weight, followed by one QR label per bag. Saved bags can also be reviewed from Step 2 without another weighing.
+- Sessions retain saved bags, the current review draft, and print progress in the operator's browser tab across reloads. **Retry Print** resumes at the first unconfirmed ticket; **Print Again** intentionally reprints the complete session. A lost printer acknowledgement can still cause a duplicate physical ticket on retry.
+- Maximum session size: 500 bags. **Next Farmer** starts a new session after all tickets have been sent. Previous operational records retain their original weights.
+
 - **Perangkat Keras**: Timbangan Lantai RS485 kapasitas 150 kg, barcode scanner, dan printer thermal IW-J300H 80 mm Ethernet untuk Reception.
 - **Fungsi**: Operator memindai ID Petani (`FRM-...`), menimbang bruto hasil panen kentang, dan memasukkan panen ke karung waring. Operator memeriksa bobot stabil dan menekan persetujuan (*Approval*).
 - **Otomasi Sistem**:
@@ -650,13 +660,19 @@ Semua entitas fisik lapangan menggunakan standar identifier berikut:
    - Contoh: `GRD-PLT-20261025-0001-A`
    - Penanda fisik wadah hasil grading per mutu.
 5. **Pouch QR GS1 Digital Link (`https://{domain}/01/{GTIN-13}/10/{LOT}/21/{SERIAL}`)**:
-   - Contoh: `https://trace.smartgeulis.id/01/899001000001/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001`
-   - AI 01: GTIN-13 (EAN-13 produk ritel)
+   - Contoh: `https://trace.smartgeulis.id/01/8994477090010/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001`
+   - AI 01: GTIN-13 (EAN-13 produk ritel, format `899447709{COMMODITY_CODE}{CHECK_DIGIT}`)
    - AI 10: Batch/Lot (Pallet Code + Grade)
    - AI 21: Serial Pouch Unik
    - Dapat dipindai scanner industri (decode GS1 AI key) dan smartphone publik (membuka halaman web traceability).
 6. **Packaging Barcode Ekspor (`ITF-14`)**:
    - Standar 14 digit GS1 untuk kemasan logistik ekspor (kardus 10 kg / karung 50 kg).
+7. **Master Komoditas & GTIN-13** (lihat detail lengkap di [COMMODITIES_GTIN.md](COMMODITIES_GTIN.md)):
+   - Format GTIN-13: `899447709` (GS1 Indonesia `899` + Prefix Eptilu `447709`) + `3 digit Product Number` + `1 digit Check Digit`.
+   - `001` — **Eptilu Washed Potatoes 10 kg** (Carton Box, Kilogram): `8994477090010`
+   - `101` — **Eptilu Fresh Red Tomatoes TW 10 kg** (Carton Box, Kilogram): `8994477091017`
+   - `201` — **Eptilu Fresh Curly Red Chili Peppers 10 kg** (Carton Box, Kilogram): `8994477092014`
+   - `202` — **Eptilu Fresh Red Bird's Eye Chili Peppers 10 kg** (Carton Box, Kilogram): `8994477092021`
 
 ---
 

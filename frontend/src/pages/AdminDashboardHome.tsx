@@ -210,6 +210,19 @@ export default function AdminDashboardHome() {
     }
   }, [bufferWarings, deliveries, finishedStock, scales, sortedBatches])
 
+  const commodityIntake = useMemo(() => {
+    const totals = new Map<string, { name: string; kg: number; count: number }>()
+    bufferWarings.forEach((item) => {
+      const name = item.commodityName || 'Unspecified commodity'
+      const key = item.commodityId || item.commodityCode || name
+      const entry = totals.get(key) || { name, kg: 0, count: 0 }
+      entry.kg += Number(item.grossWeightKg) || 0
+      entry.count += 1
+      totals.set(key, entry)
+    })
+    return Array.from(totals.entries()).sort((a, b) => b[1].kg - a[1].kg)
+  }, [bufferWarings])
+
   const liveRankings = useMemo<FarmerRankingItem[]>(() => {
     if (bufferWarings.length === 0 && dbRankings.length > 0) return dbRankings
     const map = new Map<string, { code: string; name: string; village: string; totalWarings: number; totalKg: number }>()
@@ -411,7 +424,7 @@ export default function AdminDashboardHome() {
     <>
       {presentationMode && (
         <div
-          className="fixed inset-0 z-[90] flex flex-col bg-[#0c0a09] text-white overflow-hidden p-3 xl:p-4 gap-2.5"
+          className="fixed inset-0 z-[90] flex flex-col bg-[#0c0a09] text-white overflow-y-auto p-3 xl:p-4 gap-2.5"
           role="dialog"
           aria-modal="true"
           aria-label="Operations Presentation"
@@ -513,7 +526,7 @@ export default function AdminDashboardHome() {
                   </span>
                 </div>
                 <p className="text-2xl xl:text-3xl font-black font-mono tabular-nums text-white leading-tight">
-                  {metrics.finishedUnits} <span className="text-sm font-bold text-[#f97316]">pouches (1kg)</span>
+                  {metrics.finishedUnits} <span className="text-sm font-bold text-[#f97316]">units</span>
                 </p>
                 <p className="text-xs text-white/60 truncate">
                   {formatWeight(metrics.finishedWeightKg)} kg packed · {metrics.activeDeliveries} active shipments
@@ -549,8 +562,15 @@ export default function AdminDashboardHome() {
             </div>
           </div>
 
+          <section className="border border-white/10 bg-white/[0.04] p-3">
+            <div className="flex items-center justify-between gap-3 mb-2"><h2 className="text-sm font-bold uppercase tracking-wider">Intake by Commodity</h2><span className="text-xs text-white/60">All recorded intake · gross weight</span></div>
+            {commodityIntake.length === 0 ? <p className="text-sm text-white/60">No intake records available.</p> : <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
+              {commodityIntake.map(([key, commodity]) => <div key={key} className="border border-white/10 px-3 py-2 flex items-center justify-between gap-3"><div className="min-w-0"><p className="text-sm font-semibold truncate" title={commodity.name}>{commodity.name}</p><p className="text-xs text-white/60">{commodity.count} Warings</p></div><span className="shrink-0 font-mono font-bold text-orange-400">{formatWeight(commodity.kg)} kg</span></div>)}
+            </div>}
+          </section>
+
           {/* Row 2: Central Analytics & Quality Grid (Daily, Weekly, Grade Quality) */}
-          <div className="flex-1 min-h-0 grid grid-cols-12 gap-2.5 xl:gap-3 overflow-hidden">
+          <div className="grid grid-cols-12 gap-2.5 xl:gap-3">
             <DailyDepositChart
               data={depositChartData.todayHourly}
               totalKg={depositChartData.todayTotalKg}
@@ -577,9 +597,9 @@ export default function AdminDashboardHome() {
           </div>
 
           {/* Row 3: Operational Tri-Panel (Left: Farmer Leaderboard, Center: Activity Log, Right: Scale Telemetry) */}
-          <div className="shrink-0 grid grid-cols-12 gap-3 h-[185px] xl:h-[200px] overflow-hidden">
+          <div className="shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-3">
             {/* Left: Farmer Leaderboard (col-span-4) */}
-            <div className="col-span-4 border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between overflow-hidden">
+            <div className="min-h-[185px] border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-1.5 shrink-0">
                 <div className="flex items-center gap-1.5">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white">
@@ -608,7 +628,7 @@ export default function AdminDashboardHome() {
                               : 'bg-amber-700 text-white'
                           }`}
                         >
-                          {f.rank === 1 ? '1 🥇' : f.rank === 2 ? '2 🥈' : '3 🥉'}
+                          {f.rank}
                         </span>
                         <div className="min-w-0">
                           <p className="font-bold text-sm text-white truncate leading-tight">
@@ -634,7 +654,7 @@ export default function AdminDashboardHome() {
             </div>
 
             {/* Center: Activity Log (col-span-4) */}
-            <div className="col-span-4 border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between overflow-hidden">
+            <div className="min-h-[185px] border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-1.5 shrink-0">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-white">
                   Activity Log
@@ -659,7 +679,7 @@ export default function AdminDashboardHome() {
             </div>
 
             {/* Right: Scale Telemetry (col-span-4) */}
-            <div className="col-span-4 border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between overflow-hidden">
+            <div className="min-h-[185px] border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-1.5 shrink-0">
                 <div className="flex items-center gap-1.5">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white">

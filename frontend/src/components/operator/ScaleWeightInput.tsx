@@ -37,6 +37,7 @@ interface ScaleWeightInputProps {
   capacityKg?: number
   maxAllowedWeightKg?: number
   allowZero?: boolean
+  hideTare?: boolean
 }
 
 function readMode(): Mode {
@@ -78,6 +79,7 @@ export default function ScaleWeightInput({
   capacityKg = 150,
   maxAllowedWeightKg,
   allowZero = false,
+  hideTare = false,
 }: ScaleWeightInputProps) {
   const [mode, setMode] = useState<Mode>(readMode)
   const [connection, setConnection] = useState<Connection>('reconnecting')
@@ -340,14 +342,14 @@ export default function ScaleWeightInput({
               >
                 Capture Weight
               </Button>
-              <Button
+              {!hideTare && <Button
                 variant="outline"
                 icon="scale"
                 disabled={tarePending || connection !== 'connected'}
                 onClick={handleTare}
               >
                 Tare (Offset)
-              </Button>
+              </Button>}
               <Button
                 variant="ghost"
                 icon="refresh"

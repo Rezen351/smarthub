@@ -8,17 +8,37 @@ import PageHeader from '../components/shared/PageHeader'
 import StatCard from '../components/shared/StatCard'
 import { formatWeight } from '../lib/utils'
 import { usePackhouseStore, type BufferWaringItem, type FinishedStockItem } from '../hooks/usePackhouseStore'
+import { useAuth } from '../hooks/useAuth'
+import CancelTransactionModal from '../components/admin/CancelTransactionModal'
+import { DEFAULT_COMMODITIES } from '../services/api'
 
 type WarehouseZone = 'buffer' | 'finished'
 
 export default function WarehousePage() {
+  const { user } = useAuth()
+  const [cancelModalRecord, setCancelModalRecord] = useState<{ code: string; farmerName?: string } | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const initialZone = (searchParams.get('zone') as WarehouseZone) || 'buffer'
   const [activeZone, setActiveZone] = useState<WarehouseZone>(initialZone)
+  const [commodityFilter, setCommodityFilter] = useState<string>('')
   const { waitingWarings, finishedStock } = usePackhouseStore()
 
-  const bufferItems = waitingWarings
-  const finishedItems = finishedStock
+  const bufferItems = commodityFilter
+    ? waitingWarings.filter((i) => (i.commodityCode || '001') === commodityFilter)
+    : waitingWarings
+  const finishedItems = commodityFilter
+    ? finishedStock.filter((i) => (i.commodityCode || '001') === commodityFilter)
+    : finishedStock
+
+  const commodityOptions = Array.from(
+    new Map([
+      ...DEFAULT_COMMODITIES.map((c) => [c.code, c.name] as [string, string]),
+      ...[...waitingWarings, ...finishedStock].map((item) => [
+        item.commodityCode || '001',
+        item.commodityName || 'Kentang',
+      ] as [string, string]),
+    ]).entries()
+  )
 
   useEffect(() => {
     const qZone = searchParams.get('zone')
@@ -56,6 +76,16 @@ export default function WarehousePage() {
       render: (row) => <span className="font-semibold text-foreground text-sm">{row.farmerName}</span>,
     },
     {
+      key: 'commodityName',
+      label: 'Commodity',
+      render: (row) => (
+        <span className="text-xs text-foreground">
+          <span className="font-mono font-bold mr-1">{row.commodityCode || '001'}</span>
+          {row.commodityName || 'Kentang'}
+        </span>
+      ),
+    },
+    {
       key: 'grossWeightKg',
       label: 'Gross Weight',
       align: 'right',
@@ -87,9 +117,28 @@ export default function WarehousePage() {
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: 'Aksi',
       align: 'right',
-      render: () => <Link to="/dashboard/sorting"><Button size="sm" variant="outline">Open Sorting</Button></Link>,
+      render: (row) => (
+        <div className="flex items-center gap-1.5 justify-end">
+          <Link to="/dashboard/sorting">
+            <Button size="sm" variant="outline">
+              Buka Pemilahan
+            </Button>
+          </Link>
+          {user?.role === 'ADMIN' && (
+            <Button
+              size="sm"
+              variant="outline"
+              icon="trash"
+              className="text-destructive hover:bg-destructive/10 border-destructive/30"
+              onClick={() => setCancelModalRecord({ code: row.code, farmerName: row.farmerName })}
+            >
+              Batalkan
+            </Button>
+          )}
+        </div>
+      ),
     },
   ]
 
@@ -99,6 +148,16 @@ export default function WarehousePage() {
       label: 'Batch Code',
       priority: true,
       render: (row) => <span className="font-mono font-bold text-foreground">{row.code}</span>,
+    },
+    {
+      key: 'commodityName',
+      label: 'Commodity',
+      render: (row) => (
+        <span className="text-xs text-foreground">
+          <span className="font-mono font-bold mr-1">{row.commodityCode || '001'}</span>
+          {row.commodityName || 'Kentang'}
+        </span>
+      ),
     },
     {
       key: 'packageType',
@@ -149,7 +208,22 @@ export default function WarehousePage() {
         title="Warehouse Inventory"
         subtitle="Harvest buffer and finished goods storage."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {commodityOptions.length > 0 && (
+              <select
+                aria-label="Filter by commodity"
+                className="form-input text-xs py-1.5"
+                value={commodityFilter}
+                onChange={(e) => setCommodityFilter(e.target.value)}
+              >
+                <option value="">All Commodities</option>
+                {commodityOptions.map(([code, name]) => (
+                  <option key={code} value={code}>
+                    {code} — {name}
+                  </option>
+                ))}
+              </select>
+            )}
             <Badge tone="accent">2 Zones Active</Badge>
           </div>
         }
@@ -161,11 +235,10 @@ export default function WarehousePage() {
         <button
           type="button"
           onClick={() => handleSwitchZone('buffer')}
-          className={`p-5 border text-left rounded-none transition-all cursor-pointer flex items-start justify-between ${
-            activeZone === 'buffer'
+          className={`p-5 border text-left rounded-none transition-all cursor-pointer flex items-start justify-between ${activeZone === 'buffer'
               ? 'border-emerald-600 bg-emerald-50/60 shadow-sm'
               : 'border-border bg-card hover:bg-muted/30'
-          }`}
+            }`}
         >
           <div>
             <div className="flex items-center gap-2">
@@ -187,11 +260,10 @@ export default function WarehousePage() {
             </div>
           </div>
           <div
-            className={`w-9 h-9 border flex items-center justify-center shrink-0 ${
-              activeZone === 'buffer'
+            className={`w-9 h-9 border flex items-center justify-center shrink-0 ${activeZone === 'buffer'
                 ? 'border-emerald-600 bg-emerald-600 text-white'
                 : 'border-border bg-muted text-muted-foreground'
-            }`}
+              }`}
           >
             <Icon name="box" size={18} />
           </div>
@@ -201,11 +273,10 @@ export default function WarehousePage() {
         <button
           type="button"
           onClick={() => handleSwitchZone('finished')}
-          className={`p-5 border text-left rounded-none transition-all cursor-pointer flex items-start justify-between ${
-            activeZone === 'finished'
+          className={`p-5 border text-left rounded-none transition-all cursor-pointer flex items-start justify-between ${activeZone === 'finished'
               ? 'border-blue-600 bg-blue-50/60 shadow-sm'
               : 'border-border bg-card hover:bg-muted/30'
-          }`}
+            }`}
         >
           <div>
             <div className="flex items-center gap-2">
@@ -227,11 +298,10 @@ export default function WarehousePage() {
             </div>
           </div>
           <div
-            className={`w-9 h-9 border flex items-center justify-center shrink-0 ${
-              activeZone === 'finished'
+            className={`w-9 h-9 border flex items-center justify-center shrink-0 ${activeZone === 'finished'
                 ? 'border-blue-600 bg-blue-600 text-white'
                 : 'border-border bg-muted text-muted-foreground'
-            }`}
+              }`}
           >
             <Icon name="stack" size={18} />
           </div>
@@ -349,6 +419,18 @@ export default function WarehousePage() {
           </div>
         </div>
       )}
+
+      {/* Admin Transaction Cancellation Modal */}
+      <CancelTransactionModal
+        open={!!cancelModalRecord}
+        waringCode={cancelModalRecord?.code}
+        farmerName={cancelModalRecord?.farmerName}
+        onClose={() => setCancelModalRecord(null)}
+        onSuccess={() => {
+          setCancelModalRecord(null)
+          window.location.reload()
+        }}
+      />
     </div>
   )
 }

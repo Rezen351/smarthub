@@ -8,7 +8,7 @@ import StatCard from '../components/shared/StatCard'
 import DataTable, { type Column } from '../components/shared/DataTable'
 import { useToast } from '../components/feedback/Toast'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
-import { api } from '../services/api'
+import { api, type Commodity, DEFAULT_COMMODITIES } from '../services/api'
 import { formatWeight } from '../lib/utils'
 
 interface Stat {
@@ -41,6 +41,14 @@ export default function ReportsPage() {
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const [rankingPeriod, setRankingPeriod] = useState<'all' | 'month' | 'today'>('all')
+  const [commodityFilter, setCommodityFilter] = useState<string>('')
+  const [commodities, setCommodities] = useState<Commodity[]>(DEFAULT_COMMODITIES)
+
+  useEffect(() => {
+    api.commodities.list().then((list) => {
+      if (Array.isArray(list)) setCommodities(list)
+    }).catch(() => {})
+  }, [])
 
   const [dailyData, setDailyData] = useState<any>(null)
   const [dailyLoading, setDailyLoading] = useState(false)
@@ -58,7 +66,7 @@ export default function ReportsPage() {
   const handleDownloadDailyCsv = async () => {
     setDailyDownloading(true)
     try {
-      await api.reports.downloadDailyCsv(selectedDate)
+      await api.reports.downloadDailyCsv(selectedDate, commodityFilter || undefined)
       toast.success('Daily recap CSV downloaded successfully')
     } catch (err: any) {
       toast.error(err?.message || 'Failed to download daily recap CSV')
@@ -70,7 +78,7 @@ export default function ReportsPage() {
   const handleDownloadMonthlyCsv = async () => {
     setMonthlyDownloading(true)
     try {
-      await api.reports.downloadMonthlyCsv(selectedMonth)
+      await api.reports.downloadMonthlyCsv(selectedMonth, commodityFilter || undefined)
       toast.success('Monthly recap CSV downloaded successfully')
     } catch (err: any) {
       toast.error(err?.message || 'Failed to download monthly recap CSV')
@@ -82,7 +90,7 @@ export default function ReportsPage() {
   const handleDownloadRankingsCsv = async () => {
     setRankingsDownloading(true)
     try {
-      await api.reports.downloadRankingsCsv(50, rankingPeriod)
+      await api.reports.downloadRankingsCsv(50, rankingPeriod, commodityFilter || undefined)
       toast.success('Farmer leaderboard CSV downloaded successfully')
     } catch (err: any) {
       toast.error(err?.message || 'Failed to download farmer leaderboard CSV')
@@ -109,13 +117,15 @@ export default function ReportsPage() {
   const loadDailyRecap = useCallback(async (date: string) => {
     setDailyLoading(true)
     try {
-      const res = await api.reports.dailyRecap(date)
+      const res = await api.reports.dailyRecap(date, commodityFilter || undefined)
       if (res) {
         setDailyData(res)
       }
     } catch {
       // Fallback compute from local store bufferWarings
-      const dateWarings = bufferWarings.filter((w) => w.date === date)
+      const dateWarings = bufferWarings.filter(
+        (w) => w.date === date && (!commodityFilter || (w.commodityCode || '001') === commodityFilter),
+      )
       const gKg = dateWarings.reduce((sum, w) => sum + (Number(w.grossWeightKg) || 0), 0)
       const tKg = dateWarings.reduce((sum, w) => sum + (Number((w as any).tareWeightKg) || 1.2), 0)
       const nKg = Math.max(0, gKg - tKg)
@@ -152,13 +162,13 @@ export default function ReportsPage() {
     } finally {
       setDailyLoading(false)
     }
-  }, [bufferWarings])
+  }, [bufferWarings, commodityFilter])
 
   /* ── 2. Monthly Recap loader ── */
   const loadMonthlyRecap = useCallback(async (month: string) => {
     setMonthlyLoading(true)
     try {
-      const res = await api.reports.monthlyRecap(month)
+      const res = await api.reports.monthlyRecap(month, commodityFilter || undefined)
       if (res) {
         setMonthlyData(res)
       }
@@ -167,13 +177,13 @@ export default function ReportsPage() {
     } finally {
       setMonthlyLoading(false)
     }
-  }, [])
+  }, [commodityFilter])
 
   /* ── 3. Farmer Rankings loader ── */
   const loadFarmerRankings = useCallback(async (period: string) => {
     setRankingsLoading(true)
     try {
-      const res = await api.reports.farmerRankings(50, period)
+      const res = await api.reports.farmerRankings(50, period, commodityFilter || undefined)
       if (res?.rankings) {
         setRankings(res.rankings)
       }
@@ -406,6 +416,19 @@ export default function ReportsPage() {
         subtitle="Operational recaps per day, per month, farmer rankings, and OpenAPI Documentation."
         actions={
           <div className="flex items-center gap-2">
+            <select
+              aria-label="Filter reports by commodity"
+              className="form-input text-xs py-1.5"
+              value={commodityFilter}
+              onChange={(e) => setCommodityFilter(e.target.value)}
+            >
+              <option value="">All Commodities</option>
+              {commodities.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} — {c.name}
+                </option>
+              ))}
+            </select>
             <Button
               variant="outline"
               size="sm"

@@ -235,7 +235,7 @@ Waring Code & \texttt{WRG-\{YYYYMMDD\}-\{SEQ\}} & Label stiker QR pada waring in
 Pallet Code & \texttt{PLT-\{YYYYMMDD\}-\{SEQ\}} & Label QR palet sortir penampung kentang \\
 Pallet Grade QR & \texttt{PLT-GRD-\{GRADE\}-\{ID\}} & Stiker QR permanen tertempel di palet grade (discan \& ditautkan tanpa cetak) \\
 Pouch QR & \texttt{https://\{domain\}/01/\{GTIN\}/}\newline\texttt{10/\{LOT\}/21/\{SERIAL\}} & QR GS1 Digital Link pada pouch retail 1 kg \\
-Pouch EAN-13 & \texttt{899\{COMMODITY\_CODE\}\{SEQ\}} & Barcode EAN-13 pada kemasan retail \\
+Pouch EAN-13 & \texttt{899447709\{CODE\}\{D\}} & Barcode EAN-13 / GTIN-13 (Prefix GS1 Indonesia \texttt{899} + Eptilu \texttt{447709} + 3 digit kode komoditas + 1 digit check digit) \\
 Kemasan Ekspor & \texttt{\{GTIN-14\}} & Barcode GS1 ITF-14 pada kardus/karung ekspor \\
 \bottomrule
 \end{longtable}
@@ -244,7 +244,7 @@ Kemasan Ekspor & \texttt{\{GTIN-14\}} & Barcode GS1 ITF-14 pada kardus/karung ek
 URI pada label QR kemasan pouch retail mengikuti struktur resmi GS1 Digital Link:
 {\scriptsize
 \begin{verbatim}
-https://trace.smartgeulis.id/01/899001000001/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001
+https://trace.smartgeulis.id/01/8994477090010/10/PLT-20261025-0001-A/21/PCH-PLT-20261025-0001-001
                    |                |                    |
                  AI 01            AI 10                 AI 21
                (GTIN-13)       (batch/lot)           (serial unik)
@@ -272,7 +272,7 @@ Basis data relasional PostgreSQL mengelola data transaksi dari penerimaan hingga
 \endhead
 \texttt{user} & Akun sistem dengan 3 role: \texttt{ADMIN}, \texttt{OPERATOR}, \texttt{FARMER} \\
 \texttt{farmer} & Data profil petani (\texttt{code}, nama, telepon, alamat, lokasi lahan) \\
-\texttt{commodity} & Master komoditas (Kentang aktif: \texttt{001}; Tomat \texttt{002} dan Cabai \texttt{003} dicadangkan) \\
+\texttt{commodity} & Master komoditas \& GTIN-13 (\texttt{001}: Potatoes \texttt{8994477090010}; \texttt{101}: Tomatoes TW \texttt{8994477091017}; \texttt{201}: Curly Red Chili \texttt{8994477092014}; \texttt{202}: Red Bird's Eye Chili \texttt{8994477092021}) \\
 \texttt{waring} & Entitas waring intake (\texttt{code}, \texttt{farmerId}, \texttt{initialWeightKg}, \texttt{status}, \texttt{receivedAt}) \\
 \texttt{pallet} & Entitas palet sortir (\texttt{code}, \texttt{status}: \texttt{IN\_SORTING}, \texttt{GRADED}, \texttt{PACKED}) \\
 \texttt{pallet\_waring} & Tabel asosiasi penghubung relasi waring dan palet untuk silsilah ketertelusuran \\
