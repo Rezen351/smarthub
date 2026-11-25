@@ -207,6 +207,7 @@ export interface PackagingProduct {
   mode: 'RETAIL_POUCH' | 'BULK_EXPORT'
   targetKg: number
   variant?: 'WASHED' | 'DRY' | 'STANDARD'
+  grade?: 'ALL' | 'A' | 'B' | 'C'
   productName: string
   packageType: string
   brand: string
@@ -453,18 +454,25 @@ export function resolvePackagingSpec(params: {
   const isDry = params.variant === 'DRY'
   const gradeLabel = params.grade ? ` (Grade ${params.grade})` : ''
 
-  // 1. Check saved custom catalog first
+  // 1. Check saved custom catalog first (4-key lookup: Commodity -> Washed/Unwashed -> Grade -> Size)
   const catalog = getSavedPackagingCatalog()
-  const custom = catalog.find((p) => {
+  const matchesBase = (p: PackagingProduct) => {
     if (!p.isActive) return false
     if (p.commodityCode !== code) return false
     if (p.mode !== params.mode) return false
     if (Math.abs(p.targetKg - target) > 0.1) return false
-    if (code === '001' && !isPouch && p.variant && p.variant !== 'STANDARD') {
+    if (p.variant && p.variant !== 'STANDARD') {
       return isDry ? p.variant === 'DRY' : p.variant === 'WASHED'
     }
     return true
-  })
+  }
+
+  const normalizedGrade = params.grade?.toUpperCase()
+  const custom =
+    (normalizedGrade
+      ? catalog.find((p) => matchesBase(p) && p.grade === normalizedGrade)
+      : undefined) ||
+    catalog.find((p) => matchesBase(p) && (!p.grade || p.grade === 'ALL'))
 
   if (custom) {
     return {
@@ -637,6 +645,7 @@ export interface Pallet {
   commodityName?: string | null
   commodityExportName?: string | null
   commodityGtin?: string | null
+  washDecision?: 'WASHED' | 'UNWASHED' | string | null
   createdAt?: string
   updatedAt?: string
 }

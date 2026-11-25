@@ -60,6 +60,7 @@ interface AvailablePallet {
   commodityCode?: string
   commodityName?: string
   commodityGtin?: string
+  washDecision?: 'WASHED' | 'UNWASHED'
 }
 
 export default function PackagingPage() {
@@ -87,8 +88,9 @@ export default function PackagingPage() {
 
   const [packagingMode, setPackagingMode] = useState<PackagingMode>('RETAIL_POUCH')
   const [selectedGrade, setSelectedGrade] = useState<'A' | 'B' | 'C'>('A')
-  const [potatoCondition, setPotatoCondition] = useState<'WASHED' | 'DRY'>('WASHED')
+  const [sourceWashDecision, setSourceWashDecision] = useState<'WASHED' | 'UNWASHED'>('WASHED')
   const [exportTargetKg, setExportTargetKg] = useState<5 | 10 | 50>(10)
+  const potatoCondition: 'WASHED' | 'DRY' = sourceWashDecision === 'UNWASHED' ? 'DRY' : 'WASHED'
 
   const activePackagingSpec = resolvePackagingSpec({
     commodityCode: sourceCommodityCode,
@@ -191,6 +193,7 @@ export default function PackagingPage() {
           commodityCode: p.commodityCode || '001',
           commodityName: p.commodityName || 'Eptilu Washed Potatoes 10 kg',
           commodityGtin: p.commodityGtin || '8994477090010',
+          washDecision: p.washDecision === 'UNWASHED' ? 'UNWASHED' : 'WASHED',
         }))
         .filter((p) => p.code && p.remainingKg > 0)
       setPalletsFromApi(mapped)
@@ -217,6 +220,10 @@ export default function PackagingPage() {
             farmerName: p.farmerName || 'Farmer',
             farmerVillage: p.farmerVillage,
             waringCode: p.waringCode || '',
+            commodityCode: p.commodityCode || '001',
+            commodityName: p.commodityName || 'Eptilu Washed Potatoes 10 kg',
+            commodityGtin: p.commodityGtin || '8994477090010',
+            washDecision: p.washDecision === 'UNWASHED' ? 'UNWASHED' : 'WASHED',
           }))
           .filter((p) => p.code && p.remainingKg > 0)
         setPalletsFromApi(mapped)
@@ -245,6 +252,7 @@ export default function PackagingPage() {
     setSourceWaring(p.waringCode)
     setSourceCommodityCode(p.commodityCode || '001')
     setSourceCommodityName(p.commodityName || 'Kentang')
+    setSourceWashDecision(p.washDecision === 'UNWASHED' ? 'UNWASHED' : 'WASHED')
     setSourcePalletRemainingKg(p.remainingKg)
     setPalletScanError(null)
     setSavedSuccessRecord(null)
@@ -283,6 +291,7 @@ export default function PackagingPage() {
           commodityCode: pallet.commodityCode || '001',
           commodityName: pallet.commodityName || 'Eptilu Washed Potatoes 10 kg',
           commodityGtin: pallet.commodityGtin || '8994477090010',
+          washDecision: pallet.washDecision === 'UNWASHED' ? 'UNWASHED' : 'WASHED',
         })
         setPalletSearch('')
         setPalletScanError(null)
@@ -524,6 +533,7 @@ export default function PackagingPage() {
     setSourcePalletCode('')
     setSourceFarmer('')
     setSourceWaring('')
+    setSourceWashDecision('WASHED')
     setSourcePalletRemainingKg(null)
     setPalletSearch('')
     setPalletScanError(null)
@@ -866,6 +876,16 @@ export default function PackagingPage() {
                 >
                   Grade {selectedGrade}
                 </span>}
+                {sourcePalletCode && (
+                  <Badge tone="neutral">
+                    {sourceCommodityName}
+                  </Badge>
+                )}
+                {sourcePalletCode && (
+                  <Badge tone={sourceWashDecision === 'WASHED' ? 'accent' : 'neutral'}>
+                    {sourceWashDecision === 'WASHED' ? 'Washed' : 'Unwashed'}
+                  </Badge>
+                )}
                 {sourcePalletCode && <span className="text-xs text-muted-foreground">({sourceFarmer} · Origin: {sourceWaring})</span>}
               </div>
               {sourcePalletCode && sourcePalletRemainingKg !== null && (
@@ -1012,31 +1032,6 @@ export default function PackagingPage() {
                 </Button>
               </div>
               {scaleCapacityKg !== null && scaleCapacityKg < 50 && <p className="text-xs text-muted-foreground">50 kg requires a scale with at least 50 kg capacity.</p>}
-            </div>
-          )}
-
-          {/* Potato Condition (Washed vs Dry) - applicable if commodity is Potato */}
-          {sourceCommodityCode === '001' && (
-            <div className="p-4 bg-card border border-border space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-foreground block">
-                Potato Condition (Kondisi Kentang):
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Button
-                  size="sm"
-                  variant={potatoCondition === 'WASHED' ? 'primary' : 'outline'}
-                  onClick={() => setPotatoCondition('WASHED')}
-                >
-                  Kentang Basah / Cuci (Washed)
-                </Button>
-                <Button
-                  size="sm"
-                  variant={potatoCondition === 'DRY' ? 'primary' : 'outline'}
-                  onClick={() => setPotatoCondition('DRY')}
-                >
-                  Kentang Kering (Dry)
-                </Button>
-              </div>
             </div>
           )}
 
