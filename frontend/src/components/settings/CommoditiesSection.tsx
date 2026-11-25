@@ -656,11 +656,6 @@ export default function CommoditiesSection() {
       ),
     },
     {
-      key: 'unit',
-      label: 'Unit',
-      render: (row) => <span className="font-mono text-xs">{row.unit || 'kg'}</span>,
-    },
-    {
       key: 'isActive',
       label: 'Status',
       render: (row) => (
@@ -1195,23 +1190,14 @@ export default function CommoditiesSection() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Field label="Measurement Unit">
+                <div>
+                  <Field label="Harvest Description">
                     <Input
-                      value={newRawForm.unit}
-                      onChange={(e) => setNewRawForm((f) => ({ ...f, unit: e.target.value }))}
-                      placeholder="kg"
+                      value={newRawForm.description}
+                      onChange={(e) => setNewRawForm((f) => ({ ...f, description: e.target.value }))}
+                      placeholder="e.g. Fresh highland harvest crops delivered from local farmers"
                     />
                   </Field>
-                  <div className="md:col-span-2">
-                    <Field label="Harvest Description">
-                      <Input
-                        value={newRawForm.description}
-                        onChange={(e) => setNewRawForm((f) => ({ ...f, description: e.target.value }))}
-                        placeholder="e.g. Fresh highland harvest crops delivered from local farmers"
-                      />
-                    </Field>
-                  </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
@@ -1257,23 +1243,14 @@ export default function CommoditiesSection() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Field label="Measurement Unit">
+                <div>
+                  <Field label="Harvest Description">
                     <Input
-                      value={rawForm.unit}
-                      onChange={(e) => setRawForm((f) => ({ ...f, unit: e.target.value }))}
-                      placeholder="kg"
+                      value={rawForm.description}
+                      onChange={(e) => setRawForm((f) => ({ ...f, description: e.target.value }))}
+                      placeholder="e.g. Freshly harvested raw crop from highland farmers"
                     />
                   </Field>
-                  <div className="md:col-span-2">
-                    <Field label="Harvest Description">
-                      <Input
-                        value={rawForm.description}
-                        onChange={(e) => setRawForm((f) => ({ ...f, description: e.target.value }))}
-                        placeholder="e.g. Freshly harvested raw crop from highland farmers"
-                      />
-                    </Field>
-                  </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
