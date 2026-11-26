@@ -723,10 +723,10 @@ export default function WeighingPage() {
                   document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
                 }}
               >
-                Approve
+                Setujui
               </Button>
               <Button size="sm" variant="outline" icon="refresh" onClick={() => handleKoreksi(row)}>
-                Correct Weight
+                Koreksi Berat
               </Button>
             </>
           ) : (
@@ -743,7 +743,7 @@ export default function WeighingPage() {
                 document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
               }}
             >
-              Reprint
+              Cetak Ulang
             </Button>
           )}
           {user?.role === 'ADMIN' && (
@@ -755,7 +755,7 @@ export default function WeighingPage() {
               disabled={isSaving || isPrinting || receptionSession.records.some((record) => record.id === row.id)}
               onClick={() => setCancelModalRecord(row)}
             >
-              Cancel
+              Batalkan
             </Button>
           )}
         </div>
@@ -1293,7 +1293,7 @@ export default function WeighingPage() {
             {/* Controls */}
             <div className="flex shrink-0 items-center gap-2">
               <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode} className="whitespace-nowrap">
-                Exit Focus Mode
+                Keluar Mode Fokus
               </Button>
             </div>
           </header>
@@ -1322,7 +1322,7 @@ export default function WeighingPage() {
                 icon="history"
                 onClick={() => document.getElementById('weighing-records')?.scrollIntoView({ behavior: 'smooth' })}
               >
-                Records ({records.length})
+                Riwayat ({records.length})
               </Button>
             }
           />
@@ -1359,7 +1359,7 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <span className="font-semibold text-base text-foreground">Reception Workflow</span>
             <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-              Focus Mode
+              Mode Fokus
             </Button>
           </div>
 

@@ -628,10 +628,10 @@ export default function SortingPage() {
               />
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <Button type="submit" variant="primary" icon="check" className="w-full sm:w-auto">
-                  Verify
+                  Verifikasi
                 </Button>
                 <Button type="button" variant="outline" icon="scan" onClick={openWaringCameraModal} className="w-full sm:w-auto">
-                  Camera
+                  Kamera
                 </Button>
               </div>
             </form>
@@ -653,7 +653,7 @@ export default function SortingPage() {
                 {formatWeight(Number(grossIntakeKg))} kg Gross
               </span>
               <Button variant="primary" icon="check" touch onClick={() => setActiveStep(2)} className="flex-1 sm:flex-initial">
-                Proceed to Sizing
+                Lanjut ke Pencucian &amp; Ukuran
               </Button>
             </div>
           </div>
@@ -696,7 +696,7 @@ export default function SortingPage() {
                 icon="check"
                 onClick={() => setSizerFedConfirmed(!sizerFedConfirmed)}
               >
-                {sizerFedConfirmed ? 'Feeding Completed' : 'Confirm Feeding'}
+                {sizerFedConfirmed ? 'Pengumpanan Selesai' : 'Konfirmasi Pengumpanan'}
               </Button>
             </div>
 
@@ -740,10 +740,10 @@ export default function SortingPage() {
 
           <div className="flex justify-between items-center pt-4 border-t border-border">
             <Button variant="ghost" onClick={() => setActiveStep(1)}>
-              Back to Waring
+              Kembali ke Waring
             </Button>
             <Button variant="primary" icon="check" touch onClick={() => setActiveStep(3)}>
-              Proceed to Weigh Grades
+              Lanjut ke Timbang Grade
             </Button>
           </div>
         </div>
@@ -829,7 +829,7 @@ export default function SortingPage() {
                   }
                   onClick={() => handleAssignLiveWeight()}
                 >
-                  Assign {liveScaleWeight || '0'} kg to Grade {activeGradeTab}
+                  Simpan {liveScaleWeight || '0'} kg ke Grade {activeGradeTab}
                 </Button>
                 <Button
                   variant="outline"
@@ -873,7 +873,7 @@ export default function SortingPage() {
                   icon="scan"
                   onClick={() => openPalletCameraModal(activeGradeTab)}
                 >
-                  Scan Pallet QR
+                  Pindai QR Palet
                 </Button>
               </div>
 
@@ -960,7 +960,7 @@ export default function SortingPage() {
             )}
             <div className="flex justify-between items-center">
               <Button variant="ghost" onClick={() => setActiveStep(2)}>
-                Back to Sizing
+                Kembali ke Pencucian
               </Button>
               <Button
                 variant="primary"
@@ -969,7 +969,7 @@ export default function SortingPage() {
                 disabled={!allGradesRecorded || totalGraded <= 0 || totalGraded > gGross + 0.005}
                 onClick={() => setActiveStep(4)}
               >
-                Proceed to Review & Save
+                Lanjut ke Tinjau &amp; Simpan
               </Button>
             </div>
           </div>
@@ -1122,7 +1122,7 @@ export default function SortingPage() {
             )}
             <div className="flex items-center justify-between pt-1 flex-wrap gap-3">
               <Button variant="ghost" onClick={() => setActiveStep(3)}>
-                Back to Weigh Grades
+                Kembali ke Timbang Grade
               </Button>
 
               {!savedSuccessBatch ? (
@@ -1133,11 +1133,11 @@ export default function SortingPage() {
                   disabled={!allGradesRecorded || totalGraded <= 0 || totalGraded > gGross + 0.005}
                   onClick={handleSaveSortingRun}
                 >
-                  Commit Batch & Update Inventory
+                  Simpan Batch &amp; Perbarui Stok
                 </Button>
               ) : (
                 <Button variant="primary" icon="check" touch onClick={handleStartNextWaring}>
-                  Sort Next Waring
+                  Sortir Waring Berikutnya
                 </Button>
               )}
             </div>
@@ -1172,7 +1172,7 @@ export default function SortingPage() {
             {/* Controls */}
             <div className="flex shrink-0 items-center gap-2">
               <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode} className="whitespace-nowrap">
-                Exit Focus Mode
+                Keluar Mode Fokus
               </Button>
             </div>
           </header>
@@ -1201,7 +1201,7 @@ export default function SortingPage() {
               icon="history"
               onClick={() => document.getElementById('sorting-records')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              Records ({sortedBatches.length})
+              Riwayat ({sortedBatches.length})
             </Button>
           }
         />
@@ -1240,7 +1240,7 @@ export default function SortingPage() {
             <span className="font-semibold text-base text-foreground">Sorting Stepper</span>
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-                Focus Mode
+                Mode Fokus
               </Button>
             </div>
           </div>

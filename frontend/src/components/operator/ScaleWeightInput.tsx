@@ -315,7 +315,7 @@ export default function ScaleWeightInput({
                     : undefined
                 }
               >
-                Capture Weight
+                Ambil Berat
               </Button>
             </div>
           </div>
