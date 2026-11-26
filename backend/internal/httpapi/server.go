@@ -1135,7 +1135,7 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 		err = s.db.QueryRow(r.Context(), `
 			WITH intake AS (SELECT COALESCE(NULLIF($4,'')::uuid, gen_random_uuid()) AS id)
 			INSERT INTO warings(id,code,"farmerId","commodityId","grossWeightKg","tareWeightKg","netWeightKg",status,"createdAt")
-			SELECT id,'WRG-' || to_char(NOW(),'YYYYMMDD') || '-' || replace(id::text,'-',''),$1,$2,$3,0,$3,'PENDING',NOW() FROM intake WHERE true
+			SELECT id,'WRG-' || to_char(NOW() AT TIME ZONE 'Asia/Jakarta','YYYYMMDD') || '-' || lpad(nextval('waring_code_seq')::text, 6, '0'),$1,$2,$3,0,$3,'PENDING',NOW() FROM intake WHERE true
 			ON CONFLICT (id) DO UPDATE SET id=warings.id
 			WHERE warings."farmerId"=EXCLUDED."farmerId" AND warings."commodityId"=EXCLUDED."commodityId" AND warings."grossWeightKg"=EXCLUDED."grossWeightKg" AND warings."tareWeightKg"=0
 			RETURNING id::text,code`, fid, cid, v.Gross, v.RequestID).Scan(&id, &war)
@@ -1684,7 +1684,7 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 	var out []byte
 	out = append(out, 0x1b, 0x40)
 	labels := map[string]string{
-		"receipt": "RECEIVING RECEIPT",
+		"receipt": "BUKTI PENERIMAAN",
 		"waring":  "WARING LABEL",
 		"pallet":  "SORTING PALLET",
 		"grade":   "SORTED PALLET",
@@ -1697,6 +1697,14 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 			job.WeightKg, err = receptionReceiptTotal(job.Type, job.Items)
 			if err != nil {
 				return nil, err
+			}
+		}
+		if job.Type == "pouch" || job.Type == "export" {
+			if len(job.Barcode) >= 18 && strings.HasPrefix(job.Barcode, "010") && job.Barcode[16:18] == "21" {
+				job.GTIN = job.Barcode[3:16]
+			}
+			if err := validateGTIN13(job.GTIN); err != nil {
+				return nil, fmt.Errorf("packaging label requires a valid GTIN-13: %w", err)
 			}
 		}
 		label, ok := labels[job.Type]
@@ -1712,23 +1720,14 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 		hasMeta := false
 		if job.Type == "receipt" {
 			if job.FarmerName != "" {
-				out = appendText(out, "Farmer: "+job.FarmerName+"\n")
-				hasMeta = true
-			}
-			if job.FarmerID != "" {
-				out = appendText(out, "Farmer ID: "+job.FarmerID+"\n")
-				hasMeta = true
+				out = appendText(out, "Petani: "+job.FarmerName+"\n")
 			}
 			commodity := job.Commodity
 			if commodity == "" {
-				commodity = "Potatoes"
+				commodity = "Kentang"
 			}
-			out = appendText(out, "Commodity: "+commodity+"\n")
+			out = appendText(out, "Hasil panen: "+commodity+"\n")
 			hasMeta = true
-			if job.Station != "" {
-				out = appendText(out, "Station: "+job.Station+"\n")
-				hasMeta = true
-			}
 		} else if job.Type == "waring" {
 			// Waring: Farmer & Farmer ID directly, station removed
 			if job.FarmerName != "" {
@@ -1759,25 +1758,33 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 		if hasMeta {
 			out = appendText(out, "--------------------------------\n")
 		}
+		if job.Type == "receipt" && len(job.Items) == 0 {
+			job.Items = []receiptItem{{Code: job.Code, WeightKg: job.WeightKg}}
+		}
 		if len(job.Items) > 0 {
 			out = append(out, 0x1b, 0x61, 0x00)
-			out = appendText(out, fmt.Sprintf("Bags: %d\n", len(job.Items)))
+			out = appendText(out, fmt.Sprintf("Jumlah waring: %d\n", len(job.Items)))
 			for index, item := range job.Items {
-				out = appendText(out, fmt.Sprintf("%d. %s\n   %.3f kg\n", index+1, item.Code, item.WeightKg))
+				out = appendText(out, fmt.Sprintf("Waring %d: %d kg\n", index+1, int64(math.Round(item.WeightKg))))
 			}
 			out = append(out, 0x1b, 0x61, 0x01)
-			out = appendText(out, "Total Weight\n")
+			out = appendText(out, "Total berat\n")
 		}
 
 		if job.WeightKg > 0 && job.Type != "pallet" {
-			out = appendText(out, fmt.Sprintf("%.3f kg\n", job.WeightKg))
+			out = appendText(out, fmt.Sprintf("%d kg\n", int64(math.Round(job.WeightKg))))
 		}
-		out = appendText(out, job.Code+"\n")
+		if job.Type != "receipt" {
+			out = appendText(out, job.Code+"\n")
+
+		}
 		out = appendText(out, "--------------------------------\n")
 
 		if job.Type == "waring" {
 			// Waring label uses 2D QR Code only
 			out = appendQR(out, job.Code)
+		} else if job.Type == "pouch" || job.Type == "export" {
+			out = appendEAN13(out, job.GTIN)
 		} else if job.Type != "receipt" {
 			// Pallet, Pouch, and Export use both Code128 barcode and QR Code
 			barcodePayload := job.Code
@@ -1790,7 +1797,11 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 			}
 			out = appendCode128(out, barcodePayload)
 			out = appendText(out, "\n")
-			out = appendQR(out, qrPayload)
+			if job.Type == "pallet" || job.Type == "grade" {
+				out = appendQRWithSize(out, qrPayload, 0x09)
+			} else {
+				out = appendQR(out, qrPayload)
+			}
 		}
 
 		dateStr := job.Date
@@ -1804,7 +1815,7 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 			out = appendText(out, strings.TrimSpace(dateStr+" "+timeStr)+"\n")
 		}
 		if job.Type == "receipt" {
-			out = appendText(out, "BUFFER_WAITING\n")
+			out = appendText(out, "Terima kasih\n")
 		} else {
 			out = appendText(out, "PRINTED\n")
 		}
@@ -1824,6 +1835,13 @@ func appendText(dst []byte, value string) []byte {
 	}, value))...)
 }
 
+// EAN-13 is encoded by the printer with a 3-dot module and human-readable GTIN.
+func appendEAN13(dst []byte, gtin string) []byte {
+	dst = append(dst, 0x1d, 0x77, 0x03, 0x1d, 0x68, 0xd0, 0x1d, 0x48, 0x02)
+	dst = append(dst, 0x1d, 0x6b, 0x43, 0x0d)
+	return append(dst, []byte(gtin)...)
+}
+
 func appendCode128(dst []byte, value string) []byte {
 	data := "{B" + value
 	dst = append(dst, 0x1d, 0x77, 0x02, 0x1d, 0x68, 0x20, 0x1d, 0x48, 0x00)
@@ -1832,11 +1850,14 @@ func appendCode128(dst []byte, value string) []byte {
 }
 
 func appendQR(dst []byte, value string) []byte {
+	return appendQRWithSize(dst, value, 0x05)
+}
+
+func appendQRWithSize(dst []byte, value string, moduleSize byte) []byte {
 	data := []byte(value)
 	length := len(data) + 3
 	dst = append(dst, 0x1d, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00)
-	// Normal module size 5 (0x05) ensures clean, un-stretched 1:1 square QR on 80 mm ESC/POS paper
-	dst = append(dst, 0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, 0x05)
+	dst = append(dst, 0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, moduleSize)
 	dst = append(dst, 0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x31)
 	dst = append(dst, 0x1d, 0x28, 0x6b, byte(length), byte(length>>8), 0x31, 0x50, 0x30)
 	dst = append(dst, data...)
@@ -2621,7 +2642,7 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 		rows, err := s.db.Query(r.Context(), `
 			SELECT pu.id, pu.code, pu.format, pu.grade, pu."weightKg", pu.barcode, pu.status, pu."createdAt",
 			       COALESCE(p.code, '') AS pallet_code,
-			       COALESCE(c.id, ''), COALESCE(c.code, '001'), COALESCE(c.name, 'Kentang'), COALESCE(c."exportName", c.name), COALESCE(c.gtin, '8994477090010')
+			       COALESCE(c.id, ''), COALESCE(c.code, '001'), COALESCE(c.name, 'Kentang'), COALESCE(pu."labelProductName", c."exportName", c.name), COALESCE(c.gtin, '8994477090010')
 			FROM package_units pu
 			LEFT JOIN pallets p ON p.id = pu."sourcePalletId"
 			LEFT JOIN commodities c ON c.id = pu."commodityId"
@@ -2639,6 +2660,9 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 			var weight float64
 			var createdAt time.Time
 			if err := rows.Scan(&id, &code, &format, &grade, &weight, &barcode, &status, &createdAt, &palletCode, &cID, &cCode, &cName, &cExportName, &cGTIN); err == nil {
+				if len(barcode) >= 18 && strings.HasPrefix(barcode, "010") && barcode[16:18] == "21" && validateGTIN13(barcode[3:16]) == nil {
+					cGTIN = barcode[3:16]
+				}
 				records = append(records, map[string]any{
 					"id":                  id,
 					"code":                code,
@@ -2766,9 +2790,9 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 
 		unitID := "pkg-" + strings.ToLower(packageCode)
 		_, err = tx.Exec(r.Context(), `
-			INSERT INTO package_units (id, code, format, grade, "weightKg", barcode, "sourcePalletId", "sortingBatchId", "commodityId", status, "createdAt")
-			VALUES ($1, $2, $3::"PackageFormat", $4, $5, $6, $7, $8, $9, 'STORED'::"PackageStatus", NOW())
-		`, unitID, packageCode, format, grade, input.TotalNetWeightKg, barcode, palletID, sortingBatchID, nullIfEmpty(cID))
+			INSERT INTO package_units (id, code, format, grade, "weightKg", barcode, "sourcePalletId", "sortingBatchId", "commodityId", status, "createdAt", "labelProductName")
+			VALUES ($1, $2, $3::"PackageFormat", $4, $5, $6, $7, $8, $9, 'STORED'::"PackageStatus", NOW(), $10)
+		`, unitID, packageCode, format, grade, input.TotalNetWeightKg, barcode, palletID, sortingBatchID, nullIfEmpty(cID), cExportName)
 		if err != nil {
 			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to record package unit: "+err.Error())
 			return
@@ -2822,12 +2846,12 @@ func (s *server) packagingHandler(w http.ResponseWriter, r *http.Request, p []st
 				"commodityExportName": cExportName,
 				"commodityGtin":       cGTIN,
 				"barcode":             barcode,
-				"digitalLinkUrl":  digitalLinkURL,
-				"remainingKg":     newRemaining,
-				"palletStatus":    newStatus,
-				"palletReleased":  newStatus == "AVAILABLE",
-				"belowMinPackage": belowMinPackage,
-				"minPackageKg":    minStandardPackageKg,
+				"digitalLinkUrl":      digitalLinkURL,
+				"remainingKg":         newRemaining,
+				"palletStatus":        newStatus,
+				"palletReleased":      newStatus == "AVAILABLE",
+				"belowMinPackage":     belowMinPackage,
+				"minPackageKg":        minStandardPackageKg,
 			},
 		})
 		return

@@ -36,13 +36,13 @@ SmartGeulis transforms traditional agricultural packaging and warehouse operatio
 - Go 1.23+
 - Docker & Docker Compose
 - PostgreSQL 17 (or use Docker)
-- Scale simulator for development or physical Modbus TCP scales
+- Physical Modbus TCP scales for station operations
 
 ### One-Command Setup
 
 ```bash
 # Start infrastructure
-docker-compose up -d postgres scale-simulator
+docker-compose up -d postgres
 docker-compose run --rm db-migrate
 docker-compose up -d backend
 ```
@@ -171,7 +171,7 @@ Operational hardware values are backend-owned and exposed through the API:
 - Scale host, port, capacity, Online/Offline status, and live weight come from the Go backend and Modbus connection.
 - Reception and Packaging printer addresses, ports, and Online/Offline status come from PostgreSQL-backed printer settings.
 - Thermal receipts and labels are sent by the Go backend to the configured station printer; operational printing does not use the browser print dialog.
-- Scale host, port, and capacity are stored in the database and edited through Settings; simulator ports are fixed test fixtures.
+- Configure each physical scale host, port, and capacity in Settings before using a station.
 - UI labels, station names, barcode formats, and the mandated IW-J300H 80 mm format are fixed product constants.
 
 Frontend pages must not define physical IP addresses, operational ports, capacities, live weights, or device status as fallback values.

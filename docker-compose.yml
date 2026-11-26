@@ -41,8 +41,6 @@ services:
         condition: service_healthy
       db-migrate:
         condition: service_completed_successfully
-      scale-simulator:
-        condition: service_started
     networks:
       - enyx-network
 
@@ -58,20 +56,6 @@ services:
       postgres:
         condition: service_healthy
     restart: "no"
-    networks:
-      - enyx-network
-
-  scale-simulator:
-    build:
-      context: ./scripts/simulators
-      dockerfile: Dockerfile
-    container_name: enyx-scale-simulator
-    restart: unless-stopped
-    ports:
-      - "5020:5020"
-      - "5021:5021"
-      - "5022:5022"
-      - "8088:8088"
     networks:
       - enyx-network
 

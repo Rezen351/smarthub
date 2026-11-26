@@ -91,7 +91,7 @@ func TestEncodePrintJobsCommodityVisibility(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encode receipt failed: %v", err)
 	}
-	if !bytes.Contains(receiptBytes, []byte("Commodity: Eptilu Fresh Red Tomatoes TW 10 kg")) {
+	if !bytes.Contains(receiptBytes, []byte("Hasil panen: Eptilu Fresh Red Tomatoes TW 10 kg")) {
 		t.Fatalf("receipt must include dynamic commodity name")
 	}
 
@@ -111,7 +111,7 @@ func TestEncodePrintJobsCommodityVisibility(t *testing.T) {
 		"Commodity: Eptilu Fresh Red Tomatoes TW 10 kg",
 		"GTIN: 8994477091017",
 		"Grade: A",
-		"010899447709101721PCH-20261125-0001",
+		"8994477091017",
 	} {
 		if !bytes.Contains(pouchBytes, []byte(needle)) {
 			t.Fatalf("packaging label missing %q", needle)
