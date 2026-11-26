@@ -68,6 +68,8 @@ export default function CommoditiesSection() {
     productName: string
     targetKg: number
     packageType: string
+    variant: 'STANDARD' | 'WASHED' | 'DRY'
+    grade: 'ALL' | 'A' | 'B' | 'C'
     brand: string
     gtin: string
     isActive: boolean
@@ -76,6 +78,8 @@ export default function CommoditiesSection() {
     productName: '',
     targetKg: 10,
     packageType: 'Carton Box',
+    variant: 'STANDARD',
+    grade: 'ALL',
     brand: 'Eptilu',
     gtin: '',
     isActive: true,
@@ -91,6 +95,7 @@ export default function CommoditiesSection() {
     mode: 'RETAIL_POUCH' | 'BULK_EXPORT'
     packageType: string
     variant: 'STANDARD' | 'WASHED' | 'DRY'
+    grade: 'ALL' | 'A' | 'B' | 'C'
     brand: string
     gtin: string
     isActive: boolean
@@ -103,6 +108,7 @@ export default function CommoditiesSection() {
     mode: 'BULK_EXPORT',
     packageType: 'Carton Box',
     variant: 'STANDARD',
+    grade: 'ALL',
     brand: 'Eptilu',
     gtin: computeGtin13FromCode('006'),
     isActive: true,
@@ -202,6 +208,7 @@ export default function CommoditiesSection() {
       mode: 'BULK_EXPORT',
       packageType: 'Carton Box',
       variant: 'STANDARD',
+      grade: 'ALL',
       brand: 'Eptilu',
       gtin: computeGtin13FromCode(nextCode),
       isActive: true,
@@ -261,6 +268,7 @@ export default function CommoditiesSection() {
       mode: newPkgForm.mode,
       targetKg: Number(newPkgForm.targetKg) || 10,
       variant: newPkgForm.variant,
+      grade: newPkgForm.grade,
       productName: newPkgForm.productName.trim(),
       packageType: newPkgForm.packageType.trim() || 'Carton Box',
       brand: newPkgForm.brand.trim() || 'Eptilu',
@@ -283,6 +291,8 @@ export default function CommoditiesSection() {
       productName: product.productName,
       targetKg: product.targetKg,
       packageType: product.packageType,
+      variant: product.variant || 'STANDARD',
+      grade: product.grade || 'ALL',
       brand: product.brand,
       gtin: product.gtin,
       isActive: product.isActive,
@@ -325,6 +335,8 @@ export default function CommoditiesSection() {
           productName: pkgForm.productName.trim(),
           targetKg: Number(pkgForm.targetKg) || p.targetKg,
           packageType: pkgForm.packageType.trim() || p.packageType,
+          variant: pkgForm.variant,
+          grade: pkgForm.grade,
           brand: pkgForm.brand.trim() || p.brand,
           gtin: pkgForm.gtin.trim() || p.gtin,
           isActive: pkgForm.isActive,
@@ -564,7 +576,9 @@ export default function CommoditiesSection() {
         <div>
           <div className="font-semibold text-sm text-foreground">{row.productName}</div>
           <div className="text-[11px] text-muted-foreground font-mono">
-            {row.brand} · {row.packageType} {row.variant && row.variant !== 'STANDARD' ? `· ${row.variant}` : ''}
+            {row.brand} · {row.packageType}
+            {row.variant && row.variant !== 'STANDARD' ? ` · ${row.variant}` : ''}
+            {row.grade && row.grade !== 'ALL' ? ` · Grade ${row.grade}` : ''}
           </div>
         </div>
       ),
@@ -640,11 +654,6 @@ export default function CommoditiesSection() {
           </div>
         </div>
       ),
-    },
-    {
-      key: 'unit',
-      label: 'Unit',
-      render: (row) => <span className="font-mono text-xs">{row.unit || 'kg'}</span>,
     },
     {
       key: 'isActive',
@@ -869,7 +878,25 @@ export default function CommoditiesSection() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <Field label="Grade Scope">
+                      <Select
+                        value={newPkgForm.grade}
+                        onChange={(e) =>
+                          setNewPkgForm((f) => ({
+                            ...f,
+                            grade: e.target.value as 'ALL' | 'A' | 'B' | 'C',
+                          }))
+                        }
+                      >
+                        <option value="ALL">All Grades (A/B/C)</option>
+                        <option value="A">Grade A Only</option>
+                        <option value="B">Grade B Only</option>
+                        <option value="C">Grade C Only</option>
+                      </Select>
+                    </Field>
+                  </div>
                   <div>
                     <Field label="Brand">
                       <Input
@@ -959,7 +986,7 @@ export default function CommoditiesSection() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   <div>
                     <Field label="Package Format">
                       <Input
@@ -967,6 +994,41 @@ export default function CommoditiesSection() {
                         onChange={(e) => setPkgForm((f) => ({ ...f, packageType: e.target.value }))}
                         placeholder="Carton Box / Retail Pouch"
                       />
+                    </Field>
+                  </div>
+                  <div>
+                    <Field label="Condition Variant">
+                      <Select
+                        value={pkgForm.variant}
+                        onChange={(e) =>
+                          setPkgForm((f) => ({
+                            ...f,
+                            variant: e.target.value as 'STANDARD' | 'WASHED' | 'DRY',
+                          }))
+                        }
+                      >
+                        <option value="STANDARD">Standard</option>
+                        <option value="WASHED">Washed (Cleaned)</option>
+                        <option value="DRY">Dry (Unwashed)</option>
+                      </Select>
+                    </Field>
+                  </div>
+                  <div>
+                    <Field label="Grade Scope">
+                      <Select
+                        value={pkgForm.grade}
+                        onChange={(e) =>
+                          setPkgForm((f) => ({
+                            ...f,
+                            grade: e.target.value as 'ALL' | 'A' | 'B' | 'C',
+                          }))
+                        }
+                      >
+                        <option value="ALL">All Grades (A/B/C)</option>
+                        <option value="A">Grade A Only</option>
+                        <option value="B">Grade B Only</option>
+                        <option value="C">Grade C Only</option>
+                      </Select>
                     </Field>
                   </div>
                   <div>
@@ -1128,23 +1190,14 @@ export default function CommoditiesSection() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Field label="Measurement Unit">
+                <div>
+                  <Field label="Harvest Description">
                     <Input
-                      value={newRawForm.unit}
-                      onChange={(e) => setNewRawForm((f) => ({ ...f, unit: e.target.value }))}
-                      placeholder="kg"
+                      value={newRawForm.description}
+                      onChange={(e) => setNewRawForm((f) => ({ ...f, description: e.target.value }))}
+                      placeholder="e.g. Fresh highland harvest crops delivered from local farmers"
                     />
                   </Field>
-                  <div className="md:col-span-2">
-                    <Field label="Harvest Description">
-                      <Input
-                        value={newRawForm.description}
-                        onChange={(e) => setNewRawForm((f) => ({ ...f, description: e.target.value }))}
-                        placeholder="e.g. Fresh highland harvest crops delivered from local farmers"
-                      />
-                    </Field>
-                  </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
@@ -1190,23 +1243,14 @@ export default function CommoditiesSection() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Field label="Measurement Unit">
+                <div>
+                  <Field label="Harvest Description">
                     <Input
-                      value={rawForm.unit}
-                      onChange={(e) => setRawForm((f) => ({ ...f, unit: e.target.value }))}
-                      placeholder="kg"
+                      value={rawForm.description}
+                      onChange={(e) => setRawForm((f) => ({ ...f, description: e.target.value }))}
+                      placeholder="e.g. Freshly harvested raw crop from highland farmers"
                     />
                   </Field>
-                  <div className="md:col-span-2">
-                    <Field label="Harvest Description">
-                      <Input
-                        value={rawForm.description}
-                        onChange={(e) => setRawForm((f) => ({ ...f, description: e.target.value }))}
-                        placeholder="e.g. Freshly harvested raw crop from highland farmers"
-                      />
-                    </Field>
-                  </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">

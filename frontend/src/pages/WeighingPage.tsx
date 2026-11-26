@@ -145,6 +145,7 @@ export default function WeighingPage() {
 
   /* ── Step 2: Weighing Form ── */
   const [weightKg, setWeightKg] = useState('')
+  const [editingSessionBagId, setEditingSessionBagId] = useState<string | null>(null)
   const [scaleCapacityKg, setScaleCapacityKg] = useState<number | null>(null)
   const [scaleOnline, setScaleOnline] = useState(false)
   const [scaleEndpoint, setScaleEndpoint] = useState('Not configured')
@@ -482,8 +483,8 @@ export default function WeighingPage() {
   }
 
   /* Reset for next farmer weighing */
-  const handleNextWeighing = () => {
-    if ((!sessionPrinted && receptionSession.records.length > 0) || isPrinting) return
+  const handleNextWeighing = (force = false) => {
+    if ((!force && !sessionPrinted && receptionSession.records.length > 0) || isPrinting) return
     updateReceptionSession(emptySession())
     setSaveError('')
     setPrintStatus('Not sent to printer')
@@ -510,6 +511,93 @@ export default function WeighingPage() {
     setActiveStep(2)
   }
 
+  /* Add & save current bag directly on Step 2 for fast multi-bag weighing */
+  const handleAddBagOnStep2 = async () => {
+    if (savingRef.current || printingRef.current || sessionRef.current.closed) return
+    const numericWeight = Number(weightKg)
+    if (!Number.isFinite(numericWeight) || numericWeight < 0.001) {
+      setFormError('Weighing cannot be zero. Place a bag on the scale first.')
+      return
+    }
+    if (scaleCapacityKg !== null && numericWeight > scaleCapacityKg) {
+      setFormError(`Weight exceeds scale capacity of ${scaleCapacityKg} kg.`)
+      return
+    }
+    const sessionFarmer = sessionRef.current.records[0] || sessionRef.current.draft
+    const farmerId = sessionFarmer?.farmerId || farmer?.id || ''
+    if (!farmerId) {
+      setFormError('Select a valid farmer before saving.')
+      return
+    }
+    const activeFarmerObj = farmersList.find((f) => f.id === farmerId)
+    const sessionCommodityCode = sessionFarmer?.commodityCode || activeCommodity.code
+    const sessionCommodityName = sessionFarmer?.commodityName
+      ? getGeneralCommodityName({ code: sessionCommodityCode, name: sessionFarmer.commodityName })
+      : activeCommodity.name
+
+    const payload: WeighingRecord = {
+      id: editingId ?? crypto.randomUUID(),
+      farmerId,
+      farmerName: sessionFarmer?.farmerName || farmer!.name || '',
+      farmerVillage: activeFarmerObj?.village || '',
+      commodityCode: sessionCommodityCode,
+      commodityName: sessionCommodityName,
+      weightKg: Number(numericWeight.toFixed(3)),
+      depositDate: today(),
+      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      status: 'PENDING',
+    }
+
+    savingRef.current = true
+    setIsSaving(true)
+    setFormError('')
+    setSaveError('')
+    try {
+      if (editingSessionBagId) {
+        const rounded = Number(numericWeight.toFixed(3))
+        await api.weighing.updateWeight(editingSessionBagId, rounded)
+        const nextRecords = sessionRef.current.records.map((r) =>
+          r.id === editingSessionBagId ? { ...r, weightKg: rounded } : r,
+        )
+        updateReceptionSession({
+          ...sessionRef.current,
+          draft: undefined,
+          records: nextRecords,
+        })
+        setRecords((current) =>
+          current.map((item) => (item.id === editingSessionBagId ? { ...item, weightKg: rounded } : item)),
+        )
+        setEditingSessionBagId(null)
+        setWeightKg('')
+        void syncWithBackend()
+        toast.success(`Berat karung diperbarui: ${formatWeight(rounded)} kg`)
+        return
+      }
+
+      const updatedRecord = await saveReceptionIntake(payload, api.weighing.create)
+      const assignedCode = updatedRecord.waringCode!
+      if (!sessionRef.current.records.some((record) => record.id === updatedRecord.id)) {
+        updateReceptionSession({
+          ...sessionRef.current,
+          draft: undefined,
+          records: [...sessionRef.current.records, updatedRecord],
+        })
+      }
+      setRecords((current) => [updatedRecord, ...current.filter((item) => item.id !== updatedRecord.id)])
+      setEditingId(null)
+      setWeightKg('')
+      void syncWithBackend()
+      toast.success(`Karung ${sessionRef.current.records.length} ditambahkan: ${assignedCode}`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Gagal menyimpan karung.'
+      setFormError(message)
+      toast.error(message)
+    } finally {
+      savingRef.current = false
+      setIsSaving(false)
+    }
+  }
+
   /* Correction: return to Step 2 with the recorded weight */
   const handleKoreksi = (record: WeighingRecord) => {
     setSaveError('')
@@ -518,6 +606,9 @@ export default function WeighingPage() {
     setConfirmApprove(null)
     setApprovedSuccessRecord(null)
     setPrintModalRecord(null)
+    if (sessionRef.current.draft) {
+      updateReceptionSession({ ...sessionRef.current, draft: undefined })
+    }
     setActiveStep(2)
     toast.warning('Record loaded back for re-weighing.')
   }
@@ -632,10 +723,10 @@ export default function WeighingPage() {
                   document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
                 }}
               >
-                Approve
+                Setujui
               </Button>
               <Button size="sm" variant="outline" icon="refresh" onClick={() => handleKoreksi(row)}>
-                Correct Weight
+                Koreksi Berat
               </Button>
             </>
           ) : (
@@ -652,7 +743,7 @@ export default function WeighingPage() {
                 document.getElementById('weighing-stepper')?.scrollIntoView({ behavior: 'smooth' })
               }}
             >
-              Reprint
+              Cetak Ulang
             </Button>
           )}
           {user?.role === 'ADMIN' && (
@@ -664,7 +755,7 @@ export default function WeighingPage() {
               disabled={isSaving || isPrinting || receptionSession.records.some((record) => record.id === row.id)}
               onClick={() => setCancelModalRecord(row)}
             >
-              Cancel
+              Batalkan
             </Button>
           )}
         </div>
@@ -815,17 +906,17 @@ export default function WeighingPage() {
               />
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <Button type="submit" variant="primary" icon="check" className="w-full sm:w-auto">
-                  Verify
+                  Verifikasi
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   icon="scan"
                   onClick={openCameraModal}
-                  title="Open Camera Scanner"
+                  title="Buka Kamera Scanner"
                   className="w-full sm:w-auto"
                 >
-                  Camera
+                  Kamera
                 </Button>
               </div>
             </form>
@@ -860,8 +951,23 @@ export default function WeighingPage() {
               <Badge tone="success" dot>
                 Farmer: {receptionSession.records[0]?.farmerName || receptionSession.draft?.farmerName || farmer?.name}
               </Badge>
-              <Button size="sm" variant="ghost" icon="edit" disabled={receptionSession.records.length > 0 || !!receptionSession.draft} onClick={() => setActiveStep(1)}>
-                Change Farmer
+              <Button
+                size="sm"
+                variant="ghost"
+                icon="edit"
+                disabled={isSaving || (receptionSession.records.length > 0 && !sessionPrinted)}
+                onClick={() => {
+                  if (sessionPrinted) {
+                    handleNextWeighing()
+                    return
+                  }
+                  if (sessionRef.current.draft) {
+                    updateReceptionSession({ ...sessionRef.current, draft: undefined })
+                  }
+                  setActiveStep(1)
+                }}
+              >
+                Ganti Petani
               </Button>
             </div>
           </div>
@@ -922,30 +1028,119 @@ export default function WeighingPage() {
                 </div>
               </div>
 
+              {receptionSession.records.length > 0 && (
+                <div className="p-3 bg-card border border-border rounded-none space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold gap-2 flex-wrap">
+                    <span className="text-muted-foreground uppercase tracking-wider">Karung Tersimpan</span>
+                    <Badge tone="success">
+                      {receptionSession.records.length} karung · {formatWeight(receptionSession.records.reduce((s, r) => s + r.weightKg, 0))} kg
+                    </Badge>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto divide-y divide-border text-xs font-mono">
+                    {receptionSession.records.map((r, idx) => (
+                      <div key={r.id} className="py-1.5 flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground truncate">#{idx + 1} {r.waringCode}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-bold text-foreground">{formatWeight(r.weightKg)} kg</span>
+                          {!receptionSession.closed && (
+                            <Button
+                              size="sm"
+                              variant={editingSessionBagId === r.id ? 'primary' : 'outline'}
+                              onClick={() => {
+                                setEditingSessionBagId(r.id)
+                                setWeightKg(String(r.weightKg))
+                                setFormError('')
+                              }}
+                            >
+                              Ubah
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-border pt-4">
-            <Button variant="outline" disabled={receptionSession.records.length > 0 || !!receptionSession.draft} onClick={() => setActiveStep(1)}>
-              Back to Farmer
-            </Button>
-            {receptionSession.records.length > 0 && <Button variant="outline" icon="print"
-              disabled={!!weightKg}
-              onClick={() => {
-                const last = receptionSession.records[receptionSession.records.length - 1]
-                setConfirmApprove(last)
-                setApprovedSuccessRecord(last)
-                setActiveStep(3)
-              }}>Review & Print</Button>}
+          {editingSessionBagId && (
+            <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs flex items-center justify-between gap-2">
+              <span className="font-medium text-amber-900 dark:text-amber-200">
+                Mode Ubah Berat: sesuaikan berat pada timbangan lalu klik <strong>Simpan Perubahan</strong>.
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEditingSessionBagId(null)
+                  setWeightKg('')
+                  setFormError('')
+                }}
+              >
+                Batal
+              </Button>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between border-t border-border pt-4 flex-wrap gap-2">
             <Button
-              variant="primary"
-              icon="check"
-              touch
-              disabled={!(Number(weightKg) > 0)}
-              onClick={handleProceedToApproval}
+              variant="outline"
+              disabled={isSaving || (receptionSession.records.length > 0 && !sessionPrinted)}
+              title={receptionSession.records.length > 0 && !sessionPrinted ? 'Selesaikan & cetak karung petani saat ini terlebih dahulu' : undefined}
+              onClick={() => {
+                if (sessionPrinted) {
+                  handleNextWeighing()
+                  return
+                }
+                if (sessionRef.current.draft) {
+                  updateReceptionSession({ ...sessionRef.current, draft: undefined })
+                }
+                setActiveStep(1)
+              }}
             >
-              Review Weight
+              Kembali ke Scan
             </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              {!receptionSession.closed && receptionSession.records.length < 500 && (
+                <Button
+                  variant={editingSessionBagId ? 'primary' : 'outline'}
+                  icon={editingSessionBagId ? 'check' : 'plus'}
+                  loading={isSaving}
+                  disabled={!(Number(weightKg) > 0) || isSaving}
+                  onClick={() => void handleAddBagOnStep2()}
+                >
+                  {editingSessionBagId ? 'Simpan Perubahan' : 'Tambahkan'}
+                </Button>
+              )}
+              {receptionSession.records.length > 0 && !(Number(weightKg) > 0) && !editingSessionBagId ? (
+                <Button
+                  variant="primary"
+                  icon="print"
+                  touch
+                  disabled={isSaving}
+                  onClick={() => {
+                    const last = receptionSession.records[receptionSession.records.length - 1]
+                    setConfirmApprove(last)
+                    setApprovedSuccessRecord(last)
+                    setActiveStep(3)
+                  }}
+                >
+                  Selesai &amp; Cetak
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  icon="check"
+                  touch
+                  disabled={!(Number(weightKg) > 0) || isSaving || Boolean(editingSessionBagId)}
+                  onClick={handleProceedToApproval}
+                >
+                  Tinjau Berat
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1046,21 +1241,32 @@ export default function WeighingPage() {
           </p>
           <div className="flex items-center justify-between border-t border-border pt-3 flex-wrap gap-2 no-print">
             {!approvedSuccessRecord && <Button variant="outline" icon="refresh" disabled={isSaving || isPrinting}
-              onClick={() => confirmApprove && handleKoreksi(confirmApprove)}>Correct Weight</Button>}
+              onClick={() => confirmApprove && handleKoreksi(confirmApprove)}>Koreksi Berat</Button>}
             {!receptionSession.closed && receptionSession.records.length < 500 && <Button variant="outline" icon="check"
               loading={isSaving} disabled={isPrinting} onClick={() => void handleNextBag()}>
-              {saveError ? 'Retry Save & Next Bag' : 'Save & Next Bag'}
+              {saveError ? 'Coba Simpan Lagi' : 'Simpan & Karung Berikutnya'}
             </Button>}
             <Button variant="primary" icon="print" touch loading={isPrinting || isSaving}
               onClick={async () => {
                 const saved = approvedSuccessRecord || await handleApproveCommit()
                 if (saved) void triggerPrintBoth(saved, sessionPrinted)
               }}>
-              {sessionPrinted ? 'Print Again' : printStatus.includes('failed') || receptionSession.closed ? 'Retry Print' : 'Finish & Print'}
+              {sessionPrinted ? 'Cetak Lagi' : printStatus.includes('failed') || receptionSession.closed ? 'Cetak Ulang' : 'Selesai & Cetak'}
             </Button>
-            {(sessionPrinted || (approvedSuccessRecord && !receptionSession.records.length)) && <Button variant="primary" icon="check" touch disabled={isPrinting} onClick={handleNextWeighing}>
-              {sessionPrinted ? 'Next Farmer' : 'Back to Weighing'}
-            </Button>}
+            {(sessionPrinted || (approvedSuccessRecord && !receptionSession.records.length)) ? (
+              <Button variant="primary" icon="check" touch disabled={isPrinting} onClick={() => handleNextWeighing()}>
+                {sessionPrinted ? 'Petani Berikutnya' : 'Kembali Menimbang'}
+              </Button>
+            ) : receptionSession.closed && (
+              <Button
+                variant="outline"
+                icon="arrow-right"
+                disabled={isPrinting}
+                onClick={() => handleNextWeighing(true)}
+              >
+                Petani Berikutnya (Lewati Cetak)
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -1087,7 +1293,7 @@ export default function WeighingPage() {
             {/* Controls */}
             <div className="flex shrink-0 items-center gap-2">
               <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode} className="whitespace-nowrap">
-                Exit Focus Mode
+                Keluar Mode Fokus
               </Button>
             </div>
           </header>
@@ -1116,7 +1322,7 @@ export default function WeighingPage() {
                 icon="history"
                 onClick={() => document.getElementById('weighing-records')?.scrollIntoView({ behavior: 'smooth' })}
               >
-                Records ({records.length})
+                Riwayat ({records.length})
               </Button>
             }
           />
@@ -1153,7 +1359,7 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <span className="font-semibold text-base text-foreground">Reception Workflow</span>
             <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-              Focus Mode
+              Mode Fokus
             </Button>
           </div>
 

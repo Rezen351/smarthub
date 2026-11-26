@@ -1026,6 +1026,56 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 		s.executeCancelTransaction(w, r, cancelRequest{WaringID: target, WaringCode: target})
 		return
 	}
+	if (r.Method == "PUT" || r.Method == "PATCH") && len(p) == 1 {
+		target := strings.TrimSpace(p[0])
+		var input struct {
+			Gross float64 `json:"grossWeightKg"`
+		}
+		if !decode(r, &input) || !validReceptionWeight(input.Gross) {
+			fail(w, 400, "VALIDATION_ERROR", "A valid positive grossWeightKg is required")
+			return
+		}
+		var id, war, status string
+		err := s.db.QueryRow(r.Context(), `
+			SELECT id::text, code, status
+			FROM warings
+			WHERE id::text=$1 OR UPPER(code)=UPPER($1)
+			LIMIT 1
+		`, target).Scan(&id, &war, &status)
+		if err == pgx.ErrNoRows {
+			fail(w, 404, "WARING_NOT_FOUND", "Intake record not found")
+			return
+		}
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to look up intake record")
+			return
+		}
+		if status != "PENDING" && status != "APPROVED" {
+			fail(w, 409, "WARING_ALREADY_SORTED", "Cannot edit weight after waring has been sorted")
+			return
+		}
+		_, err = s.db.Exec(r.Context(), `
+			UPDATE warings
+			SET "grossWeightKg"=$1, "tareWeightKg"=0, "netWeightKg"=$1
+			WHERE id=$2
+		`, input.Gross, id)
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to update waring weight")
+			return
+		}
+		write(w, map[string]any{
+			"success": true,
+			"data": map[string]any{
+				"id":            id,
+				"code":          war,
+				"grossWeightKg": input.Gross,
+				"tareWeightKg":  0,
+				"netWeightKg":   input.Gross,
+				"status":        status,
+			},
+		})
+		return
+	}
 	if r.Method == "POST" && len(p) == 0 {
 		var v struct {
 			FarmerCode    string  `json:"farmerCode"`
@@ -1799,9 +1849,11 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 		rows, err := s.db.Query(r.Context(), `
 			SELECT p.id, p.code, p.grade, p.status, p."weightKg", p."remainingKg", p."tareKg", p.notes,
 			       f.name, p."createdAt", p."updatedAt",
-			       p."commodityId", c.code, c.name, COALESCE(c."exportName", c.name), c.gtin
+			       p."commodityId", c.code, c.name, COALESCE(c."exportName", c.name), c.gtin,
+			       sb."washDecision"::text
 			FROM pallets p
 			LEFT JOIN farmers f ON f.id = p."farmerId"
+			LEFT JOIN sorting_batches sb ON sb.id = p."sortingBatchId"
 			LEFT JOIN commodities c ON c.id = p."commodityId"
 			ORDER BY p.code ASC
 		`)
@@ -1813,10 +1865,10 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 		out := []any{}
 		for rows.Next() {
 			var id, code, status, notes string
-			var grade, farmerName, cID, cCode, cName, cExportName, cGTIN *string
+			var grade, farmerName, cID, cCode, cName, cExportName, cGTIN, washDecision *string
 			var weight, remaining, tare float64
 			var createdAt, updatedAt time.Time
-			if err := rows.Scan(&id, &code, &grade, &status, &weight, &remaining, &tare, &notes, &farmerName, &createdAt, &updatedAt, &cID, &cCode, &cName, &cExportName, &cGTIN); err == nil {
+			if err := rows.Scan(&id, &code, &grade, &status, &weight, &remaining, &tare, &notes, &farmerName, &createdAt, &updatedAt, &cID, &cCode, &cName, &cExportName, &cGTIN, &washDecision); err == nil {
 				out = append(out, map[string]any{
 					"id":                  id,
 					"code":                code,
@@ -1832,6 +1884,7 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 					"commodityName":       cName,
 					"commodityExportName": cExportName,
 					"commodityGtin":       cGTIN,
+					"washDecision":        washDecision,
 					"createdAt":           createdAt,
 					"updatedAt":           updatedAt,
 				})
@@ -1854,8 +1907,8 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 		}
 		code := strings.ToUpper(strings.TrimSpace(input.Code))
 		tare := input.TareKg
-		if tare <= 0 {
-			tare = 15.0
+		if tare < 0 {
+			tare = 0
 		}
 		notes := strings.TrimSpace(input.Notes)
 		id := "plt-" + strings.ToLower(strings.TrimPrefix(code, "PLT-"))
@@ -1938,13 +1991,14 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 	if r.Method == "GET" && len(p) == 1 {
 		q := strings.TrimSpace(p[0])
 		var id, code, status, notes string
-		var grade, farmerName, farmerVillage, waringCode, cID, cCode, cName, cExportName, cGTIN *string
+		var grade, farmerName, farmerVillage, waringCode, cID, cCode, cName, cExportName, cGTIN, washDecision *string
 		var weight, remaining, tare float64
 		var createdAt, updatedAt time.Time
 		err := s.db.QueryRow(r.Context(), `
 			SELECT p.id, p.code, p.grade, p.status, p."weightKg", p."remainingKg", p."tareKg", p.notes,
 			       f.name, f.village, w.code, p."createdAt", p."updatedAt",
-			       p."commodityId", c.code, c.name, COALESCE(c."exportName", c.name), c.gtin
+			       p."commodityId", c.code, c.name, COALESCE(c."exportName", c.name), c.gtin,
+			       sb."washDecision"::text
 			FROM pallets p
 			LEFT JOIN farmers f ON f.id = p."farmerId"
 			LEFT JOIN sorting_batches sb ON sb.id = p."sortingBatchId"
@@ -1952,7 +2006,7 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 			LEFT JOIN commodities c ON c.id = p."commodityId"
 			WHERE p.id=$1 OR UPPER(p.code)=UPPER($1)
 			LIMIT 1
-		`, q).Scan(&id, &code, &grade, &status, &weight, &remaining, &tare, &notes, &farmerName, &farmerVillage, &waringCode, &createdAt, &updatedAt, &cID, &cCode, &cName, &cExportName, &cGTIN)
+		`, q).Scan(&id, &code, &grade, &status, &weight, &remaining, &tare, &notes, &farmerName, &farmerVillage, &waringCode, &createdAt, &updatedAt, &cID, &cCode, &cName, &cExportName, &cGTIN, &washDecision)
 		if err == pgx.ErrNoRows {
 			fail(w, 404, "PALLET_NOT_FOUND", fmt.Sprintf("Pallet '%s' not found", q))
 			return
@@ -1980,6 +2034,7 @@ func (s *server) pallets(w http.ResponseWriter, r *http.Request, p []string) {
 				"commodityName":       cName,
 				"commodityExportName": cExportName,
 				"commodityGtin":       cGTIN,
+				"washDecision":        washDecision,
 				"createdAt":           createdAt,
 				"updatedAt":           updatedAt,
 			},
@@ -2516,7 +2571,7 @@ func (s *server) sortingHandler(w http.ResponseWriter, r *http.Request, p []stri
 			pID := "plt-" + strings.ToLower(strings.TrimPrefix(pCode, "PLT-"))
 			_, err = tx.Exec(r.Context(), `
 				INSERT INTO pallets (id, code, grade, "weightKg", "remainingKg", status, "farmerId", "sortingBatchId", "commodityId", "tareKg", notes, "createdAt", "updatedAt")
-				VALUES ($1, $2, $3, $4, $4, 'IN_USE', $5, $6, $7, 15.0, 'Sorted Grade ' || $3, NOW(), NOW())
+				VALUES ($1, $2, $3, $4, $4, 'IN_USE', $5, $6, $7, 0.0, 'Sorted Grade ' || $3, NOW(), NOW())
 				ON CONFLICT (code) DO UPDATE
 				SET grade=EXCLUDED.grade,
 				    "weightKg"=EXCLUDED."weightKg",

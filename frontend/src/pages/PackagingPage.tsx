@@ -60,6 +60,7 @@ interface AvailablePallet {
   commodityCode?: string
   commodityName?: string
   commodityGtin?: string
+  washDecision?: 'WASHED' | 'UNWASHED'
 }
 
 export default function PackagingPage() {
@@ -87,8 +88,9 @@ export default function PackagingPage() {
 
   const [packagingMode, setPackagingMode] = useState<PackagingMode>('RETAIL_POUCH')
   const [selectedGrade, setSelectedGrade] = useState<'A' | 'B' | 'C'>('A')
-  const [potatoCondition, setPotatoCondition] = useState<'WASHED' | 'DRY'>('WASHED')
+  const [sourceWashDecision, setSourceWashDecision] = useState<'WASHED' | 'UNWASHED'>('WASHED')
   const [exportTargetKg, setExportTargetKg] = useState<5 | 10 | 50>(10)
+  const potatoCondition: 'WASHED' | 'DRY' = sourceWashDecision === 'UNWASHED' ? 'DRY' : 'WASHED'
 
   const activePackagingSpec = resolvePackagingSpec({
     commodityCode: sourceCommodityCode,
@@ -191,6 +193,7 @@ export default function PackagingPage() {
           commodityCode: p.commodityCode || '001',
           commodityName: p.commodityName || 'Eptilu Washed Potatoes 10 kg',
           commodityGtin: p.commodityGtin || '8994477090010',
+          washDecision: p.washDecision === 'UNWASHED' ? 'UNWASHED' : 'WASHED',
         }))
         .filter((p) => p.code && p.remainingKg > 0)
       setPalletsFromApi(mapped)
@@ -217,6 +220,10 @@ export default function PackagingPage() {
             farmerName: p.farmerName || 'Farmer',
             farmerVillage: p.farmerVillage,
             waringCode: p.waringCode || '',
+            commodityCode: p.commodityCode || '001',
+            commodityName: p.commodityName || 'Eptilu Washed Potatoes 10 kg',
+            commodityGtin: p.commodityGtin || '8994477090010',
+            washDecision: p.washDecision === 'UNWASHED' ? 'UNWASHED' : 'WASHED',
           }))
           .filter((p) => p.code && p.remainingKg > 0)
         setPalletsFromApi(mapped)
@@ -245,6 +252,7 @@ export default function PackagingPage() {
     setSourceWaring(p.waringCode)
     setSourceCommodityCode(p.commodityCode || '001')
     setSourceCommodityName(p.commodityName || 'Kentang')
+    setSourceWashDecision(p.washDecision === 'UNWASHED' ? 'UNWASHED' : 'WASHED')
     setSourcePalletRemainingKg(p.remainingKg)
     setPalletScanError(null)
     setSavedSuccessRecord(null)
@@ -283,6 +291,7 @@ export default function PackagingPage() {
           commodityCode: pallet.commodityCode || '001',
           commodityName: pallet.commodityName || 'Eptilu Washed Potatoes 10 kg',
           commodityGtin: pallet.commodityGtin || '8994477090010',
+          washDecision: pallet.washDecision === 'UNWASHED' ? 'UNWASHED' : 'WASHED',
         })
         setPalletSearch('')
         setPalletScanError(null)
@@ -443,7 +452,7 @@ export default function PackagingPage() {
                 setActiveStep(2)
               }}
             >
-              Use 10 kg Carton
+              Gunakan Karton 10 kg
             </Button>
           )}
           {canSwitchTo5Kg && (
@@ -458,7 +467,7 @@ export default function PackagingPage() {
                 setActiveStep(2)
               }}
             >
-              Use 5 kg Carton
+              Gunakan Karton 5 kg
             </Button>
           )}
           {canSwitchTo1Kg && (
@@ -472,7 +481,7 @@ export default function PackagingPage() {
                 setActiveStep(2)
               }}
             >
-              Use 1 kg Pouch
+              Gunakan Pouch 1 kg
             </Button>
           )}
           <Button
@@ -481,7 +490,7 @@ export default function PackagingPage() {
             icon="check"
             onClick={() => setCloseoutOpen(true)}
           >
-            Close &amp; Release Pallet
+            Tutup &amp; Lepas Palet
           </Button>
         </div>
       </div>
@@ -524,6 +533,7 @@ export default function PackagingPage() {
     setSourcePalletCode('')
     setSourceFarmer('')
     setSourceWaring('')
+    setSourceWashDecision('WASHED')
     setSourcePalletRemainingKg(null)
     setPalletSearch('')
     setPalletScanError(null)
@@ -726,7 +736,7 @@ export default function PackagingPage() {
             onClick={() => handleReprintPackage(row)}
             title={`Reprint label for ${row.code}`}
           >
-            {reprintingId === row.id ? 'Printing…' : 'Reprint Label'}
+            {reprintingId === row.id ? 'Mencetak…' : 'Cetak Ulang Label'}
           </Button>
           <Button
             variant="ghost"
@@ -839,10 +849,10 @@ export default function PackagingPage() {
               />
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <Button type="submit" variant="primary" icon="check" className="w-full sm:w-auto">
-                  Verify
+                  Verifikasi
                 </Button>
                 <Button type="button" variant="outline" icon="scan" onClick={openCameraModal} className="w-full sm:w-auto">
-                  Camera
+                  Kamera
                 </Button>
               </div>
             </form>
@@ -866,6 +876,16 @@ export default function PackagingPage() {
                 >
                   Grade {selectedGrade}
                 </span>}
+                {sourcePalletCode && (
+                  <Badge tone="neutral">
+                    {sourceCommodityName}
+                  </Badge>
+                )}
+                {sourcePalletCode && (
+                  <Badge tone={sourceWashDecision === 'WASHED' ? 'accent' : 'neutral'}>
+                    {sourceWashDecision === 'WASHED' ? 'Washed' : 'Unwashed'}
+                  </Badge>
+                )}
                 {sourcePalletCode && <span className="text-xs text-muted-foreground">({sourceFarmer} · Origin: {sourceWaring})</span>}
               </div>
               {sourcePalletCode && sourcePalletRemainingKg !== null && (
@@ -886,7 +906,7 @@ export default function PackagingPage() {
                     icon="scan"
                     onClick={() => handleScanNextPallet()}
                   >
-                    Scan Next Pallet
+                    Pindai Palet Berikutnya
                   </Button>
                 </>
               ) : (
@@ -900,7 +920,7 @@ export default function PackagingPage() {
                       size="sm"
                       onClick={() => setCloseoutOpen(true)}
                     >
-                      Close &amp; Release
+                      Tutup &amp; Lepas
                     </Button>
                   )}
                 </>
@@ -987,7 +1007,7 @@ export default function PackagingPage() {
                     setCurrentWeight('')
                   }}
                 >
-                  5 kg Carton
+                  Karton 5 kg
                 </Button>
                 <Button
                   size="sm"
@@ -997,7 +1017,7 @@ export default function PackagingPage() {
                     setCurrentWeight('')
                   }}
                 >
-                  10 kg Carton
+                  Karton 10 kg
                 </Button>
                 <Button
                   size="sm"
@@ -1008,35 +1028,10 @@ export default function PackagingPage() {
                     setCurrentWeight('')
                   }}
                 >
-                  50 kg Carton
+                  Karton 50 kg
                 </Button>
               </div>
               {scaleCapacityKg !== null && scaleCapacityKg < 50 && <p className="text-xs text-muted-foreground">50 kg requires a scale with at least 50 kg capacity.</p>}
-            </div>
-          )}
-
-          {/* Potato Condition (Washed vs Dry) - applicable if commodity is Potato */}
-          {sourceCommodityCode === '001' && (
-            <div className="p-4 bg-card border border-border space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-foreground block">
-                Potato Condition (Kondisi Kentang):
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Button
-                  size="sm"
-                  variant={potatoCondition === 'WASHED' ? 'primary' : 'outline'}
-                  onClick={() => setPotatoCondition('WASHED')}
-                >
-                  Kentang Basah / Cuci (Washed)
-                </Button>
-                <Button
-                  size="sm"
-                  variant={potatoCondition === 'DRY' ? 'primary' : 'outline'}
-                  onClick={() => setPotatoCondition('DRY')}
-                >
-                  Kentang Kering (Dry)
-                </Button>
-              </div>
             </div>
           )}
 
@@ -1076,7 +1071,7 @@ export default function PackagingPage() {
                 icon="scan"
                 onClick={() => handleScanNextPallet()}
               >
-                Scan Another Pallet
+                Pindai Palet Lain
               </Button>
             ) : <div />}
             <Button
@@ -1089,7 +1084,7 @@ export default function PackagingPage() {
                 setActiveStep(2)
               }}
             >
-              Continue to Weighing
+              Lanjut Menimbang
             </Button>
           </div>
         </div>
@@ -1211,7 +1206,7 @@ export default function PackagingPage() {
                   icon="scan"
                   onClick={() => handleScanNextPallet()}
                 >
-                  Scan Next Pallet
+                  Pindai Palet Berikutnya
                 </Button>
               </div>
             )}
@@ -1229,7 +1224,7 @@ export default function PackagingPage() {
             )}
             <div className="flex items-center justify-between">
               <Button variant="outline" onClick={() => setActiveStep(1)}>
-                Back
+                Kembali
               </Button>
               <Button
                 variant="primary"
@@ -1238,7 +1233,7 @@ export default function PackagingPage() {
                 disabled={weightValue <= 0 || !sourcePalletCode || sourcePalletRemainingKg === null || weightValue > remainingPalletKg + 0.0005 || remainingPalletKg <= 0}
                 onClick={() => setActiveStep(3)}
               >
-                Continue to Label
+                Lanjut ke Label
               </Button>
             </div>
           </div>
@@ -1362,7 +1357,7 @@ export default function PackagingPage() {
                   onClick={() => handleScanNextPallet()}
                   className="w-full sm:w-auto"
                 >
-                  Scan Next Pallet
+                  Pindai Palet Berikutnya
                 </Button>
               </div>
             )}
@@ -1379,7 +1374,7 @@ export default function PackagingPage() {
               {!savedSuccessRecord ? (
                 <>
                   <Button variant="outline" onClick={() => setActiveStep(2)}>
-                    Back
+                    Kembali
                   </Button>
                   <Button
                     variant="primary"
@@ -1394,7 +1389,7 @@ export default function PackagingPage() {
                     }
                     onClick={handlePrintAndLabel}
                   >
-                    Print Label & Store
+                    Cetak Label &amp; Simpan
                   </Button>
                 </>
               ) : (
@@ -1435,7 +1430,7 @@ export default function PackagingPage() {
                         )
                       }}
                     >
-                      Reprint Label
+                      Cetak Ulang Label
                     </Button>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -1446,7 +1441,7 @@ export default function PackagingPage() {
                         touch
                         onClick={() => handleScanNextPallet()}
                       >
-                        Pallet Depleted · Scan Next Pallet
+                        Palet Habis · Pindai Palet Berikutnya
                       </Button>
                     ) : isBelowMinSku ? (
                       <Button
@@ -1455,17 +1450,17 @@ export default function PackagingPage() {
                         touch
                         onClick={() => setCloseoutOpen(true)}
                       >
-                        Close &amp; Release Pallet ({remainingPalletKg.toFixed(3)} kg)
+                        Tutup &amp; Lepas Palet ({remainingPalletKg.toFixed(3)} kg)
                       </Button>
                     ) : (
                       <>
                         {remainingPalletKg > 0.05 && (
                           <Button variant="outline" onClick={() => setCloseoutOpen(true)}>
-                            Close &amp; Release
+                            Tutup &amp; Lepas
                           </Button>
                         )}
                         <Button variant="primary" icon="check" touch onClick={handleNextUnit}>
-                          Package Next Unit
+                          Kemas Unit Berikutnya
                         </Button>
                       </>
                     )}
@@ -1501,7 +1496,7 @@ export default function PackagingPage() {
 
             <div className="flex shrink-0 items-center gap-2">
               <Button variant="outline" size="sm" icon="close" onClick={exitFocusMode} className="whitespace-nowrap">
-                Exit Focus Mode
+                Keluar Mode Fokus
               </Button>
             </div>
           </header>
@@ -1565,7 +1560,7 @@ export default function PackagingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <span className="font-semibold text-base text-foreground">Alur Kerja Pengemasan</span>
             <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-              Focus Mode
+              Mode Fokus
             </Button>
           </div>
 
@@ -1662,10 +1657,10 @@ export default function PackagingPage() {
                 disabled={reprintingId === previewPackage.id}
                 onClick={() => handleReprintPackage(previewPackage)}
               >
-                {reprintingId === previewPackage.id ? 'Printing Label…' : 'Reprint Label'}
+                {reprintingId === previewPackage.id ? 'Mencetak Label…' : 'Cetak Ulang Label'}
               </Button>
               <Button variant="ghost" onClick={() => setPreviewPackage(null)} className="w-full">
-                Close Preview
+                Tutup Pratinjau
               </Button>
             </div>
           </div>
