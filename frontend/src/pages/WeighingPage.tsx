@@ -482,8 +482,8 @@ export default function WeighingPage() {
   }
 
   /* Reset for next farmer weighing */
-  const handleNextWeighing = () => {
-    if ((!sessionPrinted && receptionSession.records.length > 0) || isPrinting) return
+  const handleNextWeighing = (force = false) => {
+    if ((!force && !sessionPrinted && receptionSession.records.length > 0) || isPrinting) return
     updateReceptionSession(emptySession())
     setSaveError('')
     setPrintStatus('Not sent to printer')
@@ -1197,9 +1197,20 @@ export default function WeighingPage() {
               }}>
               {sessionPrinted ? 'Print Again' : printStatus.includes('failed') || receptionSession.closed ? 'Retry Print' : 'Finish & Print'}
             </Button>
-            {(sessionPrinted || (approvedSuccessRecord && !receptionSession.records.length)) && <Button variant="primary" icon="check" touch disabled={isPrinting} onClick={handleNextWeighing}>
-              {sessionPrinted ? 'Next Farmer' : 'Back to Weighing'}
-            </Button>}
+            {(sessionPrinted || (approvedSuccessRecord && !receptionSession.records.length)) ? (
+              <Button variant="primary" icon="check" touch disabled={isPrinting} onClick={() => handleNextWeighing()}>
+                {sessionPrinted ? 'Next Farmer' : 'Back to Weighing'}
+              </Button>
+            ) : receptionSession.closed && (
+              <Button
+                variant="outline"
+                icon="arrow-right"
+                disabled={isPrinting}
+                onClick={() => handleNextWeighing(true)}
+              >
+                Next Farmer (Skip Print)
+              </Button>
+            )}
           </div>
         </div>
       )}
