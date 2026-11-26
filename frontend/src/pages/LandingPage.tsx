@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import Logo from '../components/shared/Logo'
 import Icon from '../components/shared/Icon'
+import { translateStatus } from '../lib/i18n'
 
 export default function LandingPage() {
   /* ── Hero Cycling Frames ── */
@@ -37,28 +38,28 @@ export default function LandingPage() {
   const reelFrames = [
     {
       url: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=1920&q=80',
-      title: 'Harvest Intake & Sacks Weighing',
-      subtitle: 'Precision Platform Scales',
+      title: 'Penerimaan Panen & Penimbangan Waring',
+      subtitle: 'Timbangan Platform Presisi',
     },
     {
       url: 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=1920&q=80',
-      title: 'Automated 3-Tier Potato Grading',
-      subtitle: 'Grade A, B, and C Sorting',
+      title: 'Sortasi Kentang 3-Tingkat Otomatis',
+      subtitle: 'Sortasi Grade A, B, dan C',
     },
     {
       url: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1920&q=80',
-      title: '1 kg Pouch Packaging Line',
-      subtitle: 'Product QR Pouch Labels',
+      title: 'Lini Pengemasan Pouch 1 kg',
+      subtitle: 'Label QR Pouch Produk',
     },
     {
       url: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=1920&q=80',
-      title: 'Warehouse Pallet Stacking & Cold Storage',
-      subtitle: 'RFID & Pallet Label Tracking',
+      title: 'Penataan Palet Gudang & Ruang Pendingin',
+      subtitle: 'Pelacakan Label Palet',
     },
     {
       url: 'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=1920&q=80',
-      title: 'Export Load Verification',
-      subtitle: 'ITF-14 Logistics Dispatch',
+      title: 'Verifikasi Muatan Pengiriman',
+      subtitle: 'Pengiriman Logistik ITF-14',
     },
   ]
 
@@ -142,75 +143,75 @@ export default function LandingPage() {
 
   const stories = [
     {
-      caseId: 'FARMER / 01',
-      badge: 'FAIR WEIGHING',
+      caseId: 'PETANI / 01',
+      badge: 'TIMBANGAN JUJUR',
       farmer: 'KANG ASEP · CIKAJANG, GARUT',
-      duration: '8 MONTHS PARTNER',
+      duration: 'MITRA 8 BULAN',
       quote:
-        'Before SmartGeulis, I was never certain if my potato sacks were weighed fairly by roaming buyers. Now, my receipt is printed right before my eyes the second my harvest lands on the scale. That trust means everything to my family.',
-      metric1: { val: '100%', label: 'Fair Payout' },
-      metric2: { val: '+18%', label: 'Family Income' },
-      metric3: { val: '8', label: 'Harvest Cycles' },
+        'Sebelum SmartGeulis, saya tidak pernah yakin apakah karung kentang saya ditimbang jujur oleh tengkulak. Sekarang, struk langsung tercetak di depan mata begitu hasil panen diletakkan di timbangan. Kepercayaan ini sangat berarti bagi keluarga saya.',
+      metric1: { val: '100%', label: 'Pembayaran Adil' },
+      metric2: { val: '+18%', label: 'Pendapatan Keluarga' },
+      metric3: { val: '8', label: 'Siklus Panen' },
       img: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=600&q=80',
     },
     {
-      caseId: 'FARMER / 02',
-      badge: 'COMMUNITY PRIDE',
+      caseId: 'PETANI / 02',
+      badge: 'KEBANGGAAN DESA',
       farmer: 'BU SITI · CISURUPAN, GARUT',
-      duration: '12 MONTHS PARTNER',
+      duration: 'MITRA 12 BULAN',
       quote:
-        'Seeing our village name appear on people phones when they buy potatoes in supermarkets fills our whole womens group with pride. We are no longer nameless growers—we are respected partners who feed families across Indonesia.',
-      metric1: { val: '+14', label: 'Tons Harvested' },
-      metric2: { val: '100%', label: 'Direct Trace' },
-      metric3: { val: '12', label: 'Months Active' },
+        'Melihat nama desa kami muncul di ponsel pembeli saat berbelanja kentang di supermarket membuat kelompok tani wanita kami bangga. Kami bukan lagi petani tanpa nama—kami mitra terhormat yang memberi makan keluarga Indonesia.',
+      metric1: { val: '+14', label: 'Ton Dipanen' },
+      metric2: { val: '100%', label: 'Lacak Langsung' },
+      metric3: { val: '12', label: 'Bulan Aktif' },
       img: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=600&q=80',
     },
     {
-      caseId: 'FARMER / 03',
-      badge: 'ZERO WASTE',
+      caseId: 'PETANI / 03',
+      badge: 'TANPA LIMBAH',
       farmer: 'PAK ENDANG · BAYONGBONG, GARUT',
-      duration: '14 MONTHS PARTNER',
+      duration: 'MITRA 14 BULAN',
       quote:
-        'Sorting our potatoes into Grade A, B, and C means every single tuber finds its best home. Premium ones go to fresh food stores, while smaller potatoes go directly to local culinary makers. Nothing gets wasted or underpaid.',
-      metric1: { val: '98.5%', label: 'Quality Score' },
-      metric2: { val: '3', label: 'Clean Grades' },
-      metric3: { val: '14', label: 'Months Partner' },
+        'Sortasi kentang ke Grade A, B, dan C memastikan setiap umbi menemukan pasarnya yang tepat. Kentang premium masuk ke toko segar, sementara yang lebih kecil langsung ke pelaku kuliner lokal. Tidak ada yang terbuang atau dihargai murah.',
+      metric1: { val: '98.5%', label: 'Skor Kualitas' },
+      metric2: { val: '3', label: 'Grade Bersih' },
+      metric3: { val: '14', label: 'Bulan Bermitra' },
       img: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
     },
     {
-      caseId: 'TEAM / 04',
-      badge: 'PACKHOUSE TEAM',
-      farmer: 'TEH RINA · GARUT OPERATIONS',
-      duration: '10 MONTHS ACTIVE',
+      caseId: 'TIM / 04',
+      badge: 'TIM RUMAH KEMAS',
+      farmer: 'TEH RINA · OPERASIONAL GARUT',
+      duration: 'AKTIF 10 BULAN',
       quote:
-        'Working in this packhouse is calm and uplifting. The scales are steady, the labels print instantly, and every potato is handled gently. We can prepare thousands of fresh bags every day knowing families will enjoy healthy food.',
-      metric1: { val: '3,800', label: 'Bags / Day' },
-      metric2: { val: '0', label: 'Weight Disputes' },
-      metric3: { val: '10', label: 'Months Live' },
+        'Bekerja di rumah kemas ini terasa tenang dan menyenangkan. Timbangan stabil, label tercetak seketika, dan setiap kentang ditangani dengan hati-hati. Kami dapat menyiapkan ribuan kemasan segar setiap hari untuk keluarga.',
+      metric1: { val: '3.800', label: 'Kemasan / Hari' },
+      metric2: { val: '0', label: 'Sengketa Berat' },
+      metric3: { val: '10', label: 'Bulan Beroperasi' },
       img: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=600&q=80',
     },
     {
-      caseId: 'FARMER / 05',
-      badge: 'FAST INTAKE',
+      caseId: 'PETANI / 05',
+      badge: 'PENERIMAAN CEPAT',
       farmer: 'PAK UJANG · SUKARESMI, GARUT',
-      duration: '6 MONTHS PARTNER',
+      duration: 'MITRA 6 BULAN',
       quote:
-        'I used to wait hours in line just to get a handwritten note that easily got torn or lost. With SmartGeulis, I deliver my harvest in the morning, receive my official printed slip in two minutes, and return home with total confidence.',
-      metric1: { val: '2 min', label: 'Average Intake' },
-      metric2: { val: '100%', label: 'Clear Records' },
-      metric3: { val: '6', label: 'Months Partner' },
+        'Dulu saya harus mengantre berjam-jam hanya untuk catatan tulis tangan yang mudah sobek atau hilang. Dengan SmartGeulis, saya kirim panen pagi hari, terima struk resmi dalam dua menit, dan pulang dengan tenang.',
+      metric1: { val: '2 mnt', label: 'Rata-rata Masuk' },
+      metric2: { val: '100%', label: 'Catatan Jelas' },
+      metric3: { val: '6', label: 'Bulan Bermitra' },
       img: 'https://images.unsplash.com/photo-1628352081506-83c43123ed6d?auto=format&fit=crop&w=600&q=80',
     },
     {
-      caseId: 'FAMILY / 06',
-      badge: 'HAPPY CONSUMER',
-      farmer: 'IBU LILIS · HOME COOK',
-      duration: '18 MONTHS CUSTOMER',
+      caseId: 'KELUARGA / 06',
+      badge: 'KONSUMEN PUAS',
+      farmer: 'IBU LILIS · IBU RUMAH TANGGA',
+      duration: 'PELANGGAN 18 BULAN',
       quote:
-        'Whenever I buy potatoes for my children, scanning the QR code on the pouch shows the actual grower and harvest date. Knowing where my food came from gives me genuine peace of mind and connects my kitchen to real farmers.',
-      metric1: { val: '18,500+', label: 'Family Scans' },
-      metric2: { val: '0', label: 'Apps Required' },
-      metric3: { val: '18', label: 'Months Trust' },
+        'Setiap kali membeli kentang untuk anak-anak, memindai kode QR pada pouch menampilkan petani asli dan tanggal panennya. Mengetahui asal makanan memberi ketenangan sekaligus menghubungkan dapur saya dengan petani.',
+      metric1: { val: '18.500+', label: 'Pindaian Keluarga' },
+      metric2: { val: '0', label: 'Tanpa Aplikasi' },
+      metric3: { val: '18', label: 'Bulan Kepercayaan' },
       img: 'https://images.unsplash.com/photo-1516253593875-bd7ba052fbc5?auto=format&fit=crop&w=600&q=80',
     },
   ]
@@ -232,8 +233,8 @@ export default function LandingPage() {
   const handleBookingSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setToastMessage({
-      title: 'Trial request received',
-      desc: 'Our deployment team will verify your packhouse setup within 24 hours.',
+      title: 'Permintaan uji coba diterima',
+      desc: 'Tim implementasi kami akan memverifikasi kesiapan rumah kemas Anda dalam 24 jam.',
     })
     setToastVisible(true)
     setTimeout(() => setToastVisible(false), 5000)
@@ -428,29 +429,29 @@ export default function LandingPage() {
                 SmartGeulis
               </div>
               <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
-                TRACEABILITY SYSTEM
+                SISTEM KETERTELUSURAN
               </div>
             </div>
           </Link>
 
           <nav className="hidden lg:flex items-center gap-8 font-heading text-xs uppercase tracking-[0.18em] text-[#666666]">
             <a href="#facility" className="hover:text-[#171717] transition-colors">
-              Facility
+              Fasilitas
             </a>
             <a href="#pipeline" className="hover:text-[#171717] transition-colors">
-              Journey
+              Alur Kerja
             </a>
             <a href="#hardware" className="hover:text-[#171717] transition-colors">
-              Stations
+              Stasiun
             </a>
             <a href="#stories" className="hover:text-[#171717] transition-colors">
-              Farmers
+              Petani
             </a>
             <a href="#booking" className="hover:text-[#171717] transition-colors">
-              Connect
+              Hubungi Kami
             </a>
             <Link to="/traceability" className="hover:text-[#ea580c] text-[#ea580c] font-semibold transition-colors">
-              Public Trace
+              Lacak Publik
             </Link>
           </nav>
 
@@ -465,13 +466,13 @@ export default function LandingPage() {
                     : 'bg-red-500'
                 }`}
               ></span>
-              <span className="tracking-wider">SYSTEM STATUS · {backendStatus}</span>
+              <span className="tracking-wider uppercase">STATUS SISTEM · {translateStatus(backendStatus)}</span>
             </div>
             <Link
               to="/login"
               className="font-heading text-xs tracking-[0.18em] uppercase text-white bg-[#000000] px-5 py-2.5 hover:bg-[#333333] transition-colors rounded-none"
             >
-              Sign In
+              Masuk
             </Link>
           </div>
         </div>
@@ -523,7 +524,7 @@ export default function LandingPage() {
                 }`}
               ></span>
               <span className="tracking-[0.2em] uppercase font-semibold">
-                SYSTEM STATUS · {backendStatus}
+                STATUS SISTEM · {translateStatus(backendStatus)}
               </span>
             </div>
           </div>
@@ -532,19 +533,19 @@ export default function LandingPage() {
           <div className="max-w-5xl">
             <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
               <span className="w-8 h-[2px] bg-[#ea580c]"></span>
-              <span>EST. 2026 · GARUT HIGHLAND PACKHOUSE</span>
+              <span>EST. 2026 · RUMAH KEMAS DATARAN TINGGI GARUT</span>
             </div>
 
             <h1 className="font-display text-[13vw] md:text-[9.5vw] lg:text-[7.5vw] leading-[0.85] mb-6 tracking-tight">
-              <span className="block">GROWN WITH CARE.</span>
-              <span className="block text-stroke-white">WEIGHED WITH HONESTY.</span>
+              <span className="block">DIRAWAT SEPENUH HATI.</span>
+              <span className="block text-stroke-white">DITIMBANG DENGAN JUJUR.</span>
               <span className="block">
-                TRACEABLE IN <span className="text-[#ea580c]">FULL.</span>
+                TERTELUSUR <span className="text-[#ea580c]">PENUH.</span>
               </span>
             </h1>
 
             <p className="max-w-2xl text-white/80 text-base md:text-lg leading-relaxed font-body">
-              From the volcanic soils of Garut into caring family kitchens. SmartGeulis connects local highland farmers directly with consumers through open scales, gentle handling, and honest traceability in every bag.
+              Dari tanah vulkanik Garut langsung ke dapur keluarga. SmartGeulis menghubungkan petani dataran tinggi dengan konsumen melalui timbangan transparan, penanganan cermat, dan ketertelusuran jujur di setiap kemasan.
             </p>
           </div>
 
@@ -568,10 +569,10 @@ export default function LandingPage() {
               </div>
               <div>
                 <div className="font-mono-custom text-[10px] tracking-[0.2em] text-white/60 uppercase">
-                  ACTIVE PACKHOUSE STATIONS
+                  STASIUN RUMAH KEMAS AKTIF
                 </div>
                 <div className="font-heading text-sm text-white tracking-wider">
-                  3 Connected Stations · Ready for Daily Work
+                  3 Stasiun Terhubung · Siap Beroperasi Harian
                 </div>
               </div>
             </div>
@@ -597,29 +598,29 @@ export default function LandingPage() {
         {/* Scrolling Ticker Marquee */}
         <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-black/80 backdrop-blur-md py-3 overflow-hidden z-20">
           <div className="marquee-track font-heading text-xs tracking-[0.25em] uppercase text-white/70">
-            <span className="px-8">WEIGHED & APPROVED</span>
+            <span className="px-8">DITIMBANG & DISETUJUI</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">PRODUCT QR LABELS</span>
+            <span className="px-8">LABEL QR PRODUK</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">CONNECTED SCALES</span>
+            <span className="px-8">TIMBANGAN TERHUBUNG</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">CLEAR SORTING</span>
+            <span className="px-8">SORTASI TRANSPARAN</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">VERIFIED WEIGHT</span>
+            <span className="px-8">BERAT TERVERIFIKASI</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">PUBLIC QR TRACEABILITY</span>
+            <span className="px-8">KETERTELUSURAN QR PUBLIK</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">FIELD TO EXPORT CONTAINER</span>
+            <span className="px-8">KEBUN HINGGA PENGIRIMAN</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">WEIGHED & APPROVED</span>
+            <span className="px-8">DITIMBANG & DISETUJUI</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">PRODUCT QR LABELS</span>
+            <span className="px-8">LABEL QR PRODUK</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">CONNECTED SCALES</span>
+            <span className="px-8">TIMBANGAN TERHUBUNG</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">CLEAR SORTING</span>
+            <span className="px-8">SORTASI TRANSPARAN</span>
             <span className="text-[#ea580c]">/</span>
-            <span className="px-8">VERIFIED WEIGHT</span>
+            <span className="px-8">BERAT TERVERIFIKASI</span>
             <span className="text-[#ea580c]">/</span>
           </div>
         </div>
@@ -634,7 +635,7 @@ export default function LandingPage() {
                 {counters.years}+
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
-                Highland Facility
+                Fasilitas Dataran Tinggi
               </div>
             </div>
 
@@ -643,16 +644,16 @@ export default function LandingPage() {
                 {counters.farmers}+
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
-                Farming Families
+                Keluarga Petani
               </div>
             </div>
 
             <div className="border-l-2 border-[#eaeaea] pl-6">
               <div className="font-display text-6xl md:text-7xl text-[#171717] tabular-nums">
-                {counters.tons.toLocaleString()}+
+                {counters.tons.toLocaleString('id-ID')}+
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
-                Kilograms Weighed with Pride
+                Kilogram Ditimbang Jujur
               </div>
             </div>
 
@@ -661,7 +662,7 @@ export default function LandingPage() {
                 {counters.stations}
               </div>
               <div className="font-mono-custom text-[11px] text-[#666666] tracking-[0.2em] uppercase mt-2">
-                Care & Quality Stations
+                Stasiun Mutu & Penanganan
               </div>
             </div>
           </div>
@@ -675,16 +676,16 @@ export default function LandingPage() {
             <div className="lg:col-span-7">
               <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4 font-semibold">
                 <span className="w-8 h-[2px] bg-[#ea580c]"></span>
-                <span>01 — Physical Facility & Headquarters</span>
+                <span>01 — Fasilitas Fisik & Pusat Operasional</span>
               </div>
               <h2 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[0.9] text-[#171717]">
-                THE HEART OF OUR <br />
-                <span className="text-[#ea580c]">HIGHLAND PACKHOUSE.</span>
+                JANTUNG <br />
+                <span className="text-[#ea580c]">RUMAH KEMAS GARUT.</span>
               </h2>
             </div>
             <div className="lg:col-span-5 flex flex-col justify-end">
               <p className="text-[#666666] text-base leading-relaxed font-body">
-                Located in the fertile volcanic highlands of Garut, West Java, the SmartGeulis packhouse serves as the physical home where fresh harvests are received directly from local farming families, sorted with care, and prepared for dining tables across the nation.
+                Berlokasi di dataran tinggi vulkanik Garut, Jawa Barat, rumah kemas SmartGeulis menjadi pusat penerimaan hasil panen langsung dari petani lokal, disortasi dengan cermat, dan disiapkan menuju meja makan di seluruh nusantara.
               </p>
             </div>
           </div>
@@ -694,17 +695,17 @@ export default function LandingPage() {
             <div className="relative overflow-hidden bg-black/5 border border-[#eaeaea] group">
               <img
                 src="/Papan Nama Warehouse.png"
-                alt="SmartGeulis Packhouse & Warehouse Signboard"
+                alt="Papan Nama Rumah Kemas & Gudang SmartGeulis"
                 className="w-full h-auto max-h-[580px] object-contain mx-auto transition-transform duration-700 group-hover:scale-[1.01]"
               />
               {/* Badge Overlays */}
               <div className="absolute top-4 left-4 bg-black/85 backdrop-blur-md border border-white/20 text-white px-3.5 py-1.5 text-xs font-mono-custom uppercase tracking-wider flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#ea580c] animate-pulse"></span>
-                <span>Official Facility Signboard</span>
+                <span>Papan Nama Fasilitas Resmi</span>
               </div>
               <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-md border border-[#eaeaea] text-[#171717] px-4 py-2 text-xs font-mono-custom tracking-wider hidden sm:flex items-center gap-2 shadow-sm font-semibold">
                 <span className="w-2 h-2 bg-[#ea580c]"></span>
-                <span>Garut Highlands · West Java, Indonesia</span>
+                <span>Dataran Tinggi Garut · Jawa Barat, Indonesia</span>
               </div>
             </div>
           </div>
@@ -715,9 +716,9 @@ export default function LandingPage() {
               <div className="w-10 h-10 bg-[#fff7ed] border border-[#ffedd5] text-[#ea580c] flex items-center justify-center mb-4">
                 <Icon name="scale" size={20} />
               </div>
-              <h3 className="font-display text-2xl text-[#171717] mb-2">OPEN & HONEST INTAKE</h3>
+              <h3 className="font-display text-2xl text-[#171717] mb-2">PENERIMAAN TERBUKA & JUJUR</h3>
               <p className="text-xs text-[#666666] leading-relaxed font-body">
-                Local growers arrive every morning with fresh harvest sacks. Digital scales with large bright screens let farmers verify their weight directly with total peace of mind.
+                Petani lokal datang setiap pagi membawa waring panen segar. Timbangan digital berlayar terang memudahkan petani memastikan berat panennya secara langsung dengan tenang.
               </p>
             </div>
 
@@ -725,9 +726,9 @@ export default function LandingPage() {
               <div className="w-10 h-10 bg-[#fff7ed] border border-[#ffedd5] text-[#ea580c] flex items-center justify-center mb-4">
                 <Icon name="package" size={20} />
               </div>
-              <h3 className="font-display text-2xl text-[#171717] mb-2">COOL HIGHLAND STORAGE</h3>
+              <h3 className="font-display text-2xl text-[#171717] mb-2">PENYIMPANAN SEJUK ALAMI</h3>
               <p className="text-xs text-[#666666] leading-relaxed font-body">
-                Naturally cooled highland air and clean, ventilated storage bays preserve crispness, moisture, and natural flavor without artificial chemicals or synthetic treatments.
+                Udara sejuk dataran tinggi dan ruang gudang berventilasi menjaga kesegaran, kadar air, dan rasa alami kentang tanpa bahan kimia tambahan.
               </p>
             </div>
 
@@ -735,9 +736,9 @@ export default function LandingPage() {
               <div className="w-10 h-10 bg-[#fff7ed] border border-[#ffedd5] text-[#ea580c] flex items-center justify-center mb-4">
                 <Icon name="users" size={20} />
               </div>
-              <h3 className="font-display text-2xl text-[#171717] mb-2">COMMUNITY & EMPOWERMENT</h3>
+              <h3 className="font-display text-2xl text-[#171717] mb-2">KOMUNITAS & PEMBERDAYAAN</h3>
               <p className="text-xs text-[#666666] leading-relaxed font-body">
-                Co-developed with Universitas Padjadjaran and Eptilu, our packhouse serves as an open learning hub for sustainable farming, transparent economics, and fair trade.
+                Dikembangkan bersama Universitas Padjadjaran dan Eptilu, rumah kemas kami menjadi pusat pembelajaran pertanian berkelanjutan, transparansi ekonomi, dan perdagangan yang adil.
               </p>
             </div>
           </div>
@@ -751,18 +752,18 @@ export default function LandingPage() {
             <div className="lg:col-span-6">
               <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
                 <span className="w-8 h-[2px] bg-[#ea580c]"></span>
-                <span>02 — Operational Pipeline</span>
+                <span>02 — Alur Operasional</span>
               </div>
               <h2 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9]">
-                Three stations.<br />
-                <span className="text-stroke">One commitment:</span><br />
-                <span className="text-[#ea580c]">100% honest quality.</span>
+                Tiga stasiun.<br />
+                <span className="text-stroke">Satu komitmen:</span><br />
+                <span className="text-[#ea580c]">100% mutu jujur.</span>
               </h2>
             </div>
 
             <div className="lg:col-span-6 flex flex-col justify-end">
               <p className="text-[#666666] text-lg leading-relaxed mb-6 font-body">
-                From the moment morning harvests arrive to the sealed retail pouch on your dining table. Explore how our three dedicated care stations ensure every potato is weighed honestly, sorted by quality, and packed with pride.
+                Sejak hasil panen pagi tiba hingga tersegel dalam pouch ritel di meja makan Anda. Lihat bagaimana tiga stasiun khusus kami memastikan setiap kentang ditimbang jujur, disortasi sesuai mutu, dan dikemas dengan cermat.
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -773,7 +774,7 @@ export default function LandingPage() {
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
-                  All Stations
+                  Semua Stasiun
                 </button>
                 <button
                   onClick={() => setActiveCategory('weighing')}
@@ -783,7 +784,7 @@ export default function LandingPage() {
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
-                  Weighing
+                  Penerimaan
                 </button>
                 <button
                   onClick={() => setActiveCategory('sorting')}
@@ -793,7 +794,7 @@ export default function LandingPage() {
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
-                  Sorting
+                  Sortasi
                 </button>
                 <button
                   onClick={() => setActiveCategory('packaging')}
@@ -803,7 +804,7 @@ export default function LandingPage() {
                       : 'border-[#eaeaea] bg-white text-[#666666] hover:border-[#d1d5db]'
                   }`}
                 >
-                  Packaging
+                  Pengemasan
                 </button>
               </div>
             </div>
@@ -817,48 +818,48 @@ export default function LandingPage() {
                 <div className="relative h-64 overflow-hidden bg-black">
                   <img
                     src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80"
-                    alt="Intake Weighing Station"
+                    alt="Stasiun Penerimaan & Penimbangan"
                     className="w-full h-full object-cover filter contrast-[1.2] opacity-80 group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#f59e0b] tracking-[0.2em]">
-                    01 / INTAKE WEIGHING
+                    01 / PENERIMAAN
                   </div>
                   <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#ea580c] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
-                    RECEIPT + LABEL
+                    STRUK + LABEL
                   </div>
                 </div>
 
                 <div className="p-7">
-                  <h3 className="font-display text-4xl mb-3 text-[#171717]">HARVEST INTAKE</h3>
+                  <h3 className="font-display text-4xl mb-3 text-[#171717]">PENERIMAAN PANEN</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Greeting local farmers at dawn, recording fresh harvest sacks on clear digital scales, and printing an immediate receipt for the grower with zero guesswork.
+                    Menyambut petani lokal sejak pagi, mencatat waring panen segar pada timbangan digital yang transparan, dan mencetak struk langsung tanpa tebak-tebakan.
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Welcome
+                        Penerimaan
                       </div>
-                      <div className="font-heading text-base text-[#171717]">DIRECT GROWER INTAKE</div>
+                      <div className="font-heading text-base text-[#171717]">LANGSUNG DARI PETANI</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Weighing
+                        Penimbangan
                       </div>
-                      <div className="font-heading text-base text-[#171717]">CERTIFIED DIGITAL SCALE</div>
+                      <div className="font-heading text-base text-[#171717]">TIMBANGAN DIGITAL PRESISI</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Trust
+                        Kepercayaan
                       </div>
-                      <div className="font-heading text-base text-[#171717]">HONEST TARE SUBTRACTION</div>
+                      <div className="font-heading text-base text-[#171717]">POTONGAN TARA JUJUR</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Confirmation
+                        Konfirmasi
                       </div>
-                      <div className="font-heading text-base text-[#171717]">PRINTED SLIP + SACK TAG</div>
+                      <div className="font-heading text-base text-[#171717]">STRUK + LABEL WARING</div>
                     </div>
                   </div>
 
@@ -866,7 +867,7 @@ export default function LandingPage() {
                     to="/dashboard/weighing"
                     className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#ea580c] transition-colors"
                   >
-                    <span>Launch Station</span>
+                    <span>Buka Stasiun</span>
                     <Icon name="arrow-right" size={16} />
                   </Link>
                 </div>
@@ -879,48 +880,48 @@ export default function LandingPage() {
                 <div className="relative h-64 overflow-hidden bg-black">
                   <img
                     src="https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80"
-                    alt="Sorting Station"
+                    alt="Stasiun Sortasi"
                     className="w-full h-full object-cover filter contrast-[1.2] opacity-80 group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#f59e0b] tracking-[0.2em]">
-                    02 / CLASSIFICATION
+                    02 / KLASIFIKASI
                   </div>
                   <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#ea580c] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
-                    SORTING FLOW
+                    ALUR SORTASI
                   </div>
                 </div>
 
                 <div className="p-7">
-                  <h3 className="font-display text-4xl mb-3 text-[#171717]">SORTING & GRADING</h3>
+                  <h3 className="font-display text-4xl mb-3 text-[#171717]">SORTASI</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Carefully selecting potatoes by hand and eye into Grade A, B, and C so premium tubers reach supermarkets and every harvest finds its best home without unnecessary waste.
+                    Memilih kentang secara cermat ke dalam Grade A, B, dan C agar umbi terbaik menjangkau supermarket dan seluruh hasil panen terserap optimal tanpa limbah.
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Selection
+                        Seleksi
                       </div>
-                      <div className="font-heading text-base text-[#171717]">HAND & EYE QUALITY SORT</div>
+                      <div className="font-heading text-base text-[#171717]">SORTASI MUTU CERMAT</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Categories
+                        Kategori
                       </div>
                       <div className="font-heading text-base text-[#171717]">GRADE A / B / C</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Identification
+                        Identifikasi
                       </div>
-                      <div className="font-heading text-base text-[#171717]">PALLET TRACKING TAG</div>
+                      <div className="font-heading text-base text-[#171717]">LABEL PELACAKAN PALET</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Destination
+                        Tahap Lanjut
                       </div>
-                      <div className="font-heading text-base text-[#171717]">READY FOR PACKAGING</div>
+                      <div className="font-heading text-base text-[#171717]">SIAP PENGEMASAN</div>
                     </div>
                   </div>
 
@@ -928,7 +929,7 @@ export default function LandingPage() {
                     to="/dashboard/sorting"
                     className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#ea580c] transition-colors"
                   >
-                    <span>Launch Station</span>
+                    <span>Buka Stasiun</span>
                     <Icon name="arrow-right" size={16} />
                   </Link>
                 </div>
@@ -941,48 +942,48 @@ export default function LandingPage() {
                 <div className="relative h-64 overflow-hidden bg-black">
                   <img
                     src="https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80"
-                    alt="Packaging Station"
+                    alt="Stasiun Pengemasan"
                     className="w-full h-full object-cover filter contrast-[1.2] opacity-80 group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute top-4 left-4 font-mono-custom text-[11px] text-[#f59e0b] tracking-[0.2em]">
-                    03 / RETAIL POUCH
+                    03 / POUCH RITEL
                   </div>
                   <div className="absolute top-4 right-4 px-2.5 py-1 bg-[#171717] text-white font-mono-custom text-[10px] tracking-wider uppercase font-semibold">
-                    3-CHANNEL CLUSTER
+                    KLASTER 3-JALUR
                   </div>
                 </div>
 
                 <div className="p-7">
-                  <h3 className="font-display text-4xl mb-3 text-[#171717]">RETAIL PACKAGING</h3>
+                  <h3 className="font-display text-4xl mb-3 text-[#171717]">PENGEMASAN RITEL</h3>
                   <p className="text-[#666666] text-sm leading-relaxed mb-6 font-body">
-                    Weighing fresh potatoes into clean 1 kg stand-up pouches, sealed with a unique QR code that connects home cooks directly to the grower who nurtured the crop.
+                    Menimbang kentang segar ke dalam pouch bersih 1 kg, disegel dengan kode QR unik yang menghubungkan konsumen langsung dengan petani penanamnya.
                   </p>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-6 pb-6 border-b border-[#eaeaea]">
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Family Unit
+                        Kemasan Keluarga
                       </div>
-                      <div className="font-heading text-base text-[#171717]">1 KG RETAIL POUCH</div>
+                      <div className="font-heading text-base text-[#171717]">POUCH RITEL 1 KG</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Freshness
+                        Kesegaran
                       </div>
-                      <div className="font-heading text-base text-[#171717]">BREATHE-EASY PACK</div>
+                      <div className="font-heading text-base text-[#171717]">KEMASAN BERSIRKULASI</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Transparency
+                        Transparansi
                       </div>
-                      <div className="font-heading text-base text-[#171717]">SCANNABLE FARMER QR</div>
+                      <div className="font-heading text-base text-[#171717]">QR PETANI SIAP PINDAI</div>
                     </div>
                     <div>
                       <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
-                        Packhouse Line
+                        Lini Kemas
                       </div>
-                      <div className="font-heading text-base text-[#171717]">DEDICATED GRADE LINES</div>
+                      <div className="font-heading text-base text-[#171717]">JALUR KHUSUS PER GRADE</div>
                     </div>
                   </div>
 
@@ -990,7 +991,7 @@ export default function LandingPage() {
                     to="/dashboard/packaging"
                     className="flex items-center justify-between font-heading text-sm tracking-[0.15em] uppercase text-[#171717] hover:text-[#ea580c] transition-colors"
                   >
-                    <span>Launch Station</span>
+                    <span>Buka Stasiun</span>
                     <Icon name="arrow-right" size={16} />
                   </Link>
                 </div>
@@ -1007,17 +1008,17 @@ export default function LandingPage() {
             <div className="lg:col-span-7">
               <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
                 <span className="w-8 h-[2px] bg-[#ea580c]"></span>
-                <span>03 — Stations</span>
+                <span>03 — Stasiun</span>
               </div>
               <h2 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9]">
-                Simple, caring tools.<br />
-                Built for <span className="text-[#ea580c]">people</span>,<br />
-                designed for <span className="text-stroke">trust.</span>
+                Alat sederhana & tepat.<br />
+                Dibuat untuk <span className="text-[#ea580c]">manusia</span>,<br />
+                dirancang untuk <span className="text-stroke">kepercayaan.</span>
               </h2>
             </div>
             <div className="lg:col-span-5 flex flex-col justify-end">
               <p className="text-[#666666] text-base leading-relaxed font-body">
-                No complex manuals or confusing jargon. Each packhouse tool is designed for everyday ease, instant clarity, and fair trade for farmers and families. Hover or tap any card below to explore.
+                Tanpa panduan rumit atau istilah membingungkan. Setiap perangkat rumah kemas dirancang untuk kemudahan harian, kejelasan seketika, dan perdagangan adil bagi petani serta keluarga. Arahkan kursor atau ketuk kartu di bawah.
               </p>
             </div>
           </div>
@@ -1035,29 +1036,29 @@ export default function LandingPage() {
                   <div className="relative h-64 overflow-hidden bg-black">
                     <img
                       src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80"
-                      alt="Digital Scales"
+                      alt="Timbangan Digital"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
                     <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
                       / 01
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
-                      RAPID CAPTURE
+                      BACA CEPAT
                     </div>
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">FAIR DIGITAL SCALES</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">TIMBANGAN DIGITAL JUJUR</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        Honest Weight for Every Farmer
+                        Berat Akurat untuk Setiap Petani
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        FAIR WEIGHING
+                        TIMBANGAN ADIL
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#ea580c] tracking-wider font-semibold">
-                        EXPLORE →
+                        LIHAT →
                       </span>
                     </div>
                   </div>
@@ -1067,32 +1068,32 @@ export default function LandingPage() {
                 <div className="flip-face flip-back border border-[#f97316] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
                     <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-3">
-                      / Everyday Trust
+                      / Kepercayaan Harian
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">FAIR NUMBERS YOU TRUST</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">ANGKA JUJUR TERPERCAYA</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Large bright display seen by farmer & operator</span>
+                        <span>Layar besar dan terang terlihat jelas oleh petani & operator</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>One-touch tare deduction for sack weight only</span>
+                        <span>Pengurangan tara satu sentuhan khusus berat waring</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Gentle, non-slip platform for fresh potatoes</span>
+                        <span>Platform antiselip yang aman untuk kentang segar</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Instant confirmation so growers leave confident</span>
+                        <span>Konfirmasi langsung agar petani pulang dengan tenang</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Complete Honesty</div>
-                    <div className="font-display text-xl text-[#ea580c]">ZERO GUESSWORK</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Clear numbers you can see before any deal is settled.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Kejujuran Penuh</div>
+                    <div className="font-display text-xl text-[#ea580c]">TANPA PERKIRAAN</div>
+                    <p className="text-[11px] text-[#666666] mt-1">Angka jelas yang dapat dilihat sebelum transaksi disepakati.</p>
                   </div>
                 </div>
               </div>
@@ -1109,29 +1110,29 @@ export default function LandingPage() {
                   <div className="relative h-64 overflow-hidden bg-black">
                     <img
                       src="https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=600&q=80"
-                      alt="Pallet QR Label Engine"
+                      alt="Mesin Cetak Label QR Palet"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
                     <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
                       / 02
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
-                      QR + RECEIPT
+                      QR + STRUK
                     </div>
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">PRINTED PROOF</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">BUKTI CETAK</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        Immediate Receipts in Hand
+                        Struk Resmi Langsung di Tangan
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        OFFICIAL SLIPS
+                        STRUK RESMI
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#ea580c] tracking-wider font-semibold">
-                        EXPLORE →
+                        LIHAT →
                       </span>
                     </div>
                   </div>
@@ -1141,32 +1142,32 @@ export default function LandingPage() {
                 <div className="flip-face flip-back border border-[#f97316] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
                     <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-3">
-                      / Everyday Confidence
+                      / Kepastian Harian
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">A RECEIPT TO TAKE HOME</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">STRUK UNTUK DIBAWA PULANG</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Instant printed receipt handed to farmer before leaving</span>
+                        <span>Struk cetak langsung diserahkan ke petani sebelum pulang</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Weather-resistant tag attached to each mesh waring sack</span>
+                        <span>Label tahan cuaca terpasang pada setiap waring</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Clear numbering for simple cooperative accounting</span>
+                        <span>Penomoran jelas untuk pembukuan koperasi yang rapi</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Operates reliably without depending on internet speed</span>
+                        <span>Tetap andal beroperasi tanpa bergantung kecepatan internet</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Permanent Record</div>
-                    <div className="font-display text-xl text-[#ea580c]">PEACE OF MIND</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Tangible printed proof for every single kilogram delivered.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Catatan Permanen</div>
+                    <div className="font-display text-xl text-[#ea580c]">KETENANGAN HATI</div>
+                    <p className="text-[11px] text-[#666666] mt-1">Bukti cetak nyata untuk setiap kilogram yang disetorkan.</p>
                   </div>
                 </div>
               </div>
@@ -1183,29 +1184,29 @@ export default function LandingPage() {
                   <div className="relative h-64 overflow-hidden bg-black">
                     <img
                       src="https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=600&q=80"
-                      alt="Packaging Lines"
+                      alt="Lini Pengemasan"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
                     <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
                       / 03
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
-                      PARALLEL LINES
+                      LINI PARALEL
                     </div>
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">KITCHEN POUCHES</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">POUCH DAPUR</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        Convenient 1 kg Family Sizing
+                        Ukuran Praktis 1 kg untuk Keluarga
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        GRADE-SPECIFIC
+                        SESUAI GRADE
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#ea580c] tracking-wider font-semibold">
-                        EXPLORE →
+                        LIHAT →
                       </span>
                     </div>
                   </div>
@@ -1215,32 +1216,32 @@ export default function LandingPage() {
                 <div className="flip-face flip-back border border-[#f97316] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
                     <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-3">
-                      / Table-Ready Quality
+                      / Mutu Siap Masak
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">SEALED FOR FRESHNESS</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">TERSEGEL SEGAR</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Grade A Line: Hand-selected premium potatoes for fresh markets</span>
+                        <span>Lini Grade A: Kentang pilihan terbaik untuk pasar segar</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Grade B Line: Wholesome, affordable table potatoes for daily cooking</span>
+                        <span>Lini Grade B: Kentang konsumsi sehat & terjangkau untuk harian</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Grade C Line: Consistent quality for food makers and local chefs</span>
+                        <span>Lini Grade C: Mutu konsisten untuk pelaku kuliner lokal</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Breathe-easy pouches that preserve farm-fresh firmness</span>
+                        <span>Pouch bersirkulasi udara yang menjaga kesegaran umbi</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Family Sizing</div>
-                    <div className="font-display text-xl text-[#ea580c]">1 KG POUCH</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Perfect portion for family cooking and easy storage.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Ukuran Keluarga</div>
+                    <div className="font-display text-xl text-[#ea580c]">POUCH 1 KG</div>
+                    <p className="text-[11px] text-[#666666] mt-1">Porsi ideal untuk masakan keluarga dan mudah disimpan.</p>
                   </div>
                 </div>
               </div>
@@ -1257,29 +1258,29 @@ export default function LandingPage() {
                   <div className="relative h-64 overflow-hidden bg-black">
                     <img
                       src="https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=600&q=80"
-                      alt="Public Traceability Web Engine"
+                      alt="Portal Web Ketertelusuran Publik"
                       className="w-full h-full object-cover filter contrast-[1.25] brightness-90"
                     />
                     <div className="absolute top-4 left-4 font-mono-custom text-[10px] text-[#f59e0b] tracking-[0.2em]">
                       / 04
                     </div>
                     <div className="absolute top-4 right-4 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-white font-mono-custom text-[10px] tracking-wider uppercase">
-                      PUBLIC PORTAL
+                      PORTAL PUBLIK
                     </div>
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-display text-3xl leading-none text-[#171717]">PHONE SCAN</h3>
+                      <h3 className="font-display text-3xl leading-none text-[#171717]">PINDAI PONSEL</h3>
                       <p className="text-[#666666] text-xs mt-2 font-heading tracking-wider uppercase">
-                        Meet Your Grower with One Tap
+                        Kenali Petani dalam Sekali Pindai
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-[#eaeaea]">
                       <span className="font-mono-custom text-[10px] text-[#666666] tracking-wider">
-                        NO APP NEEDED
+                        TANPA APLIKASI
                       </span>
                       <span className="font-mono-custom text-[10px] text-[#ea580c] tracking-wider font-semibold">
-                        EXPLORE →
+                        LIHAT →
                       </span>
                     </div>
                   </div>
@@ -1289,32 +1290,32 @@ export default function LandingPage() {
                 <div className="flip-face flip-back border border-[#f97316] bg-white p-6 flex flex-col justify-between shadow-md">
                   <div>
                     <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-3">
-                      / Farm-to-Fork Story
+                      / Kisah Kebun ke Meja
                     </div>
-                    <h3 className="font-display text-2xl mb-4 text-[#171717]">MEET YOUR GROWER</h3>
+                    <h3 className="font-display text-2xl mb-4 text-[#171717]">KENALI PETANI ANDA</h3>
                     <ul className="space-y-2.5 text-xs text-[#525252] font-body">
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Point your normal phone camera to view in seconds</span>
+                        <span>Arahkan kamera ponsel biasa untuk melihat dalam hitungan detik</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>See the grower name, highland village, and harvest date</span>
+                        <span>Lihat nama petani, desa dataran tinggi, dan tanggal panen</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Know your food was grown responsibly and fairly traded</span>
+                        <span>Pastikan pangan ditanam bertanggung jawab dan diperdagangkan adil</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="check-circle" size={14} className="text-[#ea580c] shrink-0" />
-                        <span>Celebrate the local farming families who feed us</span>
+                        <span>Apresiasi keluarga petani lokal yang memproduksi pangan kita</span>
                       </li>
                     </ul>
                   </div>
                   <div className="pt-4 border-t border-[#eaeaea]">
-                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Zero Downloads</div>
-                    <div className="font-display text-xl text-[#ea580c]">ANY SMARTPHONE</div>
-                    <p className="text-[11px] text-[#666666] mt-1">Tap the link to immediately view the genuine harvest story.</p>
+                    <div className="font-mono-custom text-[10px] text-[#666666] uppercase mb-1">Tanpa Unduhan</div>
+                    <div className="font-display text-xl text-[#ea580c]">SEMUA PONSEL</div>
+                    <p className="text-[11px] text-[#666666] mt-1">Ketuk tautan untuk langsung melihat riwayat panen asli.</p>
                   </div>
                 </div>
               </div>
@@ -1330,20 +1331,20 @@ export default function LandingPage() {
             <div className="lg:col-span-7">
               <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
                 <span className="w-8 h-[2px] bg-[#ea580c]"></span>
-                <span>04 — Voices from the Soil</span>
+                <span>04 — Suara dari Kebun</span>
               </div>
               <h2 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9]">
-                Real harvests.<br />
-                <span className="text-[#ea580c]">Real families.</span>
+                Panen nyata.<br />
+                <span className="text-[#ea580c]">Keluarga nyata.</span>
               </h2>
             </div>
             <div className="lg:col-span-5 flex flex-col justify-end">
               <p className="text-[#666666] text-base leading-relaxed mb-4 font-body">
-                Behind every potato is a family of growers who rise before dawn. Meet the farmers and packhouse team of Garut whose livelihoods are protected by honest weighing and genuine community pride.
+                Di balik setiap kentang ada keluarga petani yang bangun sebelum fajar. Kenali petani dan tim rumah kemas Garut yang kesejahteraannya dijaga melalui penimbangan jujur dan kebanggaan komunitas.
               </p>
               <div className="flex items-center gap-3 font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase">
                 <Icon name="users" size={13} className="text-[#ea580c]" />
-                <span>Swipeable · Real Stories · Verified Highlands</span>
+                <span>Geser · Kisah Nyata · Dataran Tinggi Terverifikasi</span>
               </div>
             </div>
           </div>
@@ -1424,7 +1425,7 @@ export default function LandingPage() {
                   className={`transition-all duration-300 rounded-full h-1 ${
                     i === storyIndex ? 'w-8 bg-[#ea580c]' : 'w-2 bg-[#d1d5db]'
                   }`}
-                  aria-label={`Go to case ${i + 1}`}
+                  aria-label={`Lihat kisah ${i + 1}`}
                 />
               ))}
             </div>
@@ -1434,14 +1435,14 @@ export default function LandingPage() {
               <button
                 onClick={handlePrevStory}
                 className="w-10 h-10 border border-[#eaeaea] bg-white hover:border-[#f97316] hover:text-[#ea580c] flex items-center justify-center transition-colors shadow-xs"
-                aria-label="Previous case"
+                aria-label="Kisah sebelumnya"
               >
                 <Icon name="arrow-left" size={14} />
               </button>
               <button
                 onClick={handleNextStory}
                 className="w-10 h-10 border border-[#eaeaea] bg-white hover:border-[#f97316] hover:text-[#ea580c] flex items-center justify-center transition-colors shadow-xs"
-                aria-label="Next case"
+                aria-label="Kisah berikutnya"
               >
                 <Icon name="arrow-right" size={14} />
               </button>
@@ -1456,11 +1457,11 @@ export default function LandingPage() {
           <div className="mb-14">
             <div className="inline-flex items-center gap-3 font-mono-custom text-xs text-[#ea580c] tracking-[0.25em] uppercase mb-4">
               <span className="w-8 h-[2px] bg-[#ea580c]"></span>
-              <span>05 — Connect with Our Community</span>
+              <span>05 — Terhubung dengan Komunitas Kami</span>
             </div>
             <h2 className="font-display text-6xl md:text-7xl lg:text-[7rem] leading-[0.9]">
-              JOIN OUR<br />
-              <span className="text-stroke">GROWING</span> <span className="text-[#ea580c]">COMMUNITY.</span>
+              BERGABUNG DENGAN<br />
+              <span className="text-stroke">KOMUNITAS</span> <span className="text-[#ea580c]">KAMI.</span>
             </h2>
           </div>
 
@@ -1469,29 +1470,29 @@ export default function LandingPage() {
             <div className="lg:col-span-7">
               <div className="booking-frame p-8 lg:p-12 shadow-sm">
                 <div className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase mb-2">
-                  // Connect with SmartGeulis
+                  // Terhubung dengan SmartGeulis
                 </div>
-                <h3 className="font-display text-4xl mb-2 text-[#171717]">PLAN A VISIT OR PARTNERSHIP</h3>
+                <h3 className="font-display text-4xl mb-2 text-[#171717]">RENCANAKAN KUNJUNGAN ATAU KEMITRAAN</h3>
                 <p className="text-[#666666] text-sm mb-8 font-body">
-                  Whether you are a local farming cooperative, a fresh produce retailer, or a visitor wishing to tour our Garut highland packhouse, our doors are always open.
+                  Baik Anda koperasi petani lokal, peritel produk segar, maupun pengunjung yang ingin meninjau rumah kemas dataran tinggi Garut, pintu kami selalu terbuka.
                 </p>
 
                 <form onSubmit={handleBookingSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
                       <label className="block font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase mb-1">
-                        Contact Name
+                        Nama Kontak
                       </label>
                       <input
                         type="text"
                         required
-                        placeholder="John Doe"
+                        placeholder="Budi Santoso"
                         className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#f97316] transition-colors"
                       />
                     </div>
                     <div>
                       <label className="block font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase mb-1">
-                        Phone / WhatsApp
+                        Telepon / WhatsApp
                       </label>
                       <input
                         type="tel"
@@ -1504,12 +1505,12 @@ export default function LandingPage() {
 
                   <div>
                     <label className="block font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase mb-1">
-                      Organization / Packhouse Email
+                      Email Organisasi / Rumah Kemas
                     </label>
                     <input
                       type="email"
                       required
-                      placeholder="packhouse@cooperative.id"
+                      placeholder="rumahkemas@koperasi.id"
                       className="w-full bg-transparent border-b border-[#d1d5db] py-2.5 text-base font-heading focus:outline-none focus:border-[#f97316] transition-colors"
                     />
                   </div>
@@ -1517,14 +1518,14 @@ export default function LandingPage() {
                   {/* Commodity Selector Pills */}
                   <div>
                     <label className="block font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase mb-2">
-                      Primary Potato Variety
+                      Varietas Kentang Utama
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {[
-                        { id: 'granola', label: 'Granola Table' },
-                        { id: 'atlantic', label: 'Atlantic Processing' },
+                        { id: 'granola', label: 'Granola Konsumsi' },
+                        { id: 'atlantic', label: 'Atlantic Olahan' },
                         { id: 'chippewa', label: 'Chippewa' },
-                        { id: 'seed', label: 'G0/G2 Seed Stock' },
+                        { id: 'seed', label: 'Benih G0/G2' },
                       ].map((item) => (
                         <button
                           type="button"
@@ -1545,14 +1546,14 @@ export default function LandingPage() {
                   {/* Preferred Shift Radios */}
                   <div>
                     <label className="block font-mono-custom text-[10px] text-[#666666] tracking-[0.2em] uppercase mb-2">
-                      Preferred Demonstration Time
+                      Waktu Demonstrasi Pilihan
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {[
-                        { id: 'morning', label: 'Morning Intake', sub: '05:00 - 09:00' },
-                        { id: 'midday', label: 'Midday Shift', sub: '09:00 - 12:00' },
-                        { id: 'afternoon', label: 'Afternoon Sort', sub: '12:00 - 17:00' },
-                        { id: 'evening', label: 'Evening Dispatch', sub: '17:00 - 22:00' },
+                        { id: 'morning', label: 'Penerimaan Pagi', sub: '05:00 - 09:00' },
+                        { id: 'midday', label: 'Shift Siang', sub: '09:00 - 12:00' },
+                        { id: 'afternoon', label: 'Sortasi Sore', sub: '12:00 - 17:00' },
+                        { id: 'evening', label: 'Pengiriman Malam', sub: '17:00 - 22:00' },
                       ].map((shift) => (
                         <label
                           key={shift.id}
@@ -1574,12 +1575,12 @@ export default function LandingPage() {
                     type="submit"
                     className="pulse-btn w-full bg-[#000000] text-white py-4 font-display text-2xl tracking-wider hover:bg-[#333333] transition-colors flex items-center justify-center gap-3 rounded-none"
                   >
-                    <span>SUBMIT DEPLOYMENT REQUEST</span>
+                    <span>KIRIM PERMINTAAN IMPLEMENTASI</span>
                     <Icon name="arrow-right" size={20} />
                   </button>
 
                   <p className="text-center font-mono-custom text-[10px] text-[#666666] tracking-wider uppercase">
-                    Zero Commitment · Remote Modbus Verification Included · 24h Confirmation
+                    Tanpa Komitmen · Termasuk Verifikasi Modbus Jarak Jauh · Konfirmasi 24 Jam
                   </p>
                 </form>
               </div>
@@ -1589,35 +1590,35 @@ export default function LandingPage() {
             <div className="lg:col-span-5 space-y-6">
               <div className="border border-[#eaeaea] bg-white p-7 shadow-xs">
                 <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-2">
-                  / Hub Locations
+                  / Lokasi Pusat
                 </div>
-                <h4 className="font-display text-2xl mb-2 text-[#171717]">CENTRAL PACKHOUSE PILOT</h4>
+                <h4 className="font-display text-2xl mb-2 text-[#171717]">RUMAH KEMAS PERCONTOHAN</h4>
                 <p className="text-[#666666] text-sm leading-relaxed mb-4 font-body">
-                  Pangalengan Agricultural Complex<br />
-                  Bandung Regency, West Java 40378
+                  Kawasan Pertanian Pangalengan<br />
+                  Kabupaten Bandung, Jawa Barat 40378
                 </p>
                 <div className="flex items-center gap-2 font-mono-custom text-[11px] text-[#ea580c]">
                   <Icon name="location" size={13} />
-                  <span>ELEVATION: 1,420M ASL · FIBER CONNECTED</span>
+                  <span>KETINGGIAN: 1.420 MDPL · TERHUBUNG FIBER</span>
                 </div>
               </div>
 
               <div className="border border-[#eaeaea] bg-white p-7 shadow-xs">
                 <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-2">
-                  / Operating Schedule
+                  / Jadwal Operasional
                 </div>
-                <h4 className="font-display text-2xl mb-3 text-[#171717]">ACTIVE INTAKE WINDOWS</h4>
+                <h4 className="font-display text-2xl mb-3 text-[#171717]">JAM PENERIMAAN AKTIF</h4>
                 <div className="space-y-2 text-sm font-body">
                   <div className="flex justify-between border-b border-[#eaeaea] pb-2">
-                    <span className="text-[#666666]">Monday — Friday</span>
+                    <span className="text-[#666666]">Senin — Jumat</span>
                     <span className="font-mono-custom font-semibold text-[#171717]">05:00 — 23:00</span>
                   </div>
                   <div className="flex justify-between border-b border-[#eaeaea] pb-2">
-                    <span className="text-[#666666]">Saturday (Peak Intake)</span>
+                    <span className="text-[#666666]">Sabtu (Puncak Penerimaan)</span>
                     <span className="font-mono-custom font-semibold text-[#171717]">06:00 — 21:00</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#666666]">Sunday (Export Dispatch)</span>
+                    <span className="text-[#666666]">Minggu (Pengiriman Ekspor)</span>
                     <span className="font-mono-custom font-semibold text-[#171717]">07:00 — 18:00</span>
                   </div>
                 </div>
@@ -1625,16 +1626,16 @@ export default function LandingPage() {
 
               <div className="border border-[#eaeaea] bg-white p-7 shadow-xs">
                 <div className="font-mono-custom text-[10px] text-[#ea580c] tracking-[0.2em] uppercase mb-2">
-                  / Direct Engineer Contact
+                  / Kontak Teknis Langsung
                 </div>
-                <h4 className="font-display text-2xl mb-3 text-[#171717]">TECHNICAL SUPPORT</h4>
+                <h4 className="font-display text-2xl mb-3 text-[#171717]">DUKUNGAN TEKNIS</h4>
                 <div className="space-y-2.5 text-sm font-body">
                   <a
                     href="tel:+62215550100"
                     className="flex items-center gap-3 hover:text-[#ea580c] transition-colors text-[#525252]"
                   >
                     <Icon name="phone" size={14} className="text-[#ea580c]" />
-                    <span className="font-mono-custom">+62 (21) 555-0100 (Packhouse Ops)</span>
+                    <span className="font-mono-custom">+62 (21) 555-0100 (Operasional Rumah Kemas)</span>
                   </a>
                   <a
                     href="mailto:support@smartgeulisunpad.com"
@@ -1657,7 +1658,7 @@ export default function LandingPage() {
           className="font-display text-[16vw] leading-none text-stroke opacity-15 absolute bottom-[-5%] left-0 right-0 text-center pointer-events-none select-none z-0"
           aria-hidden="true"
         >
-          TRACEABILITY
+          KETERTELUSURAN
         </div>
 
                 <div className="relative z-10 max-w-[1600px] mx-auto px-6 lg:px-10">
@@ -1667,14 +1668,14 @@ export default function LandingPage() {
               <div>
                 <div className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.25em] uppercase font-semibold mb-2 flex items-center gap-2">
                   <span className="w-2 h-2 bg-[#ea580c]"></span>
-                  STRATEGIC PARTNERS & COLLABORATION
+                  MITRA STRATEGIS & KOLABORASI
                 </div>
                 <h4 className="font-display text-3xl md:text-4xl tracking-wider text-[#171717]">
-                  SUPPORTED BY ACADEMIC & INDUSTRY LEADERS
+                  DIDUKUNG OLEH AKADEMISI & MITRA INDUSTRI
                 </h4>
               </div>
               <p className="text-xs text-[#666666] font-body max-w-lg leading-relaxed">
-                SmartGeulis Traceability System is co-developed and supported through active collaboration with the Ministry of Agriculture of the Republic of Indonesia, the ICARE program, Universitas Padjadjaran (UNPAD), and Eptilu Garut.
+                Sistem Ketertelusuran SmartGeulis dikembangkan dan didukung melalui kolaborasi aktif bersama Kementerian Pertanian Republik Indonesia, program I-CARE, Universitas Padjadjaran (UNPAD), dan Eptilu Garut.
               </p>
             </div>
 
@@ -1684,19 +1685,19 @@ export default function LandingPage() {
                 <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
                   <img
                     src="/Ministry of Agriculture of the Republic of Indonesia.png"
-                    alt="Ministry of Agriculture of the Republic of Indonesia"
+                    alt="Kementerian Pertanian Republik Indonesia"
                     className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
                   />
                 </div>
                 <div className="min-w-0">
                   <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
-                    Government Ministry
+                    Kementerian
                   </span>
                   <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
-                    Ministry of Agriculture
+                    Kementerian Pertanian
                   </div>
                   <div className="text-xs text-[#666666] mt-1 leading-snug">
-                    National agricultural policy and horticulture governance support.
+                    Dukungan kebijakan pertanian nasional dan tata kelola hortikultura.
                   </div>
                 </div>
               </div>
@@ -1706,19 +1707,19 @@ export default function LandingPage() {
                 <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
                   <img
                     src="/I Care.png"
-                    alt="ICARE Program"
+                    alt="Program I-CARE"
                     className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
                   />
                 </div>
                 <div className="min-w-0">
                   <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
-                    Development Program
+                    Program Pengembangan
                   </span>
                   <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
-                    ICARE
+                    I-CARE
                   </div>
                   <div className="text-xs text-[#666666] mt-1 leading-snug">
-                    Integrated farming competitiveness and resilient ecosystem initiative.
+                    Inisiatif daya saing pertanian terpadu dan ekosistem tangguh.
                   </div>
                 </div>
               </div>
@@ -1734,13 +1735,13 @@ export default function LandingPage() {
                 </div>
                 <div className="min-w-0">
                   <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
-                    Academic & Research
+                    Akademik & Riset
                   </span>
                   <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
                     Universitas Padjadjaran
                   </div>
                   <div className="text-xs text-[#666666] mt-1 leading-snug">
-                    Lead research institution advancing agricultural traceability.
+                    Institusi riset utama pengembang sistem ketertelusuran pertanian.
                   </div>
                 </div>
               </div>
@@ -1750,19 +1751,19 @@ export default function LandingPage() {
                 <div className="w-20 h-20 bg-white border border-[#eaeaea] p-2 flex items-center justify-center shrink-0">
                   <img
                     src="/Eptilu.jpeg"
-                    alt="Eptilu Fresh Produce"
+                    alt="Eptilu Garut"
                     className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform rounded-sm"
                   />
                 </div>
                 <div className="min-w-0">
                   <span className="font-mono-custom text-[10px] text-[#ea580c] uppercase tracking-wider block font-semibold">
-                    Agro-Industry Partner
+                    Mitra Agroindustri
                   </span>
                   <div className="font-heading text-sm uppercase tracking-wider text-[#171717] font-semibold mt-0.5">
                     Eptilu Garut
                   </div>
                   <div className="text-xs text-[#666666] mt-1 leading-snug">
-                    Agro-tourism & commercial packhouse partner in Garut highlands.
+                    Mitra agrowisata & rumah kemas komersial di dataran tinggi Garut.
                   </div>
                 </div>
               </div>
@@ -1777,47 +1778,47 @@ export default function LandingPage() {
                     SmartGeulis
                   </div>
                   <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
-                    TRACEABILITY SYSTEM
+                    SISTEM KETERTELUSURAN
                   </div>
                 </div>
               </div>
               <p className="text-[#666666] text-sm leading-relaxed max-w-md mb-6 font-body">
-                Modular IoT platform uniting smart platform scales, optical grading classification, and GS1 Digital Link
-                pouch barcodes into a unified single source of truth for the potato supply chain.
+                Platform IoT modular yang menyatukan timbangan pintar, klasifikasi sortasi, dan kode QR GS1 Digital Link
+                menjadi satu sumber data terpadu bagi rantai pasok kentang.
               </p>
               <div className="flex items-center gap-2">
                 <span className="text-xs bg-[#f5f5f5] text-[#525252] border border-[#eaeaea] px-2.5 py-1 font-mono-custom">
-                  Type: smartgeulis
+                  Tipe: smartgeulis
                 </span>
                 <span className="text-xs text-[#666666] font-mono-custom">
-                  v1.0.0 (Production)
+                  v1.0.0 (Produksi)
                 </span>
               </div>
             </div>
 
             <div className="md:col-span-2">
               <h5 className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase mb-4 font-semibold">
-                Workstations
+                Stasiun Kerja
               </h5>
               <ul className="space-y-2 text-sm font-heading tracking-wider uppercase text-[#666666]">
                 <li>
                   <Link to="/dashboard/weighing" className="hover:text-[#171717] transition-colors">
-                    Intake Weighing
+                    Penerimaan
                   </Link>
                 </li>
                 <li>
                   <Link to="/dashboard/sorting" className="hover:text-[#171717] transition-colors">
-                    Sorting Station
+                    Stasiun Sortasi
                   </Link>
                 </li>
                 <li>
                   <Link to="/dashboard/packaging" className="hover:text-[#171717] transition-colors">
-                    Pouch Packaging
+                    Pengemasan Pouch
                   </Link>
                 </li>
                 <li>
                   <Link to="/dashboard/warehouse" className="hover:text-[#171717] transition-colors">
-                    Warehouse Ledger
+                    Buku Gudang
                   </Link>
                 </li>
               </ul>
@@ -1825,12 +1826,12 @@ export default function LandingPage() {
 
             <div className="md:col-span-2">
               <h5 className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase mb-4 font-semibold">
-                Traceability
+                Ketertelusuran
               </h5>
               <ul className="space-y-2 text-sm font-heading tracking-wider uppercase text-[#666666]">
                 <li>
                   <Link to="/traceability" className="hover:text-[#171717] transition-colors">
-                    Public Scan Portal
+                    Portal Pindai Publik
                   </Link>
                 </li>
                 <li>
@@ -1840,12 +1841,12 @@ export default function LandingPage() {
                 </li>
                 <li>
                   <a href="#hardware" className="hover:text-[#171717] transition-colors">
-                    Modbus Telemetry
+                    Telemetri Modbus
                   </a>
                 </li>
                 <li>
                   <Link to="/login" className="hover:text-[#171717] transition-colors">
-                    Operator Login
+                    Masuk Operator
                   </Link>
                 </li>
               </ul>
@@ -1853,17 +1854,17 @@ export default function LandingPage() {
 
             <div className="md:col-span-3">
               <h5 className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase mb-4 font-semibold">
-                System Updates
+                Pembaruan Sistem
               </h5>
               <p className="text-[#666666] text-xs mb-3 font-body">
-                Subscribe for batch verification notices, firmware changelogs, and harvest summaries.
+                Berlangganan notifikasi verifikasi batch, catatan pembaruan firmware, dan ringkasan panen.
               </p>
               <form
                 onSubmit={(e) => {
                   e.preventDefault()
                   setToastMessage({
-                    title: 'Subscription confirmed',
-                    desc: 'You have been registered for automated telemetry updates.',
+                    title: 'Langganan dikonfirmasi',
+                    desc: 'Anda telah terdaftar untuk pembaruan telemetri otomatis.',
                   })
                   setToastVisible(true)
                   setTimeout(() => setToastVisible(false), 4000)
@@ -1873,13 +1874,13 @@ export default function LandingPage() {
                 <input
                   type="email"
                   required
-                  placeholder="operator@cooperative.id"
+                  placeholder="operator@koperasi.id"
                   className="flex-1 bg-transparent px-3 py-2 text-xs text-[#171717] outline-none placeholder:text-[#999999]"
                 />
                 <button
                   type="submit"
                   className="px-3.5 bg-[#000000] text-white hover:bg-[#333333] transition-colors"
-                  aria-label="Subscribe"
+                  aria-label="Berlangganan"
                 >
                   <Icon name="arrow-right" size={13} />
                 </button>
@@ -1888,16 +1889,16 @@ export default function LandingPage() {
           </div>
 
           <div className="border-t border-[#eaeaea] pt-6 flex flex-col md:flex-row justify-between gap-4 text-[#666666] font-mono-custom text-[11px] tracking-wider uppercase">
-            <div>© {new Date().getFullYear()} SmartGeulis · TRACEABILITY SYSTEM</div>
+            <div>© {new Date().getFullYear()} SmartGeulis · SISTEM KETERTELUSURAN</div>
             <div className="flex gap-6">
               <Link to="/traceability" className="hover:text-[#ea580c] transition-colors">
-                Public Trace
+                Lacak Publik
               </Link>
               <Link to="/login" className="hover:text-[#ea580c] transition-colors">
-                Sign In
+                Masuk
               </Link>
               <a href="#hero" className="hover:text-[#ea580c] transition-colors">
-                Back to Top ↑
+                Kembali ke Atas ↑
               </a>
             </div>
           </div>
@@ -1912,7 +1913,7 @@ export default function LandingPage() {
       >
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10 py-3.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 font-mono-custom text-[11px] text-[#ea580c] tracking-wider font-semibold">
+            <div className="hidden sm:flex items-center gap-2 font-mono-custom text-[11px] text-[#ea580c] tracking-wider font-semibold uppercase">
               <span
                 className={`w-2 h-2 rounded-full ${
                   backendStatus === 'ONLINE'
@@ -1922,14 +1923,14 @@ export default function LandingPage() {
                     : 'bg-red-500'
                 }`}
               ></span>
-              <span>BACKEND STATUS · {backendStatus}</span>
+              <span>STATUS SERVER · {translateStatus(backendStatus)}</span>
             </div>
             <div>
               <div className="font-display text-xl md:text-2xl leading-none text-[#171717]">
-                READY TO TRACE YOUR HARVEST?
+                SIAP MELACAK HASIL PANEN ANDA?
               </div>
               <div className="font-mono-custom text-[10px] text-[#666666] tracking-wider uppercase mt-0.5">
-                WEIGHING · GRADING · 1 KG POUCH PACKAGING · GS1 DIGITAL LINK
+                PENERIMAAN · SORTASI · PENGEMASAN POUCH 1 KG · GS1 DIGITAL LINK
               </div>
             </div>
           </div>
@@ -1938,7 +1939,7 @@ export default function LandingPage() {
             href="#booking"
             className="pulse-btn bg-[#ea580c] text-white px-6 py-2.5 font-heading text-xs uppercase tracking-[0.18em] hover:bg-[#16a34a] transition-colors flex items-center gap-2 rounded-none shrink-0 font-semibold"
           >
-            <span>Deploy System</span>
+            <span>Terapkan Sistem</span>
             <Icon name="arrow-right" size={14} />
           </a>
         </div>

@@ -9,6 +9,7 @@ import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
 import { api, type Commodity, DEFAULT_COMMODITIES } from '../services/api'
+import { translateStatus } from '@/lib/i18n'
 
 interface Delivery {
   id: string
@@ -41,7 +42,7 @@ export default function DeliveriesPage() {
       const data = await api.deliveries.list()
       setDeliveries(Array.isArray(data) ? data : [])
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not load deliveries.')
+      toast.error(err instanceof Error ? err.message : 'Gagal memuat data pengiriman.')
     }
   }, [toast])
 
@@ -57,31 +58,31 @@ export default function DeliveriesPage() {
   const create = async (event: React.FormEvent) => {
     event.preventDefault()
     const units = Number(form.units)
-    if (!Number.isInteger(units) || units < 1) { toast.error('Enter a valid unit count.'); return }
+    if (!Number.isInteger(units) || units < 1) { toast.error('Masukkan jumlah unit yang valid.'); return }
     setBusy(true)
     try {
       const saved = await api.deliveries.create({ ...form, units })
       setSelectedId(saved.id)
       setForm((prev) => ({ truckPlate: '', destination: '', driverName: '', commodityCode: prev.commodityCode, grade: 'A', units: '' }))
       await refresh()
-      toast.success(`Delivery ${saved.code} created. Scan each assigned package.`)
+      toast.success(`Pengiriman ${saved.code} berhasil dibuat. Pindai setiap kemasan yang dialokasikan.`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not create delivery.')
+      toast.error(err instanceof Error ? err.message : 'Gagal membuat pengiriman.')
     } finally { setBusy(false) }
   }
 
   const verify = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!selectedId) { toast.error('Select a delivery first.'); return }
-    if (!scanCode.trim()) { toast.error('Scan a package code or barcode.'); return }
+    if (!selectedId) { toast.error('Pilih pengiriman terlebih dahulu.'); return }
+    if (!scanCode.trim()) { toast.error('Pindai kode kemasan atau barcode.'); return }
     setBusy(true)
     try {
       const result = await api.deliveries.verify(selectedId, scanCode.trim())
       setScanCode('')
       await refresh()
-      toast.success(`${result.code} verified. ${result.remainingUnits} package(s) remaining.`)
+      toast.success(`${result.code} terverifikasi. Sisa ${result.remainingUnits} kemasan.`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Package verification failed.')
+      toast.error(err instanceof Error ? err.message : 'Verifikasi kemasan gagal.')
     } finally { setBusy(false) }
   }
 
@@ -91,10 +92,10 @@ export default function DeliveriesPage() {
     try {
       await api.deliveries.depart(confirmDepart.id)
       await Promise.all([refresh(), syncWithBackend()])
-      toast.success(`Truck ${confirmDepart.truckPlate} departed.`)
+      toast.success(`Truk ${confirmDepart.truckPlate} telah berangkat.`)
       setConfirmDepart(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not record departure.')
+      toast.error(err instanceof Error ? err.message : 'Gagal mencatat keberangkatan.')
     } finally { setBusy(false) }
   }
 
@@ -114,7 +115,7 @@ export default function DeliveriesPage() {
     { key: 'truckPlate', label: 'Truk', priority: true },
     { key: 'destination', label: 'Tujuan', priority: true },
     { key: 'units', label: 'Kemasan', render: (row) => `${row.verifiedUnits}/${row.units} terverifikasi` },
-    { key: 'status', label: 'Status', render: (row) => <Badge tone={row.status === 'DEPARTED' ? 'success' : row.status === 'READY' ? 'accent' : 'warning'}>{row.status === 'DEPARTED' ? 'BERANGKAT' : row.status === 'READY' ? 'SIAP' : 'MEMUAT'}</Badge> },
+    { key: 'status', label: 'Status', render: (row) => <Badge tone={row.status === 'DEPARTED' ? 'success' : row.status === 'READY' ? 'accent' : 'warning'}>{translateStatus(row.status)}</Badge> },
     { key: 'actions', label: 'Aksi', render: (row) => row.status === 'DEPARTED' ? null : <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setSelectedId(row.id)}>Pilih</Button><Button size="sm" variant="primary" disabled={row.status !== 'READY' || busy} onClick={() => setConfirmDepart(row)}>Berangkat</Button></div> },
   ]
 

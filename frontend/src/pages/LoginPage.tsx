@@ -26,7 +26,7 @@ export default function LoginPage() {
       await login(email, password)
       navigate('/dashboard')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? err.message : 'Gagal masuk')
     } finally {
       setLoading(false)
     }
@@ -61,14 +61,14 @@ export default function LoginPage() {
       {/* ── Top Header Bar ── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#eaeaea]">
         <div className="max-w-[1500px] mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group" aria-label="SmartGeulis home">
+          <Link to="/" className="flex items-center gap-3 group" aria-label="Beranda SmartGeulis">
             <Logo className="h-8 w-auto" markOnly />
             <div>
               <div className="font-display text-2xl leading-none tracking-wider text-[#171717] flex items-center gap-2">
                 SmartGeulis
               </div>
               <div className="font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
-                TRACEABILITY SYSTEM
+                SISTEM KETERTELUSURAN
               </div>
             </div>
           </Link>
@@ -205,12 +205,12 @@ export default function LoginPage() {
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 bg-[#ea580c] shrink-0"></span>
                     <span className="font-mono-custom text-[11px] text-[#ea580c] tracking-[0.2em] uppercase font-semibold">
-                      OFFICIAL FACILITY SIGNBOARD
+                      PAPAN NAMA FASILITAS RESMI
                     </span>
                   </div>
                   <div className="flex items-center gap-2 font-mono-custom text-[11px] text-white/80 bg-white/5 border border-white/10 px-3 py-1">
                     <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-ping shrink-0"></span>
-                    <span className="tracking-wider uppercase">NODE SG-GARUT-01 · ACTIVE</span>
+                    <span className="tracking-wider uppercase">NODE SG-GARUT-01 · AKTIF</span>
                   </div>
                 </div>
 
@@ -219,13 +219,13 @@ export default function LoginPage() {
                   <div className="relative overflow-hidden bg-black/40">
                     <img
                       src="/Papan Nama Warehouse.png"
-                      alt="SmartGeulis Packhouse and Warehouse Signboard"
+                      alt="Papan Nama Rumah Kemas dan Gudang SmartGeulis"
                       className="w-full h-auto max-h-[420px] object-contain mx-auto transition-transform duration-700 group-hover:scale-[1.02]"
                     />
                     {/* Badge Overlay on Image */}
                     <div className="absolute bottom-3 left-3 bg-black/85 backdrop-blur-md border border-white/20 text-white px-3 py-1 text-[10px] font-mono-custom uppercase tracking-wider flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#ea580c]"></span>
-                      <span>Garut Highland Packhouse & Warehouse</span>
+                      <span>Rumah Kemas & Gudang Dataran Tinggi Garut</span>
                     </div>
                   </div>
                 </div>
@@ -233,7 +233,7 @@ export default function LoginPage() {
                 {/* Partner Ecosystem Bar */}
                 <div className="relative z-10">
                   <div className="font-mono-custom text-[10px] text-white/60 uppercase tracking-[0.2em] mb-2.5 flex items-center gap-2">
-                    <span>OPERATED IN COLLABORATION WITH</span>
+                    <span>DIOPERASIKAN BEKERJA SAMA DENGAN</span>
                     <span className="flex-1 h-[1px] bg-white/10"></span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -241,13 +241,13 @@ export default function LoginPage() {
                       <img src="/Unpad.png" alt="Universitas Padjadjaran" className="max-h-8 max-w-full object-contain" />
                     </div>
                     <div className="bg-white p-2 flex items-center justify-center h-12 border border-white/20 shadow-xs">
-                      <img src="/Ministry of Agriculture of the Republic of Indonesia.png" alt="Ministry of Agriculture" className="max-h-8 max-w-full object-contain" />
+                      <img src="/Ministry of Agriculture of the Republic of Indonesia.png" alt="Kementerian Pertanian Republik Indonesia" className="max-h-8 max-w-full object-contain" />
                     </div>
                     <div className="bg-white p-2 flex items-center justify-center h-12 border border-white/20 shadow-xs">
-                      <img src="/I Care.png" alt="I-CARE Initiative" className="max-h-8 max-w-full object-contain" />
+                      <img src="/I Care.png" alt="Program I-CARE" className="max-h-8 max-w-full object-contain" />
                     </div>
                     <div className="bg-white p-2 flex items-center justify-center h-12 border border-white/20 shadow-xs">
-                      <img src="/Eptilu.jpeg" alt="Eptilu Fresh Produce" className="max-h-8 max-w-full object-contain" />
+                      <img src="/Eptilu.jpeg" alt="Eptilu" className="max-h-8 max-w-full object-contain" />
                     </div>
                   </div>
                 </div>
@@ -261,15 +261,15 @@ export default function LoginPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-[#eaeaea] bg-white py-5 text-xs text-[#666666]">
         <div className="max-w-[1500px] mx-auto px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© {new Date().getFullYear()} SmartGeulis. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} SmartGeulis. Hak cipta dilindungi.</p>
           <div className="flex flex-wrap items-center justify-center gap-3 font-mono-custom text-[11px]">
             <span className="bg-[#f5f5f5] px-2 py-0.5 border border-[#eaeaea] text-[#171717]">
-              Type: smartgeulis
+              Tipe: smartgeulis
             </span>
-            <span>Traceability System v1.0.0</span>
+            <span>Sistem Ketertelusuran v1.0.0</span>
           </div>
           <Link to="/traceability" className="text-[#ea580c] hover:underline font-medium">
-            Public Traceability Portal
+            Portal Ketertelusuran Publik
           </Link>
         </div>
       </footer>

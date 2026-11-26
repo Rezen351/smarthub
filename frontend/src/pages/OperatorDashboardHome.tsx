@@ -49,28 +49,28 @@ export default function OperatorDashboardHome() {
     {
       id: 'scale-01',
       stationNum: '01',
-      stationLabel: 'Reception',
-      scaleRole: 'Scale',
-      ip: 'Not configured',
-      capacity: 'Not configured',
+      stationLabel: 'Penerimaan',
+      scaleRole: 'Timbangan',
+      ip: 'Belum dikonfigurasi',
+      capacity: 'Belum dikonfigurasi',
       status: 'OFFLINE',
     },
     {
       id: 'scale-02',
       stationNum: '02',
-      stationLabel: 'Sorting',
-      scaleRole: 'Scale',
-      ip: 'Not configured',
-      capacity: 'Not configured',
+      stationLabel: 'Sortasi',
+      scaleRole: 'Timbangan',
+      ip: 'Belum dikonfigurasi',
+      capacity: 'Belum dikonfigurasi',
       status: 'OFFLINE',
     },
     {
       id: 'scale-03',
       stationNum: '03',
-      stationLabel: 'Packaging',
-      scaleRole: 'Scale',
-      ip: 'Not configured',
-      capacity: 'Not configured',
+      stationLabel: 'Pengemasan',
+      scaleRole: 'Timbangan',
+      ip: 'Belum dikonfigurasi',
+      capacity: 'Belum dikonfigurasi',
       status: 'OFFLINE',
     },
   ])
@@ -149,7 +149,7 @@ export default function OperatorDashboardHome() {
             return {
               ...node,
               ip: `${live.ip}:${live.port}`,
-              capacity: Number(live.capacityKg) > 0 ? `${Number(live.capacityKg)} kg` : 'Not configured',
+              capacity: Number(live.capacityKg) > 0 ? `${Number(live.capacityKg)} kg` : 'Belum dikonfigurasi',
               status: live.online ? 'ONLINE' : 'OFFLINE',
               liveWeightKg: live.weightKg,
             }
@@ -171,40 +171,40 @@ export default function OperatorDashboardHome() {
     {
       id: 'ws-1',
       number: '01',
-      title: 'Reception',
-      subtitle: 'Harvest intake weighing and buffer queue',
+      title: 'Penerimaan',
+      subtitle: 'Penimbangan hasil panen masuk dan antrean buffer',
       path: '/dashboard/weighing',
       icon: 'scale',
-      tag: 'STATION 01',
+      tag: 'STASIUN 01',
       badgeTone: 'accent',
-      scaleName: `Scale (${tcpNodes.find((node) => node.stationNum === '01')?.capacity || 'Not configured'})`,
-      metric: `${metrics.grossIntakeKg.toLocaleString()} kg · ${metrics.grossIntakeWarings} Warings`,
+      scaleName: `Timbangan (${tcpNodes.find((node) => node.stationNum === '01')?.capacity || 'Belum dikonfigurasi'})`,
+      metric: `${metrics.grossIntakeKg.toLocaleString('id-ID')} kg · ${metrics.grossIntakeWarings} Waring`,
     },
     {
       id: 'ws-2',
       number: '02',
-      title: 'Sorting',
-      subtitle: 'Sizing, washing, and grade weighing',
+      title: 'Sortasi',
+      subtitle: 'Pengukuran, pencucian, dan penimbangan grade',
       path: '/dashboard/sorting',
       icon: 'sortir',
-      tag: 'STATION 02',
+      tag: 'STASIUN 02',
       badgeTone: 'success',
-      scaleName: `Scale (${tcpNodes.find((node) => node.stationNum === '02')?.capacity || 'Not configured'})`,
+      scaleName: `Timbangan (${tcpNodes.find((node) => node.stationNum === '02')?.capacity || 'Belum dikonfigurasi'})`,
       metric: metrics.hasBatches
-        ? `${metrics.yieldPct.toFixed(1)}% Yield · ${metrics.shrinkagePct.toFixed(1)}% Loss`
-        : '0 Batches · Ready to Sort',
+        ? `${metrics.yieldPct.toFixed(1)}% Hasil · ${metrics.shrinkagePct.toFixed(1)}% Susut`
+        : '0 Batch · Siap Sortasi',
     },
     {
       id: 'ws-3',
       number: '03',
-      title: 'Packaging',
-      subtitle: 'Retail pouches, cartons, and storage',
+      title: 'Pengemasan',
+      subtitle: 'Pouch ritel, karton, dan penyimpanan',
       path: '/dashboard/packaging',
       icon: 'package',
-      tag: 'STATION 03',
+      tag: 'STASIUN 03',
       badgeTone: 'accent',
-      scaleName: `Scale (${tcpNodes.find((node) => node.stationNum === '03')?.capacity || 'Not configured'})`,
-      metric: `${metrics.finishedPouches} pouches · ${metrics.finishedCartons} crates`,
+      scaleName: `Timbangan (${tcpNodes.find((node) => node.stationNum === '03')?.capacity || 'Belum dikonfigurasi'})`,
+      metric: `${metrics.finishedPouches} pouch · ${metrics.finishedCartons} krat`,
     },
   ]
 
@@ -214,11 +214,11 @@ export default function OperatorDashboardHome() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Workstation Hub"
-        subtitle="Select a physical workstation console to operate."
+        title="Pusat Stasiun Kerja"
+        subtitle="Pilih konsol stasiun kerja untuk dioperasikan."
         actions={
           <Badge tone={allScalesOnline ? 'success' : 'warning'} dot live>
-            {allScalesOnline ? 'All 3 Scales Online' : onlineScaleCount > 0 ? `${onlineScaleCount}/3 Scales Online` : 'All Scales Offline'}
+            {allScalesOnline ? 'Semua 3 Timbangan Terhubung' : onlineScaleCount > 0 ? `${onlineScaleCount}/3 Timbangan Terhubung` : 'Semua Timbangan Terputus'}
           </Badge>
         }
       />
@@ -226,34 +226,34 @@ export default function OperatorDashboardHome() {
       {/* Summary KPI Strip — 100% Real Database Queries */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Today Gross Intake"
-          value={`${metrics.grossIntakeKg.toLocaleString()} kg`}
-          sub={`${metrics.grossIntakeWarings} Warings`}
+          label="Penerimaan Kotor Hari Ini"
+          value={`${metrics.grossIntakeKg.toLocaleString('id-ID')} kg`}
+          sub={`${metrics.grossIntakeWarings} Waring`}
           icon="scale"
           trend="neutral"
         />
         <StatCard
-          label="Buffer Queue"
-          value={`${metrics.bufferWarings} Warings`}
+          label="Antrean Buffer"
+          value={`${metrics.bufferWarings} Waring`}
           sub={
             metrics.bufferWarings > 0
-              ? `${metrics.bufferKg.toLocaleString()} kg awaiting sort`
-              : 'Queue empty'
+              ? `${metrics.bufferKg.toLocaleString('id-ID')} kg menunggu sortasi`
+              : 'Antrean kosong'
           }
           icon="box"
           trend="neutral"
         />
         <StatCard
-          label="Yield Efficiency"
+          label="Efisiensi Hasil"
           value={metrics.hasBatches ? `${metrics.yieldPct.toFixed(1)}%` : '0.0%'}
-          sub={metrics.hasBatches ? `${metrics.shrinkagePct.toFixed(1)}% Shrinkage` : 'No batches sorted'}
+          sub={metrics.hasBatches ? `${metrics.shrinkagePct.toFixed(1)}% Susut` : 'Belum ada batch disortasi'}
           icon="clipboard"
           trend="neutral"
         />
         <StatCard
-          label="Finished Goods Stock"
-          value={`${metrics.finishedUnits} units`}
-          sub={metrics.finishedUnits > 0 ? 'Ready for dispatch' : '0 units ready'}
+          label="Stok Barang Jadi"
+          value={`${metrics.finishedUnits} unit`}
+          sub={metrics.finishedUnits > 0 ? 'Siap dikirim' : '0 unit siap'}
           icon="package"
           trend="neutral"
         />
@@ -264,14 +264,14 @@ export default function OperatorDashboardHome() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-bold text-foreground tracking-tight">
-              Workstations
+              Stasiun Kerja
             </h2>
             <p className="text-xs text-muted-foreground">
-              Select a physical workstation to operate.
+              Pilih stasiun kerja fisik untuk dioperasikan.
             </p>
           </div>
           <span className="text-xs font-mono text-muted-foreground">
-            {onlineScaleCount} Online
+            {onlineScaleCount} Terhubung
           </span>
         </div>
 
@@ -303,18 +303,18 @@ export default function OperatorDashboardHome() {
 
                 <div className="p-3 bg-muted/20 border border-border/80 text-xs space-y-1.5 font-mono">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Scale:</span>
+                    <span className="text-muted-foreground">Timbangan:</span>
                     <span className="font-semibold text-foreground">{ws.scaleName}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Today Run:</span>
+                    <span className="text-muted-foreground">Operasi Hari Ini:</span>
                     <span className="font-semibold text-[#0E5030]">{ws.metric}</span>
                   </div>
                 </div>
               </div>
 
               <div className="pt-4 border-t border-border mt-4 flex items-center justify-between text-xs font-bold text-[#0E5030]">
-                <span>Open Console</span>
+                <span>Buka Konsol</span>
                 <Icon name="check" size={16} />
               </div>
             </Link>

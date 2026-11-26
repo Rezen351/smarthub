@@ -69,7 +69,7 @@ function formatKg(value: number) {
 export default function ScaleWeightInput({
   id = 'weight',
   stationId = '01',
-  label = 'Weight (kg)',
+  label = 'Berat (kg)',
   hint,
   error,
   value,
@@ -172,9 +172,9 @@ export default function ScaleWeightInput({
 
   const effectiveError = error ?? (
     overCapacity
-      ? `Weight exceeds scale capacity of ${capacityKg} kg.`
+      ? `Berat melebihi kapasitas timbangan ${capacityKg} kg.`
       : exceedsMaxAllowed
-      ? `Weight (${formatKg(numericValue)} kg) exceeds pallet remaining stock (${formatKg(maxAllowedWeightKg)} kg).`
+      ? `Berat (${formatKg(numericValue)} kg) melebihi sisa stok palet (${formatKg(maxAllowedWeightKg)} kg).`
       : undefined
   )
 
@@ -184,18 +184,18 @@ export default function ScaleWeightInput({
 
   const useReading = useCallback(() => {
     if (reading < 0 || (!allowZero && reading <= 0) || reading > capacityKg) {
-      toast.error('Place potatoes on the scale to read a valid weight.')
+      toast.error('Letakkan kentang di timbangan untuk membaca berat yang valid.')
       return
     }
     if (maxAllowedWeightKg !== undefined && reading > maxAllowedWeightKg + 0.0005) {
       toast.error(
-        `Scale reading (${formatKg(reading)} kg) exceeds remaining capacity (${formatKg(maxAllowedWeightKg)} kg).`,
+        `Pembacaan timbangan (${formatKg(reading)} kg) melebihi sisa kapasitas (${formatKg(maxAllowedWeightKg)} kg).`,
       )
       return
     }
     onChange(formatKg(reading))
     setCaptured(true)
-    toast.success(`Weight captured: ${formatKg(reading)} kg`)
+    toast.success(`Berat diambil: ${formatKg(reading)} kg`)
   }, [allowZero, capacityKg, maxAllowedWeightKg, onChange, reading, toast])
 
   const remaining = useMemo(() => {
@@ -205,7 +205,7 @@ export default function ScaleWeightInput({
 
   return (
     <div className="stack-md">
-      <div className="radio-row" role="group" aria-label="Weight input mode">
+      <div className="radio-row" role="group" aria-label="Mode input berat">
         <label className={`radio-card ${mode === 'auto' ? 'is-active' : ''}`}>
           <input
             type="radio"
@@ -215,7 +215,7 @@ export default function ScaleWeightInput({
             onChange={() => setMode('auto')}
           />
           <Icon name="flash" size={15} />
-          Live Scale
+          Timbangan Langsung
         </label>
         <label className={`radio-card ${mode === 'manual' ? 'is-active' : ''}`}>
           <input
@@ -226,7 +226,7 @@ export default function ScaleWeightInput({
             onChange={() => setMode('manual')}
           />
           <Icon name="edit" size={15} />
-          Manual Keypad
+          Input Manual
         </label>
       </div>
 
@@ -236,7 +236,7 @@ export default function ScaleWeightInput({
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
                 <p className="t-caption" style={{ opacity: 0.75 }}>
-                  Live Weight · Station {stationId}
+                  Berat Langsung · Stasiun {stationId}
                 </p>
                 <p className="scale-value">
                   {connection === 'connected' ? formatKg(reading) : '—'}
@@ -249,22 +249,22 @@ export default function ScaleWeightInput({
                   dot
                   live={connection === 'connected'}
                 >
-                  {connection === 'connected' ? 'Scale Online' : 'Scale Offline'}
+                  {connection === 'connected' ? 'Timbangan Terhubung' : 'Timbangan Terputus'}
                 </Badge>
                 <span className="t-caption mono font-bold" style={{ opacity: 0.85 }}>
-                  Station {stationId}
+                  Stasiun {stationId}
                 </span>
                 <span className="t-caption" style={{ opacity: 0.7 }}>
-                  Updated {lastReadingAt.toLocaleTimeString('en-GB')}
+                  Diperbarui {lastReadingAt.toLocaleTimeString('id-ID')}
                 </span>
               </div>
             </div>
             <div className="scale-meta">
               <span className="flex items-center gap-1">
                 <Icon name={isStable ? 'check-circle' : 'refresh'} size={13} />
-                {connection !== 'connected' ? 'Waiting for scale' : isStable ? 'Weight Stable' : 'Reading settling…'}
+                {connection !== 'connected' ? 'Menunggu timbangan' : isStable ? 'Berat Stabil' : 'Menstabilkan…'}
               </span>
-              <span>Maximum Load {capacityKg} kg</span>
+              <span>Beban Maksimum {capacityKg} kg</span>
             </div>
           </div>
 
@@ -274,10 +274,10 @@ export default function ScaleWeightInput({
                 <div className="scale-target">
                   Target <strong>{targetKg} kg</strong>
                   <span>
-                    tolerance ±{toleranceKg * 1000} g
+                    toleransi ±{toleranceKg * 1000} g
                   </span>
                   {remaining !== null && remaining > 0 && (
-                    <span className="mono">· remaining {remaining} kg</span>
+                    <span className="mono">· sisa {remaining} kg</span>
                   )}
                 </div>
                 <div className="progress-track">
@@ -291,7 +291,7 @@ export default function ScaleWeightInput({
 
             {readingExceedsMax && (
               <div className="p-2.5 bg-destructive/10 border border-destructive/30 rounded text-xs text-destructive font-semibold">
-                Scale reading ({formatKg(reading)} kg) exceeds remaining pallet stock ({formatKg(maxAllowedWeightKg)} kg).
+                Pembacaan timbangan ({formatKg(reading)} kg) melebihi sisa stok palet ({formatKg(maxAllowedWeightKg)} kg).
               </div>
             )}
 
@@ -311,7 +311,7 @@ export default function ScaleWeightInput({
                 onClick={useReading}
                 title={
                   readingExceedsMax
-                    ? `Cannot capture: Scale reading exceeds pallet stock (${formatKg(maxAllowedWeightKg)} kg)`
+                    ? `Tidak dapat mengambil: Pembacaan timbangan melebihi stok palet (${formatKg(maxAllowedWeightKg)} kg)`
                     : undefined
                 }
               >
@@ -324,7 +324,7 @@ export default function ScaleWeightInput({
         <Field
           label={label}
           htmlFor={id}
-          hint={hint ?? 'Type the weight shown on the scale indicator.'}
+          hint={hint ?? 'Ketik berat yang tampil pada indikator timbangan.'}
           error={effectiveError}
         >
           <Input
@@ -346,9 +346,9 @@ export default function ScaleWeightInput({
 
       {mode === 'auto' && (
         <Field
-          label={label ? `Captured ${label}` : 'Captured Weight (kg)'}
+          label={label ? `${label} Terambil` : 'Berat Terambil (kg)'}
           htmlFor={id}
-          hint={captured || numericValue > 0 ? 'This weight will be saved. Capture again to update it.' : 'Wait for a stable reading, then select Capture Weight.'}
+          hint={captured || numericValue > 0 ? 'Berat ini akan disimpan. Ambil ulang untuk memperbarui.' : 'Tunggu pembacaan stabil, lalu pilih Ambil Berat.'}
           error={effectiveError}
         >
           <Input

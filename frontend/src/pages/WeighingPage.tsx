@@ -22,6 +22,7 @@ import LabelPreview from '../components/operator/LabelPreview'
 import { saveReceptionIntake, buildReceptionPrintJobs, printReceptionSession } from '../lib/receptionIntake'
 import { useSessionContext } from '../hooks/useSessionContext'
 import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
+import { idText, translateStatus } from '@/lib/i18n'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
 import { useAuth } from '../hooks/useAuth'
 import { api, type Commodity, DEFAULT_COMMODITIES, getCommodityFamilyCode, getGeneralCommodityName } from '../services/api'
@@ -70,9 +71,9 @@ const statusTone: Record<WeighingStatus, 'success' | 'warning'> = {
 }
 
 const STEPS = [
-  { id: 1, label: 'Farmer ID' },
-  { id: 2, label: 'Weigh Harvest' },
-  { id: 3, label: 'Review & Print' },
+  { id: 1, label: 'ID Petani' },
+  { id: 2, label: 'Timbang Panen' },
+  { id: 3, label: 'Tinjau & Cetak' },
 ] as const
 
 export default function WeighingPage() {
@@ -90,7 +91,7 @@ export default function WeighingPage() {
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(next))
     } catch {
-      toast.warning('Session recovery is unavailable. Keep this page open until printing finishes.')
+      toast.warning('Pemulihan sesi tidak tersedia. Biarkan halaman ini tetap terbuka hingga pencetakan selesai.')
     }
   }
   const sessionTotalKg = receptionSession.records.reduce((sum, record) => sum + Math.round(record.weightKg * 1000), 0) / 1000
@@ -148,9 +149,9 @@ export default function WeighingPage() {
   const [editingSessionBagId, setEditingSessionBagId] = useState<string | null>(null)
   const [scaleCapacityKg, setScaleCapacityKg] = useState<number | null>(null)
   const [scaleOnline, setScaleOnline] = useState(false)
-  const [scaleEndpoint, setScaleEndpoint] = useState('Not configured')
+  const [scaleEndpoint, setScaleEndpoint] = useState('Belum dikonfigurasi')
   const [printerOnline, setPrinterOnline] = useState(false)
-  const [printerEndpoint, setPrinterEndpoint] = useState('Not configured')
+  const [printerEndpoint, setPrinterEndpoint] = useState('Belum dikonfigurasi')
   const [formError, setFormError] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -163,8 +164,8 @@ export default function WeighingPage() {
   const savingRef = useRef(false)
   const [saveError, setSaveError] = useState('')
   const [printStatus, setPrintStatus] = useState(() => sessionPrinted
-    ? 'Receipt and labels sent to printer'
-    : receptionSession.closed ? `${receptionSession.nextPrintJob} tickets sent. Continue printing below.` : 'Not sent to printer')
+    ? 'Struk dan label telah dikirim ke printer'
+    : receptionSession.closed ? `${receptionSession.nextPrintJob} tiket terkirim. Lanjutkan pencetakan di bawah.` : 'Belum dikirim ke printer')
 
   /* ── User & Admin Cancellation ── */
   const [cancelModalRecord, setCancelModalRecord] = useState<WeighingRecord | null>(null)
@@ -202,7 +203,7 @@ export default function WeighingPage() {
       .then((scale) => {
         setScaleCapacityKg(Number(scale?.capacityKg) || null)
         setScaleOnline(scale?.online === true)
-        setScaleEndpoint(scale?.ip && scale?.port ? `${scale.ip}:${scale.port}` : 'Not configured')
+        setScaleEndpoint(scale?.ip && scale?.port ? `${scale.ip}:${scale.port}` : 'Belum dikonfigurasi')
       })
       .catch(() => {
         setScaleCapacityKg(null)
@@ -251,7 +252,7 @@ export default function WeighingPage() {
         const printer = Array.isArray(printers) ? printers.find((item: any) => item.station === 'RECEPTION') : null
         if (printer?.ip && printer?.port) setPrinterEndpoint(`${printer.ip}:${printer.port}`)
       })
-      .catch(() => setPrinterEndpoint('Not configured'))
+      .catch(() => setPrinterEndpoint('Belum dikonfigurasi'))
   }, [])
 
   /* Fetch live farmers and historical warings from database */
@@ -321,7 +322,7 @@ export default function WeighingPage() {
     setScanError('')
     startScan({ id: targetFarmer.id, name: targetFarmer.name })
     setScanFarmerId(targetFarmer.code || targetFarmer.id)
-    toast.success(`Farmer verified: ${targetFarmer.name} (${targetFarmer.code || targetFarmer.id})`)
+    toast.success(`Petani terverifikasi: ${targetFarmer.name} (${targetFarmer.code || targetFarmer.id})`)
     setActiveStep(2)
   }
 
@@ -330,7 +331,7 @@ export default function WeighingPage() {
     setScanError('')
     const query = (manualSearch || scanFarmerId).trim()
     if (!query) {
-      setScanError('Please scan or type a Farmer ID / Barcode / Name.')
+      setScanError('Pindai atau masukkan ID Petani / Barcode / Nama.')
       return
     }
 
@@ -349,8 +350,8 @@ export default function WeighingPage() {
       setManualSearch('')
       setScanFarmerId('')
     } else {
-      setScanError('Unregistered Farmer: ID or Barcode not found in packhouse directory.')
-      toast.error(`Unregistered Farmer: "${query}". Please select an authorized farmer or register them first.`)
+      setScanError('Petani tidak terdaftar: ID atau Barcode tidak ditemukan.')
+      toast.error(`Petani tidak terdaftar: "${query}". Pilih petani terdaftar atau daftarkan terlebih dahulu.`)
       setManualSearch(query)
       setScanFarmerId(query)
       if (scanInputRef.current) {
@@ -379,8 +380,8 @@ export default function WeighingPage() {
       selectFarmer(matched)
       closeCameraModal()
     } else {
-      setScanError('Unregistered Farmer: ID or Barcode not found in packhouse directory.')
-      toast.error(`Unregistered Farmer: "${query}". Please select an authorized farmer or register them first.`)
+      setScanError('Petani tidak terdaftar: ID atau Barcode tidak ditemukan.')
+      toast.error(`Petani tidak terdaftar: "${query}". Pilih petani terdaftar atau daftarkan terlebih dahulu.`)
       setScanFarmerId(query)
       setManualSearch(query)
       closeCameraModal()
@@ -400,18 +401,18 @@ export default function WeighingPage() {
     const sessionFarmer = sessionRef.current.records[0] || sessionRef.current.draft
     if (sessionRef.current.closed || sessionRef.current.records.length >= 500) return
     if ((!active || !farmer) && !sessionFarmer) {
-      setFormError('Farmer context is required. Please go back to Step 1.')
+      setFormError('Data petani diperlukan. Kembali ke Langkah 1.')
       setActiveStep(1)
       return
     }
 
     const numericWeight = Number(weightKg)
     if (!Number.isFinite(numericWeight) || numericWeight < 0.001) {
-      setFormError('Weight must be greater than 0 kg.')
+      setFormError('Berat harus lebih dari 0 kg.')
       return
     }
     if (scaleCapacityKg !== null && numericWeight > scaleCapacityKg) {
-      setFormError(`Weight exceeds scale capacity of ${scaleCapacityKg} kg.`)
+      setFormError(`Berat melebihi kapasitas timbangan (${scaleCapacityKg} kg).`)
       return
     }
 
@@ -466,13 +467,13 @@ export default function WeighingPage() {
       // Synchronize to cross-station store for Station 02 and Warehouse
       void syncWithBackend()
 
-      toast.success(`Intake saved: ${assignedCode}`)
+      toast.success(`Penerimaan disimpan: ${assignedCode}`)
       setConfirmApprove(updatedRecord)
       setApprovedSuccessRecord(updatedRecord)
       setPrintModalRecord(updatedRecord)
       return updatedRecord
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not save intake.'
+      const message = error instanceof Error ? error.message : 'Gagal menyimpan data penerimaan.'
       setSaveError(message)
       toast.error(message)
       return null
@@ -487,7 +488,7 @@ export default function WeighingPage() {
     if ((!force && !sessionPrinted && receptionSession.records.length > 0) || isPrinting) return
     updateReceptionSession(emptySession())
     setSaveError('')
-    setPrintStatus('Not sent to printer')
+    setPrintStatus('Belum dikirim ke printer')
     setWeightKg('')
     setFormError('')
     setScanError('')
@@ -497,7 +498,7 @@ export default function WeighingPage() {
     setApprovedSuccessRecord(null)
     setPrintModalRecord(null)
     setActiveStep(1)
-    toast.info('Ready for the next farmer.')
+    toast.info('Siap untuk petani berikutnya.')
   }
 
   const handleNextBag = async () => {
@@ -516,17 +517,17 @@ export default function WeighingPage() {
     if (savingRef.current || printingRef.current || sessionRef.current.closed) return
     const numericWeight = Number(weightKg)
     if (!Number.isFinite(numericWeight) || numericWeight < 0.001) {
-      setFormError('Weighing cannot be zero. Place a bag on the scale first.')
+      setFormError('Berat tidak boleh nol. Letakkan karung di atas timbangan terlebih dahulu.')
       return
     }
     if (scaleCapacityKg !== null && numericWeight > scaleCapacityKg) {
-      setFormError(`Weight exceeds scale capacity of ${scaleCapacityKg} kg.`)
+      setFormError(`Berat melebihi kapasitas timbangan (${scaleCapacityKg} kg).`)
       return
     }
     const sessionFarmer = sessionRef.current.records[0] || sessionRef.current.draft
     const farmerId = sessionFarmer?.farmerId || farmer?.id || ''
     if (!farmerId) {
-      setFormError('Select a valid farmer before saving.')
+      setFormError('Pilih petani yang valid sebelum menyimpan.')
       return
     }
     const activeFarmerObj = farmersList.find((f) => f.id === farmerId)
@@ -610,7 +611,7 @@ export default function WeighingPage() {
       updateReceptionSession({ ...sessionRef.current, draft: undefined })
     }
     setActiveStep(2)
-    toast.warning('Record loaded back for re-weighing.')
+    toast.warning('Data dimuat kembali untuk penimbangan ulang.')
   }
 
   /* ── Thermal Print Actions ── */
@@ -626,22 +627,22 @@ export default function WeighingPage() {
     const batch = isSession ? current.records : [rec]
     printingRef.current = true
     setIsPrinting(true)
-    setPrintStatus('Sending receipt and labels to printer...')
+    setPrintStatus('Mengirim struk dan label ke printer...')
     let nextPrintJob = isSession && !reprint ? current.nextPrintJob : 0
     if (isSession) updateReceptionSession({ ...current, closed: true, nextPrintJob })
     try {
-      await printReceptionSession(buildReceptionPrintJobs(batch), nextPrintJob,
+      await printReceptionSession(buildReceptionPrintJobs(batch.map(record => ({ ...record, commodityName: getGeneralCommodityName({ code: record.commodityCode || activeCommodity.code, name: record.commodityName || activeCommodity.name }) }))), nextPrintJob,
         (jobs) => api.printers.print('reception', jobs),
         (next) => {
           nextPrintJob = next
           if (isSession) updateReceptionSession({ ...sessionRef.current, nextPrintJob: next })
         },
         () => new Promise((resolve) => window.setTimeout(resolve, 600)))
-      setPrintStatus('Receipt and labels sent to printer')
-      toast.success(`Receipt and ${batch.length} Waring labels sent to printer.`)
+      setPrintStatus('Struk dan label telah dikirim ke printer')
+      toast.success(`Struk dan ${batch.length} label Waring dikirim ke printer.`)
     } catch (error) {
-      setPrintStatus(`Print failed. Intake is saved. ${nextPrintJob}/${batch.length + 1} tickets sent. Retry below.`)
-      toast.error(error instanceof Error ? error.message : 'Check the Reception printer.')
+      setPrintStatus(`Pencetakan gagal. Penerimaan telah disimpan. ${nextPrintJob}/${batch.length + 1} tiket terkirim. Coba lagi di bawah.`)
+      toast.error(error instanceof Error ? error.message : 'Periksa printer Penerimaan.')
     } finally {
       printingRef.current = false
       setIsPrinting(false)
@@ -652,7 +653,7 @@ export default function WeighingPage() {
   const columns: Column<WeighingRecord>[] = [
     {
       key: 'farmerName',
-      label: 'Farmer',
+      label: 'Petani',
       priority: true,
       render: (row) => (
         <div>
@@ -663,7 +664,7 @@ export default function WeighingPage() {
     },
     {
       key: 'weightKg',
-      label: 'Weight (kg)',
+      label: 'Berat (kg)',
       priority: true,
       align: 'right',
       render: (row) => (
@@ -674,7 +675,7 @@ export default function WeighingPage() {
     },
     {
       key: 'depositDate',
-      label: 'Deposit Time',
+      label: 'Waktu Setor',
       priority: true,
       render: (row) => (
         <div>
@@ -689,24 +690,24 @@ export default function WeighingPage() {
       priority: true,
       render: (row) => (
         <Badge tone={statusTone[row.status]} dot>
-          {row.status === 'BUFFER_WAITING' ? 'BUFFER_WAITING' : row.status === 'PENDING' ? 'PENDING' : row.status}
+          {translateStatus(row.status)}
         </Badge>
       ),
     },
     {
       key: 'waringCode',
-      label: 'Waring Code',
+      label: 'Kode Waring',
       priority: true,
       render: (row) =>
         row.waringCode ? (
           <span className="font-mono font-medium tabular-nums text-foreground break-all">{row.waringCode}</span>
         ) : (
-          <span className="text-xs text-muted-foreground italic">Assigned after saving</span>
+          <span className="text-xs text-muted-foreground italic">Dibuat setelah disimpan</span>
         ),
     },
     {
       key: 'actions',
-      label: 'Actions',
+      label: 'Aksi',
       align: 'right',
       render: (row) => (
         <div className="flex items-center gap-1.5 justify-end">
@@ -774,11 +775,11 @@ export default function WeighingPage() {
      STEPPER PROGRESS BAR COMPONENT
   ───────────────────────────────────────────────────────────── */
   const renderStepperBar = () => (
-    <nav className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto scrollbar-none" aria-label="Weighing steps">
+    <nav className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto scrollbar-none" aria-label="Langkah penimbangan">
       {STEPS.map((step, idx) => {
         const isCurrent = activeStep === step.id
         const isDone = activeStep > step.id || (step.id === 3 && approvedSuccessRecord !== null)
-        const compactLabel = step.id === 1 ? 'Farmer' : step.id === 2 ? 'Weigh' : 'Print'
+        const compactLabel = step.id === 1 ? 'Petani' : step.id === 2 ? 'Timbang' : 'Cetak'
 
         return (
           <div key={step.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -825,9 +826,9 @@ export default function WeighingPage() {
     <div className="station-workflow space-y-6">
       {receptionSession.records.length > 0 && <div className="border border-border bg-muted/30 p-3 space-y-2">
         <div className="flex justify-between gap-2 font-semibold text-sm">
-          <span>{receptionSession.records.length} bags saved</span><span>{formatWeight(sessionTotalKg)} kg total</span>
+          <span>{receptionSession.records.length} karung tersimpan</span><span>Total {formatWeight(sessionTotalKg)} kg</span>
         </div>
-        <div className="max-h-40 overflow-y-auto text-xs space-y-1" aria-label="Saved bags">
+        <div className="max-h-40 overflow-y-auto text-xs space-y-1" aria-label="Karung tersimpan">
           {receptionSession.records.map((record, index) => <div key={record.id} className="flex justify-between gap-3 font-mono">
             <span className="break-all">{index + 1}. {record.waringCode}</span><span className="shrink-0">{formatWeight(record.weightKg)} kg</span>
           </div>)}
@@ -839,14 +840,14 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 1 of 3">
-                Step 1 of 3
+                {idText('Step 1 of 3')}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Scan Farmer Card">
-                Scan Farmer Card
+                {idText('Scan Farmer Card')}
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
-              Awaiting Scan
+              Menunggu Pemindaian
             </Badge>
           </div>
 
@@ -854,7 +855,7 @@ export default function WeighingPage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Commodity (1 per session)
+                Komoditas (1 per sesi)
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
@@ -885,10 +886,10 @@ export default function WeighingPage() {
             </div>
             <div className="space-y-1">
               <h3 className="text-base font-bold text-foreground">
-                2D Scanner and Camera
+                Pemindai 2D dan Kamera
               </h3>
               <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                Scan the barcode on the farmer ID card with a USB 2D hardware scanner or device camera.
+                Pindai barcode pada kartu ID petani menggunakan pemindai USB 2D atau kamera perangkat.
               </p>
             </div>
 
@@ -900,7 +901,7 @@ export default function WeighingPage() {
                   setManualSearch(e.target.value)
                   setScanError('')
                 }}
-                placeholder="Scan 2D barcode or enter name / ID..."
+                placeholder="Pindai barcode 2D atau masukkan nama / ID..."
                 className="font-mono text-sm py-2.5 flex-1 min-w-0"
                 autoFocus
               />
@@ -925,7 +926,7 @@ export default function WeighingPage() {
               <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-left flex items-start gap-2.5 max-w-md mx-auto animate-in fade-in">
                 <Icon name="alert-triangle" size={16} className="text-destructive shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
-                  <p className="text-xs font-semibold text-destructive">Verification Rejected</p>
+                  <p className="text-xs font-semibold text-destructive">Verifikasi Ditolak</p>
                   <p className="text-xs text-destructive/90">{scanError}</p>
                 </div>
               </div>
@@ -941,15 +942,15 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 2 of 3">
-                Step 2 of 3
+                {idText('Step 2 of 3')}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Weigh Harvest">
-                Weigh Harvest
+                {idText('Weigh Harvest')}
               </h2>
             </div>
             <div className="flex items-center gap-2">
               <Badge tone="success" dot>
-                Farmer: {receptionSession.records[0]?.farmerName || receptionSession.draft?.farmerName || farmer?.name}
+                Petani: {receptionSession.records[0]?.farmerName || receptionSession.draft?.farmerName || farmer?.name}
               </Badge>
               <Button
                 size="sm"
@@ -977,7 +978,7 @@ export default function WeighingPage() {
               <ScaleWeightInput
                 id="focus-weighing-weight"
                 stationId="01"
-                label="Weight (kg)"
+                label="Berat (kg)"
                 value={weightKg}
                 onChange={(val) => {
                   setWeightKg(val)
@@ -997,15 +998,15 @@ export default function WeighingPage() {
             <div className="space-y-4">
               <div className="station-secondary-panel p-4 bg-muted/30 border border-border rounded-none space-y-3">
                 <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                  <Icon name="info" size={14} /> Intake Metadata
+                  <Icon name="info" size={14} /> Metadata Penerimaan
                 </span>
                 <div className="space-y-2 text-sm pt-1">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Farmer:</span>
+                    <span className="text-muted-foreground">Petani:</span>
                     <span className="font-semibold text-foreground">{receptionSession.records[0]?.farmerName || receptionSession.draft?.farmerName || farmer?.name}</span>
                   </div>
                   <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Commodity:</span>
+                    <span className="text-muted-foreground">Komoditas:</span>
                     <span className="font-semibold text-foreground text-right">
                       {getGeneralCommodityName({
                         code: receptionSession.records[0]?.commodityCode || receptionSession.draft?.commodityCode || activeCommodity.code,
@@ -1014,15 +1015,15 @@ export default function WeighingPage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Deposit Date:</span>
+                    <span className="text-muted-foreground">Tanggal Setor:</span>
                     <span className="font-mono font-semibold text-foreground flex items-center gap-1">
-                      {today()} <Badge tone="accent">Auto</Badge>
+                      {today()} <Badge tone="accent">Otomatis</Badge>
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Waring Code:</span>
+                    <span className="text-muted-foreground">Kode Waring:</span>
                     <span className="font-mono text-xs font-semibold text-foreground">
-                      Assigned after saving
+                      Dibuat setelah disimpan
                     </span>
                   </div>
                 </div>
@@ -1100,7 +1101,7 @@ export default function WeighingPage() {
                 setActiveStep(1)
               }}
             >
-              Kembali ke Scan
+              Kembali ke Pindai
             </Button>
             <div className="flex items-center gap-2 flex-wrap">
               {!receptionSession.closed && receptionSession.records.length < 500 && (
@@ -1151,19 +1152,19 @@ export default function WeighingPage() {
           <div className="flex items-center justify-between border-b border-border pb-2 flex-wrap gap-2 no-print">
             <div>
               <span className="text-[10px] uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 3 of 3">
-                Step 3 of 3
+                {idText('Step 3 of 3')}
               </span>
               <h2 className="text-xl font-bold tracking-tight text-foreground" data-title="Approve & Print">
-                Review & Print
+                {idText('Approve & Print')}
               </h2>
             </div>
             {approvedSuccessRecord ? (
               <Badge tone="success" dot>
-                Intake Saved
+                Penerimaan Tersimpan
               </Badge>
             ) : (
               <Badge tone="warning" dot>
-                Status: PENDING OPERATOR APPROVAL
+                Status: Menunggu Persetujuan Operator
               </Badge>
             )}
           </div>
@@ -1171,7 +1172,7 @@ export default function WeighingPage() {
           {/* Intake Verification Box */}
           <div className="p-3 bg-muted/30 border border-border rounded-none grid grid-cols-1 sm:grid-cols-4 gap-2 no-print">
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Farmer</span>
+              <span className="text-xs text-muted-foreground block font-medium">Petani</span>
               <span className="font-semibold text-base text-foreground block">
                 {confirmApprove?.farmerName ?? approvedSuccessRecord?.farmerName ?? farmer?.name}
               </span>
@@ -1180,23 +1181,23 @@ export default function WeighingPage() {
               </span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Captured Weight</span>
+              <span className="text-xs text-muted-foreground block font-medium">Berat Tercatat</span>
               <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 block tracking-tight">
                 {formatWeight(confirmApprove?.weightKg ?? approvedSuccessRecord?.weightKg ?? weightKg)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
               </span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Deposit Date</span>
+              <span className="text-xs text-muted-foreground block font-medium">Tanggal Setor</span>
               <span className="font-mono font-semibold text-foreground block">{today()}</span>
-              <span className="text-xs text-muted-foreground block">System timestamped</span>
+              <span className="text-xs text-muted-foreground block">Dicatat otomatis oleh sistem</span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Assigned Waring ID</span>
+              <span className="text-xs text-muted-foreground block font-medium">Kode Waring</span>
               <span className="font-mono font-bold text-base text-primary block break-all">
-                {approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? 'Assigned after saving'}
+                {approvedSuccessRecord?.waringCode ?? confirmApprove?.waringCode ?? 'Dibuat setelah disimpan'}
               </span>
-              <span className="text-xs text-muted-foreground block">QR Waring Label</span>
+              <span className="text-xs text-muted-foreground block">Label QR Waring</span>
             </div>
           </div>
 
@@ -1214,9 +1215,9 @@ export default function WeighingPage() {
                   name: previewRecords[0]?.commodityName || activeCommodity.name,
                 })}
                 weightKg={previewTotalKg}
-                items={previewRecords.map((record, index) => ({ code: record.waringCode || `Bag ${index + 1} (unsaved)`, weightKg: record.weightKg }))}
-                time={confirmApprove?.time ?? 'Live'}
-                date={today()}
+                items={previewRecords.map((record, index) => ({ code: record.waringCode || `Karung ${index + 1} (belum disimpan)`, weightKg: record.weightKg }))}
+                time={previewRecords[0]?.time ?? confirmApprove?.time ?? ''}
+                date={previewRecords[0]?.depositDate ?? today()}
                 screenFit
               />
 
@@ -1234,10 +1235,10 @@ export default function WeighingPage() {
           </div>
 
           {saveError && <p role="alert" className="alert alert-danger">
-            {saveError} Your weight is retained. Retry saving below.
+            {saveError} Berat tetap tersimpan. Coba simpan lagi di bawah.
           </p>}
-          <p role="status" className={printStatus.includes('failed') ? 'alert alert-warning' : 'text-sm text-muted-foreground'}>
-            {isSaving ? 'Saving intake...' : printStatus}
+          <p role="status" className={printStatus.includes('gagal') ? 'alert alert-warning' : 'text-sm text-muted-foreground'}>
+            {isSaving ? 'Menyimpan penerimaan...' : printStatus}
           </p>
           <div className="flex items-center justify-between border-t border-border pt-3 flex-wrap gap-2 no-print">
             {!approvedSuccessRecord && <Button variant="outline" icon="refresh" disabled={isSaving || isPrinting}
@@ -1251,7 +1252,7 @@ export default function WeighingPage() {
                 const saved = approvedSuccessRecord || await handleApproveCommit()
                 if (saved) void triggerPrintBoth(saved, sessionPrinted)
               }}>
-              {sessionPrinted ? 'Cetak Lagi' : printStatus.includes('failed') || receptionSession.closed ? 'Cetak Ulang' : 'Selesai & Cetak'}
+              {sessionPrinted ? 'Cetak Lagi' : printStatus.includes('gagal') || receptionSession.closed ? 'Cetak Ulang' : 'Selesai & Cetak'}
             </Button>
             {(sessionPrinted || (approvedSuccessRecord && !receptionSession.records.length)) ? (
               <Button variant="primary" icon="check" touch disabled={isPrinting} onClick={() => handleNextWeighing()}>
@@ -1279,10 +1280,10 @@ export default function WeighingPage() {
          FULLSCREEN FOCUS MODE OVERLAY
          ═══════════════════════════════════════════════════════════════════ */}
       {focusMode && (
-        <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto" role="dialog" aria-modal="true" aria-label="Weighing Focus Mode">
+        <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto" role="dialog" aria-modal="true" aria-label="Mode Fokus Penerimaan">
           <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
             <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
-              STATION 01 · RECEPTION
+              STASIUN 01 · PENERIMAAN
             </div>
 
             {/* Stepper Progress */}
@@ -1313,8 +1314,8 @@ export default function WeighingPage() {
       <div className="station-page space-y-6">
         <div className="no-print">
           <PageHeader
-            title="Station 01: Reception"
-            subtitle="Farmer verification, intake weighing, and buffer queue."
+            title="Stasiun 01: Penerimaan"
+            subtitle="Verifikasi petani, penimbangan penerimaan, dan antrean buffer."
             actions={
               <Button
                 variant="outline"
@@ -1331,25 +1332,25 @@ export default function WeighingPage() {
         {/* Quick Stats Grid */}
         <div className="station-quick-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pending Approval</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Menunggu Persetujuan</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{pendingCount}</p>
-            <p className="text-xs text-muted-foreground">Requires verification</p>
+            <p className="text-xs text-muted-foreground">Perlu verifikasi</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Saved Records</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Data Tersimpan</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{approvedToday}</p>
             <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              Ready for Sorting
+              Siap untuk Sortasi
             </p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale</p>
-            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Timbangan</p>
+            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Terhubung' : 'Terputus'}</p>
             <p className="text-xs text-muted-foreground font-mono">{scaleEndpoint}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Reception Printer</p>
-            <p className={`text-2xl font-bold tracking-tight ${printerOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{printerOnline ? 'Online' : 'Offline'}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Printer Penerimaan</p>
+            <p className={`text-2xl font-bold tracking-tight ${printerOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{printerOnline ? 'Terhubung' : 'Terputus'}</p>
             <p className="text-xs text-muted-foreground font-mono">{printerEndpoint}</p>
           </div>
         </div>
@@ -1357,9 +1358,9 @@ export default function WeighingPage() {
         {/* Sequential Stepper in Standard View */}
         <div id="weighing-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
-            <span className="font-semibold text-base text-foreground">Reception Workflow</span>
+            <span className="font-semibold text-base text-foreground">Alur Kerja Penerimaan</span>
             <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-              Mode Fokus
+              {idText('Focus Mode')}
             </Button>
           </div>
 
@@ -1375,17 +1376,17 @@ export default function WeighingPage() {
         {/* ── Today's Harvest Weighing Records Ledger ── */}
         <div id="weighing-records" className="space-y-3 no-print">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight text-foreground">Reception Records</h2>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Riwayat Penerimaan</h2>
             <span className="text-xs text-muted-foreground font-mono">
-              {pendingCount} pending · {approvedToday} saved
+              {pendingCount} menunggu · {approvedToday} tersimpan
             </span>
           </div>
           <DataTable
             columns={columns}
             data={records}
             rowKey={(row) => row.id}
-            emptyTitle="No Reception records."
-            emptyDescription="Verify a farmer and weigh the first bag."
+            emptyTitle="Belum ada data Penerimaan."
+            emptyDescription="Verifikasi petani dan timbang karung pertama."
           />
         </div>
       </div>
@@ -1395,9 +1396,9 @@ export default function WeighingPage() {
         isOpen={cameraModalOpen}
         onClose={closeCameraModal}
         onScan={handleVerifyScannedCode}
-        title="Scan Farmer ID Card · Station 01 Reception"
-        subtitle="Align the QR code or 1D barcode on the farmer ID card within the camera viewport."
-        manualPlaceholder="Scan barcode or enter farmer ID / name..."
+        title="Pindai Kartu ID Petani · Stasiun 01 Penerimaan"
+        subtitle="Arahkan kode QR atau barcode 1D pada kartu ID petani ke dalam bingkai kamera."
+        manualPlaceholder="Pindai barcode atau masukkan ID / nama petani..."
       />
 
       {/* ── Admin Transaction Cancellation Modal ── */}

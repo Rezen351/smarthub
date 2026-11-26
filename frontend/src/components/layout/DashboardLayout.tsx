@@ -22,7 +22,7 @@ const roleMenu: Record<string, MenuItem[]> = {
   ADMIN: [
     { label: 'Dasbor', path: '/dashboard', icon: 'dashboard', end: true },
     { label: 'Stasiun 1: Penerimaan', path: '/dashboard/weighing', icon: 'scale' },
-    { label: 'Stasiun 2: Pemilahan', path: '/dashboard/sorting', icon: 'sortir' },
+    { label: 'Stasiun 2: Sortasi', path: '/dashboard/sorting', icon: 'sortir' },
     { label: 'Stasiun 3: Pengemasan', path: '/dashboard/packaging', icon: 'package' },
     { label: 'Buku Besar Gudang', path: '/dashboard/warehouse', icon: 'box' },
     { label: 'Pengiriman', path: '/dashboard/deliveries', icon: 'truck' },
@@ -34,7 +34,7 @@ const roleMenu: Record<string, MenuItem[]> = {
   OPERATOR: [
     { label: 'Pusat Kerja', path: '/dashboard', icon: 'dashboard', end: true },
     { label: 'Stasiun 1: Penerimaan', path: '/dashboard/weighing', icon: 'scale' },
-    { label: 'Stasiun 2: Pemilahan', path: '/dashboard/sorting', icon: 'sortir' },
+    { label: 'Stasiun 2: Sortasi', path: '/dashboard/sorting', icon: 'sortir' },
     { label: 'Stasiun 3: Pengemasan', path: '/dashboard/packaging', icon: 'package' },
     { label: 'Buku Besar Gudang', path: '/dashboard/warehouse', icon: 'box' },
     { label: 'Pengiriman', path: '/dashboard/deliveries', icon: 'truck' },
@@ -145,7 +145,7 @@ export default function DashboardLayout() {
   }
 
   const navLinks = (
-        <nav className="sidebar-nav" aria-label="Main navigation">
+        <nav className="sidebar-nav" aria-label="Navigasi utama">
           <p className="sidebar-section">{user ? roleLabel[user.role] ?? 'Menu' : 'Menu'}</p>
           {menu.map((item) =>
             item.external ? (
@@ -200,9 +200,9 @@ export default function DashboardLayout() {
       <div className="pt-2 border-t border-border flex flex-col gap-0.5 text-text-light font-mono text-[11px]">
         <div className="flex items-center justify-between">
           <span className="font-semibold text-text">SmartGeulis</span>
-          <span className="bg-bg-alt px-1.5 py-0.5 rounded-none text-[9px] font-mono tracking-wider">TRACEABILITY</span>
+          <span className="bg-bg-alt px-1.5 py-0.5 rounded-none text-[9px] font-mono tracking-wider">KETERTELUSURAN</span>
         </div>
-        <span className="text-[10px]">Traceability System v1.0.0</span>
+        <span className="text-[10px]">Sistem Ketertelusuran v1.0.0</span>
       </div>
     </div>
   )
@@ -210,13 +210,13 @@ export default function DashboardLayout() {
   return (
     <div className="app-shell">
       {/* ── Sidebar (Persistent on desktop, drawer on mobile) ── */}
-      <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`} aria-label="Sidebar">
+      <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`} aria-label="Menu samping">
         <div className="sidebar-brand">
           <Link
             to="/dashboard"
             className="flex items-center gap-3 text-inherit group"
             style={{ textDecoration: 'none' }}
-            aria-label="SmartGeulis home"
+            aria-label="Beranda SmartGeulis"
           >
             <Logo className="h-8 w-auto" markOnly />
             <div className="min-w-0">
@@ -224,8 +224,8 @@ export default function DashboardLayout() {
                 SmartGeulis
               </div>
               <div className="font-mono-custom text-[9px] text-text-light tracking-[0.22em] uppercase mt-0.5 hidden xs:block sm:block">
-                <span className="hidden sm:inline">TRACEABILITY SYSTEM</span>
-                <span className="sm:hidden">TRACE</span>
+                <span className="hidden sm:inline">SISTEM KETERTELUSURAN</span>
+                <span className="sm:hidden">LACAK</span>
               </div>
             </div>
           </Link>
@@ -244,7 +244,7 @@ export default function DashboardLayout() {
             size="sm"
             className="hide-desktop p-2 min-h-[40px] text-foreground"
             onClick={() => setMenuOpen((open) => !open)}
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
             aria-expanded={menuOpen}
           >
             <Icon name={menuOpen ? 'close' : 'menu'} size={20} />
@@ -255,7 +255,7 @@ export default function DashboardLayout() {
             to="/dashboard"
             className="hide-desktop flex items-center gap-2 text-inherit group min-w-0"
             style={{ textDecoration: 'none' }}
-            aria-label="SmartGeulis home"
+            aria-label="Beranda SmartGeulis"
           >
             <Logo className="h-6 w-auto shrink-0" markOnly />
             <div className="min-w-0">
@@ -263,14 +263,14 @@ export default function DashboardLayout() {
                 SmartGeulis
               </div>
               <div className="font-mono-custom text-[7.5px] text-text-light tracking-[0.16em] uppercase truncate">
-                TRACEABILITY
+                KETERTELUSURAN
               </div>
             </div>
           </Link>
 
           {/* On desktop: show only current page title (brand is in sidebar) */}
           <span className="navbar-title hide-mobile font-semibold text-base text-text">
-            {currentPage?.label ?? 'Dashboard'}
+            {currentPage?.label ?? 'Dasbor'}
           </span>
 
           <div className="navbar-spacer" />
@@ -285,7 +285,7 @@ export default function DashboardLayout() {
               onClick={() => setUserMenuOpen((open) => !open)}
               aria-haspopup="menu"
               aria-expanded={userMenuOpen}
-              aria-label="Account menu"
+              aria-label="Menu akun"
             >
               <span className="avatar avatar-sm">{user?.name?.charAt(0)?.toUpperCase() ?? 'U'}</span>
               <Icon name="chevron-down" size={14} />

@@ -20,15 +20,16 @@ import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import { formatWeight } from '../lib/utils'
+import { idText } from '@/lib/i18n'
 import { usePackhouseStore, type GradedBatchRecord, type BufferWaringItem } from '../hooks/usePackhouseStore'
 import CameraScannerModal from '../components/shared/CameraScannerModal'
 import { api, type Pallet } from '../services/api'
 
 const STEPS = [
-  { id: 1, label: 'Scan Waring' },
-  { id: 2, label: 'Sizing & Wash' },
-  { id: 3, label: 'Weigh Grades' },
-  { id: 4, label: 'Review & Save' },
+  { id: 1, label: 'Pindai Waring' },
+  { id: 2, label: 'Ukuran & Cuci' },
+  { id: 3, label: 'Timbang Grade' },
+  { id: 4, label: 'Tinjau & Simpan' },
 ] as const
 
 export default function SortingPage() {
@@ -201,7 +202,7 @@ export default function SortingPage() {
     setGradeBKg('')
     setGradeCKg('')
     setLiveScaleWeight('')
-    toast.success(`Waring ${item.code} loaded from buffer`)
+    toast.success(`Waring ${item.code} dimuat dari antrean`)
   }
 
   /* Manual Waring Scan Submit */
@@ -219,7 +220,7 @@ export default function SortingPage() {
       setManualWaringSearch('')
       setWaringScanError(null)
     } else {
-      setWaringScanError(`Waring "${query}" not found in buffer queue.`)
+      setWaringScanError(`Waring "${query}" tidak ditemukan dalam antrean.`)
     }
   }
 
@@ -229,30 +230,30 @@ export default function SortingPage() {
     const val = rawVal.trim()
     const numVal = Number(val)
     if (val === '' || isNaN(numVal) || numVal < 0) {
-      toast.error('Enter a valid weight (0 or higher).')
+      toast.error('Masukkan berat yang valid (0 atau lebih).')
       return
     }
 
     if (numVal > maxAllowedForActiveGrade + 0.005) {
       toast.error(
-        `Weight ${numVal.toFixed(3)} kg exceeds remaining intake capacity of ${maxAllowedForActiveGrade.toFixed(3)} kg for this waring.`,
+        `Berat ${numVal.toFixed(3)} kg melebihi sisa kapasitas ${maxAllowedForActiveGrade.toFixed(3)} kg untuk waring ini.`,
       )
       return
     }
 
     if (activeGradeTab === 'A') {
       setGradeAKg(val)
-      toast.success(numVal === 0 ? 'Grade A set to 0 kg (None)' : `Grade A weight set to ${val} kg`)
+      toast.success(numVal === 0 ? 'Grade A diatur ke 0 kg (Kosong)' : `Berat Grade A diatur ke ${val} kg`)
       setActiveGradeTab('B')
       setLiveScaleWeight(gradeBKg || '0')
     } else if (activeGradeTab === 'B') {
       setGradeBKg(val)
-      toast.success(numVal === 0 ? 'Grade B set to 0 kg (None)' : `Grade B weight set to ${val} kg`)
+      toast.success(numVal === 0 ? 'Grade B diatur ke 0 kg (Kosong)' : `Berat Grade B diatur ke ${val} kg`)
       setActiveGradeTab('C')
       setLiveScaleWeight(gradeCKg || '0')
     } else {
       setGradeCKg(val)
-      toast.success(numVal === 0 ? 'Grade C set to 0 kg (None)' : `Grade C weight set to ${val} kg`)
+      toast.success(numVal === 0 ? 'Grade C diatur ke 0 kg (Kosong)' : `Berat Grade C diatur ke ${val} kg`)
     }
   }
 
@@ -265,7 +266,7 @@ export default function SortingPage() {
     const matched = registeredPallets.find((p) => p.code.toUpperCase() === code)
     if (matched && matched.status === 'IN_USE' && (matched.remainingKg ?? 0) > 0) {
       toast.error(
-        `Pallet "${code}" is currently IN USE with Grade ${matched.grade || 'unspecified'} (${matched.remainingKg} kg). Cannot reuse until Station 03 finishes packaging.`,
+        `Palet "${code}" sedang digunakan untuk Grade ${matched.grade || 'tidak ditentukan'} (${matched.remainingKg} kg). Tidak dapat digunakan ulang hingga pengemasan di Stasiun 03 selesai.`,
       )
       return
     }
@@ -276,7 +277,7 @@ export default function SortingPage() {
       (targetGrade !== 'B' && gradeBPalletQr === code) ||
       (targetGrade !== 'C' && gradeCPalletQr === code)
     ) {
-      toast.error(`Pallet "${code}" is already assigned to another grade in this run.`)
+      toast.error(`Palet "${code}" sudah digunakan untuk grade lain pada proses ini.`)
       return
     }
 
@@ -286,7 +287,7 @@ export default function SortingPage() {
     }
     if (targetGrade === 'B') setGradeBPalletQr(code)
     if (targetGrade === 'C') setGradeCPalletQr(code)
-    toast.success(`Pallet ${code} linked to Grade ${targetGrade}`)
+    toast.success(`Palet ${code} ditautkan ke Grade ${targetGrade}`)
     closeCameraModal()
   }
 
@@ -302,7 +303,7 @@ export default function SortingPage() {
           handleSelectWaring(matched)
           closeCameraModal()
         } else {
-          toast.error(`Waring "${val}" not in queue.`)
+          toast.error(`Waring "${val}" tidak ada dalam antrean.`)
         }
       } else if (cameraModalMode === 'PALLET') {
         handleAssignScannedPallet(val, activeGradeTab)
@@ -315,22 +316,22 @@ export default function SortingPage() {
   /* Commit Batch & Save */
   const handleSaveSortingRun = async () => {
     if (!allGradesRecorded) {
-      toast.error('Record a weight or 0 kg for each grade.')
+      toast.error('Catat berat atau 0 kg untuk setiap grade.')
       return
     }
     if (totalGraded <= 0) {
-      toast.error('Cannot save batch with zero graded weight.')
+      toast.error('Tidak dapat menyimpan batch dengan total berat grade nol.')
       return
     }
 
     if (totalGraded > gGross + 0.005) {
       toast.error(
-        `Total graded weight (${totalGraded.toFixed(3)} kg) exceeds waring intake (${gGross.toFixed(3)} kg).`,
+        `Total berat tersortasi (${totalGraded.toFixed(3)} kg) melebihi berat awal waring (${gGross.toFixed(3)} kg).`,
       )
       return
     }
     if ((gA > 0 && !gradeAPalletQr.trim()) || (gB > 0 && !gradeBPalletQr.trim()) || (gC > 0 && !gradeCPalletQr.trim())) {
-      toast.error('Assign a registered pallet to every grade with weight.')
+      toast.error('Tautkan palet terdaftar untuk setiap grade yang memiliki berat.')
       return
     }
 
@@ -362,9 +363,9 @@ export default function SortingPage() {
     })
 
     setSavedSuccessBatch(newBatch)
-    toast.success(`Batch saved. Yield: ${yieldPct.toFixed(1)}%. Pallets ready for packaging.`)
+    toast.success(`Batch tersimpan. Rendemen: ${yieldPct.toFixed(1)}%. Palet siap untuk pengemasan.`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not save the sorting batch.')
+      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan batch sortasi.')
     }
   }
 
@@ -401,7 +402,7 @@ export default function SortingPage() {
   const columns: Column<GradedBatchRecord>[] = [
     {
       key: 'palletCode',
-      label: 'Pallet ID',
+      label: 'ID Palet',
       priority: true,
       render: (r) => {
         const badges: { grade: string; code: string; tone: string }[] = []
@@ -445,7 +446,7 @@ export default function SortingPage() {
     },
     {
       key: 'waringCode',
-      label: 'Waring Origin',
+      label: 'Asal Waring',
       priority: true,
       render: (r) => (
         <div className="flex flex-col">
@@ -456,7 +457,7 @@ export default function SortingPage() {
     },
     {
       key: 'grossIntakeKg',
-      label: 'Gross (kg)',
+      label: 'Bruto (kg)',
       render: (r) => <span className="font-mono text-xs">{formatWeight(r.grossIntakeKg)}</span>,
     },
     {
@@ -503,7 +504,7 @@ export default function SortingPage() {
     },
     {
       key: 'shrinkageKg',
-      label: 'Shrinkage / Loss',
+      label: 'Susut',
       render: (r) => (
         <span className="font-mono text-xs text-red-600">
           {formatWeight(r.shrinkageKg)} kg ({r.shrinkagePct}%)
@@ -512,16 +513,16 @@ export default function SortingPage() {
     },
     {
       key: 'washing',
-      label: 'Wash',
+      label: 'Cuci',
       render: (r) => (
         <Badge tone={r.washingRecord === 'WASHED' ? 'accent' : 'neutral'}>
-          {r.washingRecord}
+          {r.washingRecord === 'WASHED' ? 'Dicuci' : 'Tanpa Cuci'}
         </Badge>
       ),
     },
     {
       key: 'timestamp',
-      label: 'Time',
+      label: 'Waktu',
       align: 'right',
       render: (r) => <span className="font-mono text-xs text-muted-foreground">{r.timestamp}</span>,
     },
@@ -533,12 +534,12 @@ export default function SortingPage() {
   const renderStepperBar = () => (
     <nav
       className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto"
-      aria-label="Sorting steps"
+      aria-label="Langkah sortasi"
     >
       {STEPS.map((step, idx) => {
         const isCurrent = activeStep === step.id
         const isDone = activeStep > step.id || (step.id === 4 && savedSuccessBatch !== null)
-        const compactLabel = step.id === 1 ? 'Waring' : step.id === 2 ? 'Sizer' : step.id === 3 ? 'Grades' : 'Done'
+        const compactLabel = step.id === 1 ? 'Waring' : step.id === 2 ? 'Ukuran' : step.id === 3 ? 'Grade' : 'Selesai'
 
         return (
           <div key={step.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -589,14 +590,14 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 1 of 4">
-                Langkah 1 dari 4
+                {idText('Step 1 of 4')}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Scan Waring">
-                Pindai Waring
+                {idText('Scan Waring')}
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
-              Awaiting Scan
+              Menunggu Pemindaian
             </Badge>
           </div>
 
@@ -607,10 +608,10 @@ export default function SortingPage() {
             </div>
             <div className="space-y-1">
               <h3 className="text-base font-bold text-foreground">
-                2D Scanner and Camera
+                Pemindai 2D dan Kamera
               </h3>
               <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                Scan the QR code on the intake waring sack with a USB 2D hardware scanner or device camera.
+                Pindai kode QR pada karung waring menggunakan pemindai USB 2D atau kamera perangkat.
               </p>
             </div>
 
@@ -623,7 +624,7 @@ export default function SortingPage() {
                   setManualWaringSearch(e.target.value)
                   setWaringScanError(null)
                 }}
-                placeholder="Scan 2D barcode or enter waring code..."
+                placeholder="Pindai barcode 2D atau masukkan kode waring..."
                 className="font-mono text-sm flex-1 min-w-0"
               />
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -642,7 +643,7 @@ export default function SortingPage() {
           {/* Active Selected Waring Confirmation Strip */}
           <div className="p-3 sm:p-4 bg-card border border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="space-y-0.5">
-              <span className="text-xs text-muted-foreground uppercase font-mono block">Selected Intake Waring</span>
+              <span className="text-xs text-muted-foreground uppercase font-mono block">Waring Terpilih</span>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-base sm:text-lg font-bold font-mono">{waringCode}</span>
                 <span className="text-xs text-muted-foreground">({farmerName} · {farmerVillage})</span>
@@ -650,7 +651,7 @@ export default function SortingPage() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs sm:text-sm font-mono font-bold text-emerald-700 bg-card px-2 py-1 border border-emerald-300 dark:border-emerald-800">
-                {formatWeight(Number(grossIntakeKg))} kg Gross
+                {formatWeight(Number(grossIntakeKg))} kg Bruto
               </span>
               <Button variant="primary" icon="check" touch onClick={() => setActiveStep(2)} className="flex-1 sm:flex-initial">
                 Lanjut ke Pencucian &amp; Ukuran
@@ -666,10 +667,10 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 2 of 4">
-                Langkah 2 dari 4
+                {idText('Step 2 of 4')}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Size & Wash">
-                Sortir Ukuran & Cuci
+                {idText('Size & Wash')}
               </h2>
             </div>
             <Badge tone="accent">
@@ -681,14 +682,14 @@ export default function SortingPage() {
             {/* Sizing Machine Confirmation */}
             <div className="border border-border p-5 bg-card space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold">1. Feeding into Roller Sizer</h4>
+                <h4 className="text-sm font-bold">1. Pengumpanan ke Mesin Sortir</h4>
                 <Badge tone={sizerFedConfirmed ? 'success' : 'neutral'}>
-                  {sizerFedConfirmed ? 'Feeding Confirmed' : 'Pending'}
+                  {sizerFedConfirmed ? 'Terkonfirmasi' : 'Menunggu'}
                 </Badge>
               </div>
               <p className="station-secondary-copy text-xs text-muted-foreground leading-relaxed">
-                Pour waring <strong className="font-mono text-foreground">{waringCode}</strong> ({grossIntakeKg} kg)
-                into the sizer hopper. Tubers separate mechanically into Grade A (&gt;55mm), Grade B (40–55mm), and
+                Tuang waring <strong className="font-mono text-foreground">{waringCode}</strong> ({grossIntakeKg} kg)
+                ke hopper mesin sortir. Umbi dipisahkan secara mekanis menjadi Grade A (&gt;55mm), Grade B (40–55mm), dan
                 Grade C (&lt;40mm).
               </p>
               <Button
@@ -703,13 +704,13 @@ export default function SortingPage() {
             {/* Washing Decision */}
             <div className="border border-border p-5 bg-card space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold">2. Washing Decision</h4>
+                <h4 className="text-sm font-bold">2. Keputusan Pencucian</h4>
                 <Badge tone={washingRecord === 'WASHED' ? 'accent' : 'neutral'}>
-                  {washingRecord}
+                  {washingRecord === 'WASHED' ? 'Dicuci' : 'Tanpa Cuci'}
                 </Badge>
               </div>
               <p className="station-secondary-copy text-xs text-muted-foreground leading-relaxed">
-                Choose whether this sorted batch passes through the water washing line or bypasses dry directly to weighing.
+                Pilih apakah batch ini melewati jalur pencucian air atau langsung ditimbang dalam kondisi kering.
               </p>
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
@@ -721,7 +722,7 @@ export default function SortingPage() {
                       : 'border-border text-muted-foreground hover:bg-muted/20'
                   }`}
                 >
-                  Washed (Wet Line)
+                  Dicuci (Jalur Basah)
                 </button>
                 <button
                   type="button"
@@ -732,7 +733,7 @@ export default function SortingPage() {
                       : 'border-border text-muted-foreground hover:bg-muted/20'
                   }`}
                 >
-                  Unwashed (Direct)
+                  Tanpa Cuci (Langsung)
                 </button>
               </div>
             </div>
@@ -755,10 +756,10 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 3 of 4">
-                Langkah 3 dari 4
+                {idText('Step 3 of 4')}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Weigh Grades">
-                Timbang Grade
+                {idText('Weigh Grades')}
               </h2>
             </div>
           </div>
@@ -791,7 +792,7 @@ export default function SortingPage() {
                     </span>
                   </div>
                   <div className="text-[11px] font-mono text-muted-foreground mt-1 truncate">
-                    Pallet: {qr || 'Not linked'}
+                    Palet: {qr || 'Belum ditautkan'}
                   </div>
                 </button>
               )
@@ -803,9 +804,9 @@ export default function SortingPage() {
             {/* Left Column: Scale 02 Input */}
             <div className="border border-border p-4 bg-card space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">Weight Reading (Grade {activeGradeTab})</h4>
+                <h4 className="text-sm font-semibold">Pembacaan Berat (Grade {activeGradeTab})</h4>
                 <span className="text-xs font-mono text-muted-foreground">
-                  Max: {formatWeight(maxAllowedForActiveGrade)} kg
+                  Maks: {formatWeight(maxAllowedForActiveGrade)} kg
                 </span>
               </div>
               <ScaleWeightInput
@@ -815,7 +816,7 @@ export default function SortingPage() {
                 capacityKg={scaleCapacityKg ?? 0}
                 maxAllowedWeightKg={maxAllowedForActiveGrade}
                 allowZero
-                label={`Grade ${activeGradeTab} Weight`}
+                label={`Berat Grade ${activeGradeTab}`}
               />
               <div className="flex gap-2">
                 <Button
@@ -834,13 +835,13 @@ export default function SortingPage() {
                 <Button
                   variant="outline"
                   type="button"
-                  title="Mark this grade as 0 kg (no harvest for this grade)"
+                  title="Tandai grade ini sebagai 0 kg (tidak ada hasil untuk grade ini)"
                   onClick={() => {
                     setLiveScaleWeight('0')
                     handleAssignLiveWeight('0')
                   }}
                 >
-                  Set 0 kg
+                  Atur 0 kg
                 </Button>
               </div>
             </div>
@@ -848,18 +849,18 @@ export default function SortingPage() {
             {/* Right Column: Pre-attached Pallet QR Linkage */}
             <div className="border border-border p-4 bg-card space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">Pallet Link (Grade {activeGradeTab})</h4>
+                <h4 className="text-sm font-semibold">Tautan Palet (Grade {activeGradeTab})</h4>
                 <Badge tone="neutral">
-                  Pre-attached QR
+                  QR Terpasang
                 </Badge>
               </div>
               <p className="station-secondary-copy text-xs text-muted-foreground">
-                Scan the permanent QR code sticker attached to the Grade {activeGradeTab} physical pallet.
+                Pindai stiker kode QR permanen yang terpasang pada palet fisik Grade {activeGradeTab}.
               </p>
 
               <div className="p-3 bg-muted/20 border border-border flex items-center justify-between">
                 <div>
-                  <span className="text-[11px] text-muted-foreground uppercase font-mono block">Linked Pallet</span>
+                  <span className="text-[11px] text-muted-foreground uppercase font-mono block">Palet Tertaut</span>
                   <span className="font-mono font-bold text-sm">
                     {activeGradeTab === 'A'
                       ? gradeAPalletQr
@@ -880,7 +881,7 @@ export default function SortingPage() {
               {/* Active Pallet Shortcuts */}
               <div className="station-secondary-panel space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-mono text-muted-foreground" aria-label="Select Physical Pallet">
+                  <span className="text-[10px] uppercase font-mono text-muted-foreground" aria-label="Pilih Palet Fisik">
                     Pilih Palet Fisik
                   </span>
                   <Link
@@ -954,7 +955,7 @@ export default function SortingPage() {
               <div className="p-3 bg-destructive/15 border-2 border-destructive/40 rounded text-xs text-destructive font-semibold flex items-center gap-2">
                 <Icon name="alert-triangle" size={16} />
                 <span>
-                  Total graded weight ({formatWeight(totalGraded)} kg) exceeds waring intake weight ({formatWeight(gGross)} kg). Please adjust grade weights before proceeding.
+                  Total berat tersortasi ({formatWeight(totalGraded)} kg) melebihi berat awal waring ({formatWeight(gGross)} kg). Sesuaikan berat grade sebelum melanjutkan.
                 </span>
               </div>
             )}
@@ -982,10 +983,10 @@ export default function SortingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 4 of 4">
-                Langkah 4 dari 4
+                {idText('Step 4 of 4')}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Review & Save">
-                Tinjau & Simpan
+                {idText('Review & Save')}
               </h2>
             </div>
             <div className="flex flex-wrap gap-1 items-center">
@@ -1010,14 +1011,14 @@ export default function SortingPage() {
           {/* Yield Distribution Bar */}
           <div className="border border-border p-4 bg-card space-y-3">
             <div className="flex justify-between items-center flex-wrap gap-2">
-              <span className="text-xs font-bold uppercase font-mono">Yield Distribution</span>
+              <span className="text-xs font-bold uppercase font-mono">Distribusi Rendemen</span>
               <span
                 className={`text-xs font-mono font-semibold ${
                   totalGraded > gGross + 0.005 ? 'text-destructive font-bold' : ''
                 }`}
               >
-                Total Graded: {formatWeight(totalGraded)} kg / {formatWeight(gGross)} kg Gross
-                {totalGraded > gGross + 0.005 && ` (Exceeds by +${formatWeight(totalGraded - gGross)} kg)`}
+                Total Tersortasi: {formatWeight(totalGraded)} kg / {formatWeight(gGross)} kg Bruto
+                {totalGraded > gGross + 0.005 && ` (Melebihi +${formatWeight(totalGraded - gGross)} kg)`}
               </span>
             </div>
 
@@ -1049,14 +1050,14 @@ export default function SortingPage() {
                   <div
                     style={{ width: `${(shrinkageKg / gGross) * 100}%` }}
                     className="bg-red-600 flex items-center justify-center text-xs font-bold font-mono text-white"
-                    title={`Shrinkage: ${shrinkageKg.toFixed(1)} kg (${shrinkagePct.toFixed(1)}%)`}
+                    title={`Susut: ${shrinkageKg.toFixed(1)} kg (${shrinkagePct.toFixed(1)}%)`}
                   >
-                    {shrinkageKg > 0 && `Loss: ${formatWeight(shrinkageKg)} kg`}
+                    {shrinkageKg > 0 && `Susut: ${formatWeight(shrinkageKg)} kg`}
                   </div>
                 </>
               ) : (
                 <div className="w-full bg-muted flex items-center justify-center text-xs text-muted-foreground font-mono">
-                  No weight entered
+                  Belum ada berat dimasukkan
                 </div>
               )}
             </div>
@@ -1077,7 +1078,7 @@ export default function SortingPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3.5 h-3.5 bg-red-600 shrink-0" />
-                <span>Loss: {shrinkagePct.toFixed(1)}%</span>
+                <span>Susut: {shrinkagePct.toFixed(1)}%</span>
               </div>
             </div>
           </div>
@@ -1085,28 +1086,28 @@ export default function SortingPage() {
           {/* Detailed Batch Matrix Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="border border-border p-3.5 bg-card">
-              <span className="text-[10px] uppercase font-mono text-muted-foreground block">Gross Waring</span>
+              <span className="text-[10px] uppercase font-mono text-muted-foreground block">Bruto Waring</span>
               <span className="text-xl font-black font-mono mt-0.5 block">{formatWeight(gGross)} kg</span>
               <span className="text-xs text-muted-foreground">{waringCode}</span>
             </div>
             <div className="border border-border p-3.5 bg-card">
-              <span className="text-[10px] uppercase font-mono text-muted-foreground block">Commercial Yield</span>
+              <span className="text-[10px] uppercase font-mono text-muted-foreground block">Rendemen Komersial</span>
               <span className="text-xl font-black font-mono text-emerald-700 mt-0.5 block">
                 {yieldPct.toFixed(1)}%
               </span>
-              <span className="text-xs text-muted-foreground">{formatWeight(totalGraded)} kg net</span>
+              <span className="text-xs text-muted-foreground">{formatWeight(totalGraded)} kg neto</span>
             </div>
             <div className="border border-border p-3.5 bg-card">
-              <span className="text-[10px] uppercase font-mono text-muted-foreground block">Shrinkage Deficit</span>
+              <span className="text-[10px] uppercase font-mono text-muted-foreground block">Susut</span>
               <span className="text-xl font-black font-mono text-red-600 mt-0.5 block">
                 {formatWeight(shrinkageKg)} kg
               </span>
-              <span className="text-xs text-muted-foreground">{shrinkagePct.toFixed(1)}% loss</span>
+              <span className="text-xs text-muted-foreground">{shrinkagePct.toFixed(1)}% susut</span>
             </div>
             <div className="border border-border p-3.5 bg-card">
-              <span className="text-[10px] uppercase font-mono text-muted-foreground block">Wash Decision</span>
-              <span className="text-xl font-bold font-mono mt-0.5 block">{washingRecord}</span>
-              <span className="text-xs text-muted-foreground">Sizer Separated</span>
+              <span className="text-[10px] uppercase font-mono text-muted-foreground block">Keputusan Cuci</span>
+              <span className="text-xl font-bold font-mono mt-0.5 block">{washingRecord === 'WASHED' ? 'Dicuci' : 'Tanpa Cuci'}</span>
+              <span className="text-xs text-muted-foreground">Dipisahkan Mesin Sortir</span>
             </div>
           </div>
 
@@ -1116,7 +1117,7 @@ export default function SortingPage() {
               <div className="p-4 bg-destructive/15 border-2 border-destructive/40 rounded text-xs text-destructive font-semibold flex items-center gap-2">
                 <Icon name="alert-triangle" size={16} />
                 <span>
-                  Cannot commit batch: Total graded weight ({formatWeight(totalGraded)} kg) exceeds waring intake weight ({formatWeight(gGross)} kg).
+                  Tidak dapat menyimpan batch: Total berat tersortasi ({formatWeight(totalGraded)} kg) melebihi berat awal waring ({formatWeight(gGross)} kg).
                 </span>
               </div>
             )}
@@ -1157,11 +1158,11 @@ export default function SortingPage() {
           className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto"
           role="dialog"
           aria-modal="true"
-          aria-label="Sorting Focus Mode"
+          aria-label="Mode Fokus Sortasi"
         >
           <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
             <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
-              STATION 02 · SORTING
+              STASIUN 02 · SORTASI
             </div>
 
             {/* Stepper Progress inside Focus Mode! */}
@@ -1192,8 +1193,8 @@ export default function SortingPage() {
       <div className="station-page space-y-6">
         {/* Page Header */}
         <PageHeader
-          title="Station 02: Sorting Console"
-          subtitle="Sort potato fractions, check yield, and link grade pallets."
+          title="Stasiun 02: Sortasi"
+          subtitle="Sortasi fraksi kentang, cek rendemen, dan tautkan palet grade."
           actions={
             <Button
               variant="outline"
@@ -1209,38 +1210,38 @@ export default function SortingPage() {
         {/* Quick Stats Grid */}
         <div className="station-quick-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Buffer Queue</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Antrean Buffer</p>
             <p className="text-2xl font-bold tracking-tight text-foreground">{waitingWarings.length}</p>
-            <p className="text-xs text-muted-foreground">Ready for sorting</p>
+            <p className="text-xs text-muted-foreground">Siap untuk sortasi</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Scale 02 Status</p>
-            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
-            <p className="text-xs text-muted-foreground">{scaleCapacityKg ? `${scaleCapacityKg} kg Scale` : 'Scale capacity unavailable'}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Status Timbangan 02</p>
+            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Terhubung' : 'Terputus'}</p>
+            <p className="text-xs text-muted-foreground">{scaleCapacityKg ? `Timbangan ${scaleCapacityKg} kg` : 'Kapasitas timbangan tidak tersedia'}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Commercial Yield</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Rendemen Komersial</p>
             <p className="text-2xl font-bold tracking-tight text-emerald-600">
               {gGross > 0 ? `${yieldPct.toFixed(1)}%` : '0.0%'}
             </p>
-            <p className="text-xs text-muted-foreground">Grade A+B+C ratio</p>
+            <p className="text-xs text-muted-foreground">Rasio Grade A+B+C</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Shrinkage Loss</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Susut</p>
             <p className="text-2xl font-bold tracking-tight text-red-600">
               {gGross > 0 ? `${shrinkagePct.toFixed(1)}%` : '8.6%'}
             </p>
-            <p className="text-xs text-muted-foreground">Rejects & soil tare</p>
+            <p className="text-xs text-muted-foreground">Sortiran afkir &amp; tara tanah</p>
           </div>
         </div>
 
         {/* ── Main Sequential Stepper Card (Consistent with Screenshot) ── */}
         <div id="sorting-stepper" className="station-stepper-shell bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
-            <span className="font-semibold text-base text-foreground">Sorting Stepper</span>
+            <span className="font-semibold text-base text-foreground">Alur Kerja Sortasi</span>
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-                Mode Fokus
+                {idText('Focus Mode')}
               </Button>
             </div>
           </div>
@@ -1256,19 +1257,19 @@ export default function SortingPage() {
         <div id="sorting-records" className="space-y-3 pt-6 border-t border-border">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold">Sorting History Ledger</h3>
-              <p className="text-xs text-muted-foreground">Completed sorting batches and yield results</p>
+              <h3 className="text-base font-semibold">Riwayat Sortasi</h3>
+              <p className="text-xs text-muted-foreground">Batch sortasi selesai dan hasil rendemen</p>
             </div>
             <Badge tone="neutral">
-              {sortedBatches.length} Batches
+              {sortedBatches.length} Batch
             </Badge>
           </div>
           <DataTable
             columns={columns}
             data={sortedBatches}
             rowKey={(r) => r.id}
-            emptyTitle="No sorting runs recorded yet."
-            emptyDescription="Select a waring from buffer queue to begin sorting."
+            emptyTitle="Belum ada riwayat sortasi."
+            emptyDescription="Pilih waring dari antrean buffer untuk memulai sortasi."
           />
         </div>
       </div>
@@ -1281,16 +1282,16 @@ export default function SortingPage() {
         onScan={handleVerifyModalScan}
         title={
           cameraModalMode === 'WARING'
-            ? 'Scan Waring Sack QR Code · Station 02'
-            : `Scan Pallet QR for Grade ${activeGradeTab}`
+            ? 'Pindai Kode QR Karung Waring · Stasiun 02'
+            : `Pindai QR Palet untuk Grade ${activeGradeTab}`
         }
         subtitle={
           cameraModalMode === 'WARING'
-            ? 'Align the WRG QR code within the camera frame.'
-            : `Align the pre-attached PLT QR code for Grade ${activeGradeTab}.`
+            ? 'Arahkan kode QR WRG ke dalam bingkai kamera.'
+            : `Arahkan kode QR PLT terpasang untuk Grade ${activeGradeTab}.`
         }
         manualPlaceholder={
-          cameraModalMode === 'WARING' ? 'Enter Waring Code (WRG-...)' : `Enter Pallet Tag (PLT-GRD-${activeGradeTab}-01)`
+          cameraModalMode === 'WARING' ? 'Masukkan Kode Waring (WRG-...)' : `Masukkan Kode Palet (PLT-GRD-${activeGradeTab}-01)`
         }
         quickOptions={
           cameraModalMode === 'PALLET'

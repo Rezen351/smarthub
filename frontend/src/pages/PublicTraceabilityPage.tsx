@@ -8,6 +8,7 @@ import { formatWeight, formatSafeDate, formatSafeDateTime } from '../lib/utils'
 import OfflineQrCode from '../components/shared/OfflineQrCode'
 import { api } from '../services/api'
 import CameraScannerModal from '../components/shared/CameraScannerModal'
+import { translateStatus } from '../lib/i18n'
 
 export type TraceStep = {
   stage: string
@@ -56,17 +57,17 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
     return {
       code: w.code || code,
       type: 'PALLET',
-      commodity: 'Eptilu Washed Potatoes 10 kg',
-      variety: 'Granola Table Potato',
+      commodity: 'Kentang Cuci Eptilu 10 kg',
+      variety: 'Kentang Konsumsi Granola',
       grade: 'A/B/C',
       weightKg: Number(w.netWeightKg || w.grossWeightKg || 0),
       farmerName: o.farmerName || '-',
       farmerId: o.farmerCode || '-',
       farmLocation: o.village || '-',
-      elevation: '1,450 m ASL',
+      elevation: '1.450 mdpl',
       harvestDate: formatSafeDate(w.receivedAt),
       intakeDate: formatSafeDateTime(w.receivedAt),
-      packDate: w.approvedAt ? formatSafeDateTime(w.approvedAt) : 'Pending Sorting',
+      packDate: w.approvedAt ? formatSafeDateTime(w.approvedAt) : 'Menunggu Sortasi',
       gs1Uri: `https://id.smartgeulis.id/01/08901234567890/21/${w.code || code}`,
       gtin: '8994477090010',
       batchLot: w.code || code,
@@ -75,36 +76,36 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
       moisturePercent: '78.0%',
       journey: [
         {
-          stage: 'Field Harvest & Farm Loading',
-          location: `${o.farmerName || '-'} Farm (${o.village || '-'})`,
+          stage: 'Panen & Muat Kebun',
+          location: `Kebun ${o.farmerName || '-'} (${o.village || '-'})`,
           timestamp: formatSafeDate(w.receivedAt),
           operator: `${o.farmerName || '-'}`,
           completed: true,
-          details: 'Hand-picked table potatoes, loaded into ventilated waring sacks.',
+          details: 'Kentang konsumsi dipetik manual dan dimuat ke dalam waring berventilasi.',
         },
         {
-          stage: 'Station 01: Reception & Weighing',
-          location: 'SmartGeulis Reception Bay (Scale #01)',
+          stage: 'Stasiun 01: Penerimaan & Penimbangan',
+          location: 'Area Penerimaan SmartGeulis (Timbangan #01)',
           timestamp: formatSafeDateTime(w.receivedAt),
           operator: 'Operator',
           completed: true,
-          details: `Gross weight verified at ${w.grossWeightKg} kg, net ${w.netWeightKg} kg. Status: ${w.status}.`,
+          details: `Berat kotor terverifikasi ${w.grossWeightKg} kg, bersih ${w.netWeightKg} kg. Status: ${translateStatus(w.status)}.`,
         },
         {
-          stage: 'Station 02: Sorting & Grading',
-          location: 'Packhouse Sorting Line (Scale #02)',
-          timestamp: w.sortedBatch ? 'Sorted' : 'Queued in Buffer Warehouse',
-          operator: 'Automated 3-Tier Sizer',
+          stage: 'Stasiun 02: Sortasi',
+          location: 'Lini Sortasi Rumah Kemas (Timbangan #02)',
+          timestamp: w.sortedBatch ? 'Tersortasi' : 'Antrean Gudang Buffer',
+          operator: 'Mesin Sortasi 3-Tingkat Otomatis',
           completed: Boolean(w.sortedBatch),
-          details: w.sortedBatch ? 'Sized and graded into Grade A/B/C' : 'Awaiting buffer queue dispatch to sizing conveyor.',
+          details: w.sortedBatch ? 'Disortasi ke Grade A/B/C' : 'Menunggu antrean buffer ke konveyor sortasi.',
         },
         {
-          stage: 'Station 03: Pouch & Carton Packaging',
-          location: 'Packaging Station (Scale #03)',
-          timestamp: 'Downstream',
-          operator: 'Packaging Line Operator',
+          stage: 'Stasiun 03: Pengemasan Pouch & Karton',
+          location: 'Stasiun Pengemasan (Timbangan #03)',
+          timestamp: 'Tahap Berikutnya',
+          operator: 'Operator Lini Pengemasan',
           completed: false,
-          details: 'Packaging into 1 kg retail pouches or bulk export cartons.',
+          details: 'Pengemasan ke pouch ritel 1 kg atau karton ekspor.',
         },
       ],
     }
@@ -120,14 +121,14 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
     return {
       code: pkg.code || code,
       type: 'POUCH',
-      commodity: intake.commodity || 'Potato',
-      variety: 'Granola Table Potato',
+      commodity: intake.commodity || 'Kentang',
+      variety: 'Kentang Konsumsi Granola',
       grade: (pkg.grade || 'A') as any,
       weightKg: Number(pkg.weightKg || 1),
-      farmerName: origin.farmerName || origin.name || 'Registered Farmer',
+      farmerName: origin.farmerName || origin.name || 'Petani Terdaftar',
       farmerId: origin.farmerCode || origin.code || '-',
-      farmLocation: origin.village || 'Highland Farm',
-      elevation: '1,450 m ASL',
+      farmLocation: origin.village || 'Kebun Dataran Tinggi',
+      elevation: '1.450 mdpl',
       harvestDate: formatSafeDate(intake.receivedAt),
       intakeDate: formatSafeDateTime(intake.receivedAt),
       packDate: formatSafeDateTime(pkg.packedAt),
@@ -139,44 +140,44 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
       moisturePercent: '78.2%',
       journey: [
         {
-          stage: 'Field Harvest & Farm Loading',
-          location: `${origin.farmerName} (${origin.village || 'Farm'})`,
+          stage: 'Panen & Muat Kebun',
+          location: `${origin.farmerName} (${origin.village || 'Kebun'})`,
           timestamp: formatSafeDate(intake.receivedAt),
           operator: `${origin.farmerName}`,
           completed: true,
-          details: 'Tubers harvested and transported in ventilated sacks.',
+          details: 'Umbi dipanen dan diangkut menggunakan waring berventilasi.',
         },
         {
-          stage: 'Station 01: Reception & Intake',
-          location: 'SmartGeulis Reception Bay',
+          stage: 'Stasiun 01: Penerimaan',
+          location: 'Area Penerimaan SmartGeulis',
           timestamp: formatSafeDateTime(intake.receivedAt),
-          operator: 'Receiving Operator',
+          operator: 'Operator Penerimaan',
           completed: true,
-          details: `Intake sack ${intake.waringCode || 'Waring'}, gross ${intake.grossWeightKg} kg, net ${intake.netWeightKg} kg.`,
+          details: `Waring masuk ${intake.waringCode || 'Waring'}, kotor ${intake.grossWeightKg} kg, bersih ${intake.netWeightKg} kg.`,
         },
         {
-          stage: 'Station 02: Sorting & Grading',
-          location: 'Automated Sizer & Optical Line',
+          stage: 'Stasiun 02: Sortasi',
+          location: 'Lini Sortasi Otomatis',
           timestamp: formatSafeDateTime(sorting.sortedAt),
-          operator: 'Grading Operator',
+          operator: 'Operator Sortasi',
           completed: true,
-          details: `Graded to Grade ${pkg.grade}. Washing decision: ${sorting.washDecision || 'UNWASHED'}. Shrinkage: ${sorting.shrinkagePct || 0}%.`,
+          details: `Disortasi ke Grade ${pkg.grade}. Pencucian: ${sorting.washDecision === 'WASHED' ? 'Dicuci' : 'Tanpa Cuci'}. Susut: ${sorting.shrinkagePct || 0}%.`,
         },
         {
-          stage: 'Station 03: Packaging & GS1 Tagging',
-          location: 'Clean Pack Cleanroom',
+          stage: 'Stasiun 03: Pengemasan & Label GS1',
+          location: 'Ruang Bersih Pengemasan',
           timestamp: formatSafeDateTime(pkg.packedAt),
-          operator: 'Packaging Operator',
+          operator: 'Operator Pengemasan',
           completed: true,
-          details: `Packed into ${pkg.format === 'RETAIL_POUCH' ? '1 kg Retail Pouch' : 'Export Carton'}. Barcode: ${pkg.barcode || pkg.code}.`,
+          details: `Dikemas ke ${pkg.format === 'RETAIL_POUCH' ? 'Pouch Ritel 1 kg' : 'Karton Ekspor'}. Barcode: ${pkg.barcode || pkg.code}.`,
         },
         {
-          stage: 'Outbound Dispatch & Transport',
-          location: dispatch ? dispatch.destination : 'Finished Goods Cold Storage',
-          timestamp: dispatch ? formatSafeDateTime(dispatch.departedAt) : 'In Warehouse',
-          operator: dispatch ? `Driver: ${dispatch.driverName} (${dispatch.truckPlate})` : 'Warehouse Custodian',
+          stage: 'Pengiriman & Transportasi',
+          location: dispatch ? dispatch.destination : 'Gudang Pendingin Barang Jadi',
+          timestamp: dispatch ? formatSafeDateTime(dispatch.departedAt) : 'Di Gudang',
+          operator: dispatch ? `Pengemudi: ${dispatch.driverName} (${dispatch.truckPlate})` : 'Petugas Gudang',
           completed: Boolean(dispatch),
-          details: dispatch ? `Dispatched under manifest ${dispatch.deliveryCode} to ${dispatch.destination}` : 'Stored in cold warehouse awaiting dispatch.',
+          details: dispatch ? `Dikirim dengan manifes ${dispatch.deliveryCode} ke ${dispatch.destination}` : 'Tersimpan di gudang pendingin menunggu pengiriman.',
         },
       ],
     }
@@ -189,14 +190,14 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
   return {
     code: pallet.code || code,
     type: 'SORTED_PALLET',
-    commodity: intake.commodity || 'Potato',
-    variety: 'Granola Table Potato',
+    commodity: intake.commodity || 'Kentang',
+    variety: 'Kentang Konsumsi Granola',
     grade: (pallet.grade || 'A') as any,
     weightKg: Number(pallet.initialWeightKg || pallet.weightKg || 0),
-    farmerName: origin.farmerName || origin.name || 'Registered Farmer',
+    farmerName: origin.farmerName || origin.name || 'Petani Terdaftar',
     farmerId: origin.farmerCode || origin.code || '-',
-    farmLocation: origin.village || 'Highland Farm',
-    elevation: '1,450 m ASL',
+    farmLocation: origin.village || 'Kebun Dataran Tinggi',
+    elevation: '1.450 mdpl',
     harvestDate: formatSafeDate(intake.receivedAt),
     intakeDate: formatSafeDateTime(intake.receivedAt),
     packDate: formatSafeDateTime(pallet.createdAt),
@@ -208,36 +209,36 @@ function mapApiResponseToTraceResult(payload: any, code: string): TraceResult {
     moisturePercent: '78.5%',
     journey: [
       {
-        stage: 'Field Harvest & Farm Loading',
-        location: `${origin.farmerName} (${origin.village || 'Farm'})`,
+        stage: 'Panen & Muat Kebun',
+        location: `${origin.farmerName} (${origin.village || 'Kebun'})`,
         timestamp: formatSafeDate(intake.receivedAt),
         operator: `${origin.farmerName}`,
         completed: true,
-        details: 'Tubers harvested and transported in ventilated sacks.',
+        details: 'Umbi dipanen dan diangkut menggunakan waring berventilasi.',
       },
       {
-        stage: 'Station 01: Reception & Intake',
-        location: 'SmartGeulis Reception Bay',
+        stage: 'Stasiun 01: Penerimaan',
+        location: 'Area Penerimaan SmartGeulis',
         timestamp: formatSafeDateTime(intake.receivedAt),
-        operator: 'Receiving Operator',
+        operator: 'Operator Penerimaan',
         completed: true,
-        details: `Intake sack ${intake.waringCode || 'Waring'}, gross ${intake.grossWeightKg} kg, net ${intake.netWeightKg} kg.`,
+        details: `Waring masuk ${intake.waringCode || 'Waring'}, kotor ${intake.grossWeightKg} kg, bersih ${intake.netWeightKg} kg.`,
       },
       {
-        stage: 'Station 02: Sorting & Pallet Staging',
-        location: 'Packhouse Sorting Line',
+        stage: 'Stasiun 02: Sortasi & Penataan Palet',
+        location: 'Lini Sortasi Rumah Kemas',
         timestamp: formatSafeDateTime(pallet.createdAt),
-        operator: 'Automated 3-Tier Sizer',
+        operator: 'Mesin Sortasi 3-Tingkat Otomatis',
         completed: true,
-        details: `Assembled onto Grade ${pallet.grade} Pallet. Remaining weight: ${pallet.remainingKg || pallet.weightKg} kg.`,
+        details: `Ditata pada Palet Grade ${pallet.grade}. Sisa berat: ${pallet.remainingKg || pallet.weightKg} kg.`,
       },
       {
-        stage: 'Station 03: Packaging & Pouching',
-        location: 'Packaging Station',
-        timestamp: pallet.status === 'IN_PACKAGING' ? 'In Progress' : 'Pending',
-        operator: 'Packaging Line',
+        stage: 'Stasiun 03: Pengemasan Pouch',
+        location: 'Stasiun Pengemasan',
+        timestamp: pallet.status === 'IN_PACKAGING' ? 'Sedang Diproses' : 'Menunggu',
+        operator: 'Lini Pengemasan',
         completed: pallet.status === 'DEPLETED',
-        details: 'Fed to pouch fill and heat seal station.',
+        details: 'Dialirkan ke stasiun pengisian dan penyegelan pouch.',
       },
     ],
   }
@@ -310,14 +311,14 @@ export default function PublicTraceabilityPage() {
       {/* ── Top Header Bar ── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#eaeaea]">
         <div className="public-trace-header max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="public-trace-brand flex items-center gap-3 group min-w-0" aria-label="SmartGeulis home">
+          <Link to="/" className="public-trace-brand flex items-center gap-3 group min-w-0" aria-label="Beranda SmartGeulis">
             <Logo className="h-8 w-auto" markOnly />
             <div className="public-trace-brand-copy min-w-0">
               <div className="public-trace-brand-title font-display text-2xl leading-none tracking-wider text-[#171717] flex items-center gap-2">
                 SmartGeulis
               </div>
               <div className="public-trace-brand-subtitle font-mono-custom text-[10px] text-[#666666] tracking-[0.25em] uppercase">
-                TRACEABILITY SYSTEM
+                SISTEM KETERTELUSURAN
               </div>
             </div>
           </Link>
@@ -328,13 +329,13 @@ export default function PublicTraceabilityPage() {
               className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-[#666666] hover:text-[#171717] px-3 py-2 rounded-sm transition-colors"
             >
               <Icon name="arrow-left" size={14} />
-              <span>Back to Home</span>
+              <span>Kembali ke Beranda</span>
             </Link>
             <Link
               to="/login"
               className="public-trace-login inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider bg-[#000000] text-white hover:bg-[#333333] px-4 py-2 rounded-sm transition-colors shrink-0"
             >
-              <span>Operator Login</span>
+              <span>Masuk Operator</span>
             </Link>
           </div>
         </div>
@@ -345,13 +346,13 @@ export default function PublicTraceabilityPage() {
         {/* Page Title & Mission Banner */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
           <Badge tone="accent" icon="qr" className="px-3 py-1 text-xs">
-            Product Verification
+            Verifikasi Produk
           </Badge>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#171717]">
-            Product Traceability
+            Ketertelusuran Produk
           </h1>
           <p className="text-sm sm:text-base text-[#666666] leading-relaxed">
-            Scan the QR code on your potato pouch or pallet, or enter the code manually to confirm product origin and quality.
+            Pindai kode QR pada pouch atau palet kentang Anda, atau masukkan kode secara manual untuk memastikan asal dan kualitas produk.
           </p>
         </div>
 
@@ -359,7 +360,7 @@ export default function PublicTraceabilityPage() {
         <div className="bg-white border border-[#eaeaea] rounded-none p-5 sm:p-7 shadow-xs space-y-5">
           <form onSubmit={handleFormSubmit} className="space-y-4">
             <label className="block text-xs font-mono font-semibold uppercase tracking-wider text-[#666666]">
-              Enter Pouch or Pallet Code
+              Masukkan Kode Pouch atau Palet
             </label>
 
             <div className="flex flex-col sm:flex-row gap-3">
@@ -368,7 +369,7 @@ export default function PublicTraceabilityPage() {
                   type="text"
                   value={queryCode}
                   onChange={(e) => setQueryCode(e.target.value)}
-                  placeholder="e.g. PCH-PLT-20260914-0001-001 or PLT-20261011-0042"
+                  placeholder="Contoh: PCH-PLT-20260914-0001-001 atau PLT-20261011-0042"
                   className="w-full bg-[#fafafa] border border-[#d1d5db] rounded-none px-4 py-3 font-mono text-sm text-[#171717] placeholder:text-[#999999] focus:outline-none focus:border-[#ea580c] focus:ring-2 focus:ring-[#ea580c]/20 transition-all"
                 />
                 {queryCode && (
@@ -376,7 +377,7 @@ export default function PublicTraceabilityPage() {
                     type="button"
                     onClick={() => setQueryCode('')}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#171717] p-1"
-                    aria-label="Clear code"
+                    aria-label="Hapus kode"
                   >
                     <Icon name="close" size={14} />
                   </button>
@@ -390,7 +391,7 @@ export default function PublicTraceabilityPage() {
                   icon="search"
                   className="min-w-0 px-6 py-3 text-sm font-semibold justify-center flex-1 sm:flex-none"
                 >
-                  Trace Product
+                  Lacak Produk
                 </Button>
                 <Button
                   type="button"
@@ -399,7 +400,7 @@ export default function PublicTraceabilityPage() {
                   onClick={() => startCamera()}
                   className="min-w-0 px-4 py-3 text-sm font-semibold justify-center flex-1 sm:flex-none"
                 >
-                  Scan QR
+                  Pindai QR
                 </Button>
               </div>
             </div>
@@ -408,14 +409,14 @@ export default function PublicTraceabilityPage() {
           {/* Quick Sample Chips for Instant Verification */}
           <div className="pt-4 border-t border-[#f0f0f0] flex flex-wrap items-center gap-2">
             <span className="text-xs font-mono text-[#666666] tracking-wider uppercase mr-1">
-              Sample Records:
+              Data Contoh:
             </span>
             <button
               type="button"
               onClick={() => handleSelectSampleCode('WRG-20261026-0001')}
               className="text-xs font-mono bg-[#fff7ed] text-[#ea580c] hover:bg-[#ffedd5] border border-[#fed7aa] px-2.5 py-1 rounded-none transition-colors"
             >
-              Intake Waring (WRG-20261026-0001)
+              Waring Penerimaan (WRG-20261026-0001)
             </button>
           </div>
         </div>
@@ -429,12 +430,12 @@ export default function PublicTraceabilityPage() {
             setSearchParams({ code })
             executeSearch(code)
           }}
-          title="Live QR Code & Barcode Scanner"
-          subtitle="Align the QR code on the physical packaging sticker or waring sack within the viewfinder."
-          manualPlaceholder="Enter trace code (WRG-..., PCH-..., PLT-...)..."
+          title="Pemindai Kode QR & Barcode"
+          subtitle="Arahkan kode QR pada stiker kemasan atau waring ke dalam bingkai."
+          manualPlaceholder="Masukkan kode lacak (WRG-..., PCH-..., PLT-...)..."
           quickOptions={[
-            { label: 'Sample Waring (WRG-20261026-0001)', value: 'WRG-20261026-0001' },
-            { label: 'Sample Pouch (PCH-GRD-A-0001)', value: 'PCH-GRD-A-0001' },
+            { label: 'Contoh Waring (WRG-20261026-0001)', value: 'WRG-20261026-0001' },
+            { label: 'Contoh Pouch (PCH-GRD-A-0001)', value: 'PCH-GRD-A-0001' },
           ]}
         />
 
@@ -445,10 +446,10 @@ export default function PublicTraceabilityPage() {
               <Icon name="alert" size={24} />
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-[#171717]">Record Not Found</h3>
+              <h3 className="text-lg font-bold text-[#171717]">Data Tidak Ditemukan</h3>
               <p className="text-sm text-[#666666] max-w-md mx-auto">
-                No verified batch matching code <span className="font-mono font-bold text-[#171717]">{queryCode}</span> was
-                found. Check the code format or try one of the test sample buttons above.
+                Tidak ditemukan batch terverifikasi dengan kode <span className="font-mono font-bold text-[#171717]">{queryCode}</span>.
+                Periksa format kode atau coba tombol contoh di atas.
               </p>
             </div>
             <Button
@@ -457,7 +458,7 @@ export default function PublicTraceabilityPage() {
               icon="refresh"
               onClick={() => handleSelectSampleCode('WRG-20261026-0001')}
             >
-              Load Verified Waring
+              Muat Waring Terverifikasi
             </Button>
           </div>
         )}
@@ -471,17 +472,17 @@ export default function PublicTraceabilityPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <Badge tone="success" icon="check-circle" live>
-                      Verified Authentic
+                      Terverifikasi Asli
                     </Badge>
                     <Badge tone="neutral" className="font-mono uppercase text-xs">
-                      {result.type.replace('_', ' ')}
+                      {result.type === 'SORTED_PALLET' ? 'PALET TERSORTASI' : result.type === 'PALLET' ? 'PALET' : 'POUCH'}
                     </Badge>
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-[#171717]">
                     {result.code}
                   </h2>
                   <p className="text-xs text-[#666666] font-mono mt-1">
-                    Product Link: <a href={result.gs1Uri} target="_blank" rel="noreferrer" className="text-[#ea580c] hover:underline">Open link</a>
+                    Tautan Produk: <a href={result.gs1Uri} target="_blank" rel="noreferrer" className="text-[#ea580c] hover:underline">Buka tautan</a>
                   </p>
                 </div>
 
@@ -492,7 +493,7 @@ export default function PublicTraceabilityPage() {
                     icon="print"
                     onClick={handlePrintCertificate}
                   >
-                    Print Certificate
+                    Cetak Sertifikat
                   </Button>
                 </div>
               </div>
@@ -500,7 +501,7 @@ export default function PublicTraceabilityPage() {
               {/* Product Details Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
-                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Product & Variety</span>
+                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Produk & Varietas</span>
                   <span className="text-base font-bold text-[#171717] mt-1 block">{result.variety}</span>
                 </div>
 
@@ -517,14 +518,14 @@ export default function PublicTraceabilityPage() {
                 </div>
 
                 <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
-                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Verified Net Weight</span>
+                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Berat Bersih Terverifikasi</span>
                   <span className="text-base font-bold font-mono text-emerald-600 mt-1 block">
                     {formatWeight(result.weightKg)} kg
                   </span>
                 </div>
 
                 <div className="p-4 bg-[#fafafa] rounded-none border border-[#f0f0f0]">
-                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Quality</span>
+                  <span className="text-[11px] font-mono uppercase text-[#666666] block">Kualitas</span>
                   <span className="text-base font-bold text-[#171717] mt-1 block">{result.qualityScore}</span>
                 </div>
               </div>
@@ -533,19 +534,19 @@ export default function PublicTraceabilityPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                 <div className="space-y-3">
                   <h3 className="text-xs font-mono uppercase tracking-wider text-[#666666] font-semibold">
-                    Farm Origin
+                    Asal Kebun
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
-                      <span className="text-[#666666]">Farmer / Producer</span>
+                      <span className="text-[#666666]">Petani / Produsen</span>
                       <span className="font-semibold text-[#171717]">{result.farmerName} ({result.farmerId})</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
-                      <span className="text-[#666666]">Location</span>
+                      <span className="text-[#666666]">Lokasi</span>
                       <span className="font-semibold text-[#171717]">{result.farmLocation}</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
-                      <span className="text-[#666666]">Elevation</span>
+                      <span className="text-[#666666]">Ketinggian</span>
                       <span className="font-semibold text-[#171717]">{result.elevation}</span>
                     </div>
                   </div>
@@ -553,19 +554,19 @@ export default function PublicTraceabilityPage() {
 
                 <div className="space-y-3">
                   <h3 className="text-xs font-mono uppercase tracking-wider text-[#666666] font-semibold">
-                    Batch Details
+                    Detail Batch
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
-                      <span className="text-[#666666]">Product Number</span>
+                      <span className="text-[#666666]">Nomor Produk</span>
                       <span className="font-mono font-semibold text-[#171717]">{result.gtin}</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
-                      <span className="text-[#666666]">Batch / Lot Number</span>
+                      <span className="text-[#666666]">Nomor Batch / Lot</span>
                       <span className="font-mono font-semibold text-[#171717]">{result.batchLot}</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-[#f0f0f0]">
-                      <span className="text-[#666666]">Harvest Date</span>
+                      <span className="text-[#666666]">Tanggal Panen</span>
                       <span className="font-mono font-semibold text-[#171717]">{result.harvestDate}</span>
                     </div>
                   </div>
@@ -577,10 +578,10 @@ export default function PublicTraceabilityPage() {
             <div className="bg-white border border-[#eaeaea] rounded-none p-6 sm:p-8 shadow-xs space-y-6">
               <div className="space-y-1">
                 <h3 className="text-xl font-bold tracking-tight text-[#171717]">
-                  Verified Harvest & Processing Journey
+                  Riwayat Panen & Pemrosesan Terverifikasi
                 </h3>
                 <p className="text-xs text-[#666666]">
-                  Each stage is time-stamped and confirmed by the packhouse team.
+                  Setiap tahap tercatat waktunya dan dikonfirmasi oleh tim rumah kemas.
                 </p>
               </div>
 
@@ -624,13 +625,13 @@ export default function PublicTraceabilityPage() {
             <div className="bg-white border border-[#eaeaea] rounded-none p-6 sm:p-8 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="space-y-2 max-w-lg">
                 <Badge tone="accent" className="font-mono text-[10px]">
-                  PRODUCT QR
+                  QR PRODUK
                 </Badge>
                 <h4 className="text-lg font-bold text-[#171717]">
-                  Scannable Product Verification QR
+                  Kode QR Verifikasi Produk
                 </h4>
                 <p className="text-xs text-[#666666] leading-relaxed">
-                  Consumers and retailers can scan the QR code printed on the physical packaging sticker using any standard smartphone camera to view this live verification page.
+                  Konsumen dan peritel dapat memindai kode QR pada stiker kemasan menggunakan kamera ponsel standar untuk melihat halaman verifikasi ini.
                 </p>
               </div>
 
@@ -648,15 +649,15 @@ export default function PublicTraceabilityPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-[#eaeaea] bg-white py-6 text-xs text-[#666666] mt-auto">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} SmartGeulis. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} SmartGeulis. Hak cipta dilindungi.</p>
           <div className="flex items-center gap-3">
             <span className="bg-[#f5f5f5] px-2 py-0.5 rounded-none font-mono border border-[#eaeaea]">
-              Type: smartgeulis
+              Tipe: smartgeulis
             </span>
-            <span>Traceability System v1.0.0</span>
+            <span>Sistem Ketertelusuran v1.0.0</span>
           </div>
           <Link to="/" className="text-[#ea580c] hover:underline font-medium">
-            SmartGeulis Overview
+            Ringkasan SmartGeulis
           </Link>
         </div>
       </footer>

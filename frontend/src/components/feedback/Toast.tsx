@@ -89,7 +89,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               type="button"
               className="ml-auto p-1 opacity-60 hover:opacity-100 transition-opacity"
               onClick={() => dismiss(toast.id)}
-              aria-label="Dismiss notification"
+              aria-label="Tutup notifikasi"
             >
               <Icon name="close" size={14} />
             </button>

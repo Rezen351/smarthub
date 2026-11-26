@@ -9,6 +9,7 @@ import { useToast } from '../components/feedback/Toast'
 import { api } from '../services/api'
 import PalletsPage from './PalletsPage'
 import CommoditiesSection from '../components/settings/CommoditiesSection'
+import { idText } from '@/lib/i18n'
 
 export interface ScaleConfig {
   ip: string
@@ -109,7 +110,7 @@ export default function SettingsPage() {
   const sections: Array<{ id: 'devices' | 'pallets' | 'commodities'; label: string; icon: IconName }> = [
     { id: 'devices', label: 'Devices', icon: 'settings' },
     { id: 'pallets', label: 'Pallet Registry', icon: 'pallet' },
-    { id: 'commodities', label: 'Commodities & Packaging', icon: 'leaf' },
+    { id: 'commodities', label: 'Komoditas & Pengemasan', icon: 'leaf' },
   ]
 
   const selectSection = (section: 'devices' | 'pallets' | 'commodities') => {
@@ -119,14 +120,14 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Settings"
-        subtitle="Manage connected devices, reusable pallets, and commodity GTIN master data."
+        title="Pengaturan"
+        subtitle="Kelola perangkat terhubung, daftar palet, serta data komoditas dan GTIN."
       />
 
       <div
         className="inline-flex w-full border border-border bg-muted/40 p-1 sm:w-auto flex-wrap"
         role="tablist"
-        aria-label="Settings sections"
+        aria-label="Bagian pengaturan"
       >
         {sections.map((section) => {
           const isActive = activeSection === section.id
@@ -146,7 +147,7 @@ export default function SettingsPage() {
               }`}
             >
               <Icon name={section.icon} size={16} />
-              {section.label}
+              {idText(section.label)}
             </button>
           )
         })}
@@ -305,7 +306,7 @@ function DeviceSettings() {
     const numPort = Number(port) || 502
 
     if (!trimmedIp) {
-      toast.error(`Please enter an IP address for ${stationLabel} before testing.`)
+      toast.error(`Masukkan alamat IP untuk ${stationLabel} sebelum pengujian.`)
       setTestingTarget(null)
       return
     }
@@ -318,16 +319,16 @@ function DeviceSettings() {
         if (normalizedStation in scaleOnline) {
           setScaleOnline((prev) => ({ ...prev, [normalizedStation]: true }))
         }
-        toast.success(res.message || `${stationLabel} is ready at ${trimmedIp}:${numPort}`)
+        toast.success(res.message || `${stationLabel} terhubung di ${trimmedIp}:${numPort}`)
       } else {
         const normalizedStation = stationId.replace(/\D/g, '') as '01' | '02' | '03'
         if (normalizedStation in scaleOnline) {
           setScaleOnline((prev) => ({ ...prev, [normalizedStation]: false }))
         }
-        toast.warning(res?.message || `Could not reach ${stationLabel} at ${trimmedIp}:${numPort}`)
+        toast.warning(res?.message || `Tidak dapat menjangkau ${stationLabel} di ${trimmedIp}:${numPort}`)
       }
     } catch (err: any) {
-      toast.error(`Scale check failed: ${err.message || 'Scale unavailable'}`)
+      toast.error(`Pengecekan timbangan gagal: ${err.message || 'Timbangan tidak tersedia'}`)
     } finally {
       setTestingTarget(null)
     }
@@ -337,13 +338,13 @@ function DeviceSettings() {
     e.preventDefault()
 
     if (!form.intake.ip.trim() || !form.grading.ip.trim() || !form.packaging.ip.trim()) {
-      toast.error('All 3 scale addresses are required.')
+      toast.error('Alamat IP untuk ketiga timbangan wajib diisi.')
       return
     }
 
     const configuredPrinters = Object.entries(form.printers).filter(([, printer]) => printer.ip.trim())
     if (configuredPrinters.some(([, printer]) => Number(printer.port) <= 0 || Number(printer.port) > 65535)) {
-      toast.error('Configured thermal printers require a valid TCP port.')
+      toast.error('Printer termal yang dikonfigurasi memerlukan port TCP yang valid.')
       return
     }
 
@@ -352,21 +353,21 @@ function DeviceSettings() {
       Number(form.grading.capacityKg) <= 0 ||
       Number(form.packaging.capacityKg) <= 0
     ) {
-      toast.error('Maximum load must be greater than zero.')
+      toast.error('Beban maksimum harus lebih besar dari nol.')
       return
     }
 
     const scales = [form.intake, form.grading, form.packaging]
     if (scales.some((scale) => Number(scale.slaveId) < 1 || Number(scale.slaveId) > 247)) {
-      toast.error('Modbus Unit ID must be between 1 and 247.')
+      toast.error('Modbus Unit ID harus antara 1 dan 247.')
       return
     }
     if (scales.some((scale) => Number(scale.weightRegister) < 40001 || Number(scale.weightRegister) > 40030)) {
-      toast.error('Weight Start Register must be between 40001 and 40030.')
+      toast.error('Register Awal Berat harus antara 40001 dan 40030.')
       return
     }
     if (scales.some((scale) => Number(scale.statusRegister) < 40001 || Number(scale.statusRegister) > 40031)) {
-      toast.error('Status Register must be between 40001 and 40031.')
+      toast.error('Register Status harus antara 40001 dan 40031.')
       return
     }
 
@@ -398,9 +399,9 @@ function DeviceSettings() {
         // storage unavailable
       }
 
-      toast.success('Settings saved and applied.')
+      toast.success('Pengaturan berhasil disimpan dan diterapkan.')
     } catch (err: any) {
-      toast.error('Failed to update settings: ' + (err.message || 'Connection error'))
+      toast.error('Gagal memperbarui pengaturan: ' + (err.message || 'Kesalahan koneksi'))
     } finally {
       setSaving(false)
     }
@@ -413,7 +414,7 @@ function DeviceSettings() {
     } catch {
       // storage unavailable
     }
-    toast.info('Settings reset to defaults.')
+    toast.info('Pengaturan dikembalikan ke bawaan.')
   }
 
   const handleTestPrinter = async (station: 'reception' | 'packaging') => {
@@ -423,7 +424,7 @@ function DeviceSettings() {
     const port = Number(printer.port) || 9100
 
     if (!ip) {
-      toast.error('Please enter a printer IP address before testing.')
+      toast.error('Masukkan alamat IP printer sebelum pengujian.')
       setTestingTarget(null)
       return
     }
@@ -431,10 +432,10 @@ function DeviceSettings() {
     try {
       const result = await api.printers.test(station, { ip, port })
       setForm((prev) => ({ ...prev, printers: { ...prev.printers, [station]: { ...prev.printers[station], status: result?.online ? 'ONLINE' : 'OFFLINE' } } }))
-      if (result?.online) toast.success(`${station === 'reception' ? 'Reception' : 'Packaging'} printer is online at ${ip}:${port}.`)
-      else toast.warning(`${station === 'reception' ? 'Reception' : 'Packaging'} printer is offline at ${ip}:${port}.`)
+      if (result?.online) toast.success(`Printer ${station === 'reception' ? 'Penerimaan' : 'Pengemasan'} terhubung di ${ip}:${port}.`)
+      else toast.warning(`Printer ${station === 'reception' ? 'Penerimaan' : 'Pengemasan'} terputus di ${ip}:${port}.`)
     } catch (err: any) {
-      toast.error(`Printer check failed: ${err.message || 'Printer unavailable'}`)
+      toast.error(`Pengecekan printer gagal: ${err.message || 'Printer tidak tersedia'}`)
     } finally {
       setTestingTarget(null)
     }
@@ -442,34 +443,34 @@ function DeviceSettings() {
 
   const renderPrinterSettings = (station: 'reception' | 'packaging') => {
     const printer = form.printers[station]
-    const label = station === 'reception' ? 'Reception' : 'Packaging'
+    const label = station === 'reception' ? 'Penerimaan' : 'Pengemasan'
 
     return (
       <div className="border-t border-border pt-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <span className="font-semibold text-base text-foreground">Printer Settings</span>
-            <p className="text-xs text-muted-foreground mt-1">{label} · IW-J300H · 80 mm · Ethernet only</p>
+            <span className="font-semibold text-base text-foreground">Pengaturan Printer</span>
+            <p className="text-xs text-muted-foreground mt-1">{label} · IW-J300H · 80 mm · Khusus Ethernet</p>
           </div>
           <Badge tone={printer.status === 'ONLINE' ? 'success' : 'warning'} dot>
-            {printer.status === 'ONLINE' ? 'Online' : 'Offline'}
+            {printer.status === 'ONLINE' ? 'Terhubung' : 'Terputus'}
           </Badge>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Field label="Printer Model" htmlFor={`${station}-printer-model`}>
+          <Field label="Model Printer" htmlFor={`${station}-printer-model`}>
             <Input id={`${station}-printer-model`} mono value={printer.model} readOnly />
           </Field>
 
-          <Field label="Paper Width (mm)" htmlFor={`${station}-printer-width`}>
+          <Field label="Lebar Kertas (mm)" htmlFor={`${station}-printer-width`}>
             <Input id={`${station}-printer-width`} type="number" mono value={printer.paperWidthMm} readOnly />
           </Field>
 
-          <Field label="Connection" htmlFor={`${station}-printer-connection`}>
+          <Field label="Koneksi" htmlFor={`${station}-printer-connection`}>
             <Input id={`${station}-printer-connection`} mono value={printer.connection} readOnly />
           </Field>
 
-          <Field label="Printer IP Address" htmlFor={`${station}-printer-ip`} required>
+          <Field label="Alamat IP Printer" htmlFor={`${station}-printer-ip`} required>
             <Input
               id={`${station}-printer-ip`}
               mono
@@ -479,7 +480,7 @@ function DeviceSettings() {
             />
           </Field>
 
-          <Field label="TCP Port" htmlFor={`${station}-printer-port`} required hint="Default printer port: 9100">
+          <Field label="Port TCP" htmlFor={`${station}-printer-port`} required hint="Port default printer: 9100">
             <Input
               id={`${station}-printer-port`}
               type="number"
@@ -500,7 +501,7 @@ function DeviceSettings() {
             loading={testingTarget === `printer-${station}`}
             onClick={() => handleTestPrinter(station)}
           >
-            Test Printer
+            Uji Printer
           </Button>
         </div>
       </div>
@@ -511,12 +512,12 @@ function DeviceSettings() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Device Settings</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Scale and thermal printer connections.</p>
+          <h2 className="text-lg font-semibold text-foreground">Pengaturan Perangkat</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Koneksi timbangan dan printer termal.</p>
         </div>
         <div>
           <Badge tone="success" dot live>
-            3 Stations · 2 Printers
+            3 Stasiun · 2 Printer
           </Badge>
         </div>
       </div>
@@ -525,18 +526,18 @@ function DeviceSettings() {
         {/* Station 01: Reception */}
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4">
-            <span className="font-semibold text-base text-foreground">Station 01: Reception</span>
+            <span className="font-semibold text-base text-foreground">Stasiun 01: Penerimaan</span>
             <Badge tone={scaleOnline['01'] ? 'success' : 'warning'} dot>
-              {scaleOnline['01'] ? 'Online' : 'Offline'}
+              {scaleOnline['01'] ? 'Terhubung' : 'Terputus'}
             </Badge>
           </div>
 
           <div className="border-t border-border pt-5">
-            <span className="font-semibold text-sm uppercase tracking-wider text-foreground">Scale Settings</span>
+            <span className="font-semibold text-sm uppercase tracking-wider text-foreground">Pengaturan Timbangan</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Field label="Scale Address" htmlFor="intake-ip" required>
+            <Field label="Alamat IP Timbangan" htmlFor="intake-ip" required>
               <Input
                 id="intake-ip"
                 mono
@@ -550,7 +551,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Connection Port" htmlFor="intake-port" required>
+            <Field label="Port Koneksi" htmlFor="intake-port" required>
               <Input
                 id="intake-port"
                 type="number"
@@ -565,7 +566,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Modbus Unit ID" htmlFor="intake-slave" hint="Valid range: 1–247">
+            <Field label="Modbus Unit ID" htmlFor="intake-slave" hint="Rentang valid: 1–247">
               <Input
                 id="intake-slave"
                 type="number"
@@ -582,7 +583,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Weight Start Register" htmlFor="intake-reg-weight" required hint="FLOAT32 uses this register and the next word">
+            <Field label="Weight Start Register" htmlFor="intake-reg-weight" required hint="FLOAT32 memakai register ini dan word berikutnya">
               <Input
                 id="intake-reg-weight"
                 type="number"
@@ -599,7 +600,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Status Register" htmlFor="intake-reg-status" hint="Firmware default: 40011">
+            <Field label="Status Register" htmlFor="intake-reg-status" hint="Bawaan firmware: 40011">
               <Input
                 id="intake-reg-status"
                 type="number"
@@ -616,7 +617,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Maximum Load (kg)" htmlFor="intake-cap" required>
+            <Field label="Beban Maksimum (kg)" htmlFor="intake-cap" required>
               <Input
                 id="intake-cap"
                 type="number"
@@ -631,7 +632,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Stable Reading (g)" htmlFor="intake-stab">
+            <Field label="Pembacaan Stabil (g)" htmlFor="intake-stab">
               <Input
                 id="intake-stab"
                 type="number"
@@ -653,9 +654,9 @@ function DeviceSettings() {
               variant="outline"
               icon="refresh"
               loading={testingTarget === '01'}
-              onClick={() => handleTestConnection('01', 'Station 01', form.intake.ip, form.intake.port)}
+              onClick={() => handleTestConnection('01', 'Stasiun 01', form.intake.ip, form.intake.port)}
             >
-                Check Scale
+                Cek Timbangan
             </Button>
           </div>
 
@@ -665,18 +666,18 @@ function DeviceSettings() {
         {/* Station 02: Sorting */}
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4">
-            <span className="font-semibold text-base text-foreground">Station 02: Sorting</span>
+            <span className="font-semibold text-base text-foreground">Stasiun 02: Sortasi</span>
             <Badge tone={scaleOnline['02'] ? 'success' : 'warning'} dot>
-              {scaleOnline['02'] ? 'Online' : 'Offline'}
+              {scaleOnline['02'] ? 'Terhubung' : 'Terputus'}
             </Badge>
           </div>
 
           <div className="border-t border-border pt-5">
-            <span className="font-semibold text-sm uppercase tracking-wider text-foreground">Scale Settings</span>
+            <span className="font-semibold text-sm uppercase tracking-wider text-foreground">Pengaturan Timbangan</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Field label="Scale Address" htmlFor="grading-ip" required>
+            <Field label="Alamat IP Timbangan" htmlFor="grading-ip" required>
               <Input
                 id="grading-ip"
                 mono
@@ -690,7 +691,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Connection Port" htmlFor="grading-port" required>
+            <Field label="Port Koneksi" htmlFor="grading-port" required>
               <Input
                 id="grading-port"
                 type="number"
@@ -705,7 +706,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Modbus Unit ID" htmlFor="grading-slave" hint="Valid range: 1–247">
+            <Field label="Modbus Unit ID" htmlFor="grading-slave" hint="Rentang valid: 1–247">
               <Input
                 id="grading-slave"
                 type="number"
@@ -722,7 +723,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Weight Start Register" htmlFor="grading-reg-weight" required hint="FLOAT32 uses this register and the next word">
+            <Field label="Weight Start Register" htmlFor="grading-reg-weight" required hint="FLOAT32 memakai register ini dan word berikutnya">
               <Input
                 id="grading-reg-weight"
                 type="number"
@@ -739,7 +740,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Status Register" htmlFor="grading-reg-status" hint="Firmware default: 40011">
+            <Field label="Status Register" htmlFor="grading-reg-status" hint="Bawaan firmware: 40011">
               <Input
                 id="grading-reg-status"
                 type="number"
@@ -756,7 +757,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Maximum Load (kg)" htmlFor="grading-cap" required>
+            <Field label="Beban Maksimum (kg)" htmlFor="grading-cap" required>
               <Input
                 id="grading-cap"
                 type="number"
@@ -771,7 +772,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Stable Reading (g)" htmlFor="grading-stab">
+            <Field label="Pembacaan Stabil (g)" htmlFor="grading-stab">
               <Input
                 id="grading-stab"
                 type="number"
@@ -793,9 +794,9 @@ function DeviceSettings() {
               variant="outline"
               icon="refresh"
               loading={testingTarget === '02'}
-              onClick={() => handleTestConnection('02', 'Station 02', form.grading.ip, form.grading.port)}
+              onClick={() => handleTestConnection('02', 'Stasiun 02', form.grading.ip, form.grading.port)}
             >
-                Check Scale
+                Cek Timbangan
             </Button>
           </div>
 
@@ -804,18 +805,18 @@ function DeviceSettings() {
         {/* Station 03: Packaging */}
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4">
-            <span className="font-semibold text-base text-foreground">Station 03: Packaging</span>
+            <span className="font-semibold text-base text-foreground">Stasiun 03: Pengemasan</span>
             <Badge tone={scaleOnline['03'] ? 'success' : 'warning'} dot>
-              {scaleOnline['03'] ? 'Online' : 'Offline'}
+              {scaleOnline['03'] ? 'Terhubung' : 'Terputus'}
             </Badge>
           </div>
 
           <div className="border-t border-border pt-5">
-            <span className="font-semibold text-sm uppercase tracking-wider text-foreground">Scale Settings</span>
+            <span className="font-semibold text-sm uppercase tracking-wider text-foreground">Pengaturan Timbangan</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Field label="Scale Address" htmlFor="pkg-ip" required>
+            <Field label="Alamat IP Timbangan" htmlFor="pkg-ip" required>
               <Input
                 id="pkg-ip"
                 mono
@@ -829,7 +830,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Connection Port" htmlFor="pkg-port" required>
+            <Field label="Port Koneksi" htmlFor="pkg-port" required>
               <Input
                 id="pkg-port"
                 type="number"
@@ -844,7 +845,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Modbus Unit ID" htmlFor="pkg-slave" hint="Valid range: 1–247">
+            <Field label="Modbus Unit ID" htmlFor="pkg-slave" hint="Rentang valid: 1–247">
               <Input
                 id="pkg-slave"
                 type="number"
@@ -861,7 +862,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Weight Start Register" htmlFor="pkg-reg-weight" required hint="FLOAT32 uses this register and the next word">
+            <Field label="Weight Start Register" htmlFor="pkg-reg-weight" required hint="FLOAT32 memakai register ini dan word berikutnya">
               <Input
                 id="pkg-reg-weight"
                 type="number"
@@ -878,7 +879,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Status Register" htmlFor="pkg-reg-status" hint="Firmware default: 40011">
+            <Field label="Status Register" htmlFor="pkg-reg-status" hint="Bawaan firmware: 40011">
               <Input
                 id="pkg-reg-status"
                 type="number"
@@ -895,7 +896,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Maximum Load (kg)" htmlFor="pkg-cap" required>
+            <Field label="Beban Maksimum (kg)" htmlFor="pkg-cap" required>
               <Input
                 id="pkg-cap"
                 type="number"
@@ -910,7 +911,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Stable Reading (g)" htmlFor="pkg-stab">
+            <Field label="Pembacaan Stabil (g)" htmlFor="pkg-stab">
               <Input
                 id="pkg-stab"
                 type="number"
@@ -925,7 +926,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Pouch Allowance (g)" htmlFor="pkg-tol" required>
+            <Field label="Toleransi Kemasan (g)" htmlFor="pkg-tol" required>
               <Input
                 id="pkg-tol"
                 type="number"
@@ -947,9 +948,9 @@ function DeviceSettings() {
               variant="outline"
               icon="refresh"
               loading={testingTarget === '03'}
-              onClick={() => handleTestConnection('03', 'Station 03', form.packaging.ip, form.packaging.port)}
+              onClick={() => handleTestConnection('03', 'Stasiun 03', form.packaging.ip, form.packaging.port)}
             >
-                Check Scale
+                Cek Timbangan
             </Button>
           </div>
 
@@ -959,11 +960,11 @@ function DeviceSettings() {
         {/* Global Settings */}
         <div className="bg-card border border-border rounded-none p-6 shadow-sm space-y-6">
           <div className="border-b border-border pb-4">
-            <span className="font-semibold text-base text-foreground">General Settings</span>
+            <span className="font-semibold text-base text-foreground">Pengaturan Umum</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Update Speed (ms)" htmlFor="global-poll">
+            <Field label="Kecepatan Pembaruan (ms)" htmlFor="global-poll">
               <Input
                 id="global-poll"
                 type="number"
@@ -975,7 +976,7 @@ function DeviceSettings() {
               />
             </Field>
 
-            <Field label="Response Limit (ms)" htmlFor="global-timeout">
+            <Field label="Batas Waktu Respons (ms)" htmlFor="global-timeout">
               <Input
                 id="global-timeout"
                 type="number"
@@ -992,10 +993,10 @@ function DeviceSettings() {
         {/* Form Actions */}
         <div className="flex items-center gap-3 pt-2">
           <Button type="submit" variant="primary" icon="check" loading={saving} touch>
-            Save Settings
+            Simpan Pengaturan
           </Button>
           <Button type="button" variant="ghost" icon="refresh" onClick={handleResetDefaults}>
-            Reset Defaults
+            Reset Bawaan
           </Button>
         </div>
       </form>

@@ -25,37 +25,37 @@ export default function ContextBar() {
         <div className={`context-bar ${offline ? 'is-offline' : ''}`} data-testid="context-bar">
           <span className="context-chip">
             <Icon name="user" size={14} />
-            <span className="context-chip-label">Farmer</span>
+            <span className="context-chip-label">Petani</span>
             <span className="context-chip-value">{farmer.name}</span>
           </span>
           {pallet?.code && (
             <span className="context-chip">
               <Icon name="pallet" size={14} />
-              <span className="context-chip-label">Pallet</span>
+              <span className="context-chip-label">Palet</span>
               <span className="context-chip-value mono">{pallet.code}</span>
             </span>
           )}
           {defaultGrade && (
             <span className="context-chip hide-mobile">
               <Icon name="grade" size={14} />
-              <span className="context-chip-label">Default grade</span>
+              <span className="context-chip-label">Grade bawaan</span>
               <span className="context-chip-value">{defaultGrade}</span>
             </span>
           )}
           {offline ? (
             <Badge tone="warning" icon="wifi-off">
-              Offline — not synced
+              Terputus — belum tersinkron
             </Badge>
           ) : (
             <Badge tone="accent" dot className="hide-mobile">
-              Session {hours}h {minutes}m left
+              Sesi tersisa {hours}j {minutes}m
             </Badge>
           )}
           <button
             type="button"
             className="context-reset"
             onClick={() => setConfirmOpen(true)}
-            aria-label="Reset session context"
+            aria-label="Reset konteks sesi"
           >
             <Icon name="trash" size={14} />
             Reset
@@ -69,19 +69,19 @@ export default function ContextBar() {
       <ConfirmDialog
         open={confirmOpen}
         tone="danger"
-        title="Reset session context?"
+        title="Reset konteks sesi?"
         description={
           <>
-            Farmer <strong>{farmer.name}</strong>
+            Petani <strong>{farmer.name}</strong>
             {pallet?.code ? (
               <>
-                {' '}and pallet <strong>{pallet.code}</strong>
+                {' '}dan palet <strong>{pallet.code}</strong>
               </>
             ) : null}{' '}
-            will be cleared. Any unsaved weighing will be lost.
+            akan dikosongkan. Penimbangan yang belum disimpan akan hilang.
           </>
         }
-        confirmLabel="Yes, Reset"
+        confirmLabel="Ya, Reset"
         onConfirm={() => {
           reset()
           setConfirmOpen(false)

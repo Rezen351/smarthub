@@ -66,18 +66,18 @@ export default function WarehousePage() {
   const bufferColumns: Column<BufferWaringItem>[] = [
     {
       key: 'code',
-      label: 'Waring Code',
+      label: 'Kode Waring',
       priority: true,
       render: (row) => <span className="font-mono font-bold text-foreground">{row.code}</span>,
     },
     {
       key: 'farmerName',
-      label: 'Farmer',
+      label: 'Petani',
       render: (row) => <span className="font-semibold text-foreground text-sm">{row.farmerName}</span>,
     },
     {
       key: 'commodityName',
-      label: 'Commodity',
+      label: 'Komoditas',
       render: (row) => (
         <span className="text-xs text-foreground">
           <span className="font-mono font-bold mr-1">{row.commodityCode || '001'}</span>
@@ -87,7 +87,7 @@ export default function WarehousePage() {
     },
     {
       key: 'grossWeightKg',
-      label: 'Gross Weight',
+      label: 'Berat Kotor',
       align: 'right',
       priority: true,
       render: (row) => (
@@ -98,20 +98,20 @@ export default function WarehousePage() {
     },
     {
       key: 'intakeTime',
-      label: 'Intake Time',
+      label: 'Waktu Masuk',
       render: (row) => (
         <div>
           <span className="font-mono text-xs text-foreground block">{row.intakeTime}</span>
-          <span className="text-[10px] text-muted-foreground">{row.date || 'Today'}</span>
+          <span className="text-[10px] text-muted-foreground">{row.date || 'Hari ini'}</span>
         </div>
       ),
     },
     {
       key: 'status',
-      label: 'Queue Status',
+      label: 'Status Antrean',
       render: () => (
         <Badge tone="warning" dot>
-          Waiting for Sorting
+          Menunggu Sortasi
         </Badge>
       ),
     },
@@ -123,7 +123,7 @@ export default function WarehousePage() {
         <div className="flex items-center gap-1.5 justify-end">
           <Link to="/dashboard/sorting">
             <Button size="sm" variant="outline">
-              Buka Pemilahan
+              Buka Sortasi
             </Button>
           </Link>
           {user?.role === 'ADMIN' && (
@@ -145,13 +145,13 @@ export default function WarehousePage() {
   const finishedColumns: Column<FinishedStockItem>[] = [
     {
       key: 'code',
-      label: 'Batch Code',
+      label: 'Kode Batch',
       priority: true,
       render: (row) => <span className="font-mono font-bold text-foreground">{row.code}</span>,
     },
     {
       key: 'commodityName',
-      label: 'Commodity',
+      label: 'Komoditas',
       render: (row) => (
         <span className="text-xs text-foreground">
           <span className="font-mono font-bold mr-1">{row.commodityCode || '001'}</span>
@@ -161,7 +161,7 @@ export default function WarehousePage() {
     },
     {
       key: 'packageType',
-      label: 'Package Standard',
+      label: 'Jenis Kemasan',
       render: (row) => <span className="text-sm font-semibold text-foreground">{row.packageType}</span>,
     },
     {
@@ -171,14 +171,14 @@ export default function WarehousePage() {
     },
     {
       key: 'units',
-      label: 'Quantity Units',
+      label: 'Jumlah Unit',
       align: 'right',
       priority: true,
       render: (row) => <span className="font-mono font-bold text-foreground">{row.units}</span>,
     },
     {
       key: 'totalWeightKg',
-      label: 'Weight kg',
+      label: 'Berat (kg)',
       align: 'right',
       render: (row) => (
         <span className="font-mono font-bold text-emerald-800">
@@ -188,7 +188,7 @@ export default function WarehousePage() {
     },
     {
       key: 'storageLocation',
-      label: 'Rack / Bay',
+      label: 'Rak / Area',
       render: (row) => (
         <span className="font-mono text-xs bg-muted px-2 py-0.5 border border-border">
           {row.storageLocation}
@@ -197,7 +197,7 @@ export default function WarehousePage() {
     },
     {
       key: 'packedTime',
-      label: 'Time',
+      label: 'Waktu',
       render: (row) => <span className="font-mono text-xs text-muted-foreground">{row.packedTime}</span>,
     },
   ]
@@ -205,18 +205,18 @@ export default function WarehousePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Warehouse Inventory"
-        subtitle="Harvest buffer and finished goods storage."
+        title="Inventaris Gudang"
+        subtitle="Penyimpanan buffer hasil panen dan stok barang jadi."
         actions={
           <div className="flex items-center gap-2 flex-wrap">
             {commodityOptions.length > 0 && (
               <select
-                aria-label="Filter by commodity"
+                aria-label="Filter berdasarkan komoditas"
                 className="form-input text-xs py-1.5"
                 value={commodityFilter}
                 onChange={(e) => setCommodityFilter(e.target.value)}
               >
-                <option value="">All Commodities</option>
+                <option value="">Semua Komoditas</option>
                 {commodityOptions.map(([code, name]) => (
                   <option key={code} value={code}>
                     {code} — {name}
@@ -224,7 +224,7 @@ export default function WarehousePage() {
                 ))}
               </select>
             )}
-            <Badge tone="accent">2 Zones Active</Badge>
+            <Badge tone="accent">2 Zona Aktif</Badge>
           </div>
         }
       />
@@ -242,21 +242,21 @@ export default function WarehousePage() {
         >
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-bold text-muted-foreground">ZONE 01</span>
+              <span className="font-mono text-xs font-bold text-muted-foreground">ZONA 01</span>
               <Badge tone={activeZone === 'buffer' ? 'success' : 'neutral'}>
-                {bufferItems.length} Warings Queued
+                {bufferItems.length} Waring Antre
               </Badge>
             </div>
             <h3 className="font-bold text-lg text-foreground mt-1">
-              Raw Harvest Buffer
+              Buffer Hasil Panen
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
-              Queue for waring sacks awaiting sorting.
+              Antrean karung waring yang menunggu sortasi.
             </p>
             <div className="mt-3 flex items-center gap-3 text-xs font-mono">
-              <span className="font-bold text-emerald-800">{formatWeight(bufferTotalKg)} kg queued</span>
+              <span className="font-bold text-emerald-800">{formatWeight(bufferTotalKg)} kg antre</span>
               <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground">Capacity: {bufferPct}%</span>
+              <span className="text-muted-foreground">Kapasitas: {bufferPct}%</span>
             </div>
           </div>
           <div
@@ -280,21 +280,21 @@ export default function WarehousePage() {
         >
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-bold text-muted-foreground">ZONE 02</span>
+              <span className="font-mono text-xs font-bold text-muted-foreground">ZONA 02</span>
               <Badge tone={activeZone === 'finished' ? 'accent' : 'neutral'}>
-                {finishedTotalUnits} Units in Stock
+                {finishedTotalUnits} Unit Tersedia
               </Badge>
             </div>
             <h3 className="font-bold text-lg text-foreground mt-1">
-              Finished Goods Storage
+              Penyimpanan Barang Jadi
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
-              Retail pouches and export cartons ready for dispatch.
+              Kemasan ritel dan karton ekspor siap kirim.
             </p>
             <div className="mt-3 flex items-center gap-3 text-xs font-mono">
               <span className="font-bold text-blue-800">{formatWeight(finishedTotalKg)} kg total</span>
               <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground">Usage: {finishedPct}%</span>
+              <span className="text-muted-foreground">Terpakai: {finishedPct}%</span>
             </div>
           </div>
           <div
@@ -313,30 +313,30 @@ export default function WarehousePage() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard
-              label="Waiting Warings"
+              label="Waring Menunggu"
               value={`${bufferItems.length}`}
-              sub="Unsorted raw sacks"
+              sub="Karung belum disortasi"
               trend="neutral"
               icon={<Icon name="box" size={16} />}
             />
             <StatCard
-              label="Buffer Weight"
+              label="Berat Buffer"
               value={`${formatWeight(bufferTotalKg)} kg`}
-              sub="Gross intake weight"
+              sub="Berat kotor penerimaan"
               trend="up"
               icon={<Icon name="scale" size={16} />}
             />
             <StatCard
-              label="Buffer Utilization"
+              label="Utilisasi Buffer"
               value={`${bufferPct}%`}
-              sub={`${bufferCapacityKg - bufferTotalKg} kg free space`}
+              sub={`Sisa ruang ${bufferCapacityKg - bufferTotalKg} kg`}
               trend={bufferPct > 80 ? 'up' : 'neutral'}
               icon={<Icon name="stack" size={16} />}
             />
             <StatCard
-              label="Queue Order"
-              value="Active"
-              sub={bufferItems.length ? `Oldest: ${bufferItems[bufferItems.length - 1].intakeTime}` : 'No waiting warings'}
+              label="Antrean"
+              value="Aktif"
+              sub={bufferItems.length ? `Terlama: ${bufferItems[bufferItems.length - 1].intakeTime}` : 'Tidak ada waring menunggu'}
               trend="neutral"
               icon={<Icon name="clock" size={16} />}
             />
@@ -346,15 +346,15 @@ export default function WarehousePage() {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <h3 className="font-bold text-base text-foreground">
-                  Harvest Buffer Queue
+                  Antrean Buffer Hasil Panen
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Warings from intake weighing waiting for manual sorting and pallet association.
+                  Waring dari penerimaan yang menunggu sortasi dan penautan palet.
                 </p>
               </div>
               <Link to="/dashboard/sorting">
                 <Button variant="primary" icon="check">
-                  Open Sorting Station
+                  Buka Stasiun Sortasi
                 </Button>
               </Link>
             </div>
@@ -369,30 +369,30 @@ export default function WarehousePage() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard
-              label="Ready Units"
+              label="Unit Siap Kirim"
               value={`${finishedTotalUnits}`}
-              sub="Pouches & export cartons"
+              sub="Kemasan ritel & karton ekspor"
               trend="up"
               icon={<Icon name="package" size={16} />}
             />
             <StatCard
-              label="Finished Net Weight"
+              label="Berat Bersih Barang Jadi"
               value={`${formatWeight(finishedTotalKg)} kg`}
-              sub="Packaged potato inventory"
+              sub="Stok hasil pengemasan"
               trend="up"
               icon={<Icon name="scale" size={16} />}
             />
             <StatCard
-              label="Grade A Stock"
+              label="Stok Grade A"
               value={`${formatWeight(finishedItems.filter((item) => item.grade === 'A').reduce((sum, item) => sum + item.totalWeightKg, 0))} kg`}
-              sub="Pouches & 10kg crates"
+              sub="Kemasan ritel & peti 10 kg"
               trend="neutral"
               icon={<Icon name="leaf" size={16} />}
             />
             <StatCard
-              label="Storage Rack Utilization"
+              label="Utilisasi Rak Gudang"
               value={`${finishedPct}%`}
-              sub="Warehouse Bay A-C"
+              sub="Area Gudang A-C"
               trend="neutral"
               icon={<Icon name="box" size={16} />}
             />
@@ -402,15 +402,15 @@ export default function WarehousePage() {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <h3 className="font-bold text-base text-foreground">
-                  Finished Goods Inventory Ledger
+                  Buku Stok Barang Jadi
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Packaged items ready for scan verification and dispatch loading.
+                  Produk terkemas yang siap dipindai dan dimuat untuk pengiriman.
                 </p>
               </div>
               <Link to="/dashboard/deliveries">
                 <Button variant="primary" icon="truck">
-                  Open Dispatch & Deliveries
+                  Buka Pengiriman
                 </Button>
               </Link>
             </div>

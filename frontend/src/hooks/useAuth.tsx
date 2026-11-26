@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const data = await api.auth.login(email, password)
-    if (!data?.user) throw new Error('Invalid credentials')
+    if (!data?.user) throw new Error('Email atau kata sandi salah.')
     const u = toUser(data.user)
     setUser(u)
     localStorage.setItem('user', JSON.stringify(u))

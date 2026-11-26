@@ -74,7 +74,7 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
         <div>
           <div className="flex items-center gap-1.5">
             <h3 className={`text-sm xl:text-base font-bold tracking-tight uppercase ${isDark ? 'text-white' : 'text-foreground'}`}>
-              Grade Distribution
+              Distribusi Grade
             </h3>
             <span
               className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 border ${
@@ -83,11 +83,11 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
                   : 'border-amber-500/30 bg-amber-50 text-amber-700'
               }`}
             >
-              Station 02
+              Stasiun 02
             </span>
           </div>
           <p className={`text-xs ${isDark ? 'text-white/60' : 'text-muted-foreground'}`}>
-            Grade ratio &amp; sorting shrinkage
+            Rasio grade &amp; susut sortasi
           </p>
         </div>
 
@@ -97,7 +97,7 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
             {yieldPct > 0 ? `${yieldPct.toFixed(1)}%` : '—'}
           </p>
           <p className={`text-xs font-mono ${isDark ? 'text-white/65' : 'text-muted-foreground'}`}>
-            Recovery Yield
+            Rendemen
           </p>
         </div>
       </div>
@@ -161,7 +161,7 @@ export const GradeQualityPanel: React.FC<GradeQualityPanelProps> = ({
                   : 'border-rose-300 bg-rose-50 text-rose-700'
               }`}
             >
-              Shrinkage
+              Susut
             </span>
           </div>
           <div className="text-right shrink-0">

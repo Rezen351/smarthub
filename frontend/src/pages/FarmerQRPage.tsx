@@ -36,7 +36,7 @@ export default function FarmerQRPage() {
       const data = await api.farmers.get(farmerId)
       setFarmerData(data)
     } catch {
-      toast.error('Failed to load farmer profile')
+      toast.error('Gagal memuat profil petani')
     } finally {
       setLoading(false)
     }
@@ -44,7 +44,7 @@ export default function FarmerQRPage() {
 
   const cardData: IdCardData = {
     id: user?.id,
-    name: farmerData?.name || user?.name || 'Farmer',
+    name: farmerData?.name || user?.name || 'Petani',
     role: 'FARMER',
     code: farmerId || 'FMR-001',
     domicile: farmerData?.village || user?.farmerProfile?.village || 'Garut, Jawa Barat',
@@ -55,9 +55,9 @@ export default function FarmerQRPage() {
     try {
       setExporting(true)
       await exportIdCardToPng(cardData)
-      toast.success('ID Card PNG exported successfully.')
+      toast.success('PNG Kartu Identitas berhasil diekspor.')
     } catch {
-      toast.error('Failed to export ID Card image.')
+      toast.error('Gagal mengekspor gambar Kartu Identitas.')
     } finally {
       setExporting(false)
     }
@@ -73,9 +73,9 @@ export default function FarmerQRPage() {
         <Card>
           <div className="text-center py-8 stack-sm">
             <Icon name="user" size={36} className="text-text-secondary mx-auto" />
-            <h1 className="t-h2">My Farmer ID Card</h1>
+            <h1 className="t-h2">Kartu Identitas Petani Saya</h1>
             <p className="t-small text-text-secondary">
-              No registered farmer profile is linked to your account. Please contact the administrator.
+              Belum ada profil petani terdaftar yang terhubung ke akun Anda. Hubungi administrator.
             </p>
           </div>
         </Card>
@@ -86,12 +86,12 @@ export default function FarmerQRPage() {
   return (
     <div className="stack stack-lg" style={{ maxWidth: 760 }}>
       <PageHeader
-        title="My Farmer ID Card"
-        subtitle="Official identity pass for Station 01 Reception weighing check-in."
+        title="Kartu Identitas Petani Saya"
+        subtitle="Kartu identitas resmi untuk check-in penimbangan di Stasiun 01 Penerimaan."
         actions={
           <div className="row gap-xs">
             <Button variant="outline" size="sm" icon="print" onClick={handlePrint}>
-              Print ID Card
+              Cetak Kartu ID
             </Button>
             <Button
               variant="primary"
@@ -100,7 +100,7 @@ export default function FarmerQRPage() {
               disabled={exporting}
               onClick={handleExportPng}
             >
-              {exporting ? 'Exporting...' : 'Export to PNG'}
+              {exporting ? 'Mengekspor...' : 'Ekspor ke PNG'}
             </Button>
           </div>
         }
@@ -108,8 +108,8 @@ export default function FarmerQRPage() {
 
       {/* Main Official ID Card Display */}
       <Card
-        title="Official Laminated Badge"
-        subtitle="Registered identity badge for packhouse intake check-in"
+        title="Kartu Identitas Resmi"
+        subtitle="Kartu identitas terdaftar untuk check-in penerimaan rumah kemas"
       >
         <div className="flex flex-col sm:flex-row items-center gap-6 justify-between p-2">
           <div className="shrink-0 flex justify-center w-full sm:w-auto">
@@ -127,30 +127,30 @@ export default function FarmerQRPage() {
 
           <div className="stack-sm text-xs text-text-secondary flex-1">
             <div>
-              <p className="font-semibold text-text text-sm">Station 01 Weighing Check-In</p>
+              <p className="font-semibold text-text text-sm">Check-In Penimbangan Stasiun 01</p>
               <p className="mt-1">
-                Show this official card to the operator at Station 01 Reception or scan the QR code directly at the intake station.
+                Tunjukkan kartu resmi ini kepada operator di Stasiun 01 Penerimaan atau pindai kode QR langsung di stasiun penerimaan.
               </p>
             </div>
 
             <div className="bg-bg-alt p-3 rounded border border-border space-y-1">
               <div className="flex justify-between">
-                <span className="font-medium text-text">Farmer Name:</span>
+                <span className="font-medium text-text">Nama Petani:</span>
                 <span className="font-semibold text-text">{cardData.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium text-text">Farmer ID:</span>
+                <span className="font-medium text-text">ID Petani:</span>
                 <span className="font-mono font-bold text-accent">{cardData.code}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium text-text">Domicile:</span>
+                <span className="font-medium text-text">Domisili:</span>
                 <span>{cardData.domicile}</span>
               </div>
             </div>
 
             <div className="pt-2 flex flex-wrap gap-2">
               <Button size="sm" variant="primary" icon="print" onClick={handlePrint}>
-                Print ID Card
+                Cetak Kartu ID
               </Button>
               <Button
                 size="sm"
@@ -159,7 +159,7 @@ export default function FarmerQRPage() {
                 disabled={exporting}
                 onClick={handleExportPng}
               >
-                {exporting ? 'Exporting...' : 'Export PNG'}
+                {exporting ? 'Mengekspor...' : 'Ekspor PNG'}
               </Button>
             </div>
           </div>

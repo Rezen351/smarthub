@@ -84,7 +84,7 @@ const SingleChartPanel: React.FC<SingleChartPanelProps> = ({
                   : 'border-orange-500/30 bg-orange-50 text-orange-700'
               }`}
             >
-              Live
+              Langsung
             </span>
           </div>
           <p className={`text-xs ${isDark ? 'text-white/60' : 'text-muted-foreground'}`}>
@@ -291,17 +291,17 @@ export const DailyDepositChart: React.FC<DailyDepositChartProps> = ({
     value: h.grossKg,
     count: h.warings,
     isHighlight: h.grossKg > 0,
-    tooltipTitle: `Hour ${h.hour}`,
+    tooltipTitle: `Jam ${h.hour}`,
   }))
 
   return (
     <SingleChartPanel
-      title="Daily Intake · Today"
-      subtitle="Hourly gross intake weight (kg) distribution"
+      title="Penerimaan Harian · Hari Ini"
+      subtitle="Distribusi berat bruto penerimaan per jam (kg)"
       items={items}
       totalKg={totalKg}
       totalWarings={warings}
-      statRightLabel="Peak"
+      statRightLabel="Puncak"
       statRightValue={peakHourly.grossKg > 0 ? `${peakHourly.hour}` : '—'}
       highlightColor="#f97316"
       theme={theme}
@@ -339,13 +339,13 @@ export const WeeklyDepositChart: React.FC<WeeklyDepositChartProps> = ({
 
   return (
     <SingleChartPanel
-      title="Weekly Intake · Past 7 Days"
-      subtitle="Daily deposit volume trend over the past 7 days"
+      title="Penerimaan Mingguan · 7 Hari Terakhir"
+      subtitle="Tren volume setoran harian selama 7 hari terakhir"
       items={items}
       totalKg={totalKg}
       totalWarings={warings}
-      statRightLabel="Avg"
-      statRightValue={`${formatWeight(avgDaily)} kg/d`}
+      statRightLabel="Rata-rata"
+      statRightValue={`${formatWeight(avgDaily)} kg/hr`}
       highlightColor="#f59e0b"
       theme={theme}
       className={className}

@@ -18,6 +18,7 @@ import ScaleWeightInput from '../components/operator/ScaleWeightInput'
 import LabelPreview from '../components/operator/LabelPreview'
 import { printThermal } from '../lib/thermalPrint'
 import { formatWeight, formatSafeDate, formatSafeTime } from '../lib/utils'
+import { idText } from '@/lib/i18n'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
 import CameraScannerModal from '../components/shared/CameraScannerModal'
 import PalletCloseoutModal from '../components/shared/PalletCloseoutModal'
@@ -76,7 +77,7 @@ export default function PackagingPage() {
   const [sourceFarmer, setSourceFarmer] = useState('')
   const [sourceWaring, setSourceWaring] = useState('')
   const [sourceCommodityCode, setSourceCommodityCode] = useState('001')
-  const [sourceCommodityName, setSourceCommodityName] = useState('Eptilu Washed Potatoes 10 kg')
+  const [sourceCommodityName, setSourceCommodityName] = useState('Kentang Cuci 10 kg')
   const [sourcePalletRemainingKg, setSourcePalletRemainingKg] = useState<number | null>(null)
   const [palletSearch, setPalletSearch] = useState('')
   const [palletScanError, setPalletScanError] = useState<string | null>(null)
@@ -101,9 +102,9 @@ export default function PackagingPage() {
   })
   const [scaleCapacityKg, setScaleCapacityKg] = useState<number | null>(null)
   const [scaleOnline, setScaleOnline] = useState(false)
-  const [scaleEndpoint, setScaleEndpoint] = useState('Not configured')
+  const [scaleEndpoint, setScaleEndpoint] = useState('Belum dikonfigurasi')
   const [printerOnline, setPrinterOnline] = useState(false)
-  const [printerEndpoint, setPrinterEndpoint] = useState('Not configured')
+  const [printerEndpoint, setPrinterEndpoint] = useState('Belum dikonfigurasi')
 
   useEffect(() => {
     let active = true
@@ -114,7 +115,7 @@ export default function PackagingPage() {
           if (!active) return
           setScaleCapacityKg(Number(scale?.capacityKg) || null)
           setScaleOnline(scale?.online === true)
-          setScaleEndpoint(scale?.ip && scale?.port ? `${scale.ip}:${scale.port}` : 'Not configured')
+          setScaleEndpoint(scale?.ip && scale?.port ? `${scale.ip}:${scale.port}` : 'Belum dikonfigurasi')
         })
         .catch(() => active && setScaleOnline(false))
     }
@@ -133,7 +134,7 @@ export default function PackagingPage() {
         const printer = Array.isArray(printers) ? printers.find((item: any) => item.station === 'PACKAGING') : null
         if (printer?.ip && printer?.port) setPrinterEndpoint(`${printer.ip}:${printer.port}`)
       })
-      .catch(() => setPrinterEndpoint('Not configured'))
+      .catch(() => setPrinterEndpoint('Belum dikonfigurasi'))
   }, [])
 
   useEffect(() => {
@@ -187,11 +188,11 @@ export default function PackagingPage() {
           grade: p.grade === 'B' || p.grade === 'C' ? p.grade : 'A',
           weightKg: Number(p.weightKg || 0),
           remainingKg: Number(p.remainingKg || 0),
-          farmerName: p.farmerName || 'Farmer',
+          farmerName: p.farmerName || 'Petani',
           farmerVillage: p.farmerVillage,
           waringCode: p.waringCode || '',
           commodityCode: p.commodityCode || '001',
-          commodityName: p.commodityName || 'Eptilu Washed Potatoes 10 kg',
+          commodityName: p.commodityExportName || p.commodityName || 'Pengemasan',
           commodityGtin: p.commodityGtin || '8994477090010',
           washDecision: p.washDecision === 'UNWASHED' ? 'UNWASHED' : 'WASHED',
         }))
@@ -217,11 +218,11 @@ export default function PackagingPage() {
             grade: p.grade === 'B' || p.grade === 'C' ? p.grade : 'A',
             weightKg: Number(p.weightKg || 0),
             remainingKg: Number(p.remainingKg || 0),
-            farmerName: p.farmerName || 'Farmer',
+            farmerName: p.farmerName || 'Petani',
             farmerVillage: p.farmerVillage,
             waringCode: p.waringCode || '',
             commodityCode: p.commodityCode || '001',
-            commodityName: p.commodityName || 'Eptilu Washed Potatoes 10 kg',
+            commodityName: p.commodityExportName || p.commodityName || 'Pengemasan',
             commodityGtin: p.commodityGtin || '8994477090010',
             washDecision: p.washDecision === 'UNWASHED' ? 'UNWASHED' : 'WASHED',
           }))
@@ -256,7 +257,7 @@ export default function PackagingPage() {
     setSourcePalletRemainingKg(p.remainingKg)
     setPalletScanError(null)
     setSavedSuccessRecord(null)
-    toast.success(`Pallet ${p.code} selected (${p.commodityName || '001'} · Grade ${p.grade})`)
+    toast.success(`Palet ${p.code} dipilih (${p.commodityName || '001'} · Grade ${p.grade})`)
   }
 
   const handlePalletScanSubmit = async (e?: React.FormEvent, scannedCode?: string) => {
@@ -277,7 +278,7 @@ export default function PackagingPage() {
         const pallet = await api.pallets.get(query)
         const remainingKg = Number(pallet.remainingKg)
         if (!Number.isFinite(remainingKg) || remainingKg <= 0) {
-          throw new Error(`Pallet ${query.toUpperCase()} has no remaining weight`)
+          throw new Error(`Palet ${query.toUpperCase()} tidak memiliki sisa berat`)
         }
 
         handleSelectPallet({
@@ -285,18 +286,18 @@ export default function PackagingPage() {
           grade: pallet.grade === 'B' || pallet.grade === 'C' ? pallet.grade : 'A',
           weightKg: Number(pallet.weightKg || remainingKg),
           remainingKg,
-          farmerName: pallet.farmerName || 'Farmer',
+          farmerName: pallet.farmerName || 'Petani',
           farmerVillage: pallet.farmerVillage || undefined,
           waringCode: pallet.waringCode || '',
           commodityCode: pallet.commodityCode || '001',
-          commodityName: pallet.commodityName || 'Eptilu Washed Potatoes 10 kg',
+          commodityName: pallet.commodityName || 'Kentang Cuci 10 kg',
           commodityGtin: pallet.commodityGtin || '8994477090010',
           washDecision: pallet.washDecision === 'UNWASHED' ? 'UNWASHED' : 'WASHED',
         })
         setPalletSearch('')
         setPalletScanError(null)
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Pallet could not be verified'
+        const message = err instanceof Error ? err.message : 'Palet tidak dapat diverifikasi'
         setPalletScanError(message)
         toast.error(message)
       }
@@ -353,19 +354,19 @@ export default function PackagingPage() {
         weightKg: row.weightKg,
         date: printDate,
         time: printTime,
-        stationName: 'Station 03 · Packaging',
+        stationName: 'Stasiun 03 · Pengemasan',
       },
       'packaging',
       (err) => {
         setReprintingId(null)
         if (err) {
           toast.error(
-            `Failed to reprint label for ${row.code}: ${
-              err instanceof Error ? err.message : 'Check the Packaging printer.'
+            `Gagal mencetak ulang label untuk ${row.code}: ${
+              err instanceof Error ? err.message : 'Periksa printer Pengemasan.'
             }`,
           )
         } else {
-          toast.success(`Reprinted label for ${row.code}.`)
+          toast.success(`Label untuk ${row.code} dicetak ulang.`)
         }
       },
     )
@@ -387,7 +388,7 @@ export default function PackagingPage() {
               code: p.code || p.unitCode || '—',
               sourcePallet: p.sourcePalletCode || p.sourcePallet || undefined,
               commodityCode: p.commodityCode || '001',
-              commodityName: p.commodityName || 'Eptilu Washed Potatoes 10 kg',
+              commodityName: p.commodityExportName || p.commodityName || 'Pengemasan',
               commodityGtin: p.commodityGtin || '8994477090010',
               barcode: p.barcode,
               digitalLinkUrl: p.digitalLinkUrl,
@@ -429,13 +430,13 @@ export default function PackagingPage() {
           <div className="space-y-0.5">
             <div className="font-bold">
               {isBelowMinSku
-                ? `Sub-Minimum Remainder (${remainingPalletKg.toFixed(3)} kg < 1.000 kg)`
-                : `Remaining Stock (${remainingPalletKg.toFixed(3)} kg) Below ${targetKg} kg Spec`}
+                ? `Sisa Di Bawah Minimum (${remainingPalletKg.toFixed(3)} kg < 1.000 kg)`
+                : `Sisa Stok (${remainingPalletKg.toFixed(3)} kg) Di Bawah Spesifikasi ${targetKg} kg`}
             </div>
             <p className="text-amber-800/90 dark:text-amber-300/90">
               {isBelowMinSku
-                ? `Cannot form a 1 kg pouch from ${sourcePalletCode}. Close and release the pallet to return it to Sorting.`
-                : `Switch to a smaller standard package or close and release ${sourcePalletCode} with an audited disposition.`}
+                ? `Tidak dapat membuat pouch 1 kg dari ${sourcePalletCode}. Tutup dan lepas palet untuk mengembalikannya ke Sortasi.`
+                : `Ganti ke kemasan standar yang lebih kecil atau tutup dan lepas ${sourcePalletCode} dengan disposisi tercatat.`}
             </p>
           </div>
         </div>
@@ -525,7 +526,7 @@ export default function PackagingPage() {
     }
   }
 
-  const nextCodePreview = 'Assigned on save'
+  const nextCodePreview = 'Dibuat saat disimpan'
 
   const handleScanNextPallet = useCallback((openCamera = false) => {
     const prevPallet = sourcePalletCode
@@ -541,7 +542,7 @@ export default function PackagingPage() {
     setActiveStep(1)
     void refreshPallets()
     if (prevPallet) {
-      toast.info(`Pallet ${prevPallet} completed. Ready to scan next pallet.`)
+      toast.info(`Palet ${prevPallet} selesai. Siap memindai palet berikutnya.`)
     }
     if (openCamera) {
       openCameraModal()
@@ -553,21 +554,21 @@ export default function PackagingPage() {
   /* Step 3: Print & Dispatch Commitment */
   const handlePrintAndLabel = async () => {
     if (!sourcePalletCode || sourcePalletRemainingKg === null) {
-      toast.error('Select and verify a source pallet before packaging')
+      toast.error('Pilih dan verifikasi palet sumber sebelum pengemasan.')
       return
     }
 
     if (weightValue > remainingPalletKg + 0.0005) {
       toast.error(
-        `Package weight ${weightValue.toFixed(3)} kg exceeds pallet ${sourcePalletCode} remaining weight of ${remainingPalletKg.toFixed(3)} kg`,
+        `Berat kemasan ${weightValue.toFixed(3)} kg melebihi sisa berat palet ${sourcePalletCode} (${remainingPalletKg.toFixed(3)} kg).`,
       )
       return
     }
 
     if (!isWithinTolerance) {
       toast.warning(
-        `Weight ${currentWeight} kg is outside tolerance for ${
-          packagingMode === 'RETAIL_POUCH' ? '1 kg pouch' : `${targetKg} kg export carton`
+        `Berat ${currentWeight} kg di luar toleransi untuk ${
+          packagingMode === 'RETAIL_POUCH' ? 'pouch 1 kg' : `karton ekspor ${targetKg} kg`
         }.`,
       )
     }
@@ -584,7 +585,7 @@ export default function PackagingPage() {
         productName: activePackagingSpec.productName,
         variant: potatoCondition,
       })
-      if (!saved?.packageCode) throw new Error('The server did not confirm the package code.')
+      if (!saved?.packageCode) throw new Error('Server tidak mengonfirmasi kode kemasan.')
       const newCode = saved.packageCode
       const now = new Date()
       const printDate = formatSafeDate(now)
@@ -609,7 +610,7 @@ export default function PackagingPage() {
       setPackages((curr) => [newRecord, ...curr])
       setSavedSuccessRecord(newRecord)
       setSourcePalletRemainingKg(saved.remainingKg)
-      if (saved.palletReleased) toast.success(`Pallet ${sourcePalletCode} is available again.`)
+      if (saved.palletReleased) toast.success(`Palet ${sourcePalletCode} tersedia kembali.`)
       void refreshPallets()
       void syncWithBackend()
       void loadPackagingRecords()
@@ -628,27 +629,27 @@ export default function PackagingPage() {
           weightKg: weightValue,
           date: printDate,
           time: printTime,
-          stationName: 'Station 03 · Packaging',
+          stationName: 'Stasiun 03 · Pengemasan',
         },
         'packaging',
         (error) => {
           setIsPrinting(false)
           if (error)
             toast.error(
-              `Packaging label print failed: ${
-                error instanceof Error ? error.message : 'Check the Packaging printer.'
+              `Pencetakan label pengemasan gagal: ${
+                error instanceof Error ? error.message : 'Periksa printer Pengemasan.'
               }`,
             )
         },
       )
 
       toast.success(
-        `Recorded ${newCode} (${
-          packagingMode === 'RETAIL_POUCH' ? '1 kg Pouch' : `${targetKg} kg Export Carton`
-        }). Stored in warehouse.`,
+        `Tercatat ${newCode} (${
+          packagingMode === 'RETAIL_POUCH' ? 'Pouch 1 kg' : `Karton Ekspor ${targetKg} kg`
+        }). Tersimpan di gudang.`,
       )
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not save the package.')
+      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan kemasan.')
     } finally {
       setIsPrinting(false)
     }
@@ -734,7 +735,7 @@ export default function PackagingPage() {
             icon="print"
             disabled={reprintingId === row.id}
             onClick={() => handleReprintPackage(row)}
-            title={`Reprint label for ${row.code}`}
+            title={`Cetak ulang label untuk ${row.code}`}
           >
             {reprintingId === row.id ? 'Mencetak…' : 'Cetak Ulang Label'}
           </Button>
@@ -756,11 +757,11 @@ export default function PackagingPage() {
      STEPPER PROGRESS BAR COMPONENT
   ───────────────────────────────────────────────────────────── */
   const renderStepperBar = () => (
-    <nav className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto" aria-label="Packaging steps">
+    <nav className="flex items-center gap-1 sm:gap-3 bg-muted/40 p-2 sm:px-4 sm:py-2.5 border border-border overflow-x-auto" aria-label="Langkah pengemasan">
       {STEPS.map((step, idx) => {
         const isCurrent = activeStep === step.id
         const isDone = activeStep > step.id || (step.id === 3 && savedSuccessRecord !== null)
-        const compactLabel = step.id === 1 ? 'Pallet' : step.id === 2 ? 'Weigh' : 'Pack'
+        const compactLabel = step.id === 1 ? 'Palet' : step.id === 2 ? 'Timbang' : 'Kemas'
 
         return (
           <div key={step.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -811,14 +812,14 @@ export default function PackagingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 1 of 3">
-                Langkah 1 dari 3
+                {idText('Step 1 of 3')}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Scan Pallet & Select Package">
-                Pindai Palet & Pilih Kemasan
+                {idText('Scan Pallet & Select Package')}
               </h2>
             </div>
             <Badge tone="accent" icon="scan">
-              Awaiting Scan
+              Menunggu Pemindaian
             </Badge>
           </div>
 
@@ -828,9 +829,9 @@ export default function PackagingPage() {
               <div className="inline-flex p-3 bg-muted border border-border text-muted-foreground mb-1">
                 <Icon name="scan" size={28} />
               </div>
-              <h3 className="text-base font-bold text-foreground">QR Scanner and Camera</h3>
+              <h3 className="text-base font-bold text-foreground">Pemindai QR dan Kamera</h3>
               <p className="text-xs text-muted-foreground max-w-md">
-                Scan the pallet QR from Station 02 Sorting to confirm the grade and source.
+                Pindai QR palet dari Stasiun 02 Sortasi untuk mengonfirmasi grade dan sumber.
               </p>
             </div>
 
@@ -844,7 +845,7 @@ export default function PackagingPage() {
                   setPalletSearch(e.target.value)
                   setPalletScanError(null)
                 }}
-                placeholder="Scan or enter Pallet QR (e.g. PLT-GRD-A-01)..."
+                placeholder="Pindai atau masukkan QR Palet (mis. PLT-GRD-A-01)..."
                 className="font-mono text-xs uppercase flex-1 min-w-0"
               />
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -862,9 +863,9 @@ export default function PackagingPage() {
           {/* Active Verified Pallet Confirmation Strip */}
           <div className="p-4 bg-card border border-border flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-0.5">
-              <span className="text-xs text-muted-foreground uppercase font-mono block">Source Pallet</span>
+              <span className="text-xs text-muted-foreground uppercase font-mono block">Palet Sumber</span>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-lg font-bold font-mono text-primary">{sourcePalletCode || 'Not selected'}</span>
+                <span className="text-lg font-bold font-mono text-primary">{sourcePalletCode || 'Belum dipilih'}</span>
                 {sourcePalletCode && <span
                   className={`text-xs font-semibold px-2 py-0.5 border ${
                     selectedGrade === 'A'
@@ -883,14 +884,14 @@ export default function PackagingPage() {
                 )}
                 {sourcePalletCode && (
                   <Badge tone={sourceWashDecision === 'WASHED' ? 'accent' : 'neutral'}>
-                    {sourceWashDecision === 'WASHED' ? 'Washed' : 'Unwashed'}
+                    {sourceWashDecision === 'WASHED' ? 'Dicuci' : 'Tanpa Cuci'}
                   </Badge>
                 )}
-                {sourcePalletCode && <span className="text-xs text-muted-foreground">({sourceFarmer} · Origin: {sourceWaring})</span>}
+                {sourcePalletCode && <span className="text-xs text-muted-foreground">({sourceFarmer} · Asal: {sourceWaring})</span>}
               </div>
               {sourcePalletCode && sourcePalletRemainingKg !== null && (
                 <span className={`text-xs font-mono block ${remainingPalletKg <= 0 ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
-                  Remaining: {remainingPalletKg.toFixed(3)} kg {remainingPalletKg <= 0 && '(Depleted)'}
+                  Sisa: {remainingPalletKg.toFixed(3)} kg {remainingPalletKg <= 0 && '(Habis)'}
                 </span>
               )}
             </div>
@@ -898,7 +899,7 @@ export default function PackagingPage() {
               {sourcePalletCode && remainingPalletKg <= 0 ? (
                 <>
                   <Badge tone="danger" dot>
-                    Pallet Depleted
+                    Palet Habis
                   </Badge>
                   <Button
                     variant="outline"
@@ -912,7 +913,7 @@ export default function PackagingPage() {
               ) : (
                 <>
                   <Badge tone={sourcePalletCode ? 'success' : 'warning'} dot live={Boolean(sourcePalletCode)}>
-                    {sourcePalletCode ? 'Source Confirmed' : 'Source Required'}
+                    {sourcePalletCode ? 'Sumber Terkonfirmasi' : 'Sumber Diperlukan'}
                   </Badge>
                   {sourcePalletCode && remainingPalletKg > 0 && (
                     <Button
@@ -933,7 +934,7 @@ export default function PackagingPage() {
           {/* Mode Selector Buttons */}
           <div className="space-y-2">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
-              Choose Package Type:
+              Pilih Jenis Kemasan:
             </span>
             <div className="station-mode-grid grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
@@ -952,14 +953,14 @@ export default function PackagingPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Icon name="package" size={18} className="text-primary" />
-                    <span className="font-bold text-sm text-foreground">Retail 1 kg Pouch</span>
+                    <span className="font-bold text-sm text-foreground">Pouch Retail 1 kg</span>
                   </div>
                   <Badge tone={packagingMode === 'RETAIL_POUCH' ? 'success' : 'neutral'}>
-                    Product QR
+                    QR Produk
                   </Badge>
                 </div>
                 <p className="station-secondary-copy text-xs text-muted-foreground mt-2 leading-relaxed">
-                  1 kg consumer pouch with a product QR code. Target weight 1.000 kg (allowed range ±5 g).
+                  Pouch konsumen 1 kg dengan kode QR produk. Target berat 1.000 kg (toleransi ±5 g).
                 </p>
               </button>
 
@@ -979,14 +980,14 @@ export default function PackagingPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Icon name="truck" size={18} className="text-primary" />
-                    <span className="font-bold text-sm text-foreground">Export Carton</span>
+                    <span className="font-bold text-sm text-foreground">Karton Ekspor</span>
                   </div>
                   <Badge tone={packagingMode === 'BULK_EXPORT' ? 'accent' : 'neutral'}>
                     Barcode
                   </Badge>
                 </div>
                 <p className="station-secondary-copy text-xs text-muted-foreground mt-2 leading-relaxed">
-                  Bulk master carton with a barcode. Target weight 10 kg or 50 kg (allowed range ±50 g).
+                  Karton master curah dengan barcode. Target berat 10 kg atau 50 kg (toleransi ±50 g).
                 </p>
               </button>
             </div>
@@ -996,7 +997,7 @@ export default function PackagingPage() {
           {packagingMode === 'BULK_EXPORT' && (
             <div className="p-4 bg-card border border-border space-y-2">
               <span className="text-xs font-bold uppercase tracking-wider text-foreground block">
-                Export Carton Size:
+                Ukuran Karton Ekspor:
               </span>
               <div className="flex gap-2">
                 <Button
@@ -1031,7 +1032,7 @@ export default function PackagingPage() {
                   Karton 50 kg
                 </Button>
               </div>
-              {scaleCapacityKg !== null && scaleCapacityKg < 50 && <p className="text-xs text-muted-foreground">50 kg requires a scale with at least 50 kg capacity.</p>}
+              {scaleCapacityKg !== null && scaleCapacityKg < 50 && <p className="text-xs text-muted-foreground">Karton 50 kg memerlukan timbangan berkapasitas minimal 50 kg.</p>}
             </div>
           )}
 
@@ -1039,13 +1040,13 @@ export default function PackagingPage() {
           <div className="p-4 bg-muted/40 border border-border space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                GS1 Packaging Specification
+                Spesifikasi Kemasan GS1
               </span>
-              <Badge tone="accent">GS1 Trade Item</Badge>
+              <Badge tone="accent">Item Dagang GS1</Badge>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <span className="text-muted-foreground block">Product Title:</span>
+                <span className="text-muted-foreground block">Nama Produk:</span>
                 <span className="font-semibold text-foreground">{activePackagingSpec.productName}</span>
               </div>
               <div>
@@ -1053,11 +1054,11 @@ export default function PackagingPage() {
                 <span className="font-mono font-bold text-foreground">{activePackagingSpec.gtin}</span>
               </div>
               <div>
-                <span className="text-muted-foreground block">Packaging Format & Target:</span>
+                <span className="text-muted-foreground block">Format Kemasan &amp; Target:</span>
                 <span className="font-semibold text-foreground">{activePackagingSpec.packageType} · {targetKg} kg (±{packagingMode === 'RETAIL_POUCH' ? '5 g' : '50 g'})</span>
               </div>
               <div>
-                <span className="text-muted-foreground block">Brand:</span>
+                <span className="text-muted-foreground block">Merek:</span>
                 <span className="font-semibold text-foreground">{activePackagingSpec.brand}</span>
               </div>
             </div>
@@ -1096,14 +1097,14 @@ export default function PackagingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 2 of 3">
-                Langkah 2 dari 3
+                {idText('Step 2 of 3')}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Weigh Package">
-                Timbang Kemasan
+                {idText('Weigh Package')}
               </h2>
             </div>
             <div className="flex items-center gap-2">
-              <Badge tone="accent">Pallet: {sourcePalletCode}</Badge>
+              <Badge tone="accent">Palet: {sourcePalletCode}</Badge>
               <Badge tone="accent">Grade {selectedGrade}</Badge>
             </div>
           </div>
@@ -1117,7 +1118,7 @@ export default function PackagingPage() {
                 onChange={setCurrentWeight}
                 capacityKg={scaleCapacityKg ?? 0}
                 maxAllowedWeightKg={remainingPalletKg}
-                label="Package Weight"
+                label="Berat Kemasan"
               />
 
               {/* Target & Tolerance Metric Card */}
@@ -1129,7 +1130,7 @@ export default function PackagingPage() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground block">Difference</span>
+                  <span className="text-xs text-muted-foreground block">Selisih</span>
                   <span
                     className={`font-mono font-bold text-base ${
                       isWithinTolerance ? 'text-emerald-700' : 'text-red-700'
@@ -1140,7 +1141,7 @@ export default function PackagingPage() {
                 </div>
                 <div>
                   <Badge tone={isWithinTolerance ? 'success' : 'warning'} dot live={isWithinTolerance}>
-                    {isWithinTolerance ? 'Within Range' : 'Outside Range'}
+                    {isWithinTolerance ? 'Dalam Toleransi' : 'Di Luar Toleransi'}
                   </Badge>
                 </div>
               </div>
@@ -1150,7 +1151,7 @@ export default function PackagingPage() {
             <div className="station-step-preview lg:col-span-5 space-y-4">
               <div className="border border-border p-4 bg-card space-y-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-foreground block">
-                  {packagingMode === 'RETAIL_POUCH' ? 'Pouch Label Preview' : 'Carton Label Preview'}
+                  {packagingMode === 'RETAIL_POUCH' ? 'Pratinjau Label Pouch' : 'Pratinjau Label Karton'}
                 </span>
 
                 {packagingMode === 'RETAIL_POUCH' ? (
@@ -1163,7 +1164,7 @@ export default function PackagingPage() {
                     gtin={activePackagingSpec.gtin}
                     grade={selectedGrade}
                     weightKg={weightValue}
-                    stationName="Station 03 · Packaging"
+                    stationName="Stasiun 03 · Pengemasan"
                     date={formatSafeDate(new Date())}
                     time={formatSafeTime(new Date())}
                     compact
@@ -1197,7 +1198,7 @@ export default function PackagingPage() {
                 <div className="flex items-center gap-2 text-xs font-semibold text-amber-800 dark:text-amber-400">
                   <Icon name="alert-triangle" size={16} />
                   <span>
-                    Pallet {sourcePalletCode} is fully depleted (0.000 kg). Cannot package further units.
+                    Palet {sourcePalletCode} sudah habis (0.000 kg). Tidak dapat mengemas unit lagi.
                   </span>
                 </div>
                 <Button
@@ -1213,13 +1214,13 @@ export default function PackagingPage() {
             {weightValue > remainingPalletKg + 0.0005 && remainingPalletKg > 0.0005 && (
               <div className="p-3 bg-destructive/10 border border-destructive/30 rounded flex items-center justify-between text-xs text-destructive flex-wrap gap-2">
                 <span>
-                  Package weight ({weightValue.toFixed(3)} kg) exceeds remaining pallet stock ({remainingPalletKg.toFixed(3)} kg).
+                  Berat kemasan ({weightValue.toFixed(3)} kg) melebihi sisa stok palet ({remainingPalletKg.toFixed(3)} kg).
                 </span>
               </div>
             )}
             {weightValue <= 0 && remainingPalletKg > 0.0005 && (
               <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-700 dark:text-amber-400">
-                Please lock the reading from Scale 03 or enter a valid package weight.
+                Kunci pembacaan dari Timbangan 03 atau masukkan berat kemasan yang valid.
               </div>
             )}
             <div className="flex items-center justify-between">
@@ -1246,19 +1247,19 @@ export default function PackagingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <div>
               <span className="text-xs uppercase font-mono font-semibold tracking-wider text-muted-foreground" data-step="Step 3 of 3">
-                Langkah 3 dari 3
+                {idText('Step 3 of 3')}
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-foreground mt-0.5" data-title="Print Label & Store">
-                Cetak Label & Simpan
+                {idText('Print Label & Store')}
               </h2>
             </div>
             {savedSuccessRecord ? (
               <Badge tone="success" dot>
-                Stored
+                Tersimpan
               </Badge>
             ) : (
               <Badge tone="warning" dot>
-                Ready to Print
+                Siap Cetak
               </Badge>
             )}
           </div>
@@ -1266,13 +1267,13 @@ export default function PackagingPage() {
           {/* Summary Details Grid */}
           <div className="p-4 bg-muted/30 border border-border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 no-print">
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Package Code</span>
+              <span className="text-xs text-muted-foreground block font-medium">Kode Kemasan</span>
               <span className="font-mono font-bold text-base text-foreground block">
                 {savedSuccessRecord?.code ?? nextCodePreview}
               </span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Source Pallet</span>
+              <span className="text-xs text-muted-foreground block font-medium">Palet Sumber</span>
               <span className="font-mono font-bold text-base text-primary block truncate">
                 {sourcePalletCode}
               </span>
@@ -1283,16 +1284,16 @@ export default function PackagingPage() {
               <span className="font-bold text-base text-foreground block">Grade {selectedGrade}</span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Net Weight</span>
+              <span className="text-xs text-muted-foreground block font-medium">Berat Neto</span>
               <span className="text-2xl font-black text-emerald-700 dark:text-emerald-400 block font-mono">
                 {formatWeight(weightValue)} <span className="text-xs font-normal text-muted-foreground">kg</span>
               </span>
               <span className="text-xs text-muted-foreground">Target: {targetKg.toFixed(3)} kg</span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block font-medium">Package Type</span>
+              <span className="text-xs text-muted-foreground block font-medium">Jenis Kemasan</span>
               <span className="font-semibold text-base text-foreground block">
-                {packagingMode === 'RETAIL_POUCH' ? '1 kg Retail Pouch' : `${exportTargetKg} kg Export Carton`}
+                {packagingMode === 'RETAIL_POUCH' ? 'Pouch Retail 1 kg' : `Karton Ekspor ${exportTargetKg} kg`}
               </span>
             </div>
           </div>
@@ -1309,9 +1310,9 @@ export default function PackagingPage() {
                 gtin={savedSuccessRecord?.commodityGtin ?? activePackagingSpec.gtin}
                 barcodeValue={savedSuccessRecord?.barcode}
                 qrValue={savedSuccessRecord?.digitalLinkUrl}
-                grade={selectedGrade}
-                weightKg={weightValue}
-                stationName="Station 03 · Packaging"
+                grade={savedSuccessRecord?.grade ?? selectedGrade}
+                weightKg={savedSuccessRecord?.weightKg ?? weightValue}
+                stationName="Stasiun 03 · Pengemasan"
                 date={savedSuccessRecord?.date ?? formatSafeDate(new Date())}
                 time={savedSuccessRecord?.time ?? formatSafeTime(new Date())}
                 screenFit
@@ -1326,8 +1327,8 @@ export default function PackagingPage() {
                 gtin={savedSuccessRecord?.commodityGtin ?? activePackagingSpec.gtin}
                 barcodeValue={savedSuccessRecord?.barcode}
                 qrValue={savedSuccessRecord?.digitalLinkUrl}
-                grade={selectedGrade}
-                weightKg={weightValue}
+                grade={savedSuccessRecord?.grade ?? selectedGrade}
+                weightKg={savedSuccessRecord?.weightKg ?? weightValue}
                 date={savedSuccessRecord?.date ?? formatSafeDate(new Date())}
                 time={savedSuccessRecord?.time ?? formatSafeTime(new Date())}
                 screenFit
@@ -1344,9 +1345,9 @@ export default function PackagingPage() {
                     <Icon name="check-circle" size={20} />
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-foreground">Pallet Depleted</h4>
+                    <h4 className="font-bold text-sm text-foreground">Palet Habis</h4>
                     <p className="text-xs text-muted-foreground">
-                      Pallet <span className="font-mono font-bold text-foreground">{sourcePalletCode || savedSuccessRecord.sourcePallet}</span> is fully packaged (0.000 kg remaining). Continue by scanning the next pallet.
+                      Palet <span className="font-mono font-bold text-foreground">{sourcePalletCode || savedSuccessRecord.sourcePallet}</span> sudah habis dikemas (sisa 0.000 kg). Lanjutkan dengan memindai palet berikutnya.
                     </p>
                   </div>
                 </div>
@@ -1366,7 +1367,7 @@ export default function PackagingPage() {
               <div className="p-3 bg-destructive/15 border-2 border-destructive/40 rounded text-xs text-destructive font-semibold flex items-center gap-2">
                 <Icon name="alert-triangle" size={16} />
                 <span>
-                  Cannot print: package weight ({weightValue.toFixed(3)} kg) exceeds remaining pallet stock ({remainingPalletKg.toFixed(3)} kg). Please go back to Step 2 and adjust.
+                  Tidak dapat mencetak: berat kemasan ({weightValue.toFixed(3)} kg) melebihi sisa stok palet ({remainingPalletKg.toFixed(3)} kg). Kembali ke Langkah 2 untuk menyesuaikan.
                 </span>
               </div>
             )}
@@ -1396,7 +1397,7 @@ export default function PackagingPage() {
                 <>
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-muted-foreground font-mono">
-                      Stored: {savedSuccessRecord.code} ({savedSuccessRecord.time})
+                      Tersimpan: {savedSuccessRecord.code} ({savedSuccessRecord.time})
                     </span>
                     <Button
                       variant="outline"
@@ -1420,12 +1421,12 @@ export default function PackagingPage() {
                             weightKg: savedSuccessRecord.weightKg,
                             date: savedSuccessRecord.date || formatSafeDate(now),
                             time: savedSuccessRecord.time || formatSafeTime(now),
-                            stationName: 'Station 03 · Packaging',
+                            stationName: 'Stasiun 03 · Pengemasan',
                           },
                           'packaging',
                           (error) => {
                             setIsPrinting(false)
-                            if (error) toast.error(`Packaging label print failed: ${error instanceof Error ? error.message : 'Check the Packaging printer.'}`)
+                            if (error) toast.error(`Pencetakan label pengemasan gagal: ${error instanceof Error ? error.message : 'Periksa printer Pengemasan.'}`)
                           }
                         )
                       }}
@@ -1482,11 +1483,11 @@ export default function PackagingPage() {
           className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto"
           role="dialog"
           aria-modal="true"
-          aria-label="Packaging Focus Mode"
+          aria-label="Mode Fokus Pengemasan"
         >
           <header className="sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur border-b border-border shadow-sm">
             <div className="min-w-0 max-w-[48%] font-mono text-[9px] sm:text-[10px] leading-tight text-muted-foreground tracking-[0.16em] sm:tracking-[0.2em] uppercase">
-              STATION 03 · PACKAGING
+              STASIUN 03 · PENGEMASAN
             </div>
 
             {/* Stepper Progress Bar in Focus Header */}
@@ -1545,12 +1546,12 @@ export default function PackagingPage() {
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Timbangan</p>
-            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Online' : 'Offline'}</p>
+            <p className={`text-2xl font-bold tracking-tight ${scaleOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{scaleOnline ? 'Terhubung' : 'Terputus'}</p>
             <p className="text-xs text-muted-foreground font-mono">{scaleEndpoint}</p>
           </div>
           <div className="bg-card border border-border rounded-none p-4 shadow-sm space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Printer</p>
-            <p className={`text-2xl font-bold tracking-tight ${printerOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{printerOnline ? 'Online' : 'Offline'}</p>
+            <p className={`text-2xl font-bold tracking-tight ${printerOnline ? 'text-emerald-600' : 'text-amber-600'}`}>{printerOnline ? 'Terhubung' : 'Terputus'}</p>
             <p className="text-xs text-muted-foreground font-mono">{printerEndpoint}</p>
           </div>
         </div>
@@ -1560,7 +1561,7 @@ export default function PackagingPage() {
           <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-2 no-print">
             <span className="font-semibold text-base text-foreground">Alur Kerja Pengemasan</span>
             <Button size="sm" variant="outline" icon="expand" onClick={enterFocusMode}>
-              Mode Fokus
+              {idText('Focus Mode')}
             </Button>
           </div>
 
@@ -1592,9 +1593,9 @@ export default function PackagingPage() {
         isOpen={isCameraOpen}
         onClose={closeCameraModal}
         onScan={handleVerifyModalScan}
-        title="Scan Pallet QR Code · Station 03 Packaging"
-        subtitle="Align the QR code on the staged pallet within the camera view."
-        manualPlaceholder="Scan or enter pallet code..."
+        title="Pindai Kode QR Palet · Stasiun 03 Pengemasan"
+        subtitle="Arahkan kode QR pada palet ke dalam bingkai kamera."
+        manualPlaceholder="Pindai atau masukkan kode palet..."
       />
 
       <PalletCloseoutModal
@@ -1617,7 +1618,7 @@ export default function PackagingPage() {
           <div className="bg-card border border-border p-6 shadow-xl max-w-sm w-full space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between border-b border-border pb-3">
               <div>
-                <h3 className="text-base font-bold text-foreground">Package Label Preview</h3>
+                <h3 className="text-base font-bold text-foreground">Pratinjau Label Kemasan</h3>
                 <p className="text-xs text-muted-foreground mt-0.5 font-mono">{previewPackage.code}</p>
               </div>
               <button
@@ -1641,7 +1642,7 @@ export default function PackagingPage() {
                 gtin={previewPackage.commodityGtin || activePackagingSpec.gtin}
                 barcodeValue={previewPackage.barcode}
                 qrValue={previewPackage.digitalLinkUrl}
-                stationName="Station 03 · Packaging"
+                stationName="Stasiun 03 · Pengemasan"
                 date={previewPackage.date || formatSafeDate(new Date())}
                 time={previewPackage.time || formatSafeTime(new Date())}
                 screenFit

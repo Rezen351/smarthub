@@ -47,15 +47,15 @@ export default function MyDeliveriesPage() {
   }, [])
 
   const columns: Column<Delivery>[] = [
-    { key: 'date', label: 'Date', priority: true, render: (row) => <span className="mono t-small">{row.date}</span> },
-    { key: 'truckPlate', label: 'Truck plate', priority: true, render: (row) => <span className="mono cell-strong">{row.truckPlate}</span> },
-    { key: 'destination', label: 'Destination', priority: true, render: (row) => <span className="t-small">{row.destination}</span> },
+    { key: 'date', label: 'Tanggal', priority: true, render: (row) => <span className="mono t-small">{row.date}</span> },
+    { key: 'truckPlate', label: 'Pelat Truk', priority: true, render: (row) => <span className="mono cell-strong">{row.truckPlate}</span> },
+    { key: 'destination', label: 'Tujuan', priority: true, render: (row) => <span className="t-small">{row.destination}</span> },
     {
       key: 'status',
       label: 'Status',
       render: (row) => (
         <Badge tone={row.status === 'Delivered' ? 'success' : 'accent'} dot>
-          {row.status}
+          {row.status === 'Delivered' ? 'Terkirim' : 'Dalam Pengiriman'}
         </Badge>
       ),
     },
@@ -64,37 +64,37 @@ export default function MyDeliveriesPage() {
   return (
     <div className="stack stack-lg">
       <PageHeader
-        title="My Deposits"
-        subtitle="Trace every delivery made from your harvest deposits."
-        actions={<Badge tone="neutral">{deliveries.length} deliveries</Badge>}
+        title="Setoran Saya"
+        subtitle="Lacak setiap pengiriman dari setoran hasil panen Anda."
+        actions={<Badge tone="neutral">{deliveries.length} pengiriman</Badge>}
       />
 
       <div className="grid-stats">
         <div className="stat-card">
-          <p className="stat-label">Total deliveries</p>
+          <p className="stat-label">Total Pengiriman</p>
           <p className="stat-value">{loading ? '—' : deliveries.length}</p>
-          <p className="stat-sub">From your deposits</p>
+          <p className="stat-sub">Dari setoran Anda</p>
         </div>
         <div className="stat-card">
-          <p className="stat-label">In transit</p>
+          <p className="stat-label">Dalam Pengiriman</p>
           <p className="stat-value">{loading ? '—' : deliveries.filter((item) => item.status === 'In Transit').length}</p>
-          <p className="stat-sub">On the road</p>
+          <p className="stat-sub">Sedang dalam perjalanan</p>
         </div>
         <div className="stat-card">
-          <p className="stat-label">Delivered</p>
+          <p className="stat-label">Terkirim</p>
           <p className="stat-value">{loading ? '—' : deliveries.filter((item) => item.status === 'Delivered').length}</p>
-          <p className="stat-sub">Completed</p>
+          <p className="stat-sub">Selesai</p>
         </div>
         <div className="stat-card">
-          <p className="stat-label">Latest destination</p>
+          <p className="stat-label">Tujuan Terakhir</p>
           <p className="stat-value" style={{ fontSize: 20 }}>
             {loading ? '—' : deliveries[0]?.destination ?? '—'}
           </p>
-          <p className="stat-sub">{loading ? 'Loading' : deliveries[0]?.date ?? 'No records'}</p>
+          <p className="stat-sub">{loading ? 'Memuat' : deliveries[0]?.date ?? 'Belum ada catatan'}</p>
         </div>
       </div>
 
-      <Card title="Delivery history" subtitle="Each record links back to the weighing at the receiving area.">
+      <Card title="Riwayat Pengiriman" subtitle="Setiap catatan terhubung ke penimbangan di area penerimaan.">
         {loading ? (
           <div className="stack-sm">
             <div className="skeleton skeleton-block" />
@@ -105,8 +105,8 @@ export default function MyDeliveriesPage() {
             columns={columns}
             data={deliveries}
             rowKey={(row) => row.id}
-            emptyTitle="No deliveries recorded."
-            emptyDescription="Your deliveries appear here once your deposit leaves the warehouse."
+            emptyTitle="Belum ada pengiriman tercatat."
+            emptyDescription="Pengiriman Anda akan muncul di sini setelah setoran keluar dari gudang."
           />
         )}
       </Card>
@@ -114,7 +114,7 @@ export default function MyDeliveriesPage() {
       <div className="alert alert-info">
         <Icon name="info" size={16} />
         <span>
-          Consumers can trace the same journey publicly from the pouch QR — no account needed.
+          Konsumen dapat melacak perjalanan yang sama secara publik melalui QR pada pouch — tanpa perlu akun.
         </span>
       </div>
     </div>

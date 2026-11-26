@@ -8,6 +8,7 @@ import {
 import { Input as UIInput } from '@/components/ui/input'
 import { Textarea as UITextarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { idText } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { ChevronDown } from 'lucide-react'
 
@@ -28,7 +29,7 @@ export function Field({ label, hint, error, required, htmlFor, children, classNa
     <div className={cn('flex flex-col gap-1.5', className)}>
       {label && (
         <Label htmlFor={htmlFor} className="text-sm font-medium text-foreground">
-          {label}
+          {idText(label)}
           {required && (
             <span className="text-destructive ml-0.5" aria-hidden="true">
               *

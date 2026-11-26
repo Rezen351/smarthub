@@ -13,6 +13,7 @@ import { DailyDepositChart, WeeklyDepositChart } from '../components/dashboard/D
 import { GradeQualityPanel } from '../components/dashboard/GradeQualityPanel'
 import { api } from '../services/api'
 import { formatWeight } from '../lib/utils'
+import { idText, translateStatus } from '@/lib/i18n'
 
 interface Activity {
   id: string
@@ -35,18 +36,18 @@ interface ScaleState {
 }
 
 const defaultScales: ScaleState[] = [
-  { stationId: '01', label: 'Reception', online: false, isStable: true, capacityKg: 300, weightKg: null, endpoint: 'Not configured' },
-  { stationId: '02', label: 'Sorting', online: false, isStable: true, capacityKg: 40, weightKg: null, endpoint: 'Not configured' },
-  { stationId: '03', label: 'Packaging', online: false, isStable: true, capacityKg: 40, weightKg: null, endpoint: 'Not configured' },
+  { stationId: '01', label: 'Penerimaan', online: false, isStable: true, capacityKg: 300, weightKg: null, endpoint: 'Belum dikonfigurasi' },
+  { stationId: '02', label: 'Sortasi', online: false, isStable: true, capacityKg: 40, weightKg: null, endpoint: 'Belum dikonfigurasi' },
+  { stationId: '03', label: 'Pengemasan', online: false, isStable: true, capacityKg: 40, weightKg: null, endpoint: 'Belum dikonfigurasi' },
 ]
 
 const quickActions = [
-  { label: 'Station 01: Reception', path: '/dashboard/weighing', icon: 'scale' as IconName, description: 'Intake weighing and Waring records' },
-  { label: 'Station 02: Sorting', path: '/dashboard/sorting', icon: 'sortir' as IconName, description: 'Grade yield and pallet linkage' },
-  { label: 'Station 03: Packaging', path: '/dashboard/packaging', icon: 'package' as IconName, description: 'Finished package production' },
-  { label: 'Warehouse Ledger', path: '/dashboard/warehouse', icon: 'box' as IconName, description: 'Buffer and finished inventory' },
-  { label: 'Reports & Recaps', path: '/dashboard/reports', icon: 'reports' as IconName, description: 'Daily/monthly recap and CSV exports' },
-  { label: 'API Documentation (OpenAPI)', path: '/docs', icon: 'clipboard' as IconName, description: 'Interactive OpenAPI 3.0 specification & schema', external: true },
+  { label: 'Stasiun 01: Penerimaan', path: '/dashboard/weighing', icon: 'scale' as IconName, description: 'Penimbangan masuk dan pencatatan Waring' },
+  { label: 'Stasiun 02: Sortasi', path: '/dashboard/sorting', icon: 'sortir' as IconName, description: 'Hasil grade dan penautan palet' },
+  { label: 'Stasiun 03: Pengemasan', path: '/dashboard/packaging', icon: 'package' as IconName, description: 'Produksi kemasan barang jadi' },
+  { label: 'Buku Gudang', path: '/dashboard/warehouse', icon: 'box' as IconName, description: 'Stok buffer dan barang jadi' },
+  { label: 'Laporan & Rekap', path: '/dashboard/reports', icon: 'reports' as IconName, description: 'Rekap harian/bulanan dan ekspor CSV' },
+  { label: 'Dokumentasi API (OpenAPI)', path: '/docs', icon: 'clipboard' as IconName, description: 'Spesifikasi & skema OpenAPI 3.0 interaktif', external: true },
 ]
 
 export interface FarmerRankingItem {
@@ -114,7 +115,7 @@ export default function AdminDashboardHome() {
           isStable: scale.isStable !== false,
           capacityKg: scale.capacityKg ? Number(scale.capacityKg) : station.capacityKg,
           weightKg: Number.isFinite(Number(scale.weightKg)) ? Number(scale.weightKg) : null,
-          endpoint: scale.ip && scale.port ? `${scale.ip}:${scale.port}` : 'Not configured',
+          endpoint: scale.ip && scale.port ? `${scale.ip}:${scale.port}` : 'Belum dikonfigurasi',
         }
       }))
     }
@@ -213,7 +214,7 @@ export default function AdminDashboardHome() {
   const commodityIntake = useMemo(() => {
     const totals = new Map<string, { name: string; kg: number; count: number }>()
     bufferWarings.forEach((item) => {
-      const name = item.commodityName || 'Unspecified commodity'
+      const name = item.commodityName || 'Komoditas belum ditentukan'
       const key = item.commodityId || item.commodityCode || name
       const entry = totals.get(key) || { name, kg: 0, count: 0 }
       entry.kg += Number(item.grossWeightKg) || 0
@@ -230,7 +231,7 @@ export default function AdminDashboardHome() {
 
     bufferWarings.forEach((w) => {
       const code = w.farmerId || 'FMR-?'
-      const name = w.farmerName || 'Farmer'
+      const name = w.farmerName || 'Petani'
       const village = w.farmerVillage || ''
       const kg = Number(w.grossWeightKg) || 0
       totalAllKg += kg
@@ -256,24 +257,24 @@ export default function AdminDashboardHome() {
 
   const activities = useMemo<Activity[]>(() => {
     const reception = bufferWarings.slice(0, 2).map((item) => ({
-      id: `reception-${item.id}`, stage: 'Station 01', time: `${item.date} ${item.intakeTime}`.trim(),
+      id: `reception-${item.id}`, stage: 'Stasiun 01', time: `${item.date} ${item.intakeTime}`.trim(),
       action: `${item.code} · ${formatWeight(item.grossWeightKg)} kg · ${item.farmerName}`,
-      icon: 'scale' as IconName, badge: 'Reception', tone: 'accent' as const,
+      icon: 'scale' as IconName, badge: 'Penerimaan', tone: 'accent' as const,
     }))
     const sorting = sortedBatches.slice(0, 2).map((item) => ({
-      id: `sorting-${item.id}`, stage: 'Station 02', time: `${item.date ?? '—'} ${item.timestamp || '—'}`,
-      action: `${item.waringCode} · ${formatWeight(item.totalGradedKg)} kg graded · ${item.palletCode}`,
-      icon: 'sortir' as IconName, badge: 'Sorting', tone: 'success' as const,
+      id: `sorting-${item.id}`, stage: 'Stasiun 02', time: `${item.date ?? '—'} ${item.timestamp || '—'}`,
+      action: `${item.waringCode} · ${formatWeight(item.totalGradedKg)} kg tersortasi · ${item.palletCode}`,
+      icon: 'sortir' as IconName, badge: 'Sortasi', tone: 'success' as const,
     }))
     const packaging = finishedStock.slice(0, 2).map((item) => ({
-      id: `packaging-${item.id}`, stage: 'Station 03', time: `${item.date ?? '—'} ${item.packedTime || '—'}`,
-      action: `${item.code} · ${item.units} units · ${formatWeight(item.totalWeightKg)} kg`,
-      icon: 'package' as IconName, badge: 'Packaging', tone: 'accent' as const,
+      id: `packaging-${item.id}`, stage: 'Stasiun 03', time: `${item.date ?? '—'} ${item.packedTime || '—'}`,
+      action: `${item.code} · ${item.units} unit · ${formatWeight(item.totalWeightKg)} kg`,
+      icon: 'package' as IconName, badge: 'Pengemasan', tone: 'accent' as const,
     }))
     const dispatch = deliveries.slice(0, 2).map((item) => ({
-      id: `delivery-${item.id}`, stage: 'Dispatch', time: `${item.date} ${item.time}`.trim(),
-      action: `${item.truckPlate} · ${item.destination} · ${item.units} units`, icon: 'truck' as IconName,
-      badge: item.status, tone: item.status === 'DEPARTED' || item.status === 'DELIVERED' ? 'success' as const : 'warning' as const,
+      id: `delivery-${item.id}`, stage: 'Pengiriman', time: `${item.date} ${item.time}`.trim(),
+      action: `${item.truckPlate} · ${item.destination} · ${item.units} unit`, icon: 'truck' as IconName,
+      badge: translateStatus(item.status), tone: item.status === 'DEPARTED' || item.status === 'DELIVERED' ? 'success' as const : 'warning' as const,
     }))
     return [...reception, ...sorting, ...packaging, ...dispatch]
   }, [bufferWarings, deliveries, finishedStock, sortedBatches])
@@ -371,8 +372,8 @@ export default function AdminDashboardHome() {
       weekTotalKg += grossKg
       weekWarings += waringsCount
 
-      const dayLabel = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })
-      const fullDateLabel = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
+      const dayLabel = d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' })
+      const fullDateLabel = d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
 
       past7Days.push({
         date: dateStr,
@@ -399,8 +400,8 @@ export default function AdminDashboardHome() {
       {activities.length === 0 ? (
         <div className="py-8 text-center">
           <Icon name="history" size={22} className="mx-auto text-muted-foreground" />
-          <p className="mt-2 text-sm font-medium">No operational activity recorded.</p>
-          <p className="mt-1 text-xs text-muted-foreground">Transactions will appear after Station 01 records the first intake.</p>
+          <p className="mt-2 text-sm font-medium">Belum ada aktivitas operasional.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Transaksi muncul setelah Stasiun 01 mencatat penerimaan pertama.</p>
         </div>
       ) : activities.map((activity) => (
         <div key={activity.id} className="flex items-center justify-between gap-4 py-3">
@@ -427,24 +428,24 @@ export default function AdminDashboardHome() {
           className="fixed inset-0 z-[90] flex flex-col bg-[#0c0a09] text-white overflow-y-auto p-3 xl:p-4 gap-2.5"
           role="dialog"
           aria-modal="true"
-          aria-label="Operations Presentation"
+          aria-label="Presentasi Operasional"
         >
           {/* Header */}
           <header className="shrink-0 h-11 flex items-center justify-between border-b border-white/10 bg-[#0c0a09]/95 px-3 backdrop-blur">
             <div className="flex items-center gap-3">
-              <span className="text-lg font-black tracking-tight">PACKHOUSE OPERATIONS</span>
+              <span className="text-lg font-black tracking-tight">{idText('PACKHOUSE OPERATIONS')}</span>
               <span className="border border-[#ea580c]/50 bg-[#ea580c]/15 px-2.5 py-0.5 text-xs font-mono font-bold uppercase tracking-widest text-[#fb923c]">
-                Live
+                Langsung
               </span>
-              <span className="hidden sm:inline text-xs xl:text-sm text-white/60">· SmartGeulis Traceability System</span>
+              <span className="hidden sm:inline text-xs xl:text-sm text-white/60">· Sistem Ketertelusuran SmartGeulis</span>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <span className="font-mono text-lg xl:text-xl font-bold tabular-nums text-white">
-                  {currentTime.toLocaleTimeString('en-GB')}
+                  {currentTime.toLocaleTimeString('id-ID')}
                 </span>
                 <span className="text-xs uppercase tracking-wider text-white/60 ml-2">
-                  {currentTime.toLocaleDateString('en-GB', {
+                  {currentTime.toLocaleDateString('id-ID', {
                     weekday: 'short',
                     day: '2-digit',
                     month: 'short',
@@ -458,7 +459,7 @@ export default function AdminDashboardHome() {
                 onClick={exitPresentationMode}
                 className="border-white/25 bg-white/5 text-white hover:bg-white/10 hover:text-white text-xs py-1 px-3"
               >
-                Exit
+                Keluar
               </Button>
             </div>
           </header>
@@ -473,7 +474,7 @@ export default function AdminDashboardHome() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold uppercase tracking-wider text-white/70 truncate">
-                    Total Intake
+                    Total Penerimaan
                   </p>
                   <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-[#ea580c]/20 text-[#fb923c]">
                     St. 01
@@ -483,7 +484,7 @@ export default function AdminDashboardHome() {
                   {formatWeight(metrics.intakeKg)} <span className="text-sm font-bold text-[#f97316]">kg</span>
                 </p>
                 <p className="text-xs text-white/60 truncate">
-                  {metrics.todayWarings} Warings weighed today
+                  {metrics.todayWarings} Waring ditimbang hari ini
                 </p>
               </div>
             </div>
@@ -496,7 +497,7 @@ export default function AdminDashboardHome() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold uppercase tracking-wider text-white/70 truncate">
-                    Sorting &amp; Yield
+                    Sortasi &amp; Rendemen
                   </p>
                   <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
                     {gradeMetrics.yieldPct > 0 ? `${gradeMetrics.yieldPct.toFixed(1)}%` : 'St. 02'}
@@ -506,7 +507,7 @@ export default function AdminDashboardHome() {
                   {formatWeight(gradeMetrics.totalGradedKg)} <span className="text-sm font-bold text-amber-400">kg</span>
                 </p>
                 <p className="text-xs text-white/60 truncate">
-                  {metrics.sortedBatches} Batches · A: {formatWeight(gradeMetrics.gradeAKg)}k · B: {formatWeight(gradeMetrics.gradeBKg)}k
+                  {metrics.sortedBatches} Batch · A: {formatWeight(gradeMetrics.gradeAKg)}k · B: {formatWeight(gradeMetrics.gradeBKg)}k
                 </p>
               </div>
             </div>
@@ -519,17 +520,17 @@ export default function AdminDashboardHome() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold uppercase tracking-wider text-white/70 truncate">
-                    Packaging &amp; Outflow
+                    Pengemasan &amp; Keluar
                   </p>
                   <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-[#f97316]/20 text-[#fb923c]">
                     St. 03
                   </span>
                 </div>
                 <p className="text-2xl xl:text-3xl font-black font-mono tabular-nums text-white leading-tight">
-                  {metrics.finishedUnits} <span className="text-sm font-bold text-[#f97316]">units</span>
+                  {metrics.finishedUnits} <span className="text-sm font-bold text-[#f97316]">unit</span>
                 </p>
                 <p className="text-xs text-white/60 truncate">
-                  {formatWeight(metrics.finishedWeightKg)} kg packed · {metrics.activeDeliveries} active shipments
+                  {formatWeight(metrics.finishedWeightKg)} kg dikemas · {metrics.activeDeliveries} pengiriman aktif
                 </p>
               </div>
             </div>
@@ -542,10 +543,10 @@ export default function AdminDashboardHome() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold uppercase tracking-wider text-white/70 truncate">
-                    Warehouse Capacity
+                    Kapasitas Gudang
                   </p>
                   <span className="text-[10px] font-mono font-bold text-amber-400">
-                    {warehousePct.toFixed(1)}% Used
+                    {warehousePct.toFixed(1)}% Terpakai
                   </span>
                 </div>
                 <p className="text-2xl xl:text-3xl font-black font-mono tabular-nums text-white leading-tight">
@@ -563,9 +564,9 @@ export default function AdminDashboardHome() {
           </div>
 
           <section className="border border-white/10 bg-white/[0.04] p-3">
-            <div className="flex items-center justify-between gap-3 mb-2"><h2 className="text-sm font-bold uppercase tracking-wider">Intake by Commodity</h2><span className="text-xs text-white/60">All recorded intake · gross weight</span></div>
-            {commodityIntake.length === 0 ? <p className="text-sm text-white/60">No intake records available.</p> : <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
-              {commodityIntake.map(([key, commodity]) => <div key={key} className="border border-white/10 px-3 py-2 flex items-center justify-between gap-3"><div className="min-w-0"><p className="text-sm font-semibold truncate" title={commodity.name}>{commodity.name}</p><p className="text-xs text-white/60">{commodity.count} Warings</p></div><span className="shrink-0 font-mono font-bold text-orange-400">{formatWeight(commodity.kg)} kg</span></div>)}
+            <div className="flex items-center justify-between gap-3 mb-2"><h2 className="text-sm font-bold uppercase tracking-wider">Penerimaan per Komoditas</h2><span className="text-xs text-white/60">Seluruh penerimaan tercatat · berat kotor</span></div>
+            {commodityIntake.length === 0 ? <p className="text-sm text-white/60">Belum ada data penerimaan.</p> : <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
+              {commodityIntake.map(([key, commodity]) => <div key={key} className="border border-white/10 px-3 py-2 flex items-center justify-between gap-3"><div className="min-w-0"><p className="text-sm font-semibold truncate" title={commodity.name}>{commodity.name}</p><p className="text-xs text-white/60">{commodity.count} Waring</p></div><span className="shrink-0 font-mono font-bold text-orange-400">{formatWeight(commodity.kg)} kg</span></div>)}
             </div>}
           </section>
 
@@ -603,14 +604,14 @@ export default function AdminDashboardHome() {
               <div className="flex items-center justify-between mb-1.5 shrink-0">
                 <div className="flex items-center gap-1.5">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                    Farmer Leaderboard
+                    Peringkat Petani
                   </h3>
                   <span className="text-[10px] bg-[#ea580c]/20 border border-[#ea580c]/40 text-[#f97316] px-1.5 py-0.5 rounded font-mono font-bold">
-                    Top
+                    Teratas
                   </span>
                 </div>
                 <span className="font-mono text-xs text-[#f97316] font-bold">
-                  {liveRankings.length} Active
+                  {liveRankings.length} Aktif
                 </span>
               </div>
 
@@ -657,9 +658,9 @@ export default function AdminDashboardHome() {
             <div className="min-h-[185px] border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-1.5 shrink-0">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                  Activity Log
+                  Log Aktivitas
                 </h3>
-                <span className="font-mono text-xs text-white/60">{activities.length} events</span>
+                <span className="font-mono text-xs text-white/60">{activities.length} aktivitas</span>
               </div>
               <div className="flex-1 min-h-0 divide-y divide-white/10 overflow-hidden flex flex-col justify-around">
                 {activities.slice(0, 3).map((activity) => (
@@ -683,12 +684,12 @@ export default function AdminDashboardHome() {
               <div className="flex items-center justify-between mb-1.5 shrink-0">
                 <div className="flex items-center gap-1.5">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                    Scale Telemetry
+                    Telemetri Timbangan
                   </h3>
                   <span className="size-2 rounded-full bg-[#ea580c] animate-pulse" />
                 </div>
                 <span className="text-xs font-mono text-[#f97316] font-bold">
-                  {metrics.onlineScales}/3 Online
+                  {metrics.onlineScales}/3 Terhubung
                 </span>
               </div>
 
@@ -710,7 +711,7 @@ export default function AdminDashboardHome() {
                               : 'bg-white/5 text-white/40'
                           }`}
                         >
-                          {scale.online ? (scale.isStable !== false ? 'STABLE' : 'MOTION') : 'OFF'}
+                          {scale.online ? (scale.isStable !== false ? 'STABIL' : 'GERAK') : 'MATI'}
                         </span>
                       </div>
 
@@ -731,7 +732,7 @@ export default function AdminDashboardHome() {
                           {scale.weightKg === null ? '—' : `${formatWeight(scale.weightKg)}k`}
                         </p>
                         <p className={`text-[10px] font-bold uppercase ${scale.online ? 'text-[#fb923c]' : 'text-amber-400'}`}>
-                          {scale.online ? 'Online' : 'Offline'}
+                          {scale.online ? 'Terhubung' : 'Terputus'}
                         </p>
                       </div>
                     </div>
@@ -745,8 +746,8 @@ export default function AdminDashboardHome() {
 
       <div className="space-y-6">
         <PageHeader
-          title={`Operations Dashboard${user?.name ? ` · ${user.name}` : ''}`}
-          subtitle="Live operational status from Reception through Dispatch."
+          title={`Dasbor Operasional${user?.name ? ` · ${user.name}` : ''}`}
+          subtitle="Status operasional langsung dari Penerimaan hingga Pengiriman."
           actions={
             <div className="flex items-center gap-2">
               <Button
@@ -754,29 +755,29 @@ export default function AdminDashboardHome() {
                 icon="clipboard"
                 onClick={() => window.open('/docs', '_blank')}
               >
-                OpenAPI Docs
+                Dokumentasi API
               </Button>
               <Button
                 variant="primary"
                 icon="expand"
                 onClick={enterPresentationMode}
               >
-                Presentation Mode
+                {idText('Presentation Mode')}
               </Button>
             </div>
           }
         />
 
         <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-card px-4 py-3">
-          <div className="flex items-center gap-3"><Badge tone={dataOnline ? 'success' : 'warning'} dot live>{dataOnline ? 'Data Connected' : 'Data Unavailable'}</Badge><span className="text-xs text-muted-foreground">Last refresh {currentTime.toLocaleTimeString('en-GB')}</span></div>
-          <span className="text-xs font-mono text-muted-foreground">{loading ? 'Loading system data…' : `${metrics.onlineScales}/3 scales online`}</span>
+          <div className="flex items-center gap-3"><Badge tone={dataOnline ? 'success' : 'warning'} dot live>{dataOnline ? 'Data Terhubung' : 'Data Tidak Tersedia'}</Badge><span className="text-xs text-muted-foreground">Pembaruan terakhir {currentTime.toLocaleTimeString('id-ID')}</span></div>
+          <span className="text-xs font-mono text-muted-foreground">{loading ? 'Memuat data sistem…' : `${metrics.onlineScales}/3 timbangan terhubung`}</span>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Gross Intake Today" value={`${formatWeight(metrics.intakeKg)} kg`} sub={`${metrics.todayWarings} Warings recorded`} icon={<Icon name="scale" size={17} />} />
-          <StatCard label="Warehouse Storage" value={`${formatWeight(totalWarehouseKg)} kg`} sub={`${warehousePct.toFixed(1)}% of 10 Ton storage`} icon={<Icon name="box" size={17} />} />
-          <StatCard label="Sorting Yield" value={metrics.sortedBatches ? `${metrics.yieldPct.toFixed(1)}%` : '—'} sub={`${metrics.sortedBatches} completed batches`} icon={<Icon name="sortir" size={17} />} />
-          <StatCard label="Registered Accounts" value={String(userCount)} sub={`${farmerCount} farmer profiles`} icon={<Icon name="users" size={17} />} />
+          <StatCard label="Penerimaan Kotor Hari Ini" value={`${formatWeight(metrics.intakeKg)} kg`} sub={`${metrics.todayWarings} Waring tercatat`} icon={<Icon name="scale" size={17} />} />
+          <StatCard label="Penyimpanan Gudang" value={`${formatWeight(totalWarehouseKg)} kg`} sub={`${warehousePct.toFixed(1)}% dari kapasitas 10 Ton`} icon={<Icon name="box" size={17} />} />
+          <StatCard label="Rendemen Sortasi" value={metrics.sortedBatches ? `${metrics.yieldPct.toFixed(1)}%` : '—'} sub={`${metrics.sortedBatches} batch selesai`} icon={<Icon name="sortir" size={17} />} />
+          <StatCard label="Akun Terdaftar" value={String(userCount)} sub={`${farmerCount} profil petani`} icon={<Icon name="users" size={17} />} />
         </div>
 
         {/* Deposit Intake Analytics Charts & Quality Panel */}
@@ -807,11 +808,11 @@ export default function AdminDashboardHome() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-          <Card title="Farmer Leaderboard" subtitle="Top growers by intake volume.">
+          <Card title="Peringkat Petani" subtitle="Petani teratas berdasarkan volume penerimaan.">
             {liveRankings.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
                 <Icon name="users" size={22} className="mx-auto text-muted-foreground mb-2" />
-                <p>No intake records available.</p>
+                <p>Belum ada data penerimaan.</p>
               </div>
             ) : (
               <div className="divide-y divide-border">
@@ -844,7 +845,7 @@ export default function AdminDashboardHome() {
                           {formatWeight(f.totalKg)} kg
                         </p>
                         <p className="text-[10px] text-muted-foreground">
-                          {f.totalWarings} Warings
+                          {f.totalWarings} Waring
                         </p>
                       </div>
                     </div>
@@ -853,8 +854,8 @@ export default function AdminDashboardHome() {
               </div>
             )}
           </Card>
-          <Card title="Recent Activity" subtitle="Station 01 through final dispatch.">{activityFeed}</Card>
-          <Card title="Scale Network" subtitle="Live Modbus TCP status and telemetry.">
+          <Card title="Aktivitas Terbaru" subtitle={`${idText('Station 01 through final dispatch')}.`}>{activityFeed}</Card>
+          <Card title="Jaringan Timbangan" subtitle="Status dan telemetri Modbus TCP langsung.">
             <div className="divide-y divide-border">
               {scales.map((scale) => {
                 const hist = scaleHistories[scale.stationId] || []
@@ -864,7 +865,7 @@ export default function AdminDashboardHome() {
                       <div>
                         <div className="flex items-center gap-1.5">
                           <p className="text-xs font-bold uppercase tracking-wider">
-                            Station {scale.stationId} · {scale.label}
+                            Stasiun {scale.stationId} · {scale.label}
                           </p>
                           <span
                             className={`text-[8.5px] font-mono px-1 py-0.2 rounded font-bold uppercase ${
@@ -875,7 +876,7 @@ export default function AdminDashboardHome() {
                                 : 'bg-muted text-muted-foreground'
                             }`}
                           >
-                            {scale.online ? (scale.isStable !== false ? 'STABLE' : 'MOTION') : 'OFFLINE'}
+                            {scale.online ? (scale.isStable !== false ? 'STABIL' : 'GERAK') : 'TERPUTUS'}
                           </span>
                         </div>
                         <p className="font-mono text-[10.5px] text-muted-foreground">{scale.endpoint}</p>
@@ -885,7 +886,7 @@ export default function AdminDashboardHome() {
                           {scale.weightKg === null ? '—' : `${formatWeight(scale.weightKg)} kg`}
                         </p>
                         <Badge tone={scale.online ? 'accent' : 'warning'} dot>
-                          {scale.online ? 'Online' : 'Offline'}
+                          {scale.online ? 'Terhubung' : 'Terputus'}
                         </Badge>
                       </div>
                     </div>
@@ -907,7 +908,7 @@ export default function AdminDashboardHome() {
         </div>
 
         <section>
-          <div className="mb-3"><h2 className="text-base font-bold">Operations</h2><p className="text-xs text-muted-foreground">Open a live console or transaction report.</p></div>
+          <div className="mb-3"><h2 className="text-base font-bold">Operasional</h2><p className="text-xs text-muted-foreground">Buka konsol stasiun langsung atau laporan transaksi.</p></div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {quickActions.map((action) => (
               <Link key={action.path} to={action.path} className="flex items-center gap-3 border border-border bg-card p-4 transition-colors hover:border-[#ea580c]">

@@ -23,8 +23,8 @@ export default function CameraScannerModal({
   onClose,
   onScan,
   title,
-  subtitle = 'Position QR code in frame',
-  manualPlaceholder = 'Enter code...',
+  subtitle = 'Arahkan kode QR ke dalam bingkai',
+  manualPlaceholder = 'Masukkan kode...',
   quickOptions = [],
 }: CameraScannerModalProps) {
   const toast = useToast()
@@ -41,7 +41,7 @@ export default function CameraScannerModal({
     // Extract farmer code
     const m = text.match(/(FMR|FRM)-?\d{3,}/i)
     const cleanCode = m ? m[0].toUpperCase().replace(/FRM/i, 'FMR') : text
-    toast.success(`Scanned: ${cleanCode}`)
+    toast.success(`Terpindai: ${cleanCode}`)
     onScan(cleanCode)
     onClose()
   }
@@ -90,7 +90,7 @@ export default function CameraScannerModal({
         }
       } catch (err: any) {
         if (!isStoppingRef.current) {
-          setErrorMessage(err?.message || 'Camera access failed')
+          setErrorMessage(err?.message || 'Gagal mengakses kamera')
         }
       }
     }, 100)
@@ -140,12 +140,12 @@ export default function CameraScannerModal({
                   <>
                     <Icon name="alert" size={24} className="text-red-500 mb-2" />
                     <p className="text-xs text-red-300 mb-1">{errorMessage}</p>
-                    <p className="text-[10px] text-gray-300">Use manual input below</p>
+                    <p className="text-[10px] text-gray-300">Gunakan input manual di bawah</p>
                   </>
                 ) : (
                   <>
                     <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mb-2" />
-                    <p className="text-xs">Starting camera...</p>
+                    <p className="text-xs">Memulai kamera...</p>
                   </>
                 )}
               </div>
@@ -154,7 +154,7 @@ export default function CameraScannerModal({
 
           {/* Manual input */}
           <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-700">Or enter manually:</label>
+            <label className="text-xs font-medium text-gray-700">Atau masukkan secara manual:</label>
             <div className="flex gap-2">
               <input
                 ref={manualInputRef}
@@ -181,7 +181,7 @@ export default function CameraScannerModal({
           </div>
           {quickOptions.length > 0 && (
             <div className="space-y-2 pt-2 border-t">
-              <p className="text-xs text-gray-600 text-center">Quick select:</p>
+              <p className="text-xs text-gray-600 text-center">Pilihan cepat:</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
                 {quickOptions.map((opt) => (
                   <Button
@@ -202,7 +202,7 @@ export default function CameraScannerModal({
         {/* Footer */}
         <div className="p-3 border-t bg-gray-50 text-center">
           <Button variant="ghost" size="sm" onClick={onClose} className="text-sm">
-            Cancel
+            Batal
           </Button>
         </div>
       </div>

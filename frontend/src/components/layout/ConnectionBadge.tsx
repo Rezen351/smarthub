@@ -8,9 +8,9 @@ interface ConnectionBadgeProps {
 }
 
 const labels: Record<ConnectionState, string> = {
-  connected: 'Online',
-  reconnecting: 'Checking',
-  disconnected: 'Offline',
+  connected: 'Terhubung',
+  reconnecting: 'Memeriksa',
+  disconnected: 'Terputus',
 }
 
 /**
@@ -22,7 +22,7 @@ export default function ConnectionBadge({ state, label }: ConnectionBadgeProps) 
       tone={state === 'connected' ? 'success' : state === 'reconnecting' ? 'warning' : 'neutral'}
       dot
       live={state !== 'disconnected'}
-      title={`Server status: ${labels[state]}`}
+      title={`Status server: ${labels[state]}`}
     >
       {label ?? 'Server'} · {labels[state]}
     </Badge>

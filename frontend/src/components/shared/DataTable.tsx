@@ -44,7 +44,7 @@ export default function DataTable<T>({
   columns,
   data,
   rowKey,
-  emptyTitle = 'No data available',
+  emptyTitle = 'Belum ada data',
   emptyDescription,
   emptyAction,
   mobileActions,
@@ -172,12 +172,12 @@ export default function DataTable<T>({
 
       <div className="mobile-table-pagination flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-xs text-muted-foreground">
         <span>
-          Showing {firstRow}-{lastRow} of {data.length}
+          Menampilkan {firstRow}-{lastRow} dari {data.length}
         </span>
 
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-1.5" htmlFor="data-table-page-size">
-            Rows per page
+            Baris per halaman
             <select
               id={`data-table-page-size-${pageSizeId}`}
               value={rowsPerPage}
@@ -193,7 +193,7 @@ export default function DataTable<T>({
           </label>
 
           <span className="px-1 text-foreground">
-            Page {currentPage} of {totalPages}
+            Halaman {currentPage} dari {totalPages}
           </span>
 
           <button
@@ -202,7 +202,7 @@ export default function DataTable<T>({
             disabled={currentPage === 1}
             className="min-h-8 border border-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Previous
+            Sebelumnya
           </button>
           <button
             type="button"
@@ -210,7 +210,7 @@ export default function DataTable<T>({
             disabled={currentPage === totalPages}
             className="min-h-8 border border-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Next
+            Berikutnya
           </button>
         </div>
       </div>

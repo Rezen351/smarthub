@@ -3,6 +3,8 @@
  * Connects the frontend to the Go REST backend at /api/v1
  */
 
+import { translateApiError } from '../lib/i18n'
+
 const BASE_URL = '/api/v1'
 
 function getAuthHeader(): Record<string, string> {
@@ -30,8 +32,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       localStorage.removeItem('auth_token')
       localStorage.removeItem('user')
     }
-    const errorMsg = payload?.error?.message || `Request failed with status ${response.status}`
-    throw new Error(errorMsg)
+    const rawMsg = payload?.error?.message || `Request failed with status ${response.status}`
+    throw new Error(translateApiError(rawMsg, response.status))
   }
 
   return payload
@@ -46,11 +48,11 @@ async function downloadFile(endpoint: string, filename: string): Promise<void> {
       localStorage.removeItem('auth_token')
       localStorage.removeItem('user')
     }
-    let errorMsg = `Download failed with status ${response.status}`
+    let errorMsg = `Gagal mengunduh berkas (status ${response.status})`
     try {
       const payload = await response.json()
       if (payload?.error?.message) {
-        errorMsg = payload.error.message
+        errorMsg = translateApiError(payload.error.message, response.status)
       }
     } catch {
       // payload not JSON

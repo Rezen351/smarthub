@@ -109,8 +109,8 @@ export const LiveWeightSparkline: React.FC<LiveWeightSparklineProps> = ({
       {showLabels && (
         <div className="flex items-center justify-between mt-1 text-xs font-mono text-white/50">
           <span>Min {minVal.toFixed(2)} kg</span>
-          {capacityKg && <span>Cap {capacityKg} kg</span>}
-          <span className="text-[#fb923c] font-bold">Max {maxVal.toFixed(2)} kg</span>
+          {capacityKg && <span>Kap {capacityKg} kg</span>}
+          <span className="text-[#fb923c] font-bold">Maks {maxVal.toFixed(2)} kg</span>
         </div>
       )}
     </div>

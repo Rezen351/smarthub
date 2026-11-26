@@ -27,7 +27,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
   // Register Modal State
   const [registerOpen, setRegisterOpen] = useState(false)
   const [formCode, setFormCode] = useState('')
-  const [formNotes, setFormNotes] = useState('Standard wood pallet')
+  const [formNotes, setFormNotes] = useState('Palet kayu standar')
   const [printImmediately, setPrintImmediately] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -80,7 +80,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
         setCloseouts(closeoutsRes.value)
       }
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to load pallets')
+      toast.error(err?.message || 'Gagal memuat data palet.')
     }
   }
 
@@ -135,7 +135,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
 
   const handleOpenRegister = () => {
     setFormCode(nextSuggestedCode)
-    setFormNotes('Standard wood pallet')
+    setFormNotes('Palet kayu standar')
     setPrintImmediately(false)
     setRegisterOpen(true)
   }
@@ -144,7 +144,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
     e.preventDefault()
     const trimmedCode = formCode.trim().toUpperCase()
     if (!trimmedCode) {
-      toast.warning('Please enter a pallet code.')
+      toast.warning('Masukkan kode palet.')
       return
     }
 
@@ -157,7 +157,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
         notes: formNotes.trim(),
       })
 
-      toast.success(`Pallet ${trimmedCode} registered successfully.`)
+      toast.success(`Palet ${trimmedCode} berhasil didaftarkan.`)
       setRegisterOpen(false)
       await fetchPallets()
 
@@ -165,7 +165,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
         handlePrint(trimmedCode)
       }
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to register pallet')
+      toast.error(err?.message || 'Gagal mendaftarkan palet.')
     } finally {
       setSubmitting(false)
     }
@@ -175,7 +175,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
     const ip = (palletPrinter.ip || '').trim()
     const port = Number(palletPrinter.port) || 9100
     if (!ip) {
-      toast.warning('Please enter a printer IP address before testing.')
+      toast.warning('Masukkan alamat IP printer sebelum pengujian.')
       return
     }
     setTestingPrinter(true)
@@ -184,13 +184,13 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
       const isOnline = Boolean(res?.online)
       setPalletPrinter((prev) => ({ ...prev, status: isOnline ? 'ONLINE' : 'OFFLINE' }))
       if (isOnline) {
-        toast.success(`Pallet printer is online at ${ip}:${port}.`)
+        toast.success(`Printer palet terhubung di ${ip}:${port}.`)
       } else {
-        toast.warning(`Pallet printer is offline at ${ip}:${port}.`)
+        toast.warning(`Printer palet terputus di ${ip}:${port}.`)
       }
     } catch (err: any) {
       setPalletPrinter((prev) => ({ ...prev, status: 'OFFLINE' }))
-      toast.error(`Printer test failed: ${err?.message || 'Connection timeout'}`)
+      toast.error(`Pengujian printer gagal: ${err?.message || 'Koneksi habis waktu'}`)
     } finally {
       setTestingPrinter(false)
     }
@@ -203,13 +203,13 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
     setSavingPrinter(true)
     try {
       await api.printers.update('pallet', ip, port)
-      toast.success('Pallet printer settings saved.')
+      toast.success('Pengaturan printer palet berhasil disimpan.')
       setPrinterModalOpen(false)
       if (ip) {
         void handleTestPrinter()
       }
     } catch (err: any) {
-      toast.error(`Failed to save printer settings: ${err?.message || 'Error'}`)
+      toast.error(`Gagal menyimpan pengaturan printer: ${err?.message || 'Terjadi kesalahan'}`)
     } finally {
       setSavingPrinter(false)
     }
@@ -217,16 +217,16 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
 
   const handlePrint = async (code: string) => {
     if (!palletPrinter.ip) {
-      toast.warning('Pallet printer is not configured. Please set the printer IP in Printer Settings.')
+      toast.warning('Printer palet belum dikonfigurasi. Atur alamat IP di Pengaturan Printer.')
       setPrinterModalOpen(true)
       return
     }
     setPrintingCode(code)
     try {
       const res = await api.pallets.print(code)
-      toast.success(res?.message || `Print job for pallet ${code} dispatched to Pallet Printer.`)
+      toast.success(res?.message || `Cetak label palet ${code} dikirim ke Printer Palet.`)
     } catch (err: any) {
-      toast.error(err?.message || `Failed to print label for ${code}`)
+      toast.error(err?.message || `Gagal mencetak label untuk ${code}`)
     } finally {
       setPrintingCode(null)
     }
@@ -237,11 +237,11 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
     setDeleting(true)
     try {
       await api.pallets.delete(confirmDelete.id || confirmDelete.code)
-      toast.success(`Pallet ${confirmDelete.code} removed.`)
+      toast.success(`Palet ${confirmDelete.code} dihapus.`)
       setConfirmDelete(null)
       await fetchPallets()
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to delete pallet')
+      toast.error(err?.message || 'Gagal menghapus palet.')
     } finally {
       setDeleting(false)
     }
@@ -274,10 +274,10 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
   const totalStockKg = pallets.reduce((sum, p) => sum + (p.remainingKg || p.weightKg || 0), 0)
 
   const DISPOSITION_LABELS: Record<CloseoutDisposition, string> = {
-    SHRINKAGE_LOSS: 'Shrinkage Loss',
-    LOOSE_RESERVE: 'Loose Crate',
-    CULL_REJECT: 'Quality Reject',
-    SAMPLE_USE: 'Sample / QC',
+    SHRINKAGE_LOSS: 'Susut Berat',
+    LOOSE_RESERVE: 'Peti Cadangan',
+    CULL_REJECT: 'Afkir Kualitas',
+    SAMPLE_USE: 'Sampel / QC',
   }
 
   const renderActions = (row: Pallet) => {
@@ -410,7 +410,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
             <div className="flex items-center gap-3">
               <h2 className="text-lg font-semibold text-foreground">Daftar Palet</h2>
               <Badge tone={palletPrinter.status === 'ONLINE' ? 'success' : 'warning'} dot>
-                {palletPrinter.status === 'ONLINE' ? `Printer Online (${palletPrinter.ip})` : 'Printer Offline'}
+                {palletPrinter.status === 'ONLINE' ? `Printer Terhubung (${palletPrinter.ip})` : 'Printer Terputus'}
               </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">Registrasi palet fisik, atur tara, dan cetak label QR.</p>
@@ -488,7 +488,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search pallets by code, notes, grade..."
+              placeholder="Cari palet berdasarkan kode, catatan, grade..."
               className="text-sm"
             />
           </div>
@@ -507,12 +507,12 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                       : 'bg-card text-muted-foreground hover:bg-muted/50'
                   }`}
                 >
-                  {mode === 'ALL' ? 'All' : mode === 'AVAILABLE' ? 'Available' : 'In Use'}
+                  {mode === 'ALL' ? 'Semua' : mode === 'AVAILABLE' ? 'Tersedia' : 'Digunakan'}
                 </button>
               ))}
             </div>
             <Button variant="outline" size="sm" icon="refresh" onClick={fetchPallets}>
-              Refresh
+              Muat Ulang
             </Button>
           </div>
         </div>
@@ -523,11 +523,11 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
           data={filteredPallets}
           rowKey={(p) => p.id || p.code}
           mobileActions={renderActions}
-          emptyTitle="No Pallets Found"
-          emptyDescription="Register physical pallets to make them selectable at Station 2: Sorting."
+          emptyTitle="Palet Tidak Ditemukan"
+          emptyDescription="Daftarkan palet fisik agar dapat dipilih di Stasiun 02: Sortasi."
           emptyAction={
             <Button variant="primary" icon="plus" size="sm" onClick={handleOpenRegister}>
-              Register First Pallet
+              Daftarkan Palet Pertama
             </Button>
           }
         />
@@ -538,10 +538,10 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
         <Card padding="none">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-foreground">Recent Remainder Closeouts</h3>
-              <p className="text-xs text-muted-foreground">Audited pallet releases returning stock to Available.</p>
+              <h3 className="text-sm font-bold text-foreground">Riwayat Penyelesaian Sisa Palet</h3>
+              <p className="text-xs text-muted-foreground">Pelepasan palet teraudit yang dikembalikan ke status Tersedia.</p>
             </div>
-            <Badge tone="neutral">{closeouts.length} records</Badge>
+            <Badge tone="neutral">{closeouts.length} data</Badge>
           </div>
           <DataTable<PalletCloseout>
             rowKey={(row) => row.id}
@@ -549,7 +549,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
             columns={[
               {
                 key: 'palletCode',
-                label: 'Pallet',
+                label: 'Palet',
                 priority: true,
                 render: (row) => <span className="font-mono font-bold text-foreground">{row.palletCode}</span>,
               },
@@ -560,32 +560,32 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
               },
               {
                 key: 'leftoverKg',
-                label: 'Settled Weight',
+                label: 'Berat Sisa',
                 align: 'right',
                 priority: true,
                 render: (row) => <span className="font-mono font-bold text-amber-700 dark:text-amber-400">{formatWeight(row.leftoverKg)} kg</span>,
               },
               {
                 key: 'disposition',
-                label: 'Disposition',
+                label: 'Disposisi',
                 render: (row) => <Badge tone="neutral">{DISPOSITION_LABELS[row.disposition] || row.disposition}</Badge>,
               },
               {
                 key: 'operatorName',
-                label: 'Released By',
-                render: (row) => <span className="text-xs text-muted-foreground">{row.operatorName || 'System'}</span>,
+                label: 'Dilepas Oleh',
+                render: (row) => <span className="text-xs text-muted-foreground">{row.operatorName || 'Sistem'}</span>,
               },
               {
                 key: 'notes',
-                label: 'Notes',
+                label: 'Catatan',
                 render: (row) => <span className="text-xs text-muted-foreground truncate max-w-xs block">{row.notes || '—'}</span>,
               },
               {
                 key: 'createdAt',
-                label: 'Time',
+                label: 'Waktu',
                 render: (row) => (
                   <span className="font-mono text-xs text-muted-foreground">
-                    {new Date(row.createdAt).toLocaleString('en-GB', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    {new Date(row.createdAt).toLocaleString('id-ID', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                   </span>
                 ),
               },
@@ -600,9 +600,9 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
           <div className="bg-card border border-border p-6 shadow-xl max-w-md w-full space-y-5 animate-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between border-b border-border pb-3">
               <div>
-                <h3 className="text-lg font-bold text-foreground">Register Physical Pallet</h3>
+                <h3 className="text-lg font-bold text-foreground">Daftar Palet Fisik</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Assign a unique, static ID code for physical barcode / QR tagging.
+                  Tetapkan kode ID unik untuk penandaan barcode / QR fisik.
                 </p>
               </div>
               <button
@@ -615,21 +615,21 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
             </div>
 
             <form onSubmit={handleRegister} className="space-y-4">
-              <Field label="Pallet Identifier Code" hint="Unique static identifier attached to the pallet">
+              <Field label="Kode Identitas Palet" hint="Kode statis unik yang ditempel pada palet">
                 <Input
                   value={formCode}
                   onChange={(e) => setFormCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. PLT-011"
+                  placeholder="Contoh: PLT-011"
                   required
                   className="font-mono text-base font-bold uppercase tracking-wider"
                 />
               </Field>
 
-              <Field label="Specification & Material Notes" hint="Optional notes (e.g. Euro wood, plastic, bay area)">
+              <Field label="Catatan Spesifikasi & Material" hint="Catatan opsional (mis. kayu standar, plastik, area rak)">
                 <Input
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
-                  placeholder="Standard wood pallet"
+                  placeholder="Palet kayu standar"
                 />
               </Field>
 
@@ -641,16 +641,16 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                   className="rounded-none border-border"
                 />
                 <span className="text-xs font-semibold text-foreground">
-                  Print QR label on Pallet Printer immediately upon registration
+                  Langsung cetak label QR di Printer Palet setelah pendaftaran
                 </span>
               </label>
 
               <div className="flex justify-end items-center gap-2 pt-3 border-t border-border">
                 <Button type="button" variant="ghost" onClick={() => setRegisterOpen(false)}>
-                  Cancel
+                  Batal
                 </Button>
                 <Button type="submit" variant="primary" icon="check" disabled={submitting}>
-                  {submitting ? 'Registering…' : 'Register Pallet'}
+                  {submitting ? 'Mendaftarkan…' : 'Daftar Palet'}
                 </Button>
               </div>
             </form>
@@ -664,7 +664,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
           <div className="bg-card border border-border p-6 shadow-xl max-w-sm w-full space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between border-b border-border pb-3">
               <div>
-                <h3 className="text-base font-bold text-foreground">Pallet Label Preview</h3>
+                <h3 className="text-base font-bold text-foreground">Pratinjau Label Palet</h3>
                 <p className="text-xs text-muted-foreground mt-0.5 font-mono">{previewPallet.code}</p>
               </div>
               <button
@@ -684,9 +684,9 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                 grade={previewPallet.grade as 'A' | 'B' | 'C' | undefined}
                 weightKg={previewPallet.weightKg > 0 ? previewPallet.weightKg : undefined}
                 farmerName={previewPallet.farmerName || undefined}
-                stationName="Pallet Management"
+                stationName="Manajemen Palet"
                 date={previewPallet.createdAt ? previewPallet.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10)}
-                time={previewPallet.createdAt ? previewPallet.createdAt.slice(11, 16) : 'Live'}
+                time={previewPallet.createdAt ? previewPallet.createdAt.slice(11, 16) : 'Aktif'}
                 screenFit
                 className="w-full"
               />
@@ -701,10 +701,10 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                 disabled={printingCode === previewPallet.code}
                 onClick={() => handlePrint(previewPallet.code)}
               >
-                {printingCode === previewPallet.code ? 'Printing Label…' : 'Print ESC/POS Label (Pallet Printer)'}
+                {printingCode === previewPallet.code ? 'Mencetak Label…' : 'Cetak Label ESC/POS (Printer Palet)'}
               </Button>
               <Button variant="ghost" onClick={() => setPreviewPallet(null)} className="w-full">
-                Close Preview
+                Tutup Pratinjau
               </Button>
             </div>
           </div>
@@ -717,8 +717,8 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
           <div className="bg-card border border-border p-6 shadow-xl max-w-md w-full space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between border-b border-border pb-3">
               <div>
-                <h3 className="text-base font-bold text-foreground">Pallet Printer Settings</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Dedicated thermal printer for Pallet QR labels</p>
+                <h3 className="text-base font-bold text-foreground">Pengaturan Printer Palet</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Printer termal khusus untuk label QR Palet</p>
               </div>
               <button
                 type="button"
@@ -731,13 +731,13 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
 
             <div className="flex items-center justify-between p-3 bg-muted/20 border border-border">
               <div>
-                <div className="text-xs font-semibold text-foreground">Connection Status</div>
+                <div className="text-xs font-semibold text-foreground">Status Koneksi</div>
                 <div className="text-xs text-muted-foreground font-mono">
-                  {palletPrinter.ip ? `${palletPrinter.ip}:${palletPrinter.port}` : 'Not configured'}
+                  {palletPrinter.ip ? `${palletPrinter.ip}:${palletPrinter.port}` : 'Belum dikonfigurasi'}
                 </div>
               </div>
               <Badge tone={palletPrinter.status === 'ONLINE' ? 'success' : 'warning'} dot>
-                {palletPrinter.status === 'ONLINE' ? 'Online' : 'Offline'}
+                {palletPrinter.status === 'ONLINE' ? 'Terhubung' : 'Terputus'}
               </Badge>
             </div>
 
@@ -746,16 +746,16 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                 <Field label="Model">
                   <Input value={palletPrinter.model} readOnly className="font-mono bg-muted/30" />
                 </Field>
-                <Field label="Paper Width">
+                <Field label="Lebar Kertas">
                   <Input value={`${palletPrinter.paperWidthMm} mm`} readOnly className="font-mono bg-muted/30" />
                 </Field>
               </div>
 
-              <Field label="Connection Protocol">
+              <Field label="Protokol Koneksi">
                 <Input value={`${palletPrinter.connection} (RAW TCP)`} readOnly className="font-mono bg-muted/30" />
               </Field>
 
-              <Field label="Printer IP Address" required hint="e.g. 192.168.8.115">
+              <Field label="Alamat IP Printer" required hint="Contoh: 192.168.8.115">
                 <Input
                   value={palletPrinter.ip}
                   onChange={(e) => setPalletPrinter((prev) => ({ ...prev, ip: e.target.value }))}
@@ -765,7 +765,7 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                 />
               </Field>
 
-              <Field label="TCP Port" required hint="Default raw thermal port is 9100">
+              <Field label="Port TCP" required hint="Port default printer termal adalah 9100">
                 <Input
                   type="number"
                   min="1"
@@ -786,14 +786,14 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
                   disabled={testingPrinter || !palletPrinter.ip}
                   onClick={handleTestPrinter}
                 >
-                  {testingPrinter ? 'Testing…' : 'Test Connection'}
+                  {testingPrinter ? 'Menguji…' : 'Uji Koneksi'}
                 </Button>
                 <div className="flex items-center gap-2">
                   <Button type="button" variant="ghost" onClick={() => setPrinterModalOpen(false)}>
-                    Cancel
+                    Batal
                   </Button>
                   <Button type="submit" variant="primary" icon="check" disabled={savingPrinter}>
-                    {savingPrinter ? 'Saving…' : 'Save Settings'}
+                    {savingPrinter ? 'Menyimpan…' : 'Simpan Pengaturan'}
                   </Button>
                 </div>
               </div>
@@ -805,9 +805,9 @@ export default function PalletsPage({ embedded = false }: PalletsPageProps) {
       {/* ── DELETE CONFIRMATION ── */}
       <ConfirmDialog
         open={confirmDelete !== null}
-        title="Remove Pallet"
-        description={`Are you sure you want to remove pallet "${confirmDelete?.code}" from the registry?`}
-        confirmLabel={deleting ? 'Removing…' : 'Remove Pallet'}
+        title="Hapus Palet"
+        description={`Yakin ingin menghapus palet "${confirmDelete?.code}" dari daftar?`}
+        confirmLabel={deleting ? 'Menghapus…' : 'Hapus Palet'}
         tone="danger"
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}

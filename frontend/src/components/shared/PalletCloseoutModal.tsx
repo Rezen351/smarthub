@@ -24,23 +24,23 @@ const DISPOSITION_OPTIONS: Array<{
 }> = [
   {
     value: 'SHRINKAGE_LOSS',
-    label: 'Shrinkage / Scale Loss',
-    description: 'Moisture loss, soil, or weighing variance.',
+    label: 'Susut / Selisih Timbang',
+    description: 'Susut kadar air, tanah, atau selisih penimbangan.',
   },
   {
     value: 'LOOSE_RESERVE',
-    label: 'Move to Loose Crate',
-    description: 'Transfer edible remainder to loose stock.',
+    label: 'Pindah ke Keranjang Curah',
+    description: 'Pindahkan sisa layak konsumsi ke stok curah.',
   },
   {
     value: 'CULL_REJECT',
-    label: 'Quality Reject / Damaged',
-    description: 'Bruised or defective potatoes removed.',
+    label: 'Afkir / Rusak',
+    description: 'Kentang memar atau cacat yang dipisahkan.',
   },
   {
     value: 'SAMPLE_USE',
-    label: 'Sample / QC Use',
-    description: 'Used for quality inspection or testing.',
+    label: 'Sampel / Uji QC',
+    description: 'Digunakan untuk pemeriksaan mutu atau pengujian.',
   },
 ]
 
@@ -75,14 +75,14 @@ export default function PalletCloseoutModal({
         disposition,
         notes: notes.trim(),
       })
-      toast.success(res?.message || `Pallet ${palletCode} released for reuse.`)
+      toast.success(res?.message || `Palet ${palletCode} telah dilepas untuk digunakan kembali.`)
       onReleased({
         palletCode: res?.palletCode || palletCode,
         settledKg: Number(res?.settledKg ?? remainingKg),
         disposition,
       })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to release pallet.')
+      toast.error(err instanceof Error ? err.message : 'Gagal melepas palet.')
     } finally {
       setSubmitting(false)
     }
@@ -93,14 +93,14 @@ export default function PalletCloseoutModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
       role="dialog"
       aria-modal="true"
-      aria-label={`Close and release pallet ${palletCode}`}
+      aria-label={`Tutup dan lepas palet ${palletCode}`}
     >
       <div className="bg-card border border-border p-6 shadow-xl max-w-lg w-full space-y-5 animate-in zoom-in-95 duration-150">
         <div className="flex items-start justify-between border-b border-border pb-3 gap-3">
           <div>
-            <h3 className="text-lg font-bold text-foreground">Close &amp; Release Pallet</h3>
+            <h3 className="text-lg font-bold text-foreground">Tutup &amp; Lepas Palet</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Record the disposition of remaining weight so this pallet returns to Station 02 Sorting.
+              Catat disposisi sisa berat agar palet ini kembali tersedia di Stasiun 02 Sortasi.
             </p>
           </div>
           <button
@@ -119,10 +119,10 @@ export default function PalletCloseoutModal({
               <span className="font-mono font-bold text-base text-foreground">{palletCode}</span>
               {grade && <Badge tone="accent">Grade {grade}</Badge>}
             </div>
-            {farmerName && <span className="text-xs text-muted-foreground block">Origin: {farmerName}</span>}
+            {farmerName && <span className="text-xs text-muted-foreground block">Asal: {farmerName}</span>}
           </div>
           <div className="text-right">
-            <span className="text-[11px] uppercase font-mono text-muted-foreground block">Remaining Stock</span>
+            <span className="text-[11px] uppercase font-mono text-muted-foreground block">Sisa Stok</span>
             <span className="font-mono text-xl font-black text-amber-700 dark:text-amber-400">
               {formatWeight(remainingKg)} kg
             </span>
@@ -132,7 +132,7 @@ export default function PalletCloseoutModal({
         <form onSubmit={handleConfirm} className="space-y-4">
           <div className="space-y-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
-              Remainder Disposition
+              Disposisi Sisa
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {DISPOSITION_OPTIONS.map((opt) => {
@@ -156,21 +156,21 @@ export default function PalletCloseoutModal({
             </div>
           </div>
 
-          <Field label="Notes (Optional)" hint="Recorded in the pallet closeout audit log">
+          <Field label="Catatan (Opsional)" hint="Tercatat dalam log audit penutupan palet">
             <Input
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Transferred remaining tubers to loose crate..."
+              placeholder="Contoh: Sisa umbi dipindahkan ke keranjang curah..."
               disabled={submitting}
             />
           </Field>
 
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
             <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
-              Cancel
+              Batal
             </Button>
             <Button type="submit" variant="primary" icon="check" loading={submitting}>
-              {submitting ? 'Releasing…' : 'Settle & Release Pallet'}
+              {submitting ? 'Melepas…' : 'Selesaikan & Lepas Palet'}
             </Button>
           </div>
         </form>

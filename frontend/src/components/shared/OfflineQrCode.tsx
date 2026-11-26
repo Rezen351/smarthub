@@ -33,7 +33,7 @@ export default function OfflineQrCode({ value, size = 180, className = '', dataA
   if (!dim) {
     return (
       <div className={`bg-white text-xs text-center ${className}`} style={{ width: size, height: size }}>
-        QR payload too long
+        Payload QR terlalu panjang
       </div>
     )
   }
@@ -55,7 +55,7 @@ export default function OfflineQrCode({ value, size = 180, className = '', dataA
         display: 'block',
       }}
       role="img"
-      aria-label={`QR Code for ${value}`}
+      aria-label={`Kode QR untuk ${value}`}
       data-farmer-qr={dataAttribute}
     >
       <rect width={dim} height={dim} fill="#ffffff" />

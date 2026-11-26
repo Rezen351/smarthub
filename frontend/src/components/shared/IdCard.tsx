@@ -2,6 +2,7 @@ import React from 'react'
 import Icon from './Icon'
 import OfflineQrCode from './OfflineQrCode'
 import { encodeQr } from '../../lib/qrEncoder'
+import { translateStatus } from '@/lib/i18n'
 import {
   Dialog,
   DialogContent,
@@ -43,8 +44,8 @@ export const ROLE_THEMES: Record<
   }
 > = {
   FARMER: {
-    name: 'Registered Farmer',
-    roleBadge: 'FARMER',
+    name: 'Petani Terdaftar',
+    roleBadge: 'PETANI',
     accentColor: '#16a34a',
     accentBg: '#f0fdf4',
     accentBorder: '#86efac',
@@ -56,7 +57,7 @@ export const ROLE_THEMES: Record<
     borderLine: '#16a34a',
   },
   OPERATOR: {
-    name: 'Plant Operator',
+    name: 'Operator Pabrik',
     roleBadge: 'OPERATOR',
     accentColor: '#2563eb',
     accentBg: '#eff6ff',
@@ -69,7 +70,7 @@ export const ROLE_THEMES: Record<
     borderLine: '#2563eb',
   },
   ADMIN: {
-    name: 'System Administrator',
+    name: 'Admin Sistem',
     roleBadge: 'ADMINISTRATOR',
     accentColor: '#18181b',
     accentBg: '#f4f4f5',
@@ -92,7 +93,7 @@ export function formatUserCode(data: IdCardData): string {
 }
 
 export function formatUserName(rawName?: string): string {
-  if (!rawName || !rawName.trim()) return 'User Name'
+  if (!rawName || !rawName.trim()) return 'Nama Pengguna'
   return rawName.replace(/\s*\([^)]*\)/g, '').trim() || rawName.trim()
 }
 
@@ -189,7 +190,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
                 marginTop: '2.5px',
               }}
             >
-              TRACEABILITY SYSTEM
+              SISTEM KETERTELUSURAN
             </div>
           </div>
         </div>
@@ -272,7 +273,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
                 fontWeight: 700,
               }}
             >
-              Full Name
+              Nama Lengkap
             </div>
             <div
               style={{
@@ -303,7 +304,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
                 fontWeight: 700,
               }}
             >
-              Identification Code
+              Kode Identitas
             </div>
             <div
               style={{
@@ -334,7 +335,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
                 fontWeight: 700,
               }}
             >
-              Domicile / Facility
+              Domisili / Fasilitas
             </div>
             <div
               style={{
@@ -382,7 +383,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
               textTransform: 'uppercase',
             }}
           >
-            SCAN · VERIFY
+            PINDAI · VERIFIKASI
           </span>
         </div>
       </div>
@@ -412,7 +413,7 @@ export function IdCard({ data, className = '' }: IdCardProps) {
             }}
           />
           <span style={{ fontWeight: 800, color: '#171717', letterSpacing: '0.12em' }}>
-            AUTHENTICATED PASS
+            KARTU TERVERIFIKASI
           </span>
         </span>
         <span style={{ color: '#171717', fontWeight: 800, letterSpacing: '0.12em' }}>
@@ -479,7 +480,7 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
 
   ctx.fillStyle = theme.headerSub
   ctx.font = 'bold 20px monospace'
-  ctx.fillText('TRACEABILITY SYSTEM', textStartX, 96)
+  ctx.fillText('SISTEM KETERTELUSURAN', textStartX, 96)
 
   // Role Pill Badge (Top Right)
   const roleText = theme.roleBadge
@@ -509,7 +510,7 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
   // FULL NAME
   ctx.fillStyle = '#555555'
   ctx.font = 'bold 18px monospace'
-  ctx.fillText('FULL NAME', 45, 185)
+  ctx.fillText('NAMA LENGKAP', 45, 185)
 
   ctx.fillStyle = '#171717'
   ctx.font = 'bold 36px Inter, sans-serif'
@@ -526,7 +527,7 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
   // IDENTIFICATION CODE
   ctx.fillStyle = '#555555'
   ctx.font = 'bold 18px monospace'
-  ctx.fillText('IDENTIFICATION CODE', 45, 290)
+  ctx.fillText('KODE IDENTITAS', 45, 290)
 
   // Code Chip
   ctx.font = 'bold 30px monospace'
@@ -543,7 +544,7 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
   // DOMICILE / FACILITY
   ctx.fillStyle = '#555555'
   ctx.font = 'bold 18px monospace'
-  ctx.fillText('DOMICILE / FACILITY', 45, 400)
+  ctx.fillText('DOMISILI / FASILITAS', 45, 400)
 
   ctx.fillStyle = '#222222'
   ctx.font = '600 24px Inter, sans-serif'
@@ -552,7 +553,7 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
   // ROLE / POSITION
   ctx.fillStyle = '#555555'
   ctx.font = 'bold 18px monospace'
-  ctx.fillText('ROLE / POSITION', 45, 495)
+  ctx.fillText('PERAN / JABATAN', 45, 495)
 
   ctx.fillStyle = '#171717'
   ctx.font = '600 22px Inter, sans-serif'
@@ -595,7 +596,7 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
   ctx.fillStyle = '#333333'
   ctx.font = 'bold 16px monospace'
   ctx.textAlign = 'center'
-  ctx.fillText('SCAN · VERIFY ACCESS', qrBoxX + qrBoxSize / 2, qrBoxY + qrBoxSize - 12)
+  ctx.fillText('PINDAI · VERIFIKASI AKSES', qrBoxX + qrBoxSize / 2, qrBoxY + qrBoxSize - 12)
   ctx.textAlign = 'left'
 
   // 5. Minimalist Footer
@@ -613,7 +614,7 @@ export async function exportIdCardToPng(data: IdCardData): Promise<void> {
 
   ctx.fillStyle = '#171717'
   ctx.font = 'bold 20px monospace'
-  ctx.fillText('AUTHENTICATED PASS', 64, 618)
+  ctx.fillText('KARTU TERVERIFIKASI', 64, 618)
 
   ctx.fillStyle = '#171717'
   ctx.font = 'bold 20px monospace'
@@ -679,7 +680,7 @@ export function printIdCard(data: IdCardData): void {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>SmartGeulis ID Card - ${formatUserName(data.name)}</title>
+  <title>Kartu ID SmartGeulis - ${formatUserName(data.name)}</title>
   <style>
     @page {
       size: 80mm 55mm landscape;
@@ -887,7 +888,7 @@ export function printIdCard(data: IdCardData): void {
         <img src="${logoUrl}" style="height:5.5mm;width:auto;" alt="" />
         <div>
           <div class="header-title">SmartGeulis</div>
-          <div class="header-sub">TRACEABILITY SYSTEM</div>
+          <div class="header-sub">SISTEM KETERTELUSURAN</div>
         </div>
       </div>
       <div class="badge">
@@ -898,11 +899,11 @@ export function printIdCard(data: IdCardData): void {
     <div class="body">
       <img class="watermark" src="${logoUrl}" alt="" />
       <div class="content-left">
-        <div class="field-label">Full Name</div>
+        <div class="field-label">Nama Lengkap</div>
         <div class="field-name">${formatUserName(data.name)}</div>
-        <div class="field-label">Identification Code</div>
+        <div class="field-label">Kode Identitas</div>
         <div class="code-chip">${code}</div>
-        <div class="field-label">Domicile / Facility</div>
+        <div class="field-label">Domisili / Fasilitas</div>
         <div class="field-domicile">${domicile}</div>
       </div>
       <div class="qr-frame" style="position:relative;z-index:1;">
@@ -910,11 +911,11 @@ export function printIdCard(data: IdCardData): void {
           <rect width="${dim}" height="${dim}" fill="#ffffff" />
           <path d="${qrSvgPath}" fill="#000000" />
         </svg>
-        <span class="qr-caption">SCAN · VERIFY</span>
+        <span class="qr-caption">PINDAI · VERIFIKASI</span>
       </div>
     </div>
     <div class="footer">
-      <span style="font-weight:900;color:#171717;">AUTHENTICATED PASS</span>
+      <span style="font-weight:900;color:#171717;">KARTU TERVERIFIKASI</span>
       <span style="color:#171717;font-weight:900">SMARTGEULIS</span>
     </div>
   </div>
@@ -973,7 +974,7 @@ export function IdCardModal({
           <div className="flex items-center justify-between">
             <div>
               <div className="font-mono-custom text-[9px] text-[#ea580c] tracking-[0.25em] uppercase font-semibold">
-                Card Preview
+                Pratinjau Kartu
               </div>
               <DialogTitle className="font-display text-xl font-bold text-[#171717] dark:text-zinc-100 tracking-tight">
                 {formatUserName(data.name)}
@@ -983,7 +984,7 @@ export function IdCardModal({
               type="button"
               className="p-1.5 text-[#888888] hover:text-[#171717] dark:hover:text-zinc-200 transition-colors"
               onClick={onClose}
-              aria-label="Close"
+              aria-label="Tutup"
             >
               <Icon name="close" size={18} />
             </button>
@@ -998,11 +999,11 @@ export function IdCardModal({
         {/* Direct Details Table */}
         <div className="bg-[#fcfcfc] dark:bg-zinc-900/80 border border-[#eaeaea] dark:border-zinc-800 p-3 text-xs text-[#666666] dark:text-zinc-300 space-y-1.5 font-body">
           <div className="flex justify-between items-center">
-            <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">Role:</span>
-            <span className="font-mono-custom text-[11px] font-bold text-[#171717] dark:text-zinc-100 capitalize">{data.role?.toLowerCase() || 'operator'}</span>
+            <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">Peran:</span>
+            <span className="font-mono-custom text-[11px] font-bold text-[#171717] dark:text-zinc-100">{translateStatus(data.role || 'OPERATOR')}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">User ID:</span>
+            <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">ID Pengguna:</span>
             <span
               className="font-mono text-xs font-bold px-2 py-0.5 border"
               style={{
@@ -1015,7 +1016,7 @@ export function IdCardModal({
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">Domicile:</span>
+            <span className="font-mono-custom text-[10px] text-[#888888] tracking-wider uppercase">Domisili:</span>
             <span className="font-medium text-[#171717] dark:text-zinc-100">{data.domicile || 'Garut, Jawa Barat'}</span>
           </div>
         </div>
@@ -1028,7 +1029,7 @@ export function IdCardModal({
             onClick={handlePrint}
           >
             <Icon name="print" size={16} />
-            <span>Print Card</span>
+            <span>Cetak Kartu</span>
           </button>
           <button
             type="button"
@@ -1037,7 +1038,7 @@ export function IdCardModal({
             onClick={handleExport}
           >
             <Icon name="download" size={16} />
-            <span>{exporting ? 'Exporting...' : 'Export PNG'}</span>
+            <span>{exporting ? 'Mengekspor...' : 'Ekspor PNG'}</span>
           </button>
         </div>
       </DialogContent>

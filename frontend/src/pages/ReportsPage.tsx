@@ -10,6 +10,7 @@ import { useToast } from '../components/feedback/Toast'
 import { usePackhouseStore } from '../hooks/usePackhouseStore'
 import { api, type Commodity, DEFAULT_COMMODITIES } from '../services/api'
 import { formatWeight } from '../lib/utils'
+import { idText, translateStatus } from '@/lib/i18n'
 
 interface Stat {
   label: string
@@ -67,9 +68,9 @@ export default function ReportsPage() {
     setDailyDownloading(true)
     try {
       await api.reports.downloadDailyCsv(selectedDate, commodityFilter || undefined)
-      toast.success('Daily recap CSV downloaded successfully')
+      toast.success('CSV rekap harian berhasil diunduh.')
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to download daily recap CSV')
+      toast.error(err?.message || 'Gagal mengunduh CSV rekap harian.')
     } finally {
       setDailyDownloading(false)
     }
@@ -79,9 +80,9 @@ export default function ReportsPage() {
     setMonthlyDownloading(true)
     try {
       await api.reports.downloadMonthlyCsv(selectedMonth, commodityFilter || undefined)
-      toast.success('Monthly recap CSV downloaded successfully')
+      toast.success('CSV rekap bulanan berhasil diunduh.')
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to download monthly recap CSV')
+      toast.error(err?.message || 'Gagal mengunduh CSV rekap bulanan.')
     } finally {
       setMonthlyDownloading(false)
     }
@@ -91,9 +92,9 @@ export default function ReportsPage() {
     setRankingsDownloading(true)
     try {
       await api.reports.downloadRankingsCsv(50, rankingPeriod, commodityFilter || undefined)
-      toast.success('Farmer leaderboard CSV downloaded successfully')
+      toast.success('CSV peringkat petani berhasil diunduh.')
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to download farmer leaderboard CSV')
+      toast.error(err?.message || 'Gagal mengunduh CSV peringkat petani.')
     } finally {
       setRankingsDownloading(false)
     }
@@ -132,7 +133,7 @@ export default function ReportsPage() {
       const fMap = new Map<string, any>()
       dateWarings.forEach((w) => {
         const c = w.farmerId || 'FMR-?'
-        const n = w.farmerName || 'Farmer'
+        const n = w.farmerName || 'Petani'
         const v = w.farmerVillage || ''
         const tareVal = Number((w as any).tareWeightKg) || 1.2
         const grossVal = Number(w.grossWeightKg) || 0
@@ -193,7 +194,7 @@ export default function ReportsPage() {
       let total = 0
       bufferWarings.forEach((w) => {
         const c = w.farmerId || 'FMR-?'
-        const n = w.farmerName || 'Farmer'
+        const n = w.farmerName || 'Petani'
         const v = w.farmerVillage || ''
         const kg = Number(w.grossWeightKg) || 0
         total += kg
@@ -230,16 +231,16 @@ export default function ReportsPage() {
   const totalDeliveriesCount = deliveries.length
 
   const stats: Stat[] = useMemo(() => [
-    { label: 'Total Farmers', value: farmerCount.toLocaleString('en-US'), sub: 'Registered farmers', trend: 'up', icon: 'users' },
-    { label: 'Total Warings', value: totalWaringsCount.toLocaleString('en-US'), sub: 'Intake sacks recorded', trend: 'up', icon: 'box' },
-    { label: 'Total Weighing (kg)', value: totalWeighedKg.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), sub: 'Live platform scales', trend: 'up', icon: 'scale' },
-    { label: 'Total Deliveries', value: totalDeliveriesCount.toLocaleString('en-US'), sub: 'Outbound dispatches', trend: 'neutral', icon: 'truck' },
+    { label: 'Total Petani', value: farmerCount.toLocaleString('id-ID'), sub: 'Petani terdaftar', trend: 'up', icon: 'users' },
+    { label: 'Total Waring', value: totalWaringsCount.toLocaleString('id-ID'), sub: 'Karung penerimaan tercatat', trend: 'up', icon: 'box' },
+    { label: 'Total Penimbangan (kg)', value: totalWeighedKg.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), sub: 'Timbangan platform aktif', trend: 'up', icon: 'scale' },
+    { label: 'Total Pengiriman', value: totalDeliveriesCount.toLocaleString('id-ID'), sub: 'Pengiriman keluar', trend: 'neutral', icon: 'truck' },
   ], [farmerCount, totalWaringsCount, totalWeighedKg, totalDeliveriesCount])
 
   /* Dynamic Weekly Intake by Day */
   const weekly = useMemo(() => {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const dayMap: Record<string, number> = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 }
+    const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
+    const dayMap: Record<string, number> = { Sen: 0, Sel: 0, Rab: 0, Kam: 0, Jum: 0, Sab: 0, Min: 0 }
     bufferWarings.forEach((w) => {
       if (w.date) {
         const d = new Date(w.date)
@@ -251,7 +252,7 @@ export default function ReportsPage() {
         }
       }
     })
-    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => ({
+    return ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day) => ({
       day,
       kg: Math.round(dayMap[day] || 0),
     }))
@@ -301,7 +302,7 @@ export default function ReportsPage() {
         station: 'Packaging' as const,
         reference: item.code,
         description: `${item.packageType} · Grade ${item.grade}`,
-        quantity: `${item.units} units · ${formatWeight(item.totalWeightKg)} kg`,
+        quantity: `${item.units} unit · ${formatWeight(item.totalWeightKg)} kg`,
         status: 'STORED',
       })),
       ...deliveries.map((item) => ({
@@ -311,7 +312,7 @@ export default function ReportsPage() {
         station: 'Dispatch' as const,
         reference: item.truckPlate,
         description: `${item.destination} · ${item.driver}`,
-        quantity: `${item.units} units`,
+        quantity: `${item.units} unit`,
         status: item.status,
       })),
     ]
@@ -332,10 +333,17 @@ export default function ReportsPage() {
       })
   }, [bufferWarings, deliveries, finishedStock, range, sortedBatches])
 
+  const stationLabels: Record<TransactionRow['station'], string> = {
+    Reception: 'Penerimaan',
+    Sorting: 'Sortasi',
+    Packaging: 'Pengemasan',
+    Dispatch: 'Pengiriman',
+  }
+
   const transactionColumns: Column<TransactionRow>[] = [
     {
       key: 'timestamp',
-      label: 'Timestamp',
+      label: 'Waktu',
       priority: true,
       render: (row) => (
         <div className="stack-none">
@@ -346,7 +354,7 @@ export default function ReportsPage() {
     },
     {
       key: 'station',
-      label: 'Station',
+      label: 'Stasiun',
       priority: true,
       render: (row) => {
         const toneMap: Record<TransactionRow['station'], 'accent' | 'warning' | 'success' | 'neutral'> = {
@@ -355,22 +363,22 @@ export default function ReportsPage() {
           Packaging: 'success',
           Dispatch: 'neutral',
         }
-        return <Badge tone={toneMap[row.station]}>{row.station}</Badge>
+        return <Badge tone={toneMap[row.station]}>{stationLabels[row.station]}</Badge>
       },
     },
     {
       key: 'reference',
-      label: 'Identifier',
+      label: 'Kode',
       render: (row) => <span className="mono t-small font-semibold">{row.reference}</span>,
     },
     {
       key: 'description',
-      label: 'Description',
+      label: 'Deskripsi',
       render: (row) => <span className="t-small text-text-secondary">{row.description}</span>,
     },
     {
       key: 'quantity',
-      label: 'Quantity',
+      label: 'Jumlah',
       priority: true,
       align: 'right',
       render: (row) => <span className="mono t-small font-semibold text-text">{row.quantity}</span>,
@@ -379,22 +387,22 @@ export default function ReportsPage() {
       key: 'status',
       label: 'Status',
       align: 'right',
-      render: (row) => <Badge tone={row.status === 'APPROVED' || row.status === 'STORED' || row.status === 'SORTED' || row.status === 'DELIVERED' ? 'success' : 'neutral'}>{row.status}</Badge>,
+      render: (row) => <Badge tone={row.status === 'APPROVED' || row.status === 'STORED' || row.status === 'SORTED' || row.status === 'DELIVERED' ? 'success' : 'neutral'}>{translateStatus(row.status)}</Badge>,
     },
   ]
 
   const handleExportCsv = () => {
-    const headers = ['Date', 'Time', 'Station', 'Identifier', 'Description', 'Quantity', 'Status']
+    const headers = ['Tanggal', 'Waktu', 'Stasiun', 'Kode', 'Deskripsi', 'Jumlah', 'Status']
     const rows = [
       headers,
       ...transactions.map((t) => [
         t.date,
         t.time,
-        t.station,
+        stationLabels[t.station],
         t.reference,
         t.description,
         t.quantity,
-        t.status,
+        translateStatus(t.status),
       ]),
     ]
 
@@ -406,23 +414,23 @@ export default function ReportsPage() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    toast.success('CSV Report exported successfully.')
+    toast.success('Laporan CSV berhasil diekspor.')
   }
 
   return (
     <div className="stack stack-lg">
       <PageHeader
-        title="Reports & Analytics"
-        subtitle="Operational recaps per day, per month, farmer rankings, and OpenAPI Documentation."
+        title="Laporan & Analitik"
+        subtitle="Rekap operasional harian, bulanan, peringkat petani, dan dokumentasi API."
         actions={
           <div className="flex items-center gap-2">
             <select
-              aria-label="Filter reports by commodity"
+              aria-label="Filter laporan berdasarkan komoditas"
               className="form-input text-xs py-1.5"
               value={commodityFilter}
               onChange={(e) => setCommodityFilter(e.target.value)}
             >
-              <option value="">All Commodities</option>
+              <option value="">Semua Komoditas</option>
               {commodities.map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.code} — {c.name}
@@ -435,7 +443,7 @@ export default function ReportsPage() {
               icon="reports"
               onClick={() => window.open('/docs', '_blank')}
             >
-              OpenAPI Docs
+              Dokumentasi API
             </Button>
             <Button
               variant="primary"
@@ -443,19 +451,19 @@ export default function ReportsPage() {
               icon="download"
               onClick={handleExportCsv}
             >
-              Export CSV
+              Ekspor CSV
             </Button>
           </div>
         }
       />
 
       {/* ── Main Navigation Tabs ── */}
-      <div className="tabs border-b border-border" role="tablist" aria-label="Report Views">
+      <div className="tabs border-b border-border" role="tablist" aria-label="Tampilan Laporan">
         {[
-          { id: 'overview', label: 'Overview & Ledger', icon: 'clipboard' as IconName },
-          { id: 'daily', label: 'Daily Recap', icon: 'calendar' as IconName },
-          { id: 'monthly', label: 'Monthly Recap', icon: 'reports' as IconName },
-          { id: 'rankings', label: 'Farmer Leaderboard', icon: 'users' as IconName },
+          { id: 'overview', label: 'Ringkasan & Buku Transaksi', icon: 'clipboard' as IconName },
+          { id: 'daily', label: 'Rekap Harian', icon: 'calendar' as IconName },
+          { id: 'monthly', label: 'Rekap Bulanan', icon: 'reports' as IconName },
+          { id: 'rankings', label: 'Peringkat Petani', icon: 'users' as IconName },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -488,7 +496,7 @@ export default function ReportsPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-md">
-            <Card title="Weekly weighing" subtitle="Approved kilograms per day">
+            <Card title="Penimbangan mingguan" subtitle="Kilogram disetujui per hari">
               <div className="stack-md">
                 <div className="row gap-sm" style={{ alignItems: 'flex-end', height: 180 }}>
                   {weekly.map((item) => (
@@ -509,44 +517,44 @@ export default function ReportsPage() {
                   ))}
                 </div>
                 <p className="t-caption text-text-secondary">
-                  Total {weekly.reduce((sum, item) => sum + item.kg, 0).toLocaleString('en-US')} kg in the last 7 days.
+                  Total {weekly.reduce((sum, item) => sum + item.kg, 0).toLocaleString('id-ID')} kg dalam 7 hari terakhir.
                 </p>
               </div>
             </Card>
 
-            <Card title="Grade distribution" subtitle="Share of approved weight per grade">
+            <Card title="Distribusi grade" subtitle="Proporsi berat hasil sortasi per grade">
               <div className="stack-md">
                 {grades.map((item) => (
                   <div key={item.grade} className="stack-xs">
                     <div className="row between gap-sm">
                       <span className="t-small font-semibold">Grade {item.grade}</span>
-                      <span className="mono t-small text-text-secondary">{item.kg.toLocaleString('en-US')} kg</span>
+                      <span className="mono t-small text-text-secondary">{item.kg.toLocaleString('id-ID')} kg</span>
                     </div>
                     <div className="progress-track">
                       <div className="progress-fill" style={{ width: `${item.share}%` }} />
                     </div>
-                    <span className="t-caption text-text-secondary">{item.share}% of total</span>
+                    <span className="t-caption text-text-secondary">{item.share}% dari total</span>
                   </div>
                 ))}
                 <div className="divider" />
                 <div className="row gap-sm flex-wrap">
-                  <Badge tone="accent" icon="leaf">Potatoes only</Badge>
-                  <Badge tone="neutral">{range === 'all' ? 'All time' : `Last ${range}`}</Badge>
+                  <Badge tone="accent" icon="leaf">Khusus Kentang</Badge>
+                  <Badge tone="neutral">{range === 'all' ? 'Semua waktu' : range === '7d' ? '7 hari terakhir' : '30 hari terakhir'}</Badge>
                 </div>
               </div>
             </Card>
           </div>
 
           <Card
-            title="Transaction Ledger"
-            subtitle="Recorded activity from Reception through Dispatch."
+            title={idText('Transaction Ledger')}
+            subtitle="Aktivitas tercatat dari Penerimaan hingga Pengiriman."
             action={
               <div className="flex items-center gap-3">
-                <div className="tabs" role="tablist" aria-label="Reporting range">
+                <div className="tabs" role="tablist" aria-label="Rentang laporan">
                   {[
-                    { id: '7d', label: '7 days' },
-                    { id: '30d', label: '30 days' },
-                    { id: 'all', label: 'All time' },
+                    { id: '7d', label: '7 hari' },
+                    { id: '30d', label: '30 hari' },
+                    { id: 'all', label: 'Semua' },
                   ].map((option) => (
                     <button
                       key={option.id}
@@ -560,7 +568,7 @@ export default function ReportsPage() {
                     </button>
                   ))}
                 </div>
-                <Badge tone="neutral">{transactions.length} records</Badge>
+                <Badge tone="neutral">{transactions.length} data</Badge>
               </div>
             }
             padding="none"
@@ -570,9 +578,9 @@ export default function ReportsPage() {
               data={transactions}
               rowKey={(row) => row.id}
               pageSize={10}
-              emptyTitle="No transactions recorded."
-              emptyDescription="Transactions appear after Station 01 records the first intake."
-              caption="Transaction data is sourced from operational records; no sample rows are shown."
+              emptyTitle={idText('No transactions recorded.')}
+              emptyDescription="Transaksi muncul setelah Stasiun 01 mencatat penerimaan pertama."
+              caption="Data transaksi bersumber langsung dari catatan operasional."
             />
           </Card>
         </>
@@ -584,7 +592,7 @@ export default function ReportsPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border bg-card">
             <div className="flex items-center gap-3">
               <label htmlFor="daily-date-input" className="text-sm font-semibold text-text">
-                Select Date:
+                Pilih Tanggal:
               </label>
               <input
                 id="daily-date-input"
@@ -600,7 +608,7 @@ export default function ReportsPage() {
                 onClick={() => loadDailyRecap(selectedDate)}
                 loading={dailyLoading}
               >
-                Refresh
+                Muat Ulang
               </Button>
             </div>
             <div className="flex items-center gap-2">
@@ -611,41 +619,41 @@ export default function ReportsPage() {
                 loading={dailyDownloading}
                 onClick={handleDownloadDailyCsv}
               >
-                Download Daily CSV
+                Unduh CSV Harian
               </Button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
-              label="Warings Received"
+              label="Waring Diterima"
               value={dailyData ? String(dailyData.totalWarings) : '0'}
-              sub={`${dailyData?.uniqueFarmers || 0} Delivering Farmers`}
+              sub={`${dailyData?.uniqueFarmers || 0} Petani Penyetor`}
               icon={<Icon name="box" size={16} />}
             />
             <StatCard
-              label="Gross Intake (kg)"
+              label="Penerimaan Kotor (kg)"
               value={dailyData ? `${formatWeight(dailyData.grossIntakeKg)} kg` : '0.0 kg'}
-              sub={`Net: ${dailyData ? formatWeight(dailyData.netIntakeKg) : '0.0'} kg`}
+              sub={`Bersih: ${dailyData ? formatWeight(dailyData.netIntakeKg) : '0.0'} kg`}
               icon={<Icon name="scale" size={16} />}
             />
             <StatCard
-              label="Sorting Yield"
-              value={dailyData ? `${dailyData.sortingBatches} Batches` : '0 Batches'}
+              label="Hasil Sortasi"
+              value={dailyData ? `${dailyData.sortingBatches} Batch` : '0 Batch'}
               sub={`A: ${dailyData?.gradeAKg?.toFixed(1) || 0}kg · B: ${dailyData?.gradeBKg?.toFixed(1) || 0}kg`}
               icon={<Icon name="sortir" size={16} />}
             />
             <StatCard
-              label="Retail Pouches"
-              value={dailyData ? `${dailyData.packagedUnits} Units` : '0 Units'}
-              sub={`Weight: ${dailyData?.packagedWeightKg?.toFixed(1) || 0} kg`}
+              label="Kemasan Ritel"
+              value={dailyData ? `${dailyData.packagedUnits} Unit` : '0 Unit'}
+              sub={`Berat: ${dailyData?.packagedWeightKg?.toFixed(1) || 0} kg`}
               icon={<Icon name="package" size={16} />}
             />
           </div>
 
           <Card
-            title={`Delivering Farmers on ${selectedDate}`}
-            subtitle="Individual grower intake records and tare deductions"
+            title={`Petani Penyetor pada ${selectedDate}`}
+            subtitle="Catatan penerimaan per petani beserta potongan tara"
             padding="none"
           >
             {dailyData?.farmerBreakdown && dailyData.farmerBreakdown.length > 0 ? (
@@ -653,13 +661,13 @@ export default function ReportsPage() {
                 <table className="table w-full">
                   <thead>
                     <tr>
-                      <th className="text-left">Farmer Code</th>
-                      <th className="text-left">Farmer Name</th>
-                      <th className="text-left">Village</th>
-                      <th className="text-right">Warings</th>
-                      <th className="text-right">Gross (kg)</th>
-                      <th className="text-right">Tare (kg)</th>
-                      <th className="text-right">Net Weight (kg)</th>
+                      <th className="text-left">Kode Petani</th>
+                      <th className="text-left">Nama Petani</th>
+                      <th className="text-left">Desa</th>
+                      <th className="text-right">Waring</th>
+                      <th className="text-right">Kotor (kg)</th>
+                      <th className="text-right">Tara (kg)</th>
+                      <th className="text-right">Berat Bersih (kg)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -680,8 +688,8 @@ export default function ReportsPage() {
             ) : (
               <div className="py-12 text-center text-muted-foreground">
                 <Icon name="calendar" size={28} className="mx-auto mb-2 text-muted-foreground" />
-                <p className="font-medium text-sm">No intake transactions recorded on {selectedDate}.</p>
-                <p className="text-xs text-muted-foreground mt-1">Select another date or perform reception weighing.</p>
+                <p className="font-medium text-sm">Belum ada transaksi penerimaan pada {selectedDate}.</p>
+                <p className="text-xs text-muted-foreground mt-1">Pilih tanggal lain atau lakukan penimbangan penerimaan.</p>
               </div>
             )}
           </Card>
@@ -694,7 +702,7 @@ export default function ReportsPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border bg-card">
             <div className="flex items-center gap-3">
               <label htmlFor="monthly-month-input" className="text-sm font-semibold text-text">
-                Select Month:
+                Pilih Bulan:
               </label>
               <input
                 id="monthly-month-input"
@@ -710,7 +718,7 @@ export default function ReportsPage() {
                 onClick={() => loadMonthlyRecap(selectedMonth)}
                 loading={monthlyLoading}
               >
-                Refresh
+                Muat Ulang
               </Button>
             </div>
             <div className="flex items-center gap-2">
@@ -721,34 +729,34 @@ export default function ReportsPage() {
                 loading={monthlyDownloading}
                 onClick={handleDownloadMonthlyCsv}
               >
-                Download Monthly CSV
+                Unduh CSV Bulanan
               </Button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
-              label="Month Sacks Received"
+              label="Waring Bulan Ini"
               value={monthlyData ? String(monthlyData.totalWarings) : '0'}
-              sub={`${monthlyData?.activeFarmers || 0} Active Growers`}
+              sub={`${monthlyData?.activeFarmers || 0} Petani Aktif`}
               icon={<Icon name="box" size={16} />}
             />
             <StatCard
-              label="Total Net Weighed"
+              label="Total Berat Bersih"
               value={monthlyData ? `${formatWeight(monthlyData.netIntakeKg)} kg` : '0.0 kg'}
-              sub={`Gross: ${monthlyData ? formatWeight(monthlyData.grossIntakeKg) : '0.0'} kg`}
+              sub={`Kotor: ${monthlyData ? formatWeight(monthlyData.grossIntakeKg) : '0.0'} kg`}
               icon={<Icon name="scale" size={16} />}
             />
             <StatCard
-              label="Sorting Yield"
-              value={monthlyData ? `${monthlyData.sortingBatches} Batches` : '0 Batches'}
+              label="Hasil Sortasi"
+              value={monthlyData ? `${monthlyData.sortingBatches} Batch` : '0 Batch'}
               sub={`A: ${monthlyData?.gradeAKg?.toFixed(1) || 0}kg · B: ${monthlyData?.gradeBKg?.toFixed(1) || 0}kg`}
               icon={<Icon name="sortir" size={16} />}
             />
             <StatCard
-              label="Packaged Pouches"
-              value={monthlyData ? `${monthlyData.packagedUnits} Units` : '0 Units'}
-              sub={`${monthlyData?.packagedWeightKg?.toFixed(1) || 0} kg shipped/stored`}
+              label="Kemasan Terproduksi"
+              value={monthlyData ? `${monthlyData.packagedUnits} Unit` : '0 Unit'}
+              sub={`${monthlyData?.packagedWeightKg?.toFixed(1) || 0} kg dikirim/tersimpan`}
               icon={<Icon name="package" size={16} />}
             />
           </div>
@@ -756,8 +764,8 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <Card
-                title={`Daily Breakdown in ${selectedMonth}`}
-                subtitle="Day-by-day aggregate intake and delivery volumes"
+                title={`Rincian Harian pada ${selectedMonth}`}
+                subtitle="Volume penerimaan dan pengiriman harian"
                 padding="none"
               >
                 {monthlyData?.dailyBreakdown && monthlyData.dailyBreakdown.length > 0 ? (
@@ -765,11 +773,11 @@ export default function ReportsPage() {
                     <table className="table w-full">
                       <thead>
                         <tr>
-                          <th className="text-left">Date</th>
-                          <th className="text-right">Warings</th>
-                          <th className="text-right">Gross (kg)</th>
-                          <th className="text-right">Net (kg)</th>
-                          <th className="text-right">Farmers</th>
+                          <th className="text-left">Tanggal</th>
+                          <th className="text-right">Waring</th>
+                          <th className="text-right">Kotor (kg)</th>
+                          <th className="text-right">Bersih (kg)</th>
+                          <th className="text-right">Petani</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -788,7 +796,7 @@ export default function ReportsPage() {
                 ) : (
                   <div className="py-12 text-center text-muted-foreground">
                     <Icon name="bar-chart" size={28} className="mx-auto mb-2 text-muted-foreground" />
-                    <p className="font-medium text-sm">No activity recorded for {selectedMonth}.</p>
+                    <p className="font-medium text-sm">Belum ada aktivitas pada {selectedMonth}.</p>
                   </div>
                 )}
               </Card>
@@ -796,8 +804,8 @@ export default function ReportsPage() {
 
             <div>
               <Card
-                title="Top 5 Farmers This Month"
-                subtitle="Leading contributors by intake weight"
+                title="5 Petani Teratas Bulan Ini"
+                subtitle="Kontributor utama berdasarkan berat penerimaan"
               >
                 {monthlyData?.topFarmers && monthlyData.topFarmers.length > 0 ? (
                   <div className="divide-y divide-border">
@@ -814,13 +822,13 @@ export default function ReportsPage() {
                         </div>
                         <div className="text-right">
                           <p className="font-mono text-xs font-bold text-success">{formatWeight(f.grossWeightKg)} kg</p>
-                          <p className="text-[10px] text-muted-foreground">{f.warings} Warings</p>
+                          <p className="text-[10px] text-muted-foreground">{f.warings} Waring</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="py-6 text-center text-xs text-muted-foreground">No monthly farmer rankings.</p>
+                  <p className="py-6 text-center text-xs text-muted-foreground">Belum ada peringkat petani bulan ini.</p>
                 )}
               </Card>
             </div>
@@ -833,12 +841,12 @@ export default function ReportsPage() {
         <div className="stack stack-lg">
           <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border bg-card">
             <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-text">Leaderboard Period:</span>
+              <span className="text-sm font-semibold text-text">Periode Peringkat:</span>
               <div className="tabs" role="tablist">
                 {[
-                  { id: 'all', label: 'All Time' },
-                  { id: 'month', label: 'This Month' },
-                  { id: 'today', label: 'Today' },
+                  { id: 'all', label: 'Semua Waktu' },
+                  { id: 'month', label: 'Bulan Ini' },
+                  { id: 'today', label: 'Hari Ini' },
                 ].map((p) => (
                   <button
                     key={p.id}
@@ -859,32 +867,32 @@ export default function ReportsPage() {
                 loading={rankingsDownloading}
                 onClick={handleDownloadRankingsCsv}
               >
-                Download Leaderboard CSV
+                Unduh CSV Peringkat
               </Button>
             </div>
           </div>
 
           <Card
-            title="Farmer Leaderboard"
-            subtitle="Ranked by total gross kilograms delivered with contribution share"
+            title="Peringkat Petani"
+            subtitle="Diurutkan berdasarkan total kilogram kotor beserta porsi kontribusi"
             padding="none"
           >
             {rankingsLoading ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">Loading farmer rankings…</div>
+              <div className="py-12 text-center text-sm text-muted-foreground">Memuat peringkat petani…</div>
             ) : rankings.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="table w-full">
                   <thead>
                     <tr>
-                      <th className="text-center w-14">Rank</th>
-                      <th className="text-left">Farmer Code</th>
-                      <th className="text-left">Farmer Name</th>
-                      <th className="text-left">Village</th>
-                      <th className="text-left">District</th>
-                      <th className="text-right">Total Warings</th>
-                      <th className="text-right">Gross Intake (kg)</th>
-                      <th className="text-right">Net Intake (kg)</th>
-                      <th className="text-right">Share (%)</th>
+                      <th className="text-center w-14">Peringkat</th>
+                      <th className="text-left">Kode Petani</th>
+                      <th className="text-left">Nama Petani</th>
+                      <th className="text-left">Desa</th>
+                      <th className="text-left">Kecamatan</th>
+                      <th className="text-right">Total Waring</th>
+                      <th className="text-right">Kotor (kg)</th>
+                      <th className="text-right">Bersih (kg)</th>
+                      <th className="text-right">Porsi (%)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -921,7 +929,7 @@ export default function ReportsPage() {
             ) : (
               <div className="py-12 text-center text-muted-foreground">
                 <Icon name="users" size={28} className="mx-auto mb-2 text-muted-foreground" />
-                <p className="font-medium text-sm">No farmer intake data found for this period.</p>
+                <p className="font-medium text-sm">Tidak ada data penerimaan petani pada periode ini.</p>
               </div>
             )}
           </Card>

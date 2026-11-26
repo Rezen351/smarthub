@@ -32,7 +32,7 @@ function ProtectedRoute({
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-background">
         <Icon name="leaf" size={28} className="text-accent" />
-        <p className="t-small text-text-secondary">Loading workspace…</p>
+        <p className="t-small text-text-secondary">Memuat ruang kerja…</p>
       </div>
     )
   }

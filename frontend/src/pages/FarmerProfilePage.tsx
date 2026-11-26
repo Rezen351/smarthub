@@ -9,11 +9,12 @@ import { Field, Input } from '../components/shared/Form'
 import PageHeader from '../components/shared/PageHeader'
 import { useToast } from '../components/feedback/Toast'
 import { IdCard, exportIdCardToPng, printIdCard, type IdCardData } from '../components/shared/IdCard'
+import { translateStatus } from '../lib/i18n'
 
 const ROLE_LABEL: Record<string, string> = {
-  ADMIN: 'System Administrator',
-  OPERATOR: 'Plant Operator',
-  FARMER: 'Registered Farmer',
+  ADMIN: 'Administrator Sistem',
+  OPERATOR: 'Operator Rumah Kemas',
+  FARMER: 'Petani Terdaftar',
 }
 
 export default function FarmerProfilePage() {
@@ -49,7 +50,7 @@ export default function FarmerProfilePage() {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) {
-      toast.error('Full name is required.')
+      toast.error('Nama lengkap wajib diisi.')
       return
     }
 
@@ -62,9 +63,9 @@ export default function FarmerProfilePage() {
         village: location.trim() || undefined,
       })
       await refreshUser()
-      toast.success('Profile details updated successfully.')
+      toast.success('Detail profil berhasil diperbarui.')
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to update profile.')
+      toast.error(err?.message || 'Gagal memperbarui profil.')
     } finally {
       setSavingProfile(false)
     }
@@ -74,19 +75,19 @@ export default function FarmerProfilePage() {
     e.preventDefault()
 
     if (!currentPassword) {
-      toast.error('Current password is required.')
+      toast.error('Kata sandi saat ini wajib diisi.')
       return
     }
     if (!newPassword) {
-      toast.error('New password is required.')
+      toast.error('Kata sandi baru wajib diisi.')
       return
     }
     if (newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters.')
+      toast.error('Kata sandi baru minimal 6 karakter.')
       return
     }
     if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match.')
+      toast.error('Konfirmasi kata sandi baru tidak cocok.')
       return
     }
 
@@ -99,9 +100,9 @@ export default function FarmerProfilePage() {
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
-      toast.success('Password changed successfully.')
+      toast.success('Kata sandi berhasil diubah.')
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to change password. Please check your current password.')
+      toast.error(err?.message || 'Gagal mengubah kata sandi. Periksa kata sandi saat ini.')
     } finally {
       setSavingPassword(false)
     }
@@ -111,10 +112,10 @@ export default function FarmerProfilePage() {
 
   const userCardData: IdCardData = {
     id: user?.id,
-    name: name || user?.name || 'User Name',
+    name: name || user?.name || 'Nama Pengguna',
     role: user?.role || 'OPERATOR',
     code: user?.farmerId || user?.farmerProfile?.code || user?.cardCode || (user?.role === 'ADMIN' ? 'ADM-001' : user?.role === 'OPERATOR' ? 'OPR-001' : 'USER-01'),
-    domicile: location || address || user?.address || (user?.role === 'FARMER' ? 'Garut, Jawa Barat' : 'SmartGeulis Facility'),
+    domicile: location || address || user?.address || (user?.role === 'FARMER' ? 'Garut, Jawa Barat' : 'Fasilitas SmartGeulis'),
     email: user?.email,
     phone: phone,
   }
@@ -122,8 +123,8 @@ export default function FarmerProfilePage() {
   return (
     <div className="stack stack-lg" style={{ maxWidth: 760 }}>
       <PageHeader
-        title="Profile & Security"
-        subtitle="Manage your personal details, farm records, and account credentials."
+        title="Profil & Keamanan"
+        subtitle="Kelola data pribadi, catatan kebun, dan kredensial akun Anda."
       />
 
       {/* Account Overview Header Card */}
@@ -131,11 +132,11 @@ export default function FarmerProfilePage() {
         <div className="row gap-md flex-wrap items-center">
           <span className="avatar avatar-lg">{name.charAt(0)?.toUpperCase() || 'U'}</span>
           <div className="stack-xs min-w-0 flex-1">
-            <p className="t-h3">{name || 'User Profile'}</p>
+            <p className="t-h3">{name || 'Profil Pengguna'}</p>
             <p className="t-small text-text-secondary">{user?.email}</p>
             <div className="row gap-xs items-center flex-wrap pt-1">
               <Badge tone="accent" icon="leaf">
-                {user ? ROLE_LABEL[user.role] ?? user.role : 'User'}
+                {user ? ROLE_LABEL[user.role] ?? translateStatus(user.role) : 'Pengguna'}
               </Badge>
               {user?.farmerId && (
                 <Badge tone="neutral">
@@ -149,8 +150,8 @@ export default function FarmerProfilePage() {
 
       {/* Official ID Card Card */}
       <Card
-        title="ID Card"
-        subtitle="Digital ID card for station check-in and transaction verification."
+        title="Kartu Identitas"
+        subtitle="Kartu identitas digital untuk check-in stasiun dan verifikasi transaksi."
         action={
           <div className="row gap-xs">
             <Button
@@ -159,7 +160,7 @@ export default function FarmerProfilePage() {
               icon="print"
               onClick={() => printIdCard(userCardData)}
             >
-              Print Card
+              Cetak Kartu
             </Button>
             <Button
               size="sm"
@@ -175,7 +176,7 @@ export default function FarmerProfilePage() {
                 }
               }}
             >
-              {exportingCard ? 'Exporting...' : 'Export PNG'}
+              {exportingCard ? 'Mengekspor...' : 'Ekspor PNG'}
             </Button>
           </div>
         }
@@ -187,25 +188,25 @@ export default function FarmerProfilePage() {
           <div className="stack-sm text-xs text-text-secondary flex-1">
             <div className="bg-bg-alt p-3 rounded border border-border space-y-1">
               <div className="flex justify-between">
-                <span className="font-medium text-text">Name:</span>
+                <span className="font-medium text-text">Nama:</span>
                 <span className="font-semibold text-text">{userCardData.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium text-text">ID Code:</span>
+                <span className="font-medium text-text">Kode ID:</span>
                 <span className="font-mono font-bold text-accent">{userCardData.code}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium text-text">Role:</span>
-                <span className="font-semibold text-text capitalize">{userCardData.role?.toLowerCase()}</span>
+                <span className="font-medium text-text">Peran:</span>
+                <span className="font-semibold text-text">{ROLE_LABEL[userCardData.role] ?? translateStatus(userCardData.role)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium text-text">Domicile:</span>
+                <span className="font-medium text-text">Domisili:</span>
                 <span>{userCardData.domicile}</span>
               </div>
             </div>
             <div className="pt-1 flex flex-wrap gap-2">
               <Button size="sm" variant="primary" icon="print" onClick={() => printIdCard(userCardData)}>
-                Print Card
+                Cetak Kartu
               </Button>
               <Button
                 size="sm"
@@ -221,7 +222,7 @@ export default function FarmerProfilePage() {
                   }
                 }}
               >
-                {exportingCard ? 'Exporting...' : 'Export PNG'}
+                {exportingCard ? 'Mengekspor...' : 'Ekspor PNG'}
               </Button>
             </div>
           </div>
@@ -229,19 +230,19 @@ export default function FarmerProfilePage() {
       </Card>
 
       {/* Account Information Form */}
-      <Card title="Account Information" subtitle="Used across system records, labels, and receipts.">
+      <Card title="Informasi Akun" subtitle="Digunakan pada catatan sistem, label, dan struk.">
         <form className="stack-md" onSubmit={handleUpdateProfile}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
-            <Field label="Full name" htmlFor="profile-name" required>
+            <Field label="Nama Lengkap" htmlFor="profile-name" required>
               <Input
                 id="profile-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your full name"
+                placeholder="Masukkan nama lengkap Anda"
                 required
               />
             </Field>
-            <Field label="Email Address" htmlFor="profile-email" hint="Contact system administrator to change email.">
+            <Field label="Alamat Email" htmlFor="profile-email" hint="Hubungi administrator sistem untuk mengubah email.">
               <Input
                 id="profile-email"
                 type="email"
@@ -250,7 +251,7 @@ export default function FarmerProfilePage() {
                 className="bg-muted cursor-not-allowed opacity-80"
               />
             </Field>
-            <Field label="Phone Number" htmlFor="profile-phone" hint="e.g. 08123456789">
+            <Field label="Nomor Telepon" htmlFor="profile-phone" hint="Contoh: 08123456789">
               <Input
                 id="profile-phone"
                 type="tel"
@@ -261,37 +262,37 @@ export default function FarmerProfilePage() {
               />
             </Field>
             {isFarmer ? (
-              <Field label="Farm Location / Village" htmlFor="profile-location" hint="Dieng, Kejajar, etc.">
+              <Field label="Lokasi Kebun / Desa" htmlFor="profile-location" hint="Cikajang, Cisurupan, dll.">
                 <Input
                   id="profile-location"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Village or farm area"
+                  placeholder="Desa atau area kebun"
                 />
               </Field>
             ) : (
-              <Field label="Department / Role" htmlFor="profile-role">
+              <Field label="Departemen / Peran" htmlFor="profile-role">
                 <Input
                   id="profile-role"
-                  value={user ? ROLE_LABEL[user.role] ?? user.role : ''}
+                  value={user ? ROLE_LABEL[user.role] ?? translateStatus(user.role) : ''}
                   disabled
                   className="bg-muted cursor-not-allowed opacity-80"
                 />
               </Field>
             )}
-            <Field label="Address / Domicile" htmlFor="profile-address" className="sm:col-span-2">
+            <Field label="Alamat / Domisili" htmlFor="profile-address" className="sm:col-span-2">
               <Input
                 id="profile-address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="Full address"
+                placeholder="Alamat lengkap"
               />
             </Field>
           </div>
 
           <div className="row gap-sm pt-2">
             <Button type="submit" variant="primary" icon="check" disabled={savingProfile}>
-              {savingProfile ? 'Saving...' : 'Save Profile Details'}
+              {savingProfile ? 'Menyimpan...' : 'Simpan Detail Profil'}
             </Button>
           </div>
         </form>
@@ -299,13 +300,13 @@ export default function FarmerProfilePage() {
 
       {/* Security & Password Change Card */}
       <Card
-        title="Security & Password"
-        subtitle="Change your login credentials to protect your account."
+        title="Keamanan & Kata Sandi"
+        subtitle="Ubah kredensial masuk untuk melindungi akun Anda."
       >
         <form className="stack-md" onSubmit={handleChangePassword}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
             <Field
-              label="Current Password"
+              label="Kata Sandi Saat Ini"
               htmlFor="profile-current-password"
               className="sm:col-span-2"
               required
@@ -316,14 +317,14 @@ export default function FarmerProfilePage() {
                 autoComplete="current-password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
+                placeholder="Masukkan kata sandi saat ini"
                 required
               />
             </Field>
             <Field
-              label="New Password"
+              label="Kata Sandi Baru"
               htmlFor="profile-new-password"
-              hint="Minimum 6 characters"
+              hint="Minimal 6 karakter"
               required
             >
               <Input
@@ -332,12 +333,12 @@ export default function FarmerProfilePage() {
                 autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
+                placeholder="Masukkan kata sandi baru"
                 required
               />
             </Field>
             <Field
-              label="Confirm New Password"
+              label="Konfirmasi Kata Sandi Baru"
               htmlFor="profile-confirm-password"
               required
             >
@@ -347,7 +348,7 @@ export default function FarmerProfilePage() {
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter new password"
+                placeholder="Masukkan ulang kata sandi baru"
                 required
               />
             </Field>
@@ -360,7 +361,7 @@ export default function FarmerProfilePage() {
               icon="lock"
               disabled={savingPassword}
             >
-              {savingPassword ? 'Updating...' : 'Update Password'}
+              {savingPassword ? 'Memperbarui...' : 'Perbarui Kata Sandi'}
             </Button>
           </div>
         </form>
@@ -370,7 +371,7 @@ export default function FarmerProfilePage() {
       {isFarmer && (
         <div className="alert alert-info">
           <Icon name="qr" size={16} />
-          <span>Present your &quot;My QR&quot; page at the weighing station so potato batches are registered directly under your identity.</span>
+          <span>Tunjukkan halaman &quot;QR Saya&quot; di stasiun penerimaan agar batch kentang langsung tercatat atas identitas Anda.</span>
         </div>
       )}
     </div>

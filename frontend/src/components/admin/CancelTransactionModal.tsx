@@ -94,7 +94,7 @@ export default function CancelTransactionModal({
                 Batalkan & Hapus Transaksi
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground font-mono">
-                {waringCode || inspectionData?.waringCode || 'Waring Intake'}
+                {waringCode || inspectionData?.waringCode || 'Waring Penerimaan'}
               </DialogDescription>
             </div>
           </div>
@@ -126,7 +126,7 @@ export default function CancelTransactionModal({
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status Alur:</span>
                   <span className="font-bold text-primary">
-                    {inspectionData?.status === 'SORTED' ? 'SUDAH DIPILAH' : 'BELUM DIPILAH (PENERIMAAN)'}
+                    {inspectionData?.status === 'SORTED' ? 'SUDAH DISORTASI' : 'BELUM DISORTASI (PENERIMAAN)'}
                   </span>
                 </div>
               </div>
@@ -143,7 +143,7 @@ export default function CancelTransactionModal({
                   {inspectionData?.hasSortingBatch && (
                     <>
                       <li>
-                        Data pemilahan terkait ({((inspectionData.gradeAKg || 0) + (inspectionData.gradeBKg || 0) + (inspectionData.gradeCKg || 0)).toFixed(1)} kg) akan dihapus.
+                        Data sortasi terkait ({((inspectionData.gradeAKg || 0) + (inspectionData.gradeBKg || 0) + (inspectionData.gradeCKg || 0)).toFixed(1)} kg) akan dihapus.
                       </li>
                       {inspectionData?.linkedPalletCodes?.length > 0 && (
                         <li>

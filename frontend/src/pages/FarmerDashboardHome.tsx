@@ -26,13 +26,13 @@ interface FarmerSummary {
 const BAR_COLORS = ['bg-accent', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500', 'bg-rose-500']
 
 const quickActions: { label: string; path: string; icon: IconName; desc: string }[] = [
-  { label: 'My Deposits', path: '/dashboard/my-deliveries', icon: 'clipboard', desc: 'History per pallet' },
-  { label: 'My QR', path: '/dashboard/farmer-qr', icon: 'qr', desc: 'Show at the weighing station' },
-  { label: 'Track Product', path: '/traceability', icon: 'search', desc: 'Public traceability' },
-  { label: 'Profile', path: '/dashboard/profile', icon: 'user', desc: 'Farm & contact data' },
+  { label: 'Setoran Saya', path: '/dashboard/my-deliveries', icon: 'clipboard', desc: 'Riwayat per palet' },
+  { label: 'QR Saya', path: '/dashboard/farmer-qr', icon: 'qr', desc: 'Tunjukkan di stasiun penerimaan' },
+  { label: 'Lacak Produk', path: '/traceability', icon: 'search', desc: 'Ketertelusuran publik' },
+  { label: 'Profil', path: '/dashboard/profile', icon: 'user', desc: 'Data kebun & kontak' },
 ]
 
-const formatKg = (value: number) => `${value.toLocaleString('en-US')} kg`
+const formatKg = (value: number) => `${value.toLocaleString('id-ID')} kg`
 
 export default function FarmerDashboardHome() {
   const { user } = useAuth()
@@ -89,8 +89,8 @@ export default function FarmerDashboardHome() {
     <div className="flex flex-col gap-6">
       {/* Greeting */}
       <header>
-        <p className="text-sm text-muted-foreground">Welcome back,</p>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">{user?.name ?? 'Farmer'}</h1>
+        <p className="text-sm text-muted-foreground">Selamat datang kembali,</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{user?.name ?? 'Petani'}</h1>
       </header>
 
       {/* Hero: total deposits */}
@@ -98,7 +98,7 @@ export default function FarmerDashboardHome() {
         <div className="flex flex-col gap-1">
           <div className="inline-flex items-center gap-2 font-mono-custom text-[11px] text-[#f59e0b] tracking-[0.2em] uppercase font-semibold">
             <span className="w-2 h-2 rounded-none bg-[#ea580c]"></span>
-            <span>TOTAL APPROVED DEPOSITS · PACKHOUSE INTAKE</span>
+            <span>TOTAL SETORAN DISETUJUI · PENERIMAAN RUMAH KEMAS</span>
           </div>
           {loading ? (
             <Skeleton className="h-10 w-48 bg-white/15" />
@@ -107,8 +107,8 @@ export default function FarmerDashboardHome() {
           )}
           <span className="text-xs text-white/70 font-mono">
             {loading
-              ? 'Loading your deposits…'
-              : `Across ${commodities.length} ${commodities.length === 1 ? 'commodity' : 'commodities'}`}
+              ? 'Memuat data setoran…'
+              : `Dari ${commodities.length} komoditas`}
           </span>
         </div>
         <Link
@@ -116,12 +116,12 @@ export default function FarmerDashboardHome() {
           className="pulse-btn inline-flex items-center justify-center gap-2 rounded-none bg-[#ea580c] text-white font-heading tracking-wider uppercase text-xs px-5 min-h-[44px] hover:bg-[#c2410c] transition-all font-semibold"
         >
           <Icon name="qr" size={16} />
-          Show my QR
+          Tampilkan QR Saya
         </Link>
       </section>
 
       {/* Per-commodity breakdown */}
-      <Card title="Deposits by commodity" subtitle="Share of your total approved weight">
+      <Card title="Setoran per Komoditas" subtitle="Proporsi dari total berat yang disetujui">
         {loading ? (
           <div className="flex flex-col gap-4">
             <Skeleton className="h-3 w-full" />
@@ -132,8 +132,8 @@ export default function FarmerDashboardHome() {
         ) : commodities.length === 0 ? (
           <EmptyState
             icon="leaf"
-            title="No deposits yet"
-            description="Your deposits appear here after your first delivery is weighed and approved at the receiving area."
+            title="Belum ada setoran"
+            description="Setoran Anda akan muncul di sini setelah pengiriman pertama ditimbang dan disetujui di area penerimaan."
           />
         ) : (
           <div className="flex flex-col gap-5">
@@ -166,7 +166,7 @@ export default function FarmerDashboardHome() {
 
       {/* Quick actions */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-base font-semibold tracking-tight text-foreground font-heading uppercase tracking-wider">Quick actions</h2>
+        <h2 className="text-base font-semibold tracking-tight text-foreground font-heading uppercase tracking-wider">Aksi Cepat</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {quickActions.map((action) => (
             <Link
