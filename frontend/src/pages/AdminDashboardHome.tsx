@@ -60,11 +60,19 @@ export interface FarmerRankingItem {
   sharePct: number
 }
 
+function getLocalDateStr(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export default function AdminDashboardHome() {
   const { user } = useAuth()
-  const { bufferWarings, sortedBatches, finishedStock, deliveries } = usePackhouseStore()
+  const { bufferWarings, sortedBatches, finishedStock, deliveries, syncWithBackend } = usePackhouseStore()
   const [presentationMode, setPresentationMode] = useState(false)
   const [currentTime, setCurrentTime] = useState(() => new Date())
+  const [lastSyncedAt, setLastSyncedAt] = useState(() => new Date())
   const [loading, setLoading] = useState(true)
   const [dataOnline, setDataOnline] = useState(false)
   const [userCount, setUserCount] = useState(0)
@@ -87,6 +95,7 @@ export default function AdminDashboardHome() {
       api.scales.list(),
       api.reports.farmerRankings(10),
       api.reports.monthlyRecap(),
+      syncWithBackend(),
     ])
 
     if (usersResult.status === 'fulfilled' && Array.isArray(usersResult.value)) setUserCount(usersResult.value.length)
@@ -120,8 +129,9 @@ export default function AdminDashboardHome() {
       }))
     }
     setDataOnline([usersResult, farmersResult, scalesResult, rankingsResult].some((result) => result.status === 'fulfilled'))
+    setLastSyncedAt(new Date())
     setLoading(false)
-  }, [])
+  }, [syncWithBackend])
 
   const pollScales = useCallback(async () => {
     try {
@@ -163,13 +173,29 @@ export default function AdminDashboardHome() {
   useEffect(() => {
     void loadSystemData()
     void pollScales()
-    const dataTimer = window.setInterval(loadSystemData, 15000)
-    const scaleTimer = window.setInterval(pollScales, presentationMode ? 2500 : 5000)
+    const dataTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void loadSystemData()
+      }
+    }, presentationMode ? 5000 : 15000)
+    const scaleTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void pollScales()
+      }
+    }, presentationMode ? 2500 : 5000)
     const clockTimer = window.setInterval(() => setCurrentTime(new Date()), 1000)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void loadSystemData()
+        void pollScales()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
     return () => {
       window.clearInterval(dataTimer)
       window.clearInterval(scaleTimer)
       window.clearInterval(clockTimer)
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [loadSystemData, pollScales, presentationMode])
 
@@ -192,7 +218,7 @@ export default function AdminDashboardHome() {
   }
 
   const metrics = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getLocalDateStr(new Date())
     const todayWarings = bufferWarings.filter((item) => item.date === today)
     const intakeKg = todayWarings.reduce((sum, item) => sum + (Number(item.grossWeightKg) || 0), 0)
     const grossSortedKg = sortedBatches.reduce((sum, item) => sum + (Number(item.grossIntakeKg) || 0), 0)
@@ -319,7 +345,7 @@ export default function AdminDashboardHome() {
 
   // ── Deposit Intake Chart Data (Today & Past 7 Days) ──
   const depositChartData = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10)
+    const todayStr = getLocalDateStr(new Date())
     const todayWarings = bufferWarings.filter((w) => w.date === todayStr)
 
     // 1. Hourly slots for Today (spanning 04:00 to 18:00)
@@ -349,7 +375,7 @@ export default function AdminDashboardHome() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now)
       d.setDate(d.getDate() - i)
-      const dateStr = d.toISOString().slice(0, 10)
+      const dateStr = getLocalDateStr(d)
       const isToday = dateStr === todayStr
 
       const localDayWarings = bufferWarings.filter((w) => w.date === dateStr)
@@ -425,21 +451,23 @@ export default function AdminDashboardHome() {
     <>
       {presentationMode && (
         <div
-          className="fixed inset-0 z-[90] flex flex-col bg-[#0c0a09] text-white overflow-y-auto p-3 xl:p-4 gap-2.5"
+          className="fixed inset-0 z-[90] flex flex-col bg-[#0c0a09] text-white overflow-y-auto xl:overflow-hidden p-3 xl:p-4 gap-2.5"
           role="dialog"
           aria-modal="true"
           aria-label="Presentasi Operasional"
         >
           {/* Header */}
           <header className="shrink-0 h-11 flex items-center justify-between border-b border-white/10 bg-[#0c0a09]/95 px-3 backdrop-blur">
-            <div className="flex items-center gap-3">
-              <span className="text-lg font-black tracking-tight">{idText('PACKHOUSE OPERATIONS')}</span>
-              <span className="border border-[#ea580c]/50 bg-[#ea580c]/15 px-2.5 py-0.5 text-xs font-mono font-bold uppercase tracking-widest text-[#fb923c]">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-lg font-black tracking-tight truncate">{idText('PACKHOUSE OPERATIONS')}</span>
+              <span className="border border-[#ea580c]/50 bg-[#ea580c]/15 px-2.5 py-0.5 text-xs font-mono font-bold uppercase tracking-widest text-[#fb923c] shrink-0">
                 Langsung
               </span>
-              <span className="hidden sm:inline text-xs xl:text-sm text-white/60">· Sistem Ketertelusuran SmartGeulis</span>
+              <span className="hidden md:inline text-xs text-white/55 font-mono shrink-0">
+                · Sinkron {lastSyncedAt.toLocaleTimeString('id-ID')}
+              </span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 shrink-0">
               <div className="text-right">
                 <span className="font-mono text-lg xl:text-xl font-bold tabular-nums text-white">
                   {currentTime.toLocaleTimeString('id-ID')}
@@ -472,11 +500,11 @@ export default function AdminDashboardHome() {
                 <Icon name="scale" size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-bold uppercase tracking-wider text-white/70 truncate">
                     Total Penerimaan
                   </p>
-                  <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-[#ea580c]/20 text-[#fb923c]">
+                  <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-[#ea580c]/20 text-[#fb923c] shrink-0">
                     St. 01
                   </span>
                 </div>
@@ -495,19 +523,19 @@ export default function AdminDashboardHome() {
                 <Icon name="sortir" size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-bold uppercase tracking-wider text-white/70 truncate">
                     Sortasi &amp; Rendemen
                   </p>
-                  <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                  <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">
                     {gradeMetrics.yieldPct > 0 ? `${gradeMetrics.yieldPct.toFixed(1)}%` : 'St. 02'}
                   </span>
                 </div>
                 <p className="text-2xl xl:text-3xl font-black font-mono tabular-nums text-white leading-tight">
                   {formatWeight(gradeMetrics.totalGradedKg)} <span className="text-sm font-bold text-amber-400">kg</span>
                 </p>
-                <p className="text-xs text-white/60 truncate">
-                  {metrics.sortedBatches} Batch · A: {formatWeight(gradeMetrics.gradeAKg)}k · B: {formatWeight(gradeMetrics.gradeBKg)}k
+                <p className="text-[11px] text-white/65 leading-snug">
+                  {metrics.sortedBatches} Batch · A: {formatWeight(gradeMetrics.gradeAKg)} kg · B: {formatWeight(gradeMetrics.gradeBKg)} kg · C: {formatWeight(gradeMetrics.gradeCKg)} kg
                 </p>
               </div>
             </div>
@@ -518,11 +546,11 @@ export default function AdminDashboardHome() {
                 <Icon name="package" size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-bold uppercase tracking-wider text-white/70 truncate">
                     Pengemasan &amp; Keluar
                   </p>
-                  <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-[#f97316]/20 text-[#fb923c]">
+                  <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-[#f97316]/20 text-[#fb923c] shrink-0">
                     St. 03
                   </span>
                 </div>
@@ -541,19 +569,19 @@ export default function AdminDashboardHome() {
                 <Icon name="box" size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold uppercase tracking-wider text-white/70 truncate">
-                    Kapasitas Gudang
+                <p className="text-xs font-bold uppercase tracking-wider text-white/70 truncate">
+                  Kapasitas Gudang
+                </p>
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="text-2xl xl:text-3xl font-black font-mono tabular-nums text-white leading-tight">
+                    {formatWeight(totalWarehouseKg)} <span className="text-sm font-bold text-amber-400">kg</span>
                   </p>
-                  <span className="text-[10px] font-mono font-bold text-amber-400">
-                    {warehousePct.toFixed(1)}% Terpakai
+                  <span className="text-lg xl:text-xl font-black font-mono tabular-nums text-amber-400 shrink-0">
+                    {warehousePct.toFixed(1)}%
                   </span>
                 </div>
-                <p className="text-2xl xl:text-3xl font-black font-mono tabular-nums text-white leading-tight">
-                  {formatWeight(totalWarehouseKg)} <span className="text-sm font-bold text-amber-400">kg</span>
-                </p>
                 {/* Progress bar */}
-                <div className="mt-1 h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                <div className="mt-1.5 h-2 w-full bg-white/10 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-[#ea580c] to-[#f59e0b] transition-all duration-500 rounded-full"
                     style={{ width: `${Math.max(4, Math.min(100, warehousePct))}%` }}
@@ -563,15 +591,33 @@ export default function AdminDashboardHome() {
             </div>
           </div>
 
-          <section className="border border-white/10 bg-white/[0.04] p-3">
-            <div className="flex items-center justify-between gap-3 mb-2"><h2 className="text-sm font-bold uppercase tracking-wider">Penerimaan per Komoditas</h2><span className="text-xs text-white/60">Seluruh penerimaan tercatat · berat kotor</span></div>
-            {commodityIntake.length === 0 ? <p className="text-sm text-white/60">Belum ada data penerimaan.</p> : <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
-              {commodityIntake.map(([key, commodity]) => <div key={key} className="border border-white/10 px-3 py-2 flex items-center justify-between gap-3"><div className="min-w-0"><p className="text-sm font-semibold truncate" title={commodity.name}>{commodity.name}</p><p className="text-xs text-white/60">{commodity.count} Waring</p></div><span className="shrink-0 font-mono font-bold text-orange-400">{formatWeight(commodity.kg)} kg</span></div>)}
-            </div>}
-          </section>
+          {/* Compact Commodity Intake Strip */}
+          {commodityIntake.length > 0 && (
+            <section className="shrink-0 border border-white/10 bg-white/[0.04] px-3 py-1.5 flex items-center gap-3 overflow-x-auto">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-white/60 shrink-0">
+                Per Komoditas
+              </span>
+              <div className="flex items-center gap-2 min-w-0">
+                {commodityIntake.map(([key, commodity]) => (
+                  <div
+                    key={key}
+                    className="shrink-0 border border-white/10 bg-white/[0.03] px-2.5 py-1 flex items-center gap-2 text-xs"
+                  >
+                    <span className="font-semibold text-white truncate max-w-[160px]" title={commodity.name}>
+                      {commodity.name}
+                    </span>
+                    <span className="text-white/50 font-mono">{commodity.count}w</span>
+                    <span className="font-mono font-bold text-orange-400 tabular-nums">
+                      {formatWeight(commodity.kg)} kg
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Row 2: Central Analytics & Quality Grid (Daily, Weekly, Grade Quality) */}
-          <div className="grid grid-cols-12 gap-2.5 xl:gap-3">
+          <div className="flex-1 min-h-[240px] grid grid-cols-12 gap-2.5 xl:gap-3">
             <DailyDepositChart
               data={depositChartData.todayHourly}
               totalKg={depositChartData.todayTotalKg}
@@ -598,9 +644,9 @@ export default function AdminDashboardHome() {
           </div>
 
           {/* Row 3: Operational Tri-Panel (Left: Farmer Leaderboard, Center: Activity Log, Right: Scale Telemetry) */}
-          <div className="shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-3">
-            {/* Left: Farmer Leaderboard (col-span-4) */}
-            <div className="min-h-[185px] border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between">
+          <div className="shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-2.5 xl:gap-3">
+            {/* Left: Farmer Leaderboard */}
+            <div className="min-h-[175px] border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-1.5 shrink-0">
                 <div className="flex items-center gap-1.5">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white">
@@ -616,9 +662,11 @@ export default function AdminDashboardHome() {
               </div>
 
               <div className="flex-1 min-h-0 divide-y divide-white/10 overflow-hidden flex flex-col justify-around">
-                {liveRankings.slice(0, 3).map((f) => (
+                {liveRankings.length === 0 ? (
+                  <p className="text-xs text-white/50 text-center py-6">Belum ada data peringkat petani.</p>
+                ) : liveRankings.slice(0, 3).map((f) => (
                   <div key={`${f.code}-${f.rank}`} className="py-1">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <span
                           className={`flex size-6 shrink-0 items-center justify-center text-xs font-black ${
@@ -654,8 +702,8 @@ export default function AdminDashboardHome() {
               </div>
             </div>
 
-            {/* Center: Activity Log (col-span-4) */}
-            <div className="min-h-[185px] border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between">
+            {/* Center: Activity Log */}
+            <div className="min-h-[175px] border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-1.5 shrink-0">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-white">
                   Log Aktivitas
@@ -663,7 +711,9 @@ export default function AdminDashboardHome() {
                 <span className="font-mono text-xs text-white/60">{activities.length} aktivitas</span>
               </div>
               <div className="flex-1 min-h-0 divide-y divide-white/10 overflow-hidden flex flex-col justify-around">
-                {activities.slice(0, 3).map((activity) => (
+                {activities.length === 0 ? (
+                  <p className="text-xs text-white/50 text-center py-6">Belum ada aktivitas operasional.</p>
+                ) : activities.slice(0, 3).map((activity) => (
                   <div key={activity.id} className="flex min-w-0 items-center gap-2.5 py-1">
                     <span className="flex size-6 shrink-0 items-center justify-center bg-[#ea580c]/15 text-[#f97316]">
                       <Icon name={activity.icon} size={13} />
@@ -679,8 +729,8 @@ export default function AdminDashboardHome() {
               </div>
             </div>
 
-            {/* Right: Scale Telemetry (col-span-4) */}
-            <div className="min-h-[185px] border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between">
+            {/* Right: Scale Telemetry */}
+            <div className="min-h-[175px] border border-white/10 bg-white/[0.04] p-3 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-1.5 shrink-0">
                 <div className="flex items-center gap-1.5">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white">
@@ -698,7 +748,7 @@ export default function AdminDashboardHome() {
                   const hist = scaleHistories[scale.stationId] || []
                   return (
                     <div key={scale.stationId} className="py-1 first:pt-0 last:pb-0 flex items-center justify-between gap-2.5">
-                      <div className="w-[90px] shrink-0">
+                      <div className="w-[104px] shrink-0">
                         <p className="text-xs font-bold uppercase text-white truncate">
                           St. {scale.stationId} {scale.label}
                         </p>
@@ -727,9 +777,9 @@ export default function AdminDashboardHome() {
                         />
                       </div>
 
-                      <div className="w-[70px] text-right shrink-0">
-                        <p className="font-mono text-sm xl:text-base font-black tabular-nums text-white leading-tight">
-                          {scale.weightKg === null ? '—' : `${formatWeight(scale.weightKg)}k`}
+                      <div className="w-[92px] text-right shrink-0">
+                        <p className="font-mono text-sm xl:text-base font-black tabular-nums text-white leading-tight whitespace-nowrap">
+                          {scale.weightKg === null ? '—' : `${formatWeight(scale.weightKg)} kg`}
                         </p>
                         <p className={`text-[10px] font-bold uppercase ${scale.online ? 'text-[#fb923c]' : 'text-amber-400'}`}>
                           {scale.online ? 'Terhubung' : 'Terputus'}
@@ -769,7 +819,7 @@ export default function AdminDashboardHome() {
         />
 
         <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-card px-4 py-3">
-          <div className="flex items-center gap-3"><Badge tone={dataOnline ? 'success' : 'warning'} dot live>{dataOnline ? 'Data Terhubung' : 'Data Tidak Tersedia'}</Badge><span className="text-xs text-muted-foreground">Pembaruan terakhir {currentTime.toLocaleTimeString('id-ID')}</span></div>
+          <div className="flex items-center gap-3"><Badge tone={dataOnline ? 'success' : 'warning'} dot live>{dataOnline ? 'Data Terhubung' : 'Data Tidak Tersedia'}</Badge><span className="text-xs text-muted-foreground">Pembaruan terakhir {lastSyncedAt.toLocaleTimeString('id-ID')}</span></div>
           <span className="text-xs font-mono text-muted-foreground">{loading ? 'Memuat data sistem…' : `${metrics.onlineScales}/3 timbangan terhubung`}</span>
         </div>
 
