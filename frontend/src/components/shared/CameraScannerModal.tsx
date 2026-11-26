@@ -15,8 +15,8 @@ interface CameraScannerModalProps {
 }
 
 /**
- * Minimal QR/Barcode Scanner Modal for 360px mobile.
- * Focus on core functionality: camera scan + manual input.
+ * Minimal QR/Barcode Camera Scanner Modal.
+ * Camera-only scan view without manual input form.
  */
 export default function CameraScannerModal({
   isOpen,
@@ -24,15 +24,11 @@ export default function CameraScannerModal({
   onScan,
   title,
   subtitle = 'Arahkan kode QR ke dalam bingkai',
-  manualPlaceholder = 'Masukkan kode...',
-  quickOptions = [],
 }: CameraScannerModalProps) {
   const toast = useToast()
   const [scannerReady, setScannerReady] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-  const [manualCode, setManualCode] = useState('')
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
-  const manualInputRef = useRef<HTMLInputElement>(null)
   const isStoppingRef = useRef(false)
 
   const handleSuccessfulScan = (decodedText: string) => {
@@ -104,16 +100,6 @@ export default function CameraScannerModal({
     }
   }, [isOpen])
 
-  // Focus manual input
-  useEffect(() => {
-    if (isOpen) {
-      const t = window.setTimeout(() => {
-        manualInputRef.current?.focus()
-      }, 300)
-      return () => window.clearTimeout(t)
-    }
-  }, [isOpen])
-
   if (!isOpen) return null
 
   return (
@@ -129,9 +115,9 @@ export default function CameraScannerModal({
         </div>
 
         {/* Scanner area */}
-        <div className="p-3 flex-1 overflow-y-auto">
+        <div className="p-3">
           {/* Camera view */}
-          <div className="relative aspect-square bg-black rounded overflow-hidden mb-3">
+          <div className="relative aspect-square bg-black rounded overflow-hidden">
             <div id="qr-reader" className="w-full h-full" />
             
             {!scannerReady && (
@@ -140,7 +126,7 @@ export default function CameraScannerModal({
                   <>
                     <Icon name="alert" size={24} className="text-red-500 mb-2" />
                     <p className="text-xs text-red-300 mb-1">{errorMessage}</p>
-                    <p className="text-[10px] text-gray-300">Gunakan input manual di bawah</p>
+                    <p className="text-[10px] text-gray-300">Tutup modal ini untuk input manual</p>
                   </>
                 ) : (
                   <>
@@ -151,52 +137,6 @@ export default function CameraScannerModal({
               </div>
             )}
           </div>
-
-          {/* Manual input */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-700">Atau masukkan secara manual:</label>
-            <div className="flex gap-2">
-              <input
-                ref={manualInputRef}
-                type="text"
-                placeholder={manualPlaceholder}
-                value={manualCode}
-                onChange={(e) => setManualCode(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && manualCode.trim()) {
-                    handleSuccessfulScan(manualCode)
-                  }
-                }}
-                className="flex-1 px-3 py-2 text-sm border rounded focus:outline-none focus:border-gray-400"
-              />
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => manualCode.trim() && handleSuccessfulScan(manualCode)}
-                disabled={!manualCode.trim()}
-              >
-                OK
-              </Button>
-            </div>
-          </div>
-          {quickOptions.length > 0 && (
-            <div className="space-y-2 pt-2 border-t">
-              <p className="text-xs text-gray-600 text-center">Pilihan cepat:</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                {quickOptions.map((opt) => (
-                  <Button
-                    key={opt.value}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleSuccessfulScan(opt.value)}
-                    className="text-xs truncate"
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}
