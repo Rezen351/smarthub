@@ -584,6 +584,9 @@ export default function WeighingPage() {
     setConfirmApprove(null)
     setApprovedSuccessRecord(null)
     setPrintModalRecord(null)
+    if (sessionRef.current.draft) {
+      updateReceptionSession({ ...sessionRef.current, draft: undefined })
+    }
     setActiveStep(2)
     toast.warning('Record loaded back for re-weighing.')
   }
@@ -926,7 +929,22 @@ export default function WeighingPage() {
               <Badge tone="success" dot>
                 Farmer: {receptionSession.records[0]?.farmerName || receptionSession.draft?.farmerName || farmer?.name}
               </Badge>
-              <Button size="sm" variant="ghost" icon="edit" disabled={receptionSession.records.length > 0 || !!receptionSession.draft} onClick={() => setActiveStep(1)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                icon="edit"
+                disabled={isSaving || (receptionSession.records.length > 0 && !sessionPrinted)}
+                onClick={() => {
+                  if (sessionPrinted) {
+                    handleNextWeighing()
+                    return
+                  }
+                  if (sessionRef.current.draft) {
+                    updateReceptionSession({ ...sessionRef.current, draft: undefined })
+                  }
+                  setActiveStep(1)
+                }}
+              >
                 Change Farmer
               </Button>
             </div>
@@ -1011,7 +1029,21 @@ export default function WeighingPage() {
           </div>
 
           <div className="flex items-center justify-between border-t border-border pt-4 flex-wrap gap-2">
-            <Button variant="outline" disabled={receptionSession.records.length > 0 || !!receptionSession.draft || isSaving} onClick={() => setActiveStep(1)}>
+            <Button
+              variant="outline"
+              disabled={isSaving || (receptionSession.records.length > 0 && !sessionPrinted)}
+              title={receptionSession.records.length > 0 && !sessionPrinted ? 'Finish & Print current farmer bags first' : undefined}
+              onClick={() => {
+                if (sessionPrinted) {
+                  handleNextWeighing()
+                  return
+                }
+                if (sessionRef.current.draft) {
+                  updateReceptionSession({ ...sessionRef.current, draft: undefined })
+                }
+                setActiveStep(1)
+              }}
+            >
               Back to Farmer
             </Button>
             <div className="flex items-center gap-2 flex-wrap">
