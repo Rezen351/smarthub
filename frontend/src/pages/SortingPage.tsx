@@ -194,7 +194,7 @@ export default function SortingPage() {
   const handleSelectWaring = (item: BufferWaringItem) => {
     setWaringCode(item.code)
     setFarmerName(item.farmerName)
-    setFarmerVillage(item.farmerVillage || 'Dieng, Wonosobo')
+    setFarmerVillage(item.farmerVillage || '')
     setGrossIntakeKg(String(item.grossWeightKg))
     setWaringScanError(null)
 
@@ -646,7 +646,7 @@ export default function SortingPage() {
               <span className="text-xs text-muted-foreground uppercase font-mono block">Waring Terpilih</span>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-base sm:text-lg font-bold font-mono">{waringCode}</span>
-                <span className="text-xs text-muted-foreground">({farmerName} · {farmerVillage})</span>
+                <span className="text-xs text-muted-foreground">({farmerName}{farmerVillage ? ` · ${farmerVillage}` : ''})</span>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">

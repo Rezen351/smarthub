@@ -973,7 +973,7 @@ func (s *server) farmers(w http.ResponseWriter, r *http.Request, p []string) {
 func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 	if r.Method == "GET" && len(p) == 0 {
 		rows, err := s.db.Query(r.Context(), `
-			SELECT w.id, w.code, f.code, f.name, w."grossWeightKg", w."tareWeightKg", w."netWeightKg", w.status, w."createdAt",
+			SELECT w.id, w.code, f.code, f.name, COALESCE(f.village, ''), w."grossWeightKg", w."tareWeightKg", w."netWeightKg", w.status, w."createdAt",
 			       c.id, c.code, c.name, COALESCE(c.gtin, '')
 			FROM warings w
 			JOIN farmers f ON f.id=w."farmerId"
@@ -987,16 +987,17 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 		defer rows.Close()
 		out := []any{}
 		for rows.Next() {
-			var id, code, fc, fn, status, cID, cCode, cName, cGTIN string
+			var id, code, fc, fn, fVillage, status, cID, cCode, cName, cGTIN string
 			var gross, tare, net float64
 			var at time.Time
-			if rows.Scan(&id, &code, &fc, &fn, &gross, &tare, &net, &status, &at, &cID, &cCode, &cName, &cGTIN) == nil {
+			if rows.Scan(&id, &code, &fc, &fn, &fVillage, &gross, &tare, &net, &status, &at, &cID, &cCode, &cName, &cGTIN) == nil {
 				out = append(out, map[string]any{
 					"id":            id,
 					"code":          code,
 					"farmerCode":    fc,
 					"farmerId":      fc,
 					"farmerName":    fn,
+					"farmerVillage": fVillage,
 					"grossWeightKg": gross,
 					"tareWeightKg":  tare,
 					"netWeightKg":   net,
@@ -1094,8 +1095,8 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 				return
 			}
 		}
-		var fid, code, name string
-		err := s.db.QueryRow(r.Context(), `SELECT id,code,name FROM farmers WHERE UPPER(code)=UPPER($1)`, v.FarmerCode).Scan(&fid, &code, &name)
+		var fid, code, name, fVillage string
+		err := s.db.QueryRow(r.Context(), `SELECT id,code,name,COALESCE(village,'') FROM farmers WHERE UPPER(code)=UPPER($1)`, v.FarmerCode).Scan(&fid, &code, &name, &fVillage)
 		if err != nil {
 			fail(w, 404, "FARMER_NOT_FOUND", "Specified farmer could not be found")
 			return
@@ -1155,6 +1156,7 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 				"code":          war,
 				"farmerCode":    code,
 				"farmerName":    name,
+				"farmerVillage": fVillage,
 				"commodityId":   cid,
 				"commodityCode": cCode,
 				"commodityName": cName,

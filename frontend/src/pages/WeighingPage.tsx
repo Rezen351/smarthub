@@ -182,9 +182,9 @@ export default function WeighingPage() {
           setRecords(
             list.map((w: any) => ({
               id: w.id,
-              farmerId: w.farmerCode || w.farmerId || 'FMR-001',
-              farmerName: w.farmerName || 'Ahmad Santoso',
-              farmerVillage: w.farmerVillage || 'Desa Sumber Brantas',
+              farmerId: w.farmerCode || w.farmerId || '',
+              farmerName: w.farmerName || '—',
+              farmerVillage: w.farmerVillage || '',
               weightKg: Number(w.grossWeightKg),
               depositDate: formatSafeDate(w.createdAt || w.approvedAt),
               time: formatSafeTime(w.createdAt || w.approvedAt),
@@ -266,7 +266,7 @@ export default function WeighingPage() {
               id: f.code || f.id,
               code: f.code || f.id,
               name: f.name,
-              village: f.village || 'Desa Sumber Brantas',
+              village: f.village || '',
             }))
           )
         }
@@ -1004,6 +1004,15 @@ export default function WeighingPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Petani:</span>
                     <span className="font-semibold text-foreground">{receptionSession.records[0]?.farmerName || receptionSession.draft?.farmerName || farmer?.name}</span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Desa:</span>
+                    <span className="font-semibold text-foreground text-right">
+                      {receptionSession.records[0]?.farmerVillage ||
+                        receptionSession.draft?.farmerVillage ||
+                        farmersList.find((f) => f.id === (receptionSession.records[0]?.farmerId || receptionSession.draft?.farmerId || farmer?.id))?.village ||
+                        '—'}
+                    </span>
                   </div>
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Komoditas:</span>
