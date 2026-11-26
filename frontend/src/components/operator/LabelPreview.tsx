@@ -59,7 +59,7 @@ export default function LabelPreview({
   // Weight: only shown if positive and not pallet
   const receiptItems = items ?? [{ code, weightKg: weightKg || 0 }]
   const totalWeight = type === 'receipt' ? receiptItems.reduce((sum, item) => sum + Math.round(item.weightKg * 1000), 0) / 1000 : weightKg
-  const displayWeight = totalWeight !== undefined && totalWeight > 0 && type !== 'pallet' ? `${totalWeight.toFixed(3)} kg` : null
+  const displayWeight = totalWeight !== undefined && totalWeight > 0 && type !== 'pallet' ? `${Math.round(totalWeight)} kg` : null
   const statusText = type === 'receipt' ? 'Terima kasih' : 'TERCETAK'
   const displayTime = [date, time].filter(Boolean).join(' ')
 
@@ -127,7 +127,7 @@ export default function LabelPreview({
         <div className="text-xs text-left space-y-1 border-t border-dashed border-gray-400 pt-2">
           <strong>Jumlah waring: {receiptItems.length}</strong>
           {receiptItems.map((item, index) => (
-            <div key={item.code} className="break-all">Waring {index + 1}: {item.weightKg.toFixed(3)} kg</div>
+            <div key={item.code} className="break-all">Waring {index + 1}: {Math.round(item.weightKg)} kg</div>
           ))}
           <strong className="block">Total berat</strong>
         </div>
