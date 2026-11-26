@@ -802,6 +802,13 @@ export const api = {
       })
       return res.data
     },
+    updateWeight: async (idOrCode: string, grossWeightKg: number) => {
+      const res = await request<ApiResponse<any>>(`/weighing/${encodeURIComponent(idOrCode)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ grossWeightKg }),
+      })
+      return res.data
+    },
     approve: async (id: string) => {
       const res = await request<ApiResponse<any>>(`/weighing/${id}/approve`, {
         method: 'PATCH',

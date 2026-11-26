@@ -1026,6 +1026,56 @@ func (s *server) weighing(w http.ResponseWriter, r *http.Request, p []string) {
 		s.executeCancelTransaction(w, r, cancelRequest{WaringID: target, WaringCode: target})
 		return
 	}
+	if (r.Method == "PUT" || r.Method == "PATCH") && len(p) == 1 {
+		target := strings.TrimSpace(p[0])
+		var input struct {
+			Gross float64 `json:"grossWeightKg"`
+		}
+		if !decode(r, &input) || !validReceptionWeight(input.Gross) {
+			fail(w, 400, "VALIDATION_ERROR", "A valid positive grossWeightKg is required")
+			return
+		}
+		var id, war, status string
+		err := s.db.QueryRow(r.Context(), `
+			SELECT id::text, code, status
+			FROM warings
+			WHERE id::text=$1 OR UPPER(code)=UPPER($1)
+			LIMIT 1
+		`, target).Scan(&id, &war, &status)
+		if err == pgx.ErrNoRows {
+			fail(w, 404, "WARING_NOT_FOUND", "Intake record not found")
+			return
+		}
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to look up intake record")
+			return
+		}
+		if status != "PENDING" && status != "APPROVED" {
+			fail(w, 409, "WARING_ALREADY_SORTED", "Cannot edit weight after waring has been sorted")
+			return
+		}
+		_, err = s.db.Exec(r.Context(), `
+			UPDATE warings
+			SET "grossWeightKg"=$1, "tareWeightKg"=0, "netWeightKg"=$1
+			WHERE id=$2
+		`, input.Gross, id)
+		if err != nil {
+			fail(w, 500, "INTERNAL_SERVER_ERROR", "Failed to update waring weight")
+			return
+		}
+		write(w, map[string]any{
+			"success": true,
+			"data": map[string]any{
+				"id":            id,
+				"code":          war,
+				"grossWeightKg": input.Gross,
+				"tareWeightKg":  0,
+				"netWeightKg":   input.Gross,
+				"status":        status,
+			},
+		})
+		return
+	}
 	if r.Method == "POST" && len(p) == 0 {
 		var v struct {
 			FarmerCode    string  `json:"farmerCode"`

@@ -145,6 +145,7 @@ export default function WeighingPage() {
 
   /* ── Step 2: Weighing Form ── */
   const [weightKg, setWeightKg] = useState('')
+  const [editingSessionBagId, setEditingSessionBagId] = useState<string | null>(null)
   const [scaleCapacityKg, setScaleCapacityKg] = useState<number | null>(null)
   const [scaleOnline, setScaleOnline] = useState(false)
   const [scaleEndpoint, setScaleEndpoint] = useState('Not configured')
@@ -552,6 +553,27 @@ export default function WeighingPage() {
     setFormError('')
     setSaveError('')
     try {
+      if (editingSessionBagId) {
+        const rounded = Number(numericWeight.toFixed(3))
+        await api.weighing.updateWeight(editingSessionBagId, rounded)
+        const nextRecords = sessionRef.current.records.map((r) =>
+          r.id === editingSessionBagId ? { ...r, weightKg: rounded } : r,
+        )
+        updateReceptionSession({
+          ...sessionRef.current,
+          draft: undefined,
+          records: nextRecords,
+        })
+        setRecords((current) =>
+          current.map((item) => (item.id === editingSessionBagId ? { ...item, weightKg: rounded } : item)),
+        )
+        setEditingSessionBagId(null)
+        setWeightKg('')
+        void syncWithBackend()
+        toast.success(`Berat karung diperbarui: ${formatWeight(rounded)} kg`)
+        return
+      }
+
       const updatedRecord = await saveReceptionIntake(payload, api.weighing.create)
       const assignedCode = updatedRecord.waringCode!
       if (!sessionRef.current.records.some((record) => record.id === updatedRecord.id)) {
@@ -565,9 +587,9 @@ export default function WeighingPage() {
       setEditingId(null)
       setWeightKg('')
       void syncWithBackend()
-      toast.success(`Bag ${sessionRef.current.records.length} added & saved: ${assignedCode}`)
+      toast.success(`Karung ${sessionRef.current.records.length} ditambahkan: ${assignedCode}`)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not save bag.'
+      const message = error instanceof Error ? error.message : 'Gagal menyimpan karung.'
       setFormError(message)
       toast.error(message)
     } finally {
@@ -884,17 +906,17 @@ export default function WeighingPage() {
               />
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <Button type="submit" variant="primary" icon="check" className="w-full sm:w-auto">
-                  Verify
+                  Verifikasi
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   icon="scan"
                   onClick={openCameraModal}
-                  title="Open Camera Scanner"
+                  title="Buka Kamera Scanner"
                   className="w-full sm:w-auto"
                 >
-                  Camera
+                  Kamera
                 </Button>
               </div>
             </form>
@@ -945,7 +967,7 @@ export default function WeighingPage() {
                   setActiveStep(1)
                 }}
               >
-                Change Farmer
+                Ganti Petani
               </Button>
             </div>
           </div>
@@ -1009,16 +1031,31 @@ export default function WeighingPage() {
               {receptionSession.records.length > 0 && (
                 <div className="p-3 bg-card border border-border rounded-none space-y-2">
                   <div className="flex items-center justify-between text-xs font-semibold gap-2 flex-wrap">
-                    <span className="text-muted-foreground uppercase tracking-wider">Session Bags</span>
+                    <span className="text-muted-foreground uppercase tracking-wider">Karung Tersimpan</span>
                     <Badge tone="success">
-                      {receptionSession.records.length} bag{receptionSession.records.length > 1 ? 's' : ''} · {formatWeight(receptionSession.records.reduce((s, r) => s + r.weightKg, 0))} kg
+                      {receptionSession.records.length} karung · {formatWeight(receptionSession.records.reduce((s, r) => s + r.weightKg, 0))} kg
                     </Badge>
                   </div>
-                  <div className="max-h-36 overflow-y-auto divide-y divide-border text-xs font-mono">
+                  <div className="max-h-40 overflow-y-auto divide-y divide-border text-xs font-mono">
                     {receptionSession.records.map((r, idx) => (
-                      <div key={r.id} className="py-1 flex items-center justify-between gap-2">
-                        <span className="text-muted-foreground">#{idx + 1} {r.waringCode}</span>
-                        <span className="font-bold text-foreground">{formatWeight(r.weightKg)} kg</span>
+                      <div key={r.id} className="py-1.5 flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground truncate">#{idx + 1} {r.waringCode}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-bold text-foreground">{formatWeight(r.weightKg)} kg</span>
+                          {!receptionSession.closed && (
+                            <Button
+                              size="sm"
+                              variant={editingSessionBagId === r.id ? 'primary' : 'outline'}
+                              onClick={() => {
+                                setEditingSessionBagId(r.id)
+                                setWeightKg(String(r.weightKg))
+                                setFormError('')
+                              }}
+                            >
+                              Ubah
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1028,11 +1065,30 @@ export default function WeighingPage() {
             </div>
           </div>
 
+          {editingSessionBagId && (
+            <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs flex items-center justify-between gap-2">
+              <span className="font-medium text-amber-900 dark:text-amber-200">
+                Mode Ubah Berat: sesuaikan berat pada timbangan lalu klik <strong>Simpan Perubahan</strong>.
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEditingSessionBagId(null)
+                  setWeightKg('')
+                  setFormError('')
+                }}
+              >
+                Batal
+              </Button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between border-t border-border pt-4 flex-wrap gap-2">
             <Button
               variant="outline"
               disabled={isSaving || (receptionSession.records.length > 0 && !sessionPrinted)}
-              title={receptionSession.records.length > 0 && !sessionPrinted ? 'Finish & Print current farmer bags first' : undefined}
+              title={receptionSession.records.length > 0 && !sessionPrinted ? 'Selesaikan & cetak karung petani saat ini terlebih dahulu' : undefined}
               onClick={() => {
                 if (sessionPrinted) {
                   handleNextWeighing()
@@ -1044,21 +1100,21 @@ export default function WeighingPage() {
                 setActiveStep(1)
               }}
             >
-              Back to Farmer
+              Kembali ke Scan
             </Button>
             <div className="flex items-center gap-2 flex-wrap">
               {!receptionSession.closed && receptionSession.records.length < 500 && (
                 <Button
-                  variant="outline"
-                  icon="plus"
+                  variant={editingSessionBagId ? 'primary' : 'outline'}
+                  icon={editingSessionBagId ? 'check' : 'plus'}
                   loading={isSaving}
                   disabled={!(Number(weightKg) > 0) || isSaving}
                   onClick={() => void handleAddBagOnStep2()}
                 >
-                  Add Bag
+                  {editingSessionBagId ? 'Simpan Perubahan' : 'Tambahkan'}
                 </Button>
               )}
-              {receptionSession.records.length > 0 && !(Number(weightKg) > 0) ? (
+              {receptionSession.records.length > 0 && !(Number(weightKg) > 0) && !editingSessionBagId ? (
                 <Button
                   variant="primary"
                   icon="print"
@@ -1071,17 +1127,17 @@ export default function WeighingPage() {
                     setActiveStep(3)
                   }}
                 >
-                  Finish & Print
+                  Selesai &amp; Cetak
                 </Button>
               ) : (
                 <Button
                   variant="primary"
                   icon="check"
                   touch
-                  disabled={!(Number(weightKg) > 0) || isSaving}
+                  disabled={!(Number(weightKg) > 0) || isSaving || Boolean(editingSessionBagId)}
                   onClick={handleProceedToApproval}
                 >
-                  Review Weight
+                  Tinjau Berat
                 </Button>
               )}
             </div>
@@ -1185,21 +1241,21 @@ export default function WeighingPage() {
           </p>
           <div className="flex items-center justify-between border-t border-border pt-3 flex-wrap gap-2 no-print">
             {!approvedSuccessRecord && <Button variant="outline" icon="refresh" disabled={isSaving || isPrinting}
-              onClick={() => confirmApprove && handleKoreksi(confirmApprove)}>Correct Weight</Button>}
+              onClick={() => confirmApprove && handleKoreksi(confirmApprove)}>Koreksi Berat</Button>}
             {!receptionSession.closed && receptionSession.records.length < 500 && <Button variant="outline" icon="check"
               loading={isSaving} disabled={isPrinting} onClick={() => void handleNextBag()}>
-              {saveError ? 'Retry Save & Next Bag' : 'Save & Next Bag'}
+              {saveError ? 'Coba Simpan Lagi' : 'Simpan & Karung Berikutnya'}
             </Button>}
             <Button variant="primary" icon="print" touch loading={isPrinting || isSaving}
               onClick={async () => {
                 const saved = approvedSuccessRecord || await handleApproveCommit()
                 if (saved) void triggerPrintBoth(saved, sessionPrinted)
               }}>
-              {sessionPrinted ? 'Print Again' : printStatus.includes('failed') || receptionSession.closed ? 'Retry Print' : 'Finish & Print'}
+              {sessionPrinted ? 'Cetak Lagi' : printStatus.includes('failed') || receptionSession.closed ? 'Cetak Ulang' : 'Selesai & Cetak'}
             </Button>
             {(sessionPrinted || (approvedSuccessRecord && !receptionSession.records.length)) ? (
               <Button variant="primary" icon="check" touch disabled={isPrinting} onClick={() => handleNextWeighing()}>
-                {sessionPrinted ? 'Next Farmer' : 'Back to Weighing'}
+                {sessionPrinted ? 'Petani Berikutnya' : 'Kembali Menimbang'}
               </Button>
             ) : receptionSession.closed && (
               <Button
@@ -1208,7 +1264,7 @@ export default function WeighingPage() {
                 disabled={isPrinting}
                 onClick={() => handleNextWeighing(true)}
               >
-                Next Farmer (Skip Print)
+                Petani Berikutnya (Lewati Cetak)
               </Button>
             )}
           </div>
