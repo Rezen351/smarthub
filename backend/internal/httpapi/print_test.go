@@ -15,9 +15,9 @@ func TestEncodePrintJobsMatchesPreviewLayout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	qrSize := []byte{0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, 0x05}
+	qrSize := []byte{0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, 0x09}
 	if got := bytes.Count(payload, qrSize); got != 1 {
-		t.Fatalf("expected one normal-size QR for the waring label, got %d", got)
+		t.Fatalf("expected one enlarged QR for the waring label, got %d", got)
 	}
 	receipt := bytes.Index(payload, []byte("BUKTI PENERIMAAN\n"))
 	waring := bytes.Index(payload, []byte("WARING LABEL\n"))

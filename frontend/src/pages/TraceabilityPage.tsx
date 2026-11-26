@@ -51,9 +51,9 @@ export default function TraceabilityPage() {
           <div className="flex flex-col items-center gap-md">
             <div
               className="p-3 bg-white border-2 border-border-strong rounded-none shadow-xs flex items-center justify-center"
-              style={{ width: 208, height: 208 }}
+              style={{ width: 240, height: 240 }}
             >
-              <OfflineQrCode value={qrData} size={184} />
+              <OfflineQrCode value={qrData} size={216} />
             </div>
 
             <div className="text-center stack-xs">

@@ -53,7 +53,6 @@ export default function LabelPreview({
   const showsBarcode = type !== 'receipt' && type !== 'waring'
   // QR Code: shown for waring, pallet, pouch, export, grade (omitted for receipt)
   const isPackaging = type === 'pouch' || type === 'export'
-  const isPallet = type === 'pallet' || type === 'grade'
   const showsQr = type !== 'receipt' && !isPackaging
   const packagingGtin = barcodeValue?.match(/^010(\d{13})21/)?.[1] || gtin || ''
 
@@ -160,7 +159,7 @@ export default function LabelPreview({
               <div className="flex justify-center items-center py-0.5">
                 <OfflineQrCode
                   value={qrValue || code || 'PENDING'}
-                  size={isPallet ? (screenFit ? 144 : compact ? 160 : 200) : (screenFit ? 88 : compact ? 96 : 112)}
+                  size={screenFit ? 144 : compact ? 160 : 200}
                   className="shrink-0"
                 />
               </div>

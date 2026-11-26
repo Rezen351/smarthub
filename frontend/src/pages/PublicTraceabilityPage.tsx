@@ -636,7 +636,7 @@ export default function PublicTraceabilityPage() {
               </div>
 
               <div className="p-4 bg-white border-2 border-[#171717] rounded-none shadow-xs text-center flex flex-col items-center shrink-0">
-                <OfflineQrCode value={result.gs1Uri} size={128} />
+                <OfflineQrCode value={result.gs1Uri} size={180} />
                 <span className="font-mono text-[10px] text-[#666666] mt-2 block">
                   {result.code}
                 </span>

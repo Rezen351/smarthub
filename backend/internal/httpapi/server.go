@@ -1799,11 +1799,7 @@ func encodePrintJobs(jobs []printJob) ([]byte, error) {
 			}
 			out = appendCode128(out, barcodePayload)
 			out = appendText(out, "\n")
-			if job.Type == "pallet" || job.Type == "grade" {
-				out = appendQRWithSize(out, qrPayload, 0x09)
-			} else {
-				out = appendQR(out, qrPayload)
-			}
+			out = appendQR(out, qrPayload)
 		}
 
 		dateStr := job.Date
@@ -1852,7 +1848,7 @@ func appendCode128(dst []byte, value string) []byte {
 }
 
 func appendQR(dst []byte, value string) []byte {
-	return appendQRWithSize(dst, value, 0x05)
+	return appendQRWithSize(dst, value, 0x09)
 }
 
 func appendQRWithSize(dst []byte, value string, moduleSize byte) []byte {
